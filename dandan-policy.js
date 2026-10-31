@@ -37,6 +37,18 @@ export const WORTH = {
 };
 /** What a card held is worth over using it now: part of its worth (a card kept is a card for later). */
 const KEEP = 0.75;
+/**
+ * Constants Medium's scores are corrected by, fitted in the lab to what the search prefers (Medium's move against
+ * Hard's at decisions inside a look-ahead). The values here are the hand-set play; a fit changes them.
+ */
+export const TUNE = {
+  pass: 0.05,                // what a move must score to be played rather than pass
+  counter: 0,                // taken off every counter's worth (Memory Lapse, Commit, Narset's Reversal on a spell)
+  counterOnCounter: 1,       // the share of a counter's worth kept when the spell it answers is itself a counter
+  cycleLorien: 0, cycleLand: 0,   // added to cycling Lórien Revealed, and to cycling a land
+  cast: {},                  // added to a spell's cast, by the card cast
+  land: {},                  // added to a land drop, by the land
+};
 
 // ---------- what the seat knows ----------
 /** Each card's name as a number (its place in NAMES), and how many copies of each the deck has: counted once. */
@@ -662,7 +674,7 @@ export class Player {
     const list = moves(this.s, this.me);
     if (!list.length) return PASS;
     if (this.easy && this.rng() < 0.12) return this.rng() < 0.4 ? PASS : pickOne(list, this.rng);
-    let best = PASS, top = 0.05;
+    let best = PASS, top = TUNE.pass;
     for (const m of list) {
       let v = this.score(m);
       if (this.easy) v += (this.rng() - 0.5) * 0.8;
@@ -736,7 +748,7 @@ export class Player {
       v += lapse && this.canDrawFirst() ? 0.4 : -0.05;
     }
     if (this.easy) v += (this.rng() - 0.5) * 0.6;
-    return v;
+    return v + (TUNE.land[n] ?? 0);
   }
   /** Whether we could draw the top card before the other player on our own turn: an instant that draws, and the mana for it after a land. */
   canDrawFirst() {
@@ -751,14 +763,14 @@ export class Player {
       const short = landCount(F, me) < 4 && !s.hand[me].some(id => id !== m.card && isLandId(id));
       const mix = this.reshuffle();
       if (!short && mix < 0.3) return -0.5;
-      return (short ? 0.9 : 0) + mix - this.manaCost(mana) + (this.theirEnd ? 0.1 : 0) - (F.myTurn && !this.myMain ? 0.2 : 0);
+      return (short ? 0.9 : 0) + mix - this.manaCost(mana) + (this.theirEnd ? 0.1 : 0) - (F.myTurn && !this.myMain ? 0.2 : 0) + TUNE.cycleLorien;
     }
     // a cycling land: worth more drawn than played when we have lands enough; best spent at the end of their turn, or
     // in their upkeep to draw a top card we know before they can
     const asLand = cardWorth(F, m.card);
     let v = 0.95 - asLand - this.manaCost(mana) + this.steal();
     if (!this.theirEnd && !this.steal()) v -= 0.25;
-    return v;
+    return v + TUNE.cycleLand;
   }
   /**
    * What drawing the top card first is worth at the other player's upkeep, when we know it: ours to keep and theirs no
@@ -796,7 +808,7 @@ export class Player {
     const half = m.from === "yard" ? halfOf(m.card, "yard") : front(m.card);
     const mana = total(costOf(s, me, half, m.from));
     const v = this.castWorth(m, half, mana);
-    return v > -0.9 ? v - this.gift(this.yardAfter(m, half), mana, m.from === "hand" ? m.card : null) : v;
+    return v > -0.9 ? v - this.gift(this.yardAfter(m, half), mana, m.from === "hand" ? m.card : null) + (TUNE.cast[half] ?? 0) : v;
   }
   castWorth(m, half, mana) {
     const s = this.s, F = this.F, me = this.me;
@@ -929,12 +941,18 @@ export class Player {
       gain += to === me ? cardWorth(F, x.card, me) * 0.9 : 0.35;
     }
     if (this.easy) return gain - 0.5;
-    return gain - keep - pay * 0.5 - (half === "Commit" ? 0.2 : 0);
+    if (["Memory Lapse", "Commit", "Narset's Reversal"].includes(x.name)) gain *= TUNE.counterOnCounter;
+    return gain - keep - pay * 0.5 - (half === "Commit" ? 0.2 : 0) - TUNE.counter;
   }
   /** Narset's Reversal on a spell: theirs goes back to their hand and we get a copy; ours, a copy and the card back. */
   reversal(x, keep, pay) {
     const F = this.F, me = this.me;
     if (x.ctl === me) {
+      // a counter of theirs aimed at it: the original goes back to our hand, so the counter has no target and is spent for
+      // nothing, and the copy resolves: the spell happens and we keep the card (better than Reversing their counter, which
+      // they keep)
+      const countered = this.s.stack.some(y => y.ctl !== me && ["Memory Lapse", "Commit"].includes(y.name) && y.targets.some(t => t.k === "s" && t.sid === x.sid));
+      if (countered && x.card != null) return spellWorth(F, x) + 0.9 * cardWorth(F, x.card) + 0.5 - keep - pay;
       const again = ["Lórien Revealed", "Take Inventory", "Chart a Course", "Memory Lapse"].includes(x.name) ? cardWorth(F, x.card) : 0;
       return again - keep - pay;
     }
