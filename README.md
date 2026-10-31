@@ -5,7 +5,7 @@ rules engine, the same computer player, the same 3D table. Open `index.html` fro
 there is no build step.
 
 Dandan is the Magic format played with one shared deck of 80 cards (16 Islands, 8 Memory Lapse, 10 Dandân and the rest).
-Each player gets seven; a Dandân (4/1) can attack only a player who has an Island. You play against the computer, Claude.
+Each player gets seven; a Dandân (4/1) can attack only a player who has an Island. You play against the computer, Monte.
 
 ## What is fixed here
 
@@ -39,7 +39,8 @@ What you can change:
   box, which is why they once sat on it).
 - **The ring that pulses round the player to move** (and the one round a player you are aiming at) goes round the
   avatar and its life together; the life sits on the avatar's corner, so a circle round the avatar alone ran through it.
-- The computer's name is **Claude**; its card fan is packed closer so the name fits a phone's header.
+- The computer's name is **Monte**, after the Monte Carlo search that picks its moves (it plays out many dealt-out games
+  and keeps the move that does best); its card fan is packed closer so the name fits a phone's header.
 
 ## The upkeep stop (a fix, also made in the Almanac)
 

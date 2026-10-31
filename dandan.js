@@ -77,7 +77,7 @@ function pips(cost) {
 let V = null;                                      // the view on screen
 let page = null;                                   // set once the runner is up
 const S = () => V?.state;
-const nameOf = seat => V?.seats?.[seat]?.name ?? (seat === 0 ? "You" : "Claude");
+const nameOf = seat => V?.seats?.[seat]?.name ?? (seat === 0 ? "You" : "Monte");
 const isMe = seat => V?.seat != null && seat === V.seat;
 const IRREGULAR = { has: "have", is: "are", fetches: "fetch" };
 /** A log line in words: the seats named, and when the viewer's name is the stock "You" the grammar follows it. */
@@ -185,7 +185,7 @@ function goOn() {
 }
 
 page = seatPage({
-  rules: pageRules, id: "dandan", pace: paceNow, botName: () => "Claude", level: () => opts.level, name: savedName() || "You",
+  rules: pageRules, id: "dandan", pace: paceNow, botName: () => "Monte", level: () => opts.level, name: savedName() || "You",
   // Hard works its move out while a tap is awaited, so it comes the moment you tap
   hold: () => { const thinking = holdForBot(); return tapHold() || thinking; },
   onView: v => {

@@ -32,7 +32,7 @@
 .d3-l1 { display: flex; align-items: baseline; gap: .45rem; min-width: 0; }
 .d3-who b.d3-name { flex: none; max-width: 60%; font-size: .74rem; font-weight: 800; font-stretch: var(--wide); text-transform: var(--caps); letter-spacing: calc(.08em * var(--track));
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* the other player's name has its line to itself (the lands are under it), so it may take it all: "Claude" is a long name for a narrow bar */
+/* the other player's name has its line to itself (the lands are under it), so it may take it all: "Monte" is a long name for a narrow bar */
 #d3foe .d3-who b.d3-name { max-width: 100%; }
 .d3-meta { min-width: 0; font-size: .68rem; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .d3-float .dd-pip { width: .72rem; height: .72rem; font-size: .48rem; vertical-align: -.08em; }

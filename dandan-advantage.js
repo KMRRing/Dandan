@@ -110,7 +110,7 @@ export function momentsOf(c, { limit = 3 } = {}) {
 }
 
 // ---------- in words ----------
-/** "your" or "Claude's": whose turn or move, in words. */
+/** "your" or "Monte's": whose turn or move, in words. */
 const whose = (names, seat, seatYou) => (seat === seatYou ? "your" : `${names[seat]}'s`);
 const signed = d => `${d < 0 ? "−" : "+"}${Math.abs(d)}`;
 /** The chart's caption: how long you were ahead, the lowest and the highest, and the biggest swing. */
