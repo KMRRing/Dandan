@@ -21,12 +21,19 @@
 .d3-av.hit .d3-life { background: var(--dd-bad); color: #FFF; }
 .d3-av.healed .d3-life { background: var(--dd-good); color: #FFF; }
 .d3-av.turn { box-shadow: 0 0 0 .18rem color-mix(in srgb, var(--brass) 60%, transparent), 0 .15rem .35rem rgba(0, 0, 0, .3); }
-/* The rings that pulse round a player (to move, or a target) go round the avatar and its life together: the life sits on
-   the avatar's lower right, so a circle round the avatar alone ran through it (31 October 2026, Korbi) */
-.d3-av { --ring: -.34rem -1.06rem -.62rem -.34rem; }
-.d3-av.move::after { content: ""; position: absolute; inset: var(--ring); border: 2px solid var(--seat); border-radius: 1.55rem; pointer-events: none; animation: d3-ring 1.6s ease-in-out infinite; }
+/* The rings that pulse round a player (to move, or a target) are two outlines: a circle round the avatar and a rounded
+   rectangle round its life, which sits on the avatar's lower right. The circle lies under the life and is open where the
+   life is, so the two never cross (31 October 2026, Korbi: one ring round both ran through the life, then a circle's
+   line crossed the life). The target's pair stands one step outside the mover's. */
+.d3-av { --open: conic-gradient(#000 0 76deg, transparent 76deg 196deg, #000 196deg); isolation: isolate; }
+.d3-life { z-index: 1; }
+.d3-av.move::after, .d3-av.tgt::before { content: ""; position: absolute; inset: -.34rem; border: 2px solid var(--seat); border-radius: 50%; pointer-events: none;
+  -webkit-mask: var(--open); mask: var(--open); animation: d3-ring 1.6s ease-in-out infinite; }
+.d3-av.move .d3-life::after, .d3-av.tgt .d3-life::before { content: ""; position: absolute; inset: -.27rem; border: 2px solid var(--seat); border-radius: 8px; pointer-events: none;
+  animation: d3-ring 1.6s ease-in-out infinite; }
+.d3-av.tgt::before { inset: -.56rem; border-color: var(--dd-in); }
+.d3-av.tgt .d3-life::before { inset: -.5rem; border-color: var(--dd-in); }
 @keyframes d3-ring { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
-.d3-av.tgt::before { content: ""; position: absolute; inset: var(--ring); border-radius: 1.55rem; pointer-events: none; animation: d3-tgt 1s ease-in-out infinite alternate; }
 .d3-av.advised { outline: 2px solid var(--dd-in); outline-offset: .32rem; }
 .d3-who { flex: 1 1 auto; min-width: 0; display: grid; line-height: 1.2; }
 .d3-l1 { display: flex; align-items: baseline; gap: .45rem; min-width: 0; }
@@ -355,5 +362,5 @@ html[data-mode="night"] .d3-mat { --d3-felt: color-mix(in srgb, var(--dd-in) 16%
 
 @media (prefers-reduced-motion: reduce) {
   .d3-slot > .d3-face { transition: none; }
-  .d3-arrows path, .d3-av.move::after, .d3-slot.tgt > .d3-face, .d3-st.tgt, .d3-av.tgt::before { animation: none; }
+  .d3-arrows path, .d3-av.move::after, .d3-av.move .d3-life::after, .d3-slot.tgt > .d3-face, .d3-st.tgt, .d3-av.tgt::before, .d3-av.tgt .d3-life::before { animation: none; }
 }

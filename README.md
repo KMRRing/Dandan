@@ -38,8 +38,10 @@ What you can change:
   teeth bared, an amber eye lit, light falling in shafts. The other twenty-four pictures are the Almanac's.
 - **The hand** is a tenth larger and sits clear of the Pass button (the outer cards of the fan swing below the hand's
   box, which is why they once sat on it).
-- **The ring that pulses round the player to move** (and the one round a player you are aiming at) goes round the
-  avatar and its life together; the life sits on the avatar's corner, so a circle round the avatar alone ran through it.
+- **The rings that pulse round the player to move** (and the pair round a player you are aiming at, a step further out)
+  are two outlines: a circle round the avatar and a rounded rectangle round its life, which sits on the avatar's corner.
+  The circle lies under the life and is left open where the life is, so no line crosses it and the two rings never meet.
+  (A circle alone ran through the life; one ring round both looked like a pill.)
 - The computer's name is **Monte**, after the Monte Carlo search that picks its moves (it plays out many dealt-out games
   and keeps the move that does best); its card fan is packed closer so the name fits a phone's header.
 
