@@ -59,6 +59,13 @@ games, each searched to 8,192 deals with nothing dropped, so any rule could be r
   old rule) and about a quarter quicker. A 40-game match, current rule at 256 deals against the new rule at 128, scored
   52.5% for the current one, plus or minus 13: no difference a game can show, with a third less thinking.
 
+- **Before the draw, the look-ahead lets both seats act.** The turns it plays out used to pass the upkeep for both players
+  (unless a top card was known), as if nobody ever cracked a Flood Plain, cycled a land or cast Predict, Brainstorm or
+  Quicken there. Now those are stops in the look-ahead (`predrawMove` in `dandan-engine.js`); an instant that only deals
+  with a creature isn't, as it can as well be cast with the drawn card in hand. In 200 games against the version that
+  passes there, it scored 53% plus or minus 7 at the same thinking time: not a gain a match can show, kept because the
+  look-ahead should know what a player can do at that moment (Korbi's call).
+
 What this measures is how well the search has settled on its own evaluation of a position (Medium's play out to the
 second turn ahead, scored by the trained value network), not a true chance of winning: more deals of the same search can't
 find what it doesn't model, so a stronger computer has to come from what each deal sees (the reads, how far ahead, the
@@ -68,8 +75,10 @@ evaluation), not from more deals.
 
 Before the draw, if you could do anything (cast Predict or any instant, cycle a land), you are now asked whether to,
 instead of the game drawing for you. From the second turn, every upkeep where a person could act is a stop, theirs or
-yours, whether the top card is known or not; passing there goes on to the draw. The computer's own upkeep stays quiet
-unless it has a known top card or a Brainstorm or Predict for your draw. `anyUpkeepMove` in `dandan-engine.js` is the
+yours, whether the top card is known or not; passing there goes on to the draw. The computer is asked at its own upkeep too whenever it
+could do something, and Hard's search weighs passing against every move there (cracking a Flood Plain, cycling, Predict,
+Brainstorm, Quicken, any instant); only the quick move that is the fallback with no worker passes unless it has a known
+top card or a Brainstorm or Predict for your draw. `anyUpkeepMove` in `dandan-engine.js` is the
 rule, and `node tests/upkeep.mjs` checks it. A Flood Plain with no Island or Plains card left in the library to fetch is
 not a reason to stop (cracking it would only shuffle); `node tests/dandan-window.mjs` checks that and the Flood Plain's own stop.
 

@@ -1,13 +1,16 @@
 // Dandan's window before the draw (dandan-engine.js wants / fetchWindow): an untapped Flood Plain is a reason to stop at an
 // upkeep, so its owner is asked, before the draw, whether to fetch (Korbi, 30 October 2026). The computer players
-// and the look-ahead pass through it as they always did.
+// pass through it as they always did; the look-ahead stops at it (as at the draw's other moves: engine predrawMove).
 import { act, wants, toMove, upkeepStop, fetchWindow } from "../dandan-engine.js";
 import { botMove } from "../dandan-bot.js";
 import { rules } from "../dandan-rules.js";
 import { seeded } from "../seats.js";
+import { withRng } from "../dandan-core.js";
 import { scene, islandsOf, go, onBf, drive, resolveStack, answer, J } from "./dandan-scene.js";
 
 let bad = 0;
+/** wants() as the look-ahead sees it: with the engine hushed, as in a game played out in the head */
+const hushedWants = (s, seat) => withRng(null, () => wants(s, seat), true);
 const check = (ok, what) => { console.log(`${ok ? "ok  " : "FAIL"} ${what}`); if (!ok) bad++; };
 const test = (what, fn) => {
   try { const r = fn(); check(r !== false && typeof r !== "string", typeof r === "string" ? `${what} — ${r}` : what); }
@@ -74,10 +77,15 @@ test("the computer passes it without a thought, at every level; a stop it always
   const bs = scene({ active: 1, step: "upkeep", turn: 6, prio: 0, bf: islandsOf(0, 1), hand: [["Brainstorm"], []] });
   return passes && !upkeepStop(s, 0) && fetchWindow(s, 0) && upkeepStop(bs, 0) && wants(bs, 0) || "the computer should pass the window and think at the other";
 });
-test("a game played out in the head (quiet) doesn't stop there", () => {
+test("a game played out in the head (quiet) stops at the draw's own moves, a Flood Plain's crack among them, and at nothing else", () => {
   const s = scene({ active: 0, step: "end", prio: 0, passes: 1, turn: 5, bf: [plain(0), ...islandsOf(0, 2)], hand: [[], []] });
   const loud = act(J(s), 0, { t: "pass" }, { rng: seeded(2) }), quiet = act(J(s), 0, { t: "pass" }, { rng: seeded(2), quiet: true });
-  return typeof loud !== "string" && loud.step === "upkeep" && typeof quiet !== "string" && quiet.step !== "upkeep" || `${loud.step} / ${quiet.step}`;
+  // an instant that only deals with a creature is no reason to stop before the draw, in the head: it can be cast after it
+  const bend = scene({ active: 1, step: "upkeep", turn: 6, prio: 0, bf: islandsOf(0, 2), hand: [["Mind Bend"], []] });
+  const s0 = scene({ active: 1, step: "upkeep", turn: 6, prio: 0, bf: [plain(0)], hand: [[], []] });
+  const empty = scene({ active: 1, step: "upkeep", turn: 6, prio: 0, bf: [plain(0)], hand: [[], []], bare: true, lib: ["Dandân", "Memory Lapse"] });
+  return typeof loud !== "string" && loud.step === "upkeep" && typeof quiet !== "string" && quiet.step === "upkeep"
+    && !hushedWants(bend, 0) && !hushedWants(empty, 0) && hushedWants(s0, 0) || `${loud.step} / ${quiet.step}`;
 });
 test("two computers playing on with Flood Plains in play pass every window (and the game keeps moving)", () => {
   let s = scene({ active: 0, step: "main1", turn: 2, hand: [["Island", "Island"], ["Island"]], bf: [plain(0), plain(1)] });

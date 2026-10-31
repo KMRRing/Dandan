@@ -251,11 +251,14 @@ const UPKEEP = new Set(["Brainstorm", "Predict"]);
  * or a Predict (to mill the card they'd draw). An unknown top card taken first is as good as one taken at the end step.
  * It is also a stop for an untapped Flood Plain (fetchWindow): the last moment to shuffle before the draw. And, for a
  * person, a stop whenever there is anything to do (anyUpkeepMove): the draw follows at once, so it's the last moment
- * for every instant, cycling card or ability, and not passing them over is a choice only the player can make.
+ * for every instant, cycling card or ability, and not passing them over is a choice only the player can make. In the
+ * computer's look-ahead (hushed) the stops are the ones about the draw itself (predrawMove), for either seat: what a
+ * player can do before the draw is part of the game the look-ahead plays out, and leaving it out had both sides passing
+ * there in every simulated turn (200 games, with it against without: 53% +- 7, at the same thinking time).
  */
 export function wants(s, seat) {
   if (s.stack.length) return hasMove(s, seat);
-  if (s.step === "upkeep") return upkeepStop(s, seat) || (!hushed() && (fetchWindow(s, seat) || anyUpkeepMove(s, seat)));
+  if (s.step === "upkeep") return upkeepStop(s, seat) || (hushed() ? predrawMove(s, seat) : fetchWindow(s, seat) || anyUpkeepMove(s, seat));
   if (!(seat === s.active ? MY_STOPS : THEIR_STOPS).has(s.step)) return false;
   return hasMove(s, seat, s.step === "attackers" || s.step === "blockers" ? COMBAT : null);
 }
@@ -269,8 +272,8 @@ export function upkeepStop(s, seat) {
  * Whether a seat holds a Flood Plain it could crack before the draw: untapped, with a land of its kind left in the
  * library. Not tied to knowing the top card: the shuffle is the player's to take now or never (the draw follows), and
  * a stop that came only when the card was known would be a hint. So every upkeep from the second turn asks, the player
- * whose turn it is first, then the other. The computer's own play and the look-ahead leave it out (hushed here, and
- * dandan-rules.js passing for the computer): they never fetched here, and a stop costs a simulated game time.
+ * whose turn it is first, then the other. In the look-ahead it is one of the draw's own stops (predrawMove), not asked
+ * apart from those: a stop costs a simulated game time.
  */
 export function fetchWindow(s, seat) {
   if (s.turn < 2) return false;
@@ -279,11 +282,20 @@ export function fetchWindow(s, seat) {
 /**
  * Whether a seat could do anything at all before the draw, from the second turn: a Predict or a Quicken held with the
  * top card unknown (31 October 2026, Korbi: "before draw, if user can do anything, including cast predict or any instant
- * speed action, they need to be able to choose to not do that"; the game had drawn on without asking). Like the Flood
- * Plain's window it is for a person: the computer's own play and the look-ahead leave it out (hushed, and dandan-bot.js
- * passing unless upkeepStop), as they never stopped here without a known card to act on.
+ * speed action, they need to be able to choose to not do that"; the game had drawn on without asking). In play it asks
+ * the computer too, and Hard's search (dandan-think.js, in its worker) weighs passing against every move there; the quick
+ * move of dandan-bot.js passes unless upkeepStop. In the look-ahead only predrawMove's moves are stops.
  */
 export const anyUpkeepMove = (s, seat) => s.turn >= 2 && hasMove(s, seat) && moves(s, seat).some(m => !emptyCrack(s, m));
+/**
+ * What a seat could do before the draw that is about the draw: a spell that draws or chooses the top card (Predict,
+ * Brainstorm, Quicken), a cycling, a Clue or a Flood Plain's crack. The look-ahead stops at these for both seats, so the
+ * moves a player makes there are weighed in the turns it plays out; an instant that deals with a creature isn't one:
+ * it can as well be cast with the card drawn in hand, which a look-ahead dealt before the draw can't see.
+ */
+export const predrawMove = (s, seat) => s.turn >= 2 && hasMove(s, seat) && moves(s, seat).some(m =>
+  m.t === "cycle" || (m.t === "cast" && PREDRAW.has(nm(m.card))) || (m.t === "ability" && !emptyCrack(s, m)));
+const PREDRAW = new Set(["Predict", "Brainstorm", "Quicken"]);
 /** A Flood Plain's crack where the library holds nothing of its kind: legal, but it only shuffles, which isn't a reason to stop (as fetchWindow). */
 const emptyCrack = (s, m) => {
   const p = m.t === "ability" && s.bf.find(x => x.id === m.id);
