@@ -1,0 +1,372 @@
+/* Dandan: a table of lacquered tiles, deep-water blue for the fish. The other player's side across the top, the library,
+   the turn and the graveyard between, yours below, and under it two columns, the card read (with the stack) and the
+   log; then your hand and the buttons. Held sideways, the same across the screen, larger. Full screen (the menu's), the
+   header gives way to the menu's button, faded at the top right. */
+:root {
+  --dd-in: #1F6E8C;                                              /* the game's enamel: sea blue */
+  --dd-soft: color-mix(in srgb, var(--dd-in) 14%, var(--sheet));
+  --dd-good: #2F7D5B; --dd-bad: #A8382B;
+  --dd-u: #3F7FB5; --dd-r: #B84A32; --dd-g: #D3C49F; --dd-plain: #B9A57C;   /* mana: blue, red, generic, none */
+  --dd-land: #8B7A4B; --dd-inst: #3F7FB5; --dd-sorc: #8F4B6B;          /* a card's type, on its top edge */
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-mode="day"]) { --dd-in: #6FB7D2; --dd-good: #7FC2A8; --dd-bad: #E8806F; --dd-u: #4F8FC5; --dd-r: #C85A42; --dd-g: #5C5440; --dd-plain: #6B5F43; --dd-land: #A89968; --dd-inst: #6FA3D4; --dd-sorc: #B87396; }
+}
+html[data-mode="night"] { --dd-in: #6FB7D2; --dd-good: #7FC2A8; --dd-bad: #E8806F; --dd-u: #4F8FC5; --dd-r: #C85A42; --dd-g: #5C5440; --dd-plain: #6B5F43; --dd-land: #A89968; --dd-inst: #6FA3D4; --dd-sorc: #B87396; }
+/* Kontor and Office lend it their own accent, as in their other games */
+html[data-theme="kontor"] { --dd-in: #1E7A45; }
+@media (prefers-color-scheme: dark) { html[data-theme="kontor"]:not([data-mode="day"]) { --dd-in: #2EB36A; } }
+html[data-theme="kontor"][data-mode="night"] { --dd-in: #2EB36A; }
+html[data-theme="office"] { --dd-in: #0F6CBD; }
+@media (prefers-color-scheme: dark) { html[data-theme="office"]:not([data-mode="day"]) { --dd-in: #479EF5; } }
+html[data-theme="office"][data-mode="night"] { --dd-in: #479EF5; }
+
+.dd-mark { display: inline-block; }
+.dd-mark svg { width: 100%; height: 100%; display: block; }
+
+/* ---------- mana pips ---------- */
+.dd-pips { display: inline-flex; gap: .1rem; align-items: center; }
+.dd-pip { display: inline-grid; place-items: center; width: .85rem; height: .85rem; border-radius: 50%; font-style: normal; font-size: .56rem; font-weight: 800; line-height: 1;
+  background: var(--dd-g); color: #1C2A34; }
+.dd-pip.U { background: var(--dd-u); color: #FFF; }
+.dd-pip.R { background: var(--dd-r); color: #FFF; }
+
+/* ---------- the two sides ---------- */
+.dd-board { display: flex; flex-direction: column; gap: .4rem; min-height: 0; padding-top: .5rem; }
+.dd-zone { flex: none; display: grid; gap: .25rem; padding: .3rem .4rem .4rem; border: 1.5px solid var(--tile-edge); border-radius: 6px; background: var(--tile); }
+.dd-zone.turn { border-color: var(--brass); }
+.dd-zone.move { box-shadow: inset 0 0 0 1.5px var(--dd-in); }
+.dd-zh { display: flex; align-items: baseline; gap: .5rem; min-width: 0; border-radius: 4px; }
+.dd-zh.tgt { background: var(--dd-soft); box-shadow: 0 0 0 1.5px var(--dd-in); cursor: pointer; }
+.dd-who { font-size: .78rem; font-weight: 800; font-stretch: var(--wide); text-transform: var(--caps); letter-spacing: calc(.08em * var(--track)); white-space: nowrap; }
+.dd-meta { flex: 1; min-width: 0; font-size: .7rem; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dd-life { font-size: 1.35rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.dd-life::before { content: "♥"; margin-right: .2rem; font-size: .8rem; color: var(--dd-bad); vertical-align: .12em; }
+
+/* a Dandân: its power and toughness large, tapped ones dim */
+.dd-cres { display: flex; gap: .3rem; min-height: 3.4rem; }
+.dd-cre { position: relative; flex: 0 1 4rem; min-width: 2.4rem; height: 3.4rem; display: grid; grid-template-rows: auto auto 1fr; justify-items: center; align-content: center; gap: .05rem;
+  padding: .15rem .1rem; border: 1.5px solid var(--dd-in); border-radius: 5px; background: var(--dd-soft); color: var(--ink); cursor: pointer; overflow: hidden; }
+.dd-cre .dd-pt { font-size: 1.3rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.dd-cre .dd-pt b.chg { color: var(--dd-bad); }
+.dd-cre .dd-cn { font-size: .6rem; font-weight: 700; }
+.dd-cre .dd-tags { font-size: .5rem; color: var(--ink-soft); line-height: 1.1; text-align: center; }
+.dd-cre.tapped { opacity: .55; border-style: dashed; }
+.dd-cre.att { border-color: var(--dd-bad); box-shadow: inset 0 0 0 1.5px var(--dd-bad); }
+.dd-cre.can { box-shadow: 0 0 0 1.5px var(--brass); }
+.dd-cre.sel { background: var(--dd-in); color: var(--sheet); box-shadow: 0 0 0 1.5px var(--dd-in); }
+.dd-cre.sel .dd-tags { color: inherit; }
+.dd-cre.look { transform: translateY(-.15rem); }
+.dd-cre.tgt, .dd-land.tgt, .dd-st.tgt { box-shadow: 0 0 0 2px var(--dd-in); background: var(--dd-soft); animation: dd-tgt 1s ease-in-out infinite alternate; }
+@keyframes dd-tgt { from { box-shadow: 0 0 0 1.5px var(--dd-in); } to { box-shadow: 0 0 0 3px var(--dd-in); } }
+@media (prefers-reduced-motion: reduce) { .dd-cre.tgt, .dd-land.tgt, .dd-st.tgt { animation: none; } }
+.dd-link { position: absolute; top: .1rem; right: .1rem; display: grid; place-items: center; min-width: .95rem; height: .95rem; padding: 0 .1rem; border-radius: 50%;
+  background: var(--brass); color: var(--yard); font-size: .6rem; font-style: normal; font-weight: 800; }
+
+/* the lands: a row of small tiles that squeeze together rather than wrap */
+.dd-lands { display: flex; gap: .2rem; min-height: 1.5rem; }
+.dd-land { flex: 0 1 1.9rem; min-width: 1.1rem; height: 1.5rem; padding: 0; border: 1.5px solid var(--tile-edge); border-radius: 4px; overflow: hidden;
+  font: inherit; font-size: .62rem; font-weight: 800; line-height: 1; color: #FFF; cursor: pointer; background: var(--dd-plain); }
+.dd-land.mU { background: var(--dd-u); }
+.dd-land.mR { background: var(--dd-r); }
+.dd-land.duo { background: linear-gradient(105deg, var(--dd-u) 50%, var(--dd-r) 50%); }
+.dd-land.m0 { color: #1C2A34; }
+.dd-land.dd-clue { flex: 0 1 2.4rem; background: var(--sheet); color: var(--ink); border-color: var(--brass); }
+.dd-land.tapped { opacity: .36; }
+.dd-land.bent { border-style: dashed; border-color: var(--dd-bad); }
+.dd-land.look { box-shadow: 0 0 0 1.5px var(--dd-in); }
+/* the manual tap: the lands that could be tapped are ringed in brass, the ones chosen lift and take the accent */
+.dd-land.can { box-shadow: 0 0 0 1.5px var(--brass); }
+.dd-land.pay { box-shadow: 0 0 0 2px var(--dd-in); transform: translateY(-.15rem); }
+
+/* ---------- between the two sides: the library, the turn and who's to move, the graveyard ---------- */
+.dd-strip { flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .45rem; }
+.dd-phase { min-width: 0; display: grid; justify-items: center; gap: .05rem; text-align: center; }
+.dd-phase b { max-width: 100%; font-size: .86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-wait { max-width: 100%; font-size: .74rem; color: var(--ink-soft); min-height: 1.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dd-pile { flex: none; width: 4.2rem; display: grid; justify-items: center; gap: 0; padding: .15rem .2rem; border: 1.5px solid var(--tile-edge); border-radius: 5px;
+  background: var(--tile); color: var(--ink); font: inherit; cursor: pointer; }
+.dd-pile b { font-size: 1.05rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.dd-pile small { font-size: .58rem; color: var(--ink-soft); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-pile small.known { color: var(--dd-in); font-weight: 800; }
+
+/* ---------- below your side: the card read (the stack above it), and the log ---------- */
+.dd-below { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .4rem; }
+.dd-read, .dd-log { min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: .3rem .45rem; border: 1px solid var(--rule); border-radius: 6px; }
+.dd-lead { margin: 0; color: var(--ink-soft); font-size: .85rem; }
+.dd-stack { display: grid; gap: .25rem; margin-bottom: .45rem; }
+.dd-st { min-width: 0; display: grid; gap: 0; padding: .2rem .45rem; border: 1.5px solid var(--tile-edge); border-radius: 5px; background: var(--tile);
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.dd-st.mine { border-left: .3rem solid var(--dd-in); }
+.dd-st.theirs { border-left: .3rem solid var(--dd-bad); }
+.dd-st b { font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dd-st span { font-size: .7rem; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dd-q { margin: 0 0 .15rem; font-weight: 800; }
+.dd-sub { margin: 0 0 .25rem; font-size: .8rem; color: var(--ink-soft); }
+/* the log: every line, the newest at the foot in bold */
+.dd-log { list-style: none; font-size: .74rem; }
+.dd-log li { padding: .14rem 0; border-bottom: 1px solid var(--rule); line-height: 1.28; }
+.dd-log li:last-child { font-weight: 700; border-bottom: 0; }
+.dd-chips { display: flex; gap: .3rem; flex-wrap: wrap; margin-top: .3rem; }
+.dd-chip { position: relative; padding: .3rem .5rem; border: 1.5px solid var(--tile-edge); border-radius: 5px; background: var(--tile); color: var(--ink); font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
+.dd-chip.sel { border-color: var(--dd-in); background: var(--dd-soft); }
+.dd-chip i { margin-right: .3rem; font-style: normal; color: var(--dd-in); }
+
+/* a card read in full */
+.dd-detail { margin-bottom: .3rem; }
+.dd-dh { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.dd-dh b { font-size: .88rem; font-weight: 800; font-stretch: var(--wide); text-transform: var(--caps); letter-spacing: calc(.06em * var(--track)); }
+.dd-dt { font-size: .68rem; color: var(--brass-lo); font-weight: 700; }
+.dd-detail p { margin: .1rem 0 0; font-size: .8rem; line-height: 1.3; }
+.dd-state { margin: .1rem 0 0; font-size: .74rem; color: var(--ink-soft); }
+
+/* ---------- your hand and the buttons ---------- */
+.dd-side { display: flex; flex-direction: column; gap: .4rem; padding-top: .4rem; }
+.dd-hand { flex: none; display: flex; gap: .2rem; min-height: 4.2rem; }
+.dd-card { position: relative; flex: 1 1 0; min-width: 2.5rem; max-width: 4.6rem; height: 4.2rem; display: grid; grid-template-rows: .9rem 1fr auto; justify-items: center; align-items: center; gap: .05rem;
+  padding: .2rem .05rem .15rem; border: 1.5px solid var(--tile-edge); border-top: 4px solid var(--dd-land); border-radius: 5px; background: var(--sheet); color: var(--ink);
+  font: inherit; text-align: center; cursor: pointer; }
+.dd-card.creature { border-top-color: var(--dd-in); }
+.dd-card.instant { border-top-color: var(--dd-inst); }
+.dd-card.sorcery { border-top-color: var(--dd-sorc); }
+.dd-card .dd-cn { font-size: .62rem; font-weight: 750; line-height: 1.1; hyphens: manual; overflow-wrap: normal; }
+.dd-card .dd-ct { font-size: .5rem; color: var(--ink-soft); }
+.dd-card.can { box-shadow: 0 0 0 1.5px var(--brass); }
+.dd-card.look { transform: translateY(-.3rem); border-color: var(--dd-in); }
+.dd-card.sel { background: var(--dd-soft); border-color: var(--dd-in); box-shadow: 0 0 0 1.5px var(--dd-in); }
+/* a card a Flood Plain's Island would pay for: dashed, its read offering Fetch first */
+.dd-card.fetch { outline: 1.5px dashed var(--dd-in); outline-offset: 1px; }
+.dd-hand.act .dd-card:not(.can):not(.sel):not(.fetch) { opacity: .62; }
+.dd-watching { margin: 0; color: var(--ink-soft); text-align: center; align-self: center; width: 100%; }
+.dd-controls { flex: none; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: .4rem; align-items: stretch; }
+.dd-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: .3rem .4rem; line-height: 1.15; min-height: 3.2rem; }
+.dd-btn b { max-width: 100%; font-size: 1.05rem; letter-spacing: .02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* four buttons across (a charm's three modes and Pass): the words smaller, so ISLANDWALK fits its quarter */
+.dd-controls[data-n="4"] .dd-btn b { font-size: .74rem; letter-spacing: 0; }
+.dd-controls[data-n="4"] .dd-btn { padding-left: .2rem; padding-right: .2rem; }
+.dd-btn small { font-size: .66rem; font-weight: 600; text-transform: none; letter-spacing: 0; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.dd-btn .dd-pip { font-size: .56rem; }
+.dd-status { margin: 0; text-align: center; color: var(--ink-soft); align-self: center; }
+.dd-go { width: 100%; min-height: 3rem; }
+
+/* the coach's line: two lines high whatever it says, so nothing moves when it speaks; a longer word is cut, and a tap on
+   the line opens Why? all the same */
+.dd-coach { flex: none; display: flex; align-items: center; gap: .5rem; height: 2.4rem; padding: 0 .1rem; font-size: .76rem; line-height: 1.22; color: var(--ink-soft); }
+.dd-coach[hidden] { display: none; }
+.dd-says { flex: 1 1 0; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.dd-says:has(.dd-why) { cursor: pointer; }
+.dd-says b { color: var(--dd-in); }
+.dd-says b.dd-miss { color: var(--dd-bad); }
+.dd-says .ld { margin-right: .4em; }
+.dd-says .dd-why { margin-left: .25em; padding: 0; border: 0; background: none; color: var(--ink); font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.dd-hint { flex: none; min-height: 2.1rem; padding: .15rem .8rem; }
+/* the coach's move, ringed where it's made: the card, its target, the button, the row */
+.dd-card.advised, .dd-cre.advised, .dd-land.advised, .dd-st.advised, .dd-pile.advised, .dd-chip.advised, .dd-zh.advised { outline: 2px solid var(--dd-in); outline-offset: 2px; }
+.dd-btn.advised:not(:disabled), .dd-opt.advised { outline: 2px solid var(--dd-in); outline-offset: -4px; }
+.dd-choices, .dd-review { margin: .4rem 0; padding-left: 1.2rem; font-size: .9rem; line-height: 1.4; }
+.dd-choices li { margin: .45rem 0; }
+.dd-choices li.best b { color: var(--dd-in); }
+.dd-choices li.mine:not(.best) b { color: var(--dd-bad); }
+.dd-choices .dd-fig { display: block; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.dd-why-note { margin: .6rem 0 0; font-size: .8rem; line-height: 1.4; color: var(--ink-soft); }
+.dd-review li { margin: .4rem 0; }
+
+/* ---------- the sheets ---------- */
+/* a sheet scrolls as one piece, its head (with the button back to the table) staying at the top, as the menu's does */
+dialog.dd-sheet { max-height: 88vh; max-height: 88svh; overflow-y: auto; overscroll-behavior: contain; }
+dialog.dd-sheet:has(.pick-head) { padding-top: 0; }
+.dd-sheet .pick-head { position: sticky; top: 0; z-index: 1; background: var(--sheet); padding: 1.1rem 0 .5rem; }
+.dd-sheet .pick-head h2 { font-size: 1rem; }
+.dd-ask h4 { margin: .8rem 0 .35rem; }
+.dd-ask-note { margin: 0 0 .6rem; font-size: .85rem; color: var(--ink-soft); }
+.dd-opts { display: grid; gap: .35rem; }
+.dd-opts.cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dd-opts.none { margin-top: .6rem; }
+.dd-opt { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem; padding: .55rem .7rem; text-align: left; }
+.dd-opt b { font-size: .92rem; font-stretch: normal; text-transform: none; letter-spacing: 0; white-space: normal; text-align: left; }
+.dd-opt small { font-size: .72rem; font-weight: 600; text-transform: none; letter-spacing: 0; opacity: .8; white-space: nowrap; }
+/* a row of a question's list that is a card: the choice, and beside it a button to read the card first */
+.dd-optrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .3rem; }
+.dd-info { min-width: 2.4rem; padding: 0 .55rem; font-weight: 800; }
+/* a card's name in a line of words, as a chip that opens it */
+.dd-chip.dd-name { padding: .1rem .45rem; font-size: inherit; font-weight: 750; line-height: 1.35; vertical-align: baseline; border-color: color-mix(in srgb, var(--dd-in) 45%, var(--tile-edge)); }
+.dd-float { font-weight: 700; color: var(--ink); white-space: nowrap; }
+.dd-float .dd-pip { margin-right: .1rem; vertical-align: -.1em; }
+
+/* a card read in full, in its own sheet: its name and cost across the top, its text large, what the question asks of it below */
+.dd-cardsheet #cardHead { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+.dd-cardsheet #cardHead span { min-width: 0; overflow-wrap: anywhere; font-stretch: var(--wide); text-transform: var(--caps); letter-spacing: calc(.06em * var(--track)); }
+.dd-cardsheet #cardHead .dd-pip { width: 1.1rem; height: 1.1rem; font-size: .7rem; }
+.dd-cardbody .dd-cd { padding: .1rem 0 .5rem; }
+.dd-cardbody .dd-cd + .dd-cd { padding-top: .6rem; border-top: 1px solid var(--rule); }
+.dd-cardbody .dd-dh b { font-size: .95rem; }
+.dd-cardbody .dd-dt { font-size: .78rem; }
+.dd-cardbody p { margin: .25rem 0 0; font-size: 1rem; line-height: 1.45; }
+.dd-cardbody .dd-state { font-size: .85rem; color: var(--ink-soft); }
+.dd-cardgo { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: .5rem; margin-top: .9rem; }
+.dd-cardgo[hidden] { display: none; }
+
+.dd-yard, .dd-known { list-style: none; margin: 0; padding: 0; }
+.dd-yard li { display: flex; align-items: center; gap: .6rem; padding: .4rem .1rem; border-bottom: 1px solid var(--rule); }
+.dd-yard li .dd-name { margin-right: auto; }
+.dd-yard .n { color: var(--ink-soft); font-size: .85rem; }
+.dd-sm { padding: .3rem .6rem; min-height: 0; font-size: .8rem; }
+.dd-known li { display: flex; align-items: center; gap: .8rem; padding: .35rem .1rem; border-bottom: 1px solid var(--rule); }
+.dd-view h4 { margin: 1rem 0 .35rem; }
+.dd-known li span { width: 2rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.dd-rules p, .dd-rules li { line-height: 1.45; }
+.dd-rules h3 { margin: 1rem 0 .4rem; font-size: .8rem; font-stretch: var(--wide); letter-spacing: calc(.12em * var(--track)); text-transform: var(--caps); color: var(--brass-lo); }
+.dd-notes { padding-left: 1.1rem; }
+.dd-cards { list-style: none; margin: 0; padding: 0; }
+.dd-cards li { padding: .35rem 0; border-bottom: 1px solid var(--rule); }
+.dd-cards p { margin: .1rem 0 0; font-size: .88rem; }
+.dd-rh { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.dd-rules-note { font-size: .85rem; color: var(--ink-soft); }
+.dd-end-head { margin: .2rem 0 .6rem; }
+.dd-standings { list-style: none; margin: 0; padding: 0; }
+.dd-standings li { display: flex; justify-content: space-between; padding: .45rem .2rem; border-bottom: 1px solid var(--rule); }
+.dd-standings li.me span { text-decoration: underline; text-decoration-color: var(--brass); text-underline-offset: .2em; }
+.dd-end-note { color: var(--ink-soft); font-size: .9rem; }
+/* the end of a game: how it went (your chance of winning at each turn's start, drawn in a 320 by 124 box whatever its
+   size: verdigris where you were ahead, oxblood where you were behind), and the record */
+.dd-end-h, .dd-rv-h { margin: .8rem 0 .25rem; font-size: .8rem; font-stretch: var(--wide); letter-spacing: calc(.12em * var(--track)); text-transform: var(--caps); color: var(--brass-lo); }
+.dd-adv-wrap { border: 1px solid var(--rule); border-radius: 4px; background: var(--tile); padding: .2rem .3rem 0; cursor: crosshair; touch-action: pan-y; scroll-margin-top: 4.6rem; user-select: none; }
+.dd-adv { display: block; width: 100%; height: auto; }
+.dd-adv-grid { stroke: var(--rule); stroke-width: 1; }
+.dd-adv-grid.mid { stroke: var(--brass); }
+.dd-adv-up { fill: var(--dd-good); fill-opacity: .26; }
+.dd-adv-down { fill: var(--dd-bad); fill-opacity: .26; }
+.dd-adv-line { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.dd-adv-dot { fill: var(--tile); stroke: var(--ink); stroke-width: 1.2; }
+.dd-adv-dot.on { fill: var(--ink); }
+.dd-adv-dot.act { fill: var(--ink-soft); stroke: none; }
+.dd-adv-dot.act.on { fill: var(--ink); stroke: var(--tile); stroke-width: 1.2; }
+.dd-adv-tick { stroke: var(--ink-soft); stroke-width: 1; opacity: .6; }
+.dd-adv-flag { fill: none; stroke: var(--dd-bad); stroke-width: 1.6; }
+.dd-adv-num { fill: var(--dd-bad); font-family: inherit; font-weight: 700; paint-order: stroke; stroke: var(--tile); stroke-width: 2.4px; stroke-linejoin: round; }
+.dd-adv-end { fill: none; stroke: var(--ink-soft); stroke-width: 1.4; stroke-dasharray: 3 3; }
+.dd-adv-fin { stroke: var(--tile); stroke-width: 1.5; }
+.dd-adv-fin.won { fill: var(--dd-good); }
+.dd-adv-fin.lost { fill: var(--dd-bad); }
+.dd-adv-fin.drawn { fill: var(--ink-soft); }
+.dd-adv-sel { stroke: var(--brass); stroke-width: 1; }
+.dd-adv-x, .dd-adv-y, .dd-adv-side { fill: var(--ink-soft); font-family: inherit; font-variant-numeric: tabular-nums; }
+.dd-adv-x.on { fill: var(--ink); font-weight: 700; }
+.dd-adv-side { opacity: .75; }
+.dd-adv-read { min-height: 2.75em; margin: .35rem 0 0; font-size: .85rem; font-weight: 650; line-height: 1.35; }
+.dd-adv-cap { margin: .2rem 0 0; font-size: .85rem; line-height: 1.4; color: var(--ink-soft); }
+.dd-adv-src { display: block; margin-top: .15rem; font-size: .78rem; }
+.dd-rec-top { display: flex; align-items: baseline; gap: .6rem; margin: .1rem 0 .25rem; font-size: .95rem; }
+.dd-rec-top span { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.dd-rec-rows { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+.dd-rec-rows li { display: flex; align-items: baseline; gap: .4rem; padding: .2rem .1rem; border-bottom: 1px solid var(--rule); font-size: .86rem; }
+.dd-rec-rows li span { flex: 1; min-width: 0; }
+.dd-rec-rows li b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.dd-rec-rows li i { min-width: 2.4em; text-align: right; font-style: normal; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.dd-rec-rows li.on span { text-decoration: underline; text-decoration-color: var(--brass); text-underline-offset: .2em; }
+.dd-rec-last { display: flex; gap: .3rem; margin: .4rem 0 0; }
+.dd-rec-last i { width: .7rem; height: .7rem; border-radius: 50%; border: 1px solid var(--ink-soft); }
+.dd-rec-last i.won { background: var(--dd-good); border-color: var(--dd-good); }
+.dd-rec-last i.lost { background: var(--dd-bad); border-color: var(--dd-bad); }
+/* the end sheet scrolls on a short screen (the chart and the record make it tall): its buttons stay at the foot of it */
+dialog.dd-sheet:has(.dd-end-acts) { padding-bottom: 0; }
+#endDlg:focus { outline: none; }
+.dd-end-acts { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .4rem; padding: .55rem 0 calc(1rem + env(safe-area-inset-bottom, 0px)); position: sticky; bottom: 0; background: var(--sheet); border-top: 1px solid var(--rule); }
+/* the review: the mistakes that come most often with the rule of thumb behind each, then the plays the coach disagreed with */
+.dd-rv { font-size: .92rem; line-height: 1.4; }
+.dd-rv-empty, .dd-rv-head { margin: .3rem 0 .5rem; }
+.dd-rv-playsh { scroll-margin-top: 4.6rem; }   /* below the sheet's header, which sticks */
+.dd-rv-kinds, .dd-rv-plays { list-style: none; margin: 0; padding: 0; }
+.dd-rv-kinds li, .dd-rv-plays li { padding: .55rem .15rem; border-bottom: 1px solid var(--rule); }
+.dd-rv-kinds li.on { background: color-mix(in srgb, var(--dd-in) 15%, var(--sheet)); }
+.dd-rv-k, .dd-rv-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .1rem .6rem; }
+.dd-rv-k b { font-weight: 800; }
+.dd-rv-k span, .dd-rv-top span, .dd-rv-ctx { font-size: .78rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.dd-rv-top b { color: var(--dd-bad); font-variant-numeric: tabular-nums; }
+.dd-rv-kinds p, .dd-rv-plays p { margin: .2rem 0 0; font-size: .88rem; }
+.dd-rv-plays p.dd-rv-ctx { font-size: .78rem; }
+.dd-rv-link { padding: 0; border: 0; background: none; color: var(--ink); font: inherit; font-size: .84rem; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.dd-rv-kinds .dd-rv-link { margin-top: .3rem; }
+.dd-rv-seg { display: flex; margin: .3rem 0 .4rem; border: 1px solid var(--brass); border-radius: 4px; overflow: hidden; }
+.dd-rv-seg button { flex: 1; padding: .4rem .6rem; border: 0; background: var(--tile); color: var(--ink); font: inherit; font-size: .82rem; font-weight: 700; cursor: pointer; }
+.dd-rv-seg button + button { border-left: 1px solid var(--brass); }
+.dd-rv-seg button[aria-pressed="true"] { background: var(--plate); color: var(--plate-ink); }
+.dd-rv-tag { display: inline-block; margin-top: .35rem; padding: .05rem .4rem; border: 1px solid var(--rule); border-radius: 4px; font-size: .7rem; color: var(--ink-soft); }
+.dd-rv-note { margin: .8rem 0 0; font-size: .78rem; line-height: 1.4; color: var(--ink-soft); }
+.dd-rv-clear { display: inline-block; margin-top: .7rem; font-weight: 600; color: var(--ink-soft); }
+.dd-toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 1.2rem); transform: translate(-50%, 1rem); opacity: 0; pointer-events: none;
+  max-width: min(90vw, 26rem); padding: .55rem .9rem; border-radius: 6px; background: var(--plate); color: var(--plate-ink); font-weight: 700; text-align: center;
+  transition: opacity .2s, transform .2s; z-index: 5; }
+.dd-toast.on { opacity: 1; transform: translate(-50%, 0); }
+/* Copy log, where the browser wouldn't copy: the words to select by hand */
+.dd-copy { display: block; width: 100%; height: 55vh; box-sizing: border-box; padding: .5rem; border: 1px solid var(--rule); border-radius: 4px; resize: none;
+  background: var(--tile); color: var(--ink); font: .76rem/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+/* a short phone: the middle gives way first */
+@media (max-height: 640px) and (orientation: portrait) {
+  .dd-board { gap: .3rem; padding-top: .35rem; }
+  .dd-zone { padding: .25rem .35rem .3rem; gap: .2rem; }
+  .dd-cres { min-height: 2.9rem; }
+  .dd-cre { height: 2.9rem; }
+  .dd-cre .dd-pt { font-size: 1.15rem; }
+  .dd-hand, .dd-card { min-height: 3.7rem; height: 3.7rem; }
+  .dd-btn { min-height: 2.8rem; }
+}
+
+/* held sideways: the same column across the screen (wide), its parts larger */
+@media (orientation: landscape) and (min-width: 700px) {
+  #app.dandan .dd-cres { min-height: 4.6rem; }
+  #app.dandan .dd-cre { flex-basis: 5.2rem; height: 4.6rem; }
+  #app.dandan .dd-cre .dd-pt { font-size: 1.6rem; }
+  #app.dandan .dd-cre .dd-cn { font-size: .72rem; }
+  #app.dandan .dd-cre .dd-tags { font-size: .6rem; }
+  #app.dandan .dd-lands { min-height: 1.9rem; }
+  #app.dandan .dd-land { flex-basis: 2.3rem; height: 1.9rem; font-size: .72rem; }
+  #app.dandan .dd-hand { min-height: 4.6rem; }
+  #app.dandan .dd-card { max-width: 6.4rem; height: 4.6rem; }
+  #app.dandan .dd-card .dd-cn { font-size: .78rem; }
+  #app.dandan .dd-log { font-size: .84rem; }
+  #app.dandan .dd-detail p { font-size: .9rem; }
+}
+
+/* the two switches at the top, hold priority and tap my own lands: small, lit while on */
+#app.dandan .top-right { gap: .3rem; }
+.dd-quick { display: flex; gap: .2rem; }
+.dd-tog { display: grid; place-items: center; width: 1.95rem; min-height: 2.25rem; padding: 0; }
+.dd-tog svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.dd-tog[aria-pressed="true"] { background: var(--plate); color: var(--plate-ink); border-color: var(--plate); }
+/* the header never pushes its buttons off the screen: the title gives way first */
+#app.dandan .mark-btn { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-quick[hidden] { display: none; }
+
+/* full screen (the menu's): the header put away but for the menu's button, faded at the top right over the other side's
+   corner, whose life steps aside for it */
+#app.dandan.dd-full { padding-top: .45rem; }
+#app.dandan.dd-full > .top { position: fixed; z-index: 4; top: calc(env(safe-area-inset-top, 0px) + .3rem); right: max(.35rem, env(safe-area-inset-right, 0px));
+  padding: 0; background: none; }
+#app.dandan.dd-full > .top :is(.mark, #rulesBtn) { display: none; }
+#app.dandan.dd-full #menuBtn { opacity: .4; transition: opacity .2s; }
+#app.dandan.dd-full #menuBtn:is(:hover, :focus-visible) { opacity: 1; }
+#app.dandan.dd-full .dd-quick { opacity: .55; transition: opacity .2s; }
+#app.dandan.dd-full .dd-quick:is(:hover, :focus-within) { opacity: 1; }
+/* the corner's width (the menu's button and the two switches, whatever the theme makes of them) is measured by the page */
+#app.dandan.dd-full .dd-zone.foe .dd-zh { padding-right: var(--dd-corner, 2.6rem); }
+html[data-theme="office"] :is(.dd-zone, .dd-card, .dd-pile, .dd-st, .dd-cre) { border-radius: 4px; }
+
+/* the moves that cost the most, under the end chart: a row is a move, and shows on the chart when tapped */
+.dd-mv-h { margin: .7rem 0 .25rem; font-size: .82rem; font-weight: 700; }
+.dd-mv { list-style: none; margin: 0; padding: 0; display: grid; gap: .25rem; }
+.dd-mv-row { display: flex; align-items: baseline; gap: .5rem; width: 100%; padding: .4rem .5rem; border: 1px solid var(--rule); border-radius: 4px; background: var(--tile); color: var(--ink); font: inherit; font-size: .82rem; line-height: 1.35; text-align: left; cursor: pointer; }
+.dd-mv-row[aria-pressed="true"] { border-color: var(--brass); box-shadow: inset 0 0 0 1px var(--brass); }
+.dd-mv-n { flex: none; display: grid; place-items: center; align-self: center; width: 1.25rem; height: 1.25rem; border: 1.6px solid var(--dd-bad); border-radius: 50%; color: var(--dd-bad); font-size: .72rem; }
+.dd-mv-d { flex: none; min-width: 2.1rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--dd-bad); }
+.dd-mv-w { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.dd-mv-w i { font-style: normal; color: var(--ink-soft); }
+
+/* the name asked when sitting down at the table (name.js) */
+.dd-name form { display: grid; gap: .6rem; }
+.dd-name .dd-sub { margin: 0; color: var(--ink-soft); font-size: .9rem; }
+.dd-name label { font-size: .75rem; font-weight: 800; font-stretch: var(--wide); letter-spacing: calc(.12em * var(--track)); text-transform: var(--caps); color: var(--ink-soft); }
+.dd-name input { width: 100%; box-sizing: border-box; min-height: 2.75rem; padding: .4rem .7rem; font: inherit; font-size: 1rem; color: var(--ink);
+  background: var(--tile); border: 1.5px solid var(--brass); border-radius: 4px; }
+.dd-name input:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
