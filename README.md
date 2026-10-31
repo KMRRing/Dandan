@@ -115,7 +115,7 @@ prove beyond doubt, and takes some 500 deals); at 50% it is rejected in most mat
 rejected in about 110 deals. A candidate that costs no more thinking and is undecided near 55% is a judgment call.
 
 The verdict after every run is in its annotation and summary, and every game is kept on the `match-results` branch
-(`results/<candidate>-<champion>-d<deals>/`: `games.jsonl`, `verdict.json`, `log.txt`). Adopting a candidate means merging
+(a folder `<candidate>-<champion>-d<deals>` at its root: `games.jsonl`, `verdict.json`, `log.txt`). Adopting a candidate means merging
 it into `main` and moving `champion` to it (`git push origin main:champion`).
 
 `lab/match.mjs` plays a run of deals between two checkouts of the repository, `lab/sequential.mjs` is the stopping rule,

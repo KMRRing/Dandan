@@ -3,7 +3,7 @@
 # with the seats swapped. It plays at least 30 deals and goes on, each run as many deals again as have been played,
 # until the candidate is shown better than the champion, can no longer reach a gain worth having, or 480 deals are played
 # (lab/sequential.mjs has the rule and why). A run is one batch, shared over 16 jobs of 4 processes; the last job of
-# the run scores everything so far, saves the games to the `match-results` branch (results/<candidate>-<champion>-d<deals>/:
+# the run scores everything so far, saves the games to the `match-results` branch (<candidate>-<champion>-d<deals>/ at its root:
 # games.jsonl, verdict.json, log.txt) and starts the next run. The search is counted in deals, not seconds, so a result
 # doesn't depend on the runner. The verdict is the run's annotation and summary. README: "Matches".
 name: Bot match
