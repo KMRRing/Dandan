@@ -11,7 +11,7 @@ import { CARDS, DECK, HALVES, NAMES, BASICS, costWords, total, parseCost } from 
 import { nm, defOf, perm, pt, isLand, isCreature, manaAlts, payFrom, topKnown, needType, poolOf, knownIn, knOf, typesOf } from "./dandan-core.js";
 import { same } from "./dandan-spells.js";
 import { seatPage, fillNames } from "./seats-ui.js";
-import { part, choice, action } from "./menu.js";
+import { part, choice, action, onPause, isPaused } from "./menu.js";
 import { savedName, askName } from "./name.js";
 import { recordResult } from "./results.js";
 import { sextant } from "./loading.js";
@@ -148,7 +148,12 @@ function holdForBot() {
   }
   return true;
 }
-const pageRules = { ...rules, bot: (s, seat, ctx) => (ctx.level === "hard" && botMoves.get(keyOf(s))) || rules.bot(s, seat, ctx) };
+// The computer's spells are shown (engine `showStop`): you sit in seat 0, the computer in the other, and only its moves ask for it.
+const pageRules = {
+  ...rules,
+  act: (s, seat, move, ctx) => rules.act(s, seat, move, { ...ctx, show: seat !== 0 }),
+  bot: (s, seat, ctx) => (ctx.level === "hard" && botMoves.get(keyOf(s))) || rules.bot(s, seat, ctx),
+};
 // ---------- the computer's pace ----------
 // What the computer does stays on the table a while before its next move (1.5 s, 3 s), or until you tap Continue
 // (solo); Quick is the runner's own pace. A move of yours, and what follows from it at once, needs no waiting: you made
@@ -163,9 +168,37 @@ function noteFresh(prev, v) {
   if (v.G.seq !== fresh.game) { fresh = { game: v.G.seq, ln, n: 0, at: 0, mine: true }; tapped = 0; return; }
   if (ln <= fresh.ln) return;
   if (!s.log.some(e => e.n > fresh.ln && !/^Turn \d+:/.test(e.t))) { fresh.ln = ln; return; }
-  const mine = !!prev?.G && prev.G.seq === v.G.seq && prev.seat != null && prev.toMove === prev.seat;
+  // (the page's own pass that lets the computer's spell resolve is not a move of yours: what it did stays on the table)
+  const mine = !!prev?.G && prev.G.seq === v.G.seq && prev.seat != null && prev.toMove === prev.seat && autoKey !== `${prev.G.seq}:${prev.G.n}`;
   fresh = { game: v.G.seq, ln, n: fresh.n + 1, at: Date.now(), mine };
 }
+// ---------- the computer's spell, on the stack ----------
+// A spell of the computer's that you can't answer would resolve inside the move that cast it and go straight to the
+// graveyard. The engine stops with it on the stack instead (`s.shown`, engine `showStop`) and you are asked only to pass;
+// after SPELL_MS the page passes for you (at Tap to continue, you tap Pass). Not while you are in the middle of
+// something (a card read, lands being chosen, a target being aimed) or a menu is open.
+const SPELL_MS = 2000;
+let autoKey = "", spellTimer = 0, spellFor = "";
+/** The computer's spell on top of the stack that the game stopped at for you to see, or null. */
+function shownSpell() {
+  const s = V?.state, top = s?.stack?.[s.stack.length - 1];
+  return top && V.seat != null && !s.over && !s.pending && s.prio === V.seat && top.kind === "spell" && top.ctl !== V.seat && top.sid === s.shown ? top : null;
+}
+function spellClock() {
+  const idle = !ui.look && !ui.tap && !ui.arm && !isPaused() && opts.pace !== "tap";
+  const key = shownSpell() && idle ? decisionOf(V) : "";
+  if (key === spellFor) return;
+  clearTimeout(spellTimer);
+  spellFor = key;
+  if (!key) return;
+  spellTimer = setTimeout(() => {
+    spellFor = "";
+    if (!V?.G || decisionOf(V) !== key || !shownSpell()) return;
+    autoKey = key;
+    page.move({ t: "pass" });
+  }, SPELL_MS);
+}
+onPause(() => { clearTimeout(spellTimer); spellFor = ""; }, () => { if (V?.G) spellClock(); });
 const BASE_PACE = () => (opts.level === "hard" ? 450 : 1000);
 /**
  * How long the computer's next move waits: Quick, the runner's pace; else what it last did stays its while, and a move
@@ -232,6 +265,7 @@ function draw() {
   const s = S(), me = v.seat ?? 0;
   if (v.G.seq !== gameSeen) { gameSeen = v.G.seq; hover = null; }
   MV = canAct() ? moves(s, v.seat) : [];
+  spellClock();
   if (!canAct()) FETCH = new Map();
   else if (fetchKey !== decisionOf(v)) { fetchKey = decisionOf(v); FETCH = afterFetch(s, v.seat); }
   if (fetchFor && (fetchFor.game !== v.G.seq || fetchFor.turn !== s.turn || !s.hand[me].includes(fetchFor.id))) fetchFor = null;
@@ -304,7 +338,11 @@ function waitLine() {
   const s = S(), tm = V.toMove;
   if (s.over || tm == null) return "";
   if (V.seat == null) return `${nameOf(tm)} to move`;
-  if (tm === V.seat) return s.pending ? "Your answer" : s.stack.length ? "Your priority: answer, or let it resolve" : "Your move";
+  if (tm === V.seat) {
+    const sp = shownSpell();
+    if (sp) return `${esc(nameOf(sp.ctl))} casts ${esc(stackName(sp))}${opts.pace === "tap" ? "" : ": it resolves in a moment"}`;
+    return s.pending ? "Your answer" : s.stack.length ? "Your priority: answer, or let it resolve" : "Your move";
+  }
   if (tapHold()) return `${esc(nameOf(tm))} waits for your tap`;
   return `${sextant().outerHTML}${esc(nameOf(tm))} is ${s.pending ? "choosing" : "thinking"}`;
 }

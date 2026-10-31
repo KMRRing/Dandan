@@ -31,7 +31,7 @@ const THEIR_STOPS = new Set(["attackers", "blockers", "end"]);
 // ---------- a new game ----------
 function blank() {
   return {
-    v: 1, turn: 0, active: 0, first: 0, step: "mull", prio: 0, passes: 0, res: 0,
+    v: 1, turn: 0, active: 0, first: 0, step: "mull", prio: 0, passes: 0, res: 0, shown: 0,
     lib: [], yard: [], exile: [], hand: [[], []], bf: [], stack: [], life: [LIFE, LIFE], kn: [], kh: [], pool: ["", ""], nid: 1, nt: 0,
     draws: [0, 0], tells: [freshTells(), freshTells()],
     played: 0, drawn: [0, 0], attacked: false, quick: [false, false], combat: null, pending: null, lost: [false, false],
@@ -348,17 +348,34 @@ function passPriority(s) {
   if (s.stack.length) resolveTop(s);
   else advance(s);
 }
-/** Plays the game on until a seat has a decision: priority passes where a seat has nothing to do, and the steps go by. */
-export function settle(s) {
+/**
+ * Plays the game on until a seat has a decision: priority passes where a seat has nothing to do, and the steps go by.
+ * shown: a seat (the computer, on the page) whose spell is to be seen on the stack: see showStop.
+ */
+export function settle(s, shown = -1) {
   for (let guard = 0; guard < 3000; guard++) {
     if (s.over || s.pending) return;
     if (sba(s)) continue;
     if (aim(s)) continue;
     if (s.adv && !hushed()) noteAction(s, s.by ?? 0, turnAt);   // an action has settled: a dot on the end-of-game chart
     if (wants(s, s.prio)) return;
+    if (shown >= 0 && showStop(s, shown)) return;
     passPriority(s);
   }
   throw new Error("dandan: the game didn't settle");
+}
+/**
+ * The other player has nothing to answer a spell with, and so would never see it: it would go on the stack and
+ * resolve inside the move that cast it. The game stops there once for each such spell, with the other seat to pass
+ * (`shown` says which item it was for, so the page can tell this stop from a question, and lets it resolve after a
+ * moment). Only the page asks for it, for the computer's moves: a game played out in the computer's head never stops.
+ * Triggers and abilities are not shown: a spell is what a player reads.
+ */
+function showStop(s, by) {
+  const top = s.stack[s.stack.length - 1];
+  if (!top || top.kind !== "spell" || top.ctl !== by || s.prio === by || top.sid === s.shown) return false;
+  s.shown = top.sid;
+  return true;
 }
 /**
  * A trigger that targets has its target chosen as it goes on the stack, before anyone may answer it (Mystic
@@ -712,10 +729,11 @@ function answer(s, seat, m) {
 
 /**
  * A seat's move made on a game (the runner hands in a copy and keeps it if this returns one). quiet: no log (a game
- * played out in the computer's head). A seat may concede ({ t: "concede" }) whoever's decision it is, as in Magic a
+ * played out in the computer's head). show: the seat's spell stays on the stack to be seen by a player who can't
+ * answer it (settle). A seat may concede ({ t: "concede" }) whoever's decision it is, as in Magic a
  * player may at any time: the game is lost there and then (Korbi, October 2026).
  */
-export function act(s, seat, m, { rng, quiet = false } = {}) {
+export function act(s, seat, m, { rng, quiet = false, show = false } = {}) {
   if (!quiet) passPoints.length = 0;
   turnAt = -1;
   return withRng(rng, () => {
@@ -724,7 +742,7 @@ export function act(s, seat, m, { rng, quiet = false } = {}) {
     if (m?.t !== "pass" && !s.stack.length) s.by = seat;   // a move with nothing on the stack begins an action (an answer or a pass carries one on)
     const err = s.pending ? (s.pending.seat === seat ? answer(s, seat, m) : "It isn't your turn") : (s.prio === seat ? priorityMove(s, seat, m) : "You don't have priority");
     if (err) return err;
-    settle(s);
+    settle(s, show && !quiet ? seat : -1);
     return s;
   }, quiet);
 }

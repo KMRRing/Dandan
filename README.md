@@ -71,6 +71,21 @@ second turn ahead, scored by the trained value network), not a true chance of wi
 find what it doesn't model, so a stronger computer has to come from what each deal sees (the reads, how far ahead, the
 evaluation), not from more deals.
 
+## The computer's spells are shown
+
+A spell of Monte's that you have nothing to answer used to go on the stack and resolve inside the move that cast it, so
+Piracy Charm or Memory Lapse went straight to the graveyard, too fast to read. Now the game stops with it on the stack,
+you to pass, and the page passes for you after two seconds (`SPELL_MS` in `dandan.js`), so what it does is seen before it
+happens. The stop is the engine's (`showStop` in `dandan-engine.js`, asked for by the page alone, for the computer's moves,
+with `show`): it is made once for each spell, and noted in the state (`shown`) so the page can tell it from a question.
+
+- A spell you could answer is a question as always, and you decide; there is no second stop.
+- Your own spells are not held. Abilities (cycling, a Flood Plain's search) and triggers are not shown, only spells.
+- At **Tap to continue** the page doesn't pass for you: you tap Pass, which says it lets the spell resolve.
+- Two seconds don't run while a menu is open, or while you are reading a card, choosing lands or aiming. The pass the page
+  makes is not counted as your move, so what the spell did then stays on the table for the computer's pace as usual.
+- The computer's search never stops there: the games it plays out in its head run on as before (`tests/stack-show.mjs`).
+
 ## The upkeep stop (a fix, also made in the Almanac)
 
 Before the draw, if you could do anything (cast Predict or any instant, cycle a land), you are now asked whether to,
@@ -107,8 +122,9 @@ soon, it is tried again at the next game's end and the next time the page opens.
   `-eval.js`, `-reads.js`, `-observe.js`, `-advantage.js` (the computer player and the judge), `-worker.js` (the search,
   off the page's thread); `dandan-words.js` (move names, taken out of the Almanac's coach file so Hard reads as before).
 - `seats.js` (the game runner), `seats-ui.js` (here: solo only), `name.js`, `results.js`, `net.js`, `sync.js`.
-- `tests/upkeep.mjs`, `tests/dandan-window.mjs` and `tests/hidden-info.mjs`, with `tests/dandan-scene.js`, which sets a game
+- `tests/upkeep.mjs`, `tests/dandan-window.mjs`, `tests/hidden-info.mjs` and `tests/stack-show.mjs`, with `tests/dandan-scene.js`, which sets a game
   up at a chosen point. The last holds the computer to the rule that it never uses what it can't see: dealt the cards it
   can't see again, its search weighs every move the same and picks the same one.
 
-The engine and the computer player are copies of the Almanac's; a rules fix there is made here by copying the file over.
+The engine and the computer player are copies of the Almanac's; a rules fix there is made here by copying the file over
+(the shown spell is this page's alone: `show` in `act` and `showStop` in `dandan-engine.js`, which a copy must keep).
