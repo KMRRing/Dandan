@@ -28,7 +28,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const PACES = [["slow", "3 s"], ["tap", "Tap to continue"]];
 const SHOWN_MS = { slow: 3000 };
 // What is fixed here (the Almanac's Dandan lets you choose): the computer plays Hard, thinking as long as it can (the
-// deepest search, 4,096 deals a move), there is no coach, revealed cards are not marked (you remember them), the table
+// deepest search, up to 2,048 deals a move), there is no coach, revealed cards are not marked (you remember them), the table
 // is always seen in 3D, and always full screen. Only the two switches at the top and the computer's pace are the player's.
 const saved = read(OPTS, {});
 let opts = { level: "hard", think: "deepest", coach: "off", reveals: false, full: true, view: "3d",

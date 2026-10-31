@@ -318,13 +318,14 @@ function where(c, seat) {
 /**
  * Weighs a decision: { best, list: [{ move, mean, se, n, seen }] (the best first; seen: where its deals left the game, on
  * average, for the coach's words), deals, only }. Each move is played out in the same deals, down its own tree; one
- * clearly behind the best (by the gap's standard error, deal by deal) is dropped as the deals go.
- * opts: deals (most), first (deals before any is dropped), turns (how far ahead: the turn after next, 2; the tree
+ * clearly behind the best (by the gap's standard error, deal by deal) is dropped as the deals go, at a look when the
+ * deals reach a power of two from `first` on (prune, below).
+ * opts: deals (most), first (deals before the first look), turns (how far ahead: the turn after next, 2; the tree
  * may reach as far), wide (moves weighed), must (a move to keep to the end: the coach's check), ms (a backstop on the
  * time), judge (the chance of winning where a game is left), explore (the tree's: how much benefit of the doubt a
  * choice tried less gets).
  */
-export function think(s, seat, { deals = 48, first = 6, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE } = {}) {
+export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
@@ -345,7 +346,7 @@ export function think(s, seat, { deals = 48, first = 6, turns = 2, wide = 7, mus
       seen[i].push(at);
     }
     d++;
-    if (d >= first && d % 2 === 0) alive = prune(alive, vals, cands, must);
+    if (d >= first && (d & (d - 1)) === 0) alive = prune(alive, vals, cands, must);   // a look at 128, 256, 512...
     if (Date.now() - t0 > ms) break;
   }
   const list = cands.map((move, i) => {
@@ -395,10 +396,16 @@ export function think(s, seat, { deals = 48, first = 6, turns = 2, wide = 7, mus
   return { best: best.move, list: [best, ...ranked.filter(c => c !== best)], deals: d, only: false };
 }
 /**
- * The moves still in the race: one goes when, over the deals they share, it trails the leader by more than twice the
- * gap's standard error and a little. The spread is taken as at least SPREAD: over the first few deals two moves can
+ * The moves still in the race: one goes when, over the deals they share, it trails the leader by more than three times
+ * the gap's standard error and a little. The spread is taken as at least SPREAD: over the first few deals two moves can
  * come out alike by chance, and a gap that looks certain there may not be.
+ * Looked at only when the deals double (at LOOK_FROM, twice that, and so on), not every second deal: a move that is really the
+ * best trails by chance now and then, and a look every other deal over thousands of deals is a thousand chances for it
+ * to go for good (measured on 200 positions at 4096 deals, the old way, twice the standard error every second deal,
+ * dropped the best move in 6% of the searches that had one, against 2% at doublings; and gave away more, not less, the
+ * longer the search ran). The same rule makes the 2048-deal search better and quicker than the 4096-deal one it replaces.
  */
+const LOOK_FROM = 128;
 const SPREAD = 0.06;
 function prune(alive, vals, cands, must) {
   const k = Math.min(...alive.map(i => vals[i].length));
@@ -409,7 +416,7 @@ function prune(alive, vals, cands, must) {
     const diffs = vals[i].slice(0, k).map((x, j) => vals[lead][j] - x);
     const m = diffs.reduce((a, b) => a + b, 0) / k;
     const sd = Math.sqrt(diffs.reduce((a, x) => a + (x - m) ** 2, 0) / Math.max(1, k - 1));
-    return m < 2.2 * Math.max(sd, SPREAD) / Math.sqrt(k) + 0.01;
+    return m < 3 * Math.max(sd, SPREAD) / Math.sqrt(k) + 0.01;
   });
 }
 
@@ -433,7 +440,7 @@ export const DEPTH = {
   quick: BUDGET.move,
   long: { deals: 256, ms: 12000 },
   deep: { deals: 1024, ms: 40000 },
-  deepest: { deals: 4096, ms: 120000 },
+  deepest: { deals: 2048, ms: 120000 },
 };
 /**
  * The coach's weighing ("think", "check") at a thinking setting: as deep and as long as Hard's there, never less than

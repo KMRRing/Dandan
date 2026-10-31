@@ -14,8 +14,9 @@ The Almanac's Dandan has settings; this page has made the choices and removed th
 - **One player.** No inviting, no table, no watching: you sit down against the computer.
 - **Dark Almanac only.** One look, night. No themes, no day mode.
 - **3D table, full screen.** The tiled table, the header layout and the full-screen switch are gone.
-- **The computer is always Hard, always thinking as long as it can** (the deepest setting: it plays out 4,096 deals
-  before each move, in a worker so the page stays free). Easier levels and shorter thinking are gone.
+- **The computer is always Hard, always thinking as long as it can** (the deepest setting: it plays out up to
+  2,048 deals before each move, in a worker so the page stays free; "How the computer searches" below says why that many).
+  Easier levels and shorter thinking are gone.
 - **No coach, no review of your play, no revealed-card marks.** Nothing marks what you have seen of the other hand or
   of the library: you have to remember it.
 - **No rules or cards pages, no copy log, no win/loss record, no other games.**
@@ -41,6 +42,27 @@ What you can change:
   avatar and its life together; the life sits on the avatar's corner, so a circle round the avatar alone ran through it.
 - The computer's name is **Monte**, after the Monte Carlo search that picks its moves (it plays out many dealt-out games
   and keeps the move that does best); its card fan is packed closer so the name fits a phone's header.
+
+## How the computer searches
+
+Hard plays out many deals of the cards it can't see (the other hand, the library), each move down its own tree, and keeps
+the move that does best on average (`dandan-think.js`). Two things were measured on 200 positions from Hard-against-Hard
+games, each searched to 8,192 deals with nothing dropped, so any rule could be replayed on the record:
+
+- **A move is dropped only at doublings (128, 256, 512... deals), when it trails the leader by more than three standard
+  errors of the gap.** Before, it was every second deal at two standard errors. A move that is really the best trails by
+  chance now and then, and a look every other deal over thousands of deals gives it a thousand chances to be dropped for
+  good: in positions with a clear best move the old rule dropped it in 6% of searches at 4,096 deals, against 2% now. The
+  longer the search ran, the more it gave away.
+- **About 1,000 deals is where the choice stops changing:** from 1,024 to 4,096 deals the move chosen was no better in
+  any kind of position (futile, close or clear), so Deepest is 2,048, which is better than the 4,096 it replaces (with the
+  old rule) and about a quarter quicker. A 40-game match, current rule at 256 deals against the new rule at 128, scored
+  52.5% for the current one, plus or minus 13: no difference a game can show, with a third less thinking.
+
+What this measures is how well the search has settled on its own evaluation of a position (Medium's play out to the
+second turn ahead, scored by the trained value network), not a true chance of winning: more deals of the same search can't
+find what it doesn't model, so a stronger computer has to come from what each deal sees (the reads, how far ahead, the
+evaluation), not from more deals.
 
 ## The upkeep stop (a fix, also made in the Almanac)
 
