@@ -107,6 +107,8 @@ soon, it is tried again at the next game's end and the next time the page opens.
   `-eval.js`, `-reads.js`, `-observe.js`, `-advantage.js` (the computer player and the judge), `-worker.js` (the search,
   off the page's thread); `dandan-words.js` (move names, taken out of the Almanac's coach file so Hard reads as before).
 - `seats.js` (the game runner), `seats-ui.js` (here: solo only), `name.js`, `results.js`, `net.js`, `sync.js`.
-- `tests/upkeep.mjs` and `tests/dandan-window.mjs`, with `tests/dandan-scene.js`, which sets a game up at a chosen point.
+- `tests/upkeep.mjs`, `tests/dandan-window.mjs` and `tests/hidden-info.mjs`, with `tests/dandan-scene.js`, which sets a game
+  up at a chosen point. The last holds the computer to the rule that it never uses what it can't see: dealt the cards it
+  can't see again, its search weighs every move the same and picks the same one.
 
 The engine and the computer player are copies of the Almanac's; a rules fix there is made here by copying the file over.
