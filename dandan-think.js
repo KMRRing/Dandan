@@ -217,7 +217,7 @@ export function playOut(c, seat, to, rng, judge = winChance) {
 // passing and the best-scored others) by how they have done for that player so far (UCB, counting a move only in the
 // deals where it was there to make), so each side comes to play what is best for it there, not only Medium's habit; a
 // node's choices widen as it's visited, and each deal grows the tree by one decision, Medium playing on from there.
-const WIDTH = 4, EXPLORE = 0.3;
+const WIDTH = 2, EXPLORE = 0.3;
 /**
  * A move as the seat sees it, so a decision's children are the same in every deal: cards by name, permanents by
  * controller and name, the other player's hidden choices (cards put back, put on the bottom, their order) by kind only.
