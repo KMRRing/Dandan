@@ -94,6 +94,20 @@ prove, and it was stopped at 126 of the 160 planned; it was adopted at Korbi's c
 reason enough. What would give more is replacing Medium in the rollouts with a policy learned from the search's own
 choices; that is not built.
 
+## Matches
+
+A change to the computer is kept only if it beats the current one in a match at the same thinking time. A match plays
+each deal twice with the seats swapped (so a lucky deal cancels), and the search is counted in deals, not seconds, so the
+result is the same on any machine. It is run from the Actions tab of the repository: Bot match, Run workflow, with the
+candidate (a branch, tag or commit), the champion (the `champion` branch unless told otherwise), how many deals (320 is
+640 games, about ten minutes, error margin about 4 points) and the search deals a decision (256; the deepest setting
+is 2,048). Sixteen jobs of four processes share the deals out; the score, with its 95% interval, is in the run's
+summary, and the games are kept as a download. Adopting a candidate means merging it into `main` and moving `champion`
+to it (`git push origin main:champion`).
+
+`lab/match.mjs` plays one run of deals between two checkouts of the repository, `lab/score.mjs` scores the games and
+`lab/shard.mjs` says which deals a job plays.
+
 ## The computer's spells are shown
 
 A spell of Monte's that you have nothing to answer used to go on the stack and resolve inside the move that cast it, so

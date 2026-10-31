@@ -1,0 +1,72 @@
+# A match between two builds of the computer player, by hand from the Actions tab (Run workflow): the champion (a git
+# ref, normally the `champion` branch) against a candidate (any branch, tag or commit). Every deal is played twice with
+# the seats swapped; the deals are shared out over 16 jobs of 4 processes, so 320 deals (640 games) take minutes where
+# one machine took two hours. The search is counted in deals, not seconds, so the result doesn't depend on the runner.
+# The score is in the run's summary (Actions > the run > Summary). README: "Matches".
+name: Bot match
+on:
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: Candidate (branch, tag or commit)
+        required: true
+      champion:
+        description: Champion (branch, tag or commit)
+        default: champion
+      pairs:
+        description: Deals to play (each is two games, one from each seat)
+        default: "320"
+      deals:
+        description: Search deals a decision, for both sides (the deepest setting is 2048)
+        default: "256"
+jobs:
+  play:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        job: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.champion }}", path: champ }
+      - uses: actions/checkout@v4
+        with: { ref: "${{ inputs.candidate }}", path: cand }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Play this job's deals, 4 at a time
+        env: { PAIRS: "${{ inputs.pairs }}", DEALS: "${{ inputs.deals }}", JOB: "${{ matrix.job }}" }
+        run: |
+          mkdir out
+          pids=()
+          for k in 0 1 2 3; do
+            read from n < <(node lab/shard.mjs "$PAIRS" 16 4 "$JOB" "$k")
+            if [ "$n" -gt 0 ]; then
+              node lab/match.mjs champ cand "$from" "$n" "out/m-$JOB-$k.jsonl" "$DEALS" "$DEALS" &
+              pids+=($!)
+            fi
+          done
+          for p in "${pids[@]}"; do wait "$p"; done   # a crashed match fails the job
+      - uses: actions/upload-artifact@v4
+        with: { name: "games-${{ matrix.job }}", path: out, if-no-files-found: ignore }
+  score:
+    needs: play
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { pattern: "games-*", merge-multiple: true, path: out }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Score (A is the champion)
+        run: |
+          {
+            echo "### ${{ inputs.candidate }} (B) against ${{ inputs.champion }} (A), ${{ inputs.deals }} deals a decision"
+            echo '```'
+            node lab/score.mjs out/*.jsonl
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with: { name: games, path: out }
