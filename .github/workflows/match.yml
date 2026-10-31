@@ -1,7 +1,7 @@
 # A match between two builds of the computer player, by hand from the Actions tab (Run workflow): the champion (a git
 # ref, normally the `champion` branch) against a candidate (any branch, tag or commit). Every deal is played twice with
-# the seats swapped; the deals are shared out over 16 jobs of 4 processes, so 320 deals (640 games) take minutes where
-# one machine took two hours. The search is counted in deals, not seconds, so the result doesn't depend on the runner.
+# the seats swapped; the deals are shared out over 16 jobs of 4 processes, so 320 deals (640 games) take about 25
+# minutes where one machine took two hours. The search is counted in deals, not seconds, so the result doesn't depend on the runner.
 # The score is in the run's summary (Actions > the run > Summary). README: "Matches".
 name: Bot match
 on:
@@ -73,5 +73,7 @@ jobs:
             node lab/score.mjs out/*.jsonl
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
+          # also as annotations: the API serves those to a session, where it can't fetch a log or an artifact
+          node lab/score.mjs out/*.jsonl | while read -r line; do echo "::notice title=Bot match::$CANDIDATE (B) against $CHAMPION (A): $line"; done
       - uses: actions/upload-artifact@v4
         with: { name: games, path: out }
