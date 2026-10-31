@@ -283,7 +283,12 @@ export function fetchWindow(s, seat) {
  * Plain's window it is for a person: the computer's own play and the look-ahead leave it out (hushed, and dandan-bot.js
  * passing unless upkeepStop), as they never stopped here without a known card to act on.
  */
-export const anyUpkeepMove = (s, seat) => s.turn >= 2 && hasMove(s, seat);
+export const anyUpkeepMove = (s, seat) => s.turn >= 2 && hasMove(s, seat) && moves(s, seat).some(m => !emptyCrack(s, m));
+/** A Flood Plain's crack where the library holds nothing of its kind: legal, but it only shuffles, which isn't a reason to stop (as fetchWindow). */
+const emptyCrack = (s, m) => {
+  const p = m.t === "ability" && s.bf.find(x => x.id === m.id);
+  return !!p && nm(p.id) === "Flood Plain" && !s.lib.some(id => hasType(id, fetchTypes(p)));
+};
 /** Who draws next if nothing else is drawn first: the player whose draw step is next. */
 export const nextDrawer = s => (s.step === "upkeep" && s.turn > 1 ? s.active : other(s.active));
 /**

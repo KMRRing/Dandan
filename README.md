@@ -36,7 +36,8 @@ Before the draw, if you could do anything (cast Predict or any instant, cycle a 
 instead of the game drawing for you. From the second turn, every upkeep where a person could act is a stop, theirs or
 yours, whether the top card is known or not; passing there goes on to the draw. The computer's own upkeep stays quiet
 unless it has a known top card or a Brainstorm or Predict for your draw. `anyUpkeepMove` in `dandan-engine.js` is the
-rule, and `node tests/upkeep.mjs` checks it.
+rule, and `node tests/upkeep.mjs` checks it. A Flood Plain with no Island or Plains card left in the library to fetch is
+not a reason to stop (cracking it would only shuffle); `node tests/dandan-window.mjs` checks that and the Flood Plain's own stop.
 
 ## Where the results go
 
@@ -63,6 +64,6 @@ soon, it is tried again at the next game's end and the next time the page opens.
   `-eval.js`, `-reads.js`, `-observe.js`, `-advantage.js` (the computer player and the judge), `-worker.js` (the search,
   off the page's thread); `dandan-words.js` (move names, taken out of the Almanac's coach file so Hard reads as before).
 - `seats.js` (the game runner), `seats-ui.js` (here: solo only), `name.js`, `results.js`, `net.js`, `sync.js`.
-- `tests/upkeep.mjs`, with `tests/dandan-scene.js`, which sets a game up at a chosen point.
+- `tests/upkeep.mjs` and `tests/dandan-window.mjs`, with `tests/dandan-scene.js`, which sets a game up at a chosen point.
 
 The engine and the computer player are copies of the Almanac's; a rules fix there is made here by copying the file over.
