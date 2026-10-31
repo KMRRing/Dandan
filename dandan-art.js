@@ -3,6 +3,8 @@
 // the back every hidden card shows. Each is a <symbol> in one sprite, put in the page once, so a card on the table is
 // a <use> of it rather than its own copy of the drawing. A picture is drawn to 60 × 44 with what matters in its middle
 // 40, since a card on the table crops it nearer square.
+// (This page's Dandân is its own, redrawn on 31 October 2026 at Korbi's asking: a heavy-jawed predator out of the dark,
+// teeth bared and an amber eye lit, light falling through the water; the rest are the Almanac's.)
 const K = "#1C2A34";                                       // the ink every outline is drawn in
 
 const ART = {
@@ -44,14 +46,37 @@ const ART = {
     <path d="M17 40.5Q30 33.5 43 40.5V44H17Z" fill="#EAF4F4" opacity=".9"/>
     <path d="M47 2L41.5 13.5H46L39.5 25L51 10.5H46.4L50 2Z" fill="#E8603C" stroke="${K}" stroke-width=".8" stroke-linejoin="round"/>
     <path d="M4 12L9 10M3 22L8 21M50 30L56 28" stroke="#58554B" stroke-width="1" stroke-linecap="round"/>`,
-  "Dandân": `<rect width="60" height="44" fill="#CFE3EA"/><path d="M0 31Q15 28 30 31T60 31V44H0Z" fill="#9CC3D3" opacity=".7"/>
-    <path d="M24 12.5L28.5 5.5L34 13" fill="#3F7FB5" stroke="${K}" stroke-width="1" stroke-linejoin="round"/>
-    <path d="M9 22Q23 6 42 17L53 9.5V34.5L42 27Q23 38 9 22Z" fill="#1F6E8C" stroke="${K}" stroke-width="1.2" stroke-linejoin="round"/>
-    <path d="M30 13Q35.5 22 30 31" fill="none" stroke="#E2B865" stroke-width="1.3" stroke-linecap="round"/>
-    <path d="M37 18q1.8 2 0 4M40.5 18.6q1.6 1.8 0 3.6M22 17.4q1.6 2.2 0 4.4" fill="none" stroke="#6FB7D2" stroke-width=".9" stroke-linecap="round"/>
-    <circle cx="16.5" cy="19.5" r="2.5" fill="#FBF4E4" stroke="${K}" stroke-width=".9"/><circle cx="16" cy="19.5" r="1.1" fill="${K}"/>
-    <path d="M10 24.4Q13.5 26.4 17 25" fill="none" stroke="${K}" stroke-width=".9" stroke-linecap="round"/><path d="M11 24.6l.9 1.2.9-1 .9 1.1.9-.9" fill="none" stroke="#FBF4E4" stroke-width=".6"/>
-    <g fill="none" stroke="#1F6E8C" stroke-width=".8"><circle cx="5.5" cy="14" r="1.3"/><circle cx="7.6" cy="8.6" r="1"/></g>`,
+  "Dandân": `<defs>
+    <linearGradient id="dn-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3F93B3"/><stop offset=".38" stop-color="#16556F"/><stop offset="1" stop-color="#06202E"/></linearGradient>
+    <radialGradient id="dn-glow" cx=".3" cy=".5" r=".55"><stop offset="0" stop-color="#8FD3E3" stop-opacity=".5"/><stop offset="1" stop-color="#8FD3E3" stop-opacity="0"/></radialGradient>
+    <radialGradient id="dn-vig" cx=".5" cy=".5" r=".75"><stop offset=".55" stop-color="#03121C" stop-opacity="0"/><stop offset="1" stop-color="#03121C" stop-opacity=".6"/></radialGradient>
+    <linearGradient id="dn-body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0A2F4E"/><stop offset=".36" stop-color="#1D78AA"/><stop offset=".72" stop-color="#9AD0DF"/><stop offset="1" stop-color="#F0F6EC"/></linearGradient>
+    <linearGradient id="dn-fin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E92C2"/><stop offset="1" stop-color="#0F4468"/></linearGradient>
+    <radialGradient id="dn-eye" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FFE9A8" stop-opacity=".9"/><stop offset="1" stop-color="#E2B865" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="60" height="44" fill="url(#dn-sea)"/>
+    <rect width="60" height="44" fill="url(#dn-glow)"/>
+    <path d="M8 0H17L28 44H8Z" fill="#E6F4F4" opacity=".13"/><path d="M26 0H31L48 44H34Z" fill="#E6F4F4" opacity=".1"/><path d="M43 0H46L60 28V44Z" fill="#E6F4F4" opacity=".07"/>
+    <path d="M0 3q3-1.5 6 0t6 0t6 0t6 0t6 0t6 0t6 0t6 0t6 0t6 0" fill="none" stroke="#EAF4F4" stroke-width=".9" stroke-linecap="round" opacity=".5"/>
+    <path d="M0 40Q2 33 1 27Q5 33 5.5 44Z M8 44Q9 38 8 33Q12 38 12.5 44Z" fill="#06202A" opacity=".75"/><path d="M54 44Q56 36 54.5 29Q59 35 60 44Z" fill="#06202A" opacity=".75"/>
+    <g transform="rotate(-8 28 22)">
+    <path d="M43.4 21.4Q47.4 16.6 53 9.6Q51 16.8 52.4 22.6Q50.8 28.4 53.6 36Q47.6 32.4 43.6 26.4Z" fill="url(#dn-fin)" stroke="${K}" stroke-width="1" stroke-linejoin="round"/>
+    <path d="M47.4 21.6L51.2 12.6M47.6 24L51.4 32.4" stroke="#E2B865" stroke-width=".6" stroke-linecap="round"/>
+    <path d="M23.4 15.8L25.4 6.6L28.8 12.6L32.2 4.2L35 11.6L39 6.6L39.6 15.6L43 12L44 20Q34 14.4 23.4 15.8Z" fill="url(#dn-fin)" stroke="${K}" stroke-width="1" stroke-linejoin="round"/>
+    <path d="M25.4 8.2L26.8 14M32.2 6L33.2 13M39 8.4L39.2 14.6" stroke="#E2B865" stroke-width=".7" stroke-linecap="round"/>
+    <path d="M26.4 34L34.6 35.6L37.8 41.8Q30.8 39.6 26.4 34Z" fill="url(#dn-fin)" stroke="${K}" stroke-width=".9" stroke-linejoin="round"/><path d="M31.4 36.4L34.6 39.4M29 36L31.2 38.2" stroke="#E2B865" stroke-width=".5" stroke-linecap="round"/>
+    <path d="M8.5 23.4L23.8 27.6L11.6 32.4Z" fill="#2A0B10"/><path d="M13 28.6L22.2 27.8L14.8 31.2Z" fill="#A8382B"/>
+    <path d="M8.5 23.4Q11.5 18.6 19.6 15.6Q28.5 12.2 37.4 15.4Q41.4 17.2 44.4 21.4V25.4Q39 33 31 36.4Q26 38.8 19.6 36Q15 34.8 11.6 32.4L22.8 27.4Z" fill="url(#dn-body)" stroke="${K}" stroke-width="1.1" stroke-linejoin="round"/>
+    <path d="M8.87 23.5L9.56 26.87L10.99 24.1ZM11.73 24.3L12.45 27.42L13.85 24.9ZM14.59 25.1L15.34 27.96L16.71 25.7ZM17.45 25.9L18.23 28.5L19.57 26.5ZM20.31 26.7L21.12 29.05L22.43 27.3Z" fill="#FBF4E4" stroke="${K}" stroke-width=".45" stroke-linejoin="round"/><path d="M12.93 31.81L14.11 28.73L14.75 30.99ZM15.24 30.77L16.4 27.94L17.07 29.96ZM17.56 29.74L18.69 27.14L19.38 28.93ZM19.87 28.71L20.98 26.35L21.7 27.89Z" fill="#FBF4E4" stroke="${K}" stroke-width=".45" stroke-linejoin="round"/>
+    <g fill="none" stroke="#7CC4DE" stroke-width=".7" stroke-linecap="round" opacity=".85"><path d="M29.6 18.8q1.7 1.6 0 3.4M33.4 18.4q1.7 1.7 0 3.6M37.2 19q1.6 1.6 0 3.4M31.6 26.4q1.7 1.6 0 3.2M35.4 25.8q1.7 1.6 0 3.2M39 24.8q1.5 1.5 0 3"/></g>
+    <path d="M15 19.2Q26 13.8 38 16.8" fill="none" stroke="#9ED8E8" stroke-width=".8" stroke-linecap="round" opacity=".55"/><path d="M28 24.4Q35 22.6 44 23.8" fill="none" stroke="#E2B865" stroke-width="1" stroke-linecap="round"/>
+    <g fill="#E2B865"><circle cx="29" cy="32.2" r=".4"/><circle cx="31.6" cy="33.2" r=".4"/><circle cx="34.2" cy="33.4" r=".4"/><circle cx="36.8" cy="32.6" r=".4"/><circle cx="39.2" cy="31.2" r=".4"/></g>
+    <path d="M24.6 18.2Q22.8 24.6 24.8 31M26.8 19Q25 24.6 27 30.4" fill="none" stroke="#A8382B" stroke-width="1.1" stroke-linecap="round"/>
+    <circle cx="17.8" cy="20.2" r="5.6" fill="url(#dn-eye)"/><circle cx="17.8" cy="20.2" r="2.9" fill="#E2B865" stroke="${K}" stroke-width=".9"/><ellipse cx="17.4" cy="20.2" rx=".75" ry="2.1" fill="${K}"/><circle cx="18.6" cy="19.2" r=".6" fill="#FBF4E4"/>
+    <path d="M13 19.2Q17.6 14.8 23 18.4" fill="none" stroke="${K}" stroke-width="1.6" stroke-linecap="round"/>
+    </g>
+    <rect width="60" height="44" fill="url(#dn-vig)"/>
+    <g fill="none" stroke="#EAF4F4" stroke-width=".5" opacity=".7"><circle cx="12" cy="11" r="1.3"/><circle cx="14.6" cy="7" r=".9"/><circle cx="10.6" cy="5.4" r=".6"/><circle cx="50" cy="38" r="1"/><circle cx="52.4" cy="33" r=".6"/></g>`,
   "Brainstorm": `<rect width="60" height="44" fill="#2C4A63"/><g fill="#FBF4E4"><circle cx="8" cy="9" r=".7"/><circle cx="53" cy="22" r=".6"/><circle cx="6" cy="30" r=".5"/></g>
     <path d="M19 44V34.5Q11.5 32 12.5 24Q13 14.5 24 13.5Q33 13 35 21L38.2 26.4Q38.4 28.2 36.4 28.4V33Q35.4 36.2 31 35.4V44Z" fill="#FBF4E4" stroke="${K}" stroke-width="1" stroke-linejoin="round"/>
     <path d="M27 3.6Q31 -1 37 2.6Q43 -.2 46 4.8Q52 5 51 10.4Q53 15.6 46.6 15.6H28.6Q22.4 15.6 23.4 10.4Q22.4 5.6 27 3.6Z" fill="#9DB8C4" stroke="${K}" stroke-width="1" stroke-linejoin="round"/>

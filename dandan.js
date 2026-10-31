@@ -77,7 +77,7 @@ function pips(cost) {
 let V = null;                                      // the view on screen
 let page = null;                                   // set once the runner is up
 const S = () => V?.state;
-const nameOf = seat => V?.seats?.[seat]?.name ?? (seat === 0 ? "You" : "Gill");
+const nameOf = seat => V?.seats?.[seat]?.name ?? (seat === 0 ? "You" : "Claude");
 const isMe = seat => V?.seat != null && seat === V.seat;
 const IRREGULAR = { has: "have", is: "are", fetches: "fetch" };
 /** A log line in words: the seats named, and when the viewer's name is the stock "You" the grammar follows it. */
@@ -185,7 +185,7 @@ function goOn() {
 }
 
 page = seatPage({
-  rules: pageRules, id: "dandan", pace: paceNow, botName: () => "Gill", level: () => opts.level, name: savedName() || "You",
+  rules: pageRules, id: "dandan", pace: paceNow, botName: () => "Claude", level: () => opts.level, name: savedName() || "You",
   // Hard works its move out while a tap is awaited, so it comes the moment you tap
   hold: () => { const thinking = holdForBot(); return tapHold() || thinking; },
   onView: v => {
@@ -1000,7 +1000,8 @@ function openMenu() {
   const body = $("menuBody");
   body.replaceChildren();
   const play = part(body, "play");
-  play.append(action("New game", newGame, "primary"));
+  // No new game from here (31 October 2026, Korbi): a game is played out or conceded; the next is dealt from the sheet that
+  // ends it (or from the buttons under a finished table)
   if (mayConcede()) play.append(action("Concede", concede, ""));
   play.append(action(`Name: ${page.name}`, changeName, "link"));
   const set = part(body, "settings");

@@ -5,7 +5,7 @@ rules engine, the same computer player, the same 3D table. Open `index.html` fro
 there is no build step.
 
 Dandan is the Magic format played with one shared deck of 80 cards (16 Islands, 8 Memory Lapse, 10 Dandân and the rest).
-Each player gets seven; a Dandân (4/1) can attack only a player who has an Island. You play against the computer, Gill.
+Each player gets seven; a Dandân (4/1) can attack only a player who has an Island. You play against the computer, Claude.
 
 ## What is fixed here
 
@@ -28,7 +28,18 @@ What you can change:
   (lit while on). Both are kept on the device.
 - **Name** (Menu). You are asked it when you first open the page, and it can be changed any time. It is kept on the
   device (`dandan:name`).
-- **New game** and **Concede** (a concession counts as a loss).
+- **Concede** (a concession counts as a loss). There is no New game in the menu: a game is played out or conceded, and
+  the next is dealt from the sheet that ends it (or the button under a finished table). A reload resumes the game in hand.
+
+## What differs from the Almanac's look
+
+- **The Dandân's picture** is drawn again for this page (`dandan-art.js`): a heavy-jawed predator out of the dark water,
+  teeth bared, an amber eye lit, light falling in shafts. The other twenty-four pictures are the Almanac's.
+- **The hand** is a tenth larger and sits clear of the Pass button (the outer cards of the fan swing below the hand's
+  box, which is why they once sat on it).
+- **The ring that pulses round the player to move** (and the one round a player you are aiming at) goes round the
+  avatar and its life together; the life sits on the avatar's corner, so a circle round the avatar alone ran through it.
+- The computer's name is **Claude**; its card fan is packed closer so the name fits a phone's header.
 
 ## The upkeep stop (a fix, also made in the Almanac)
 
