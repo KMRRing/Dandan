@@ -29,10 +29,14 @@ jobs:
         job: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
-        with: { ref: "${{ inputs.champion }}", path: champ }
-      - uses: actions/checkout@v4
-        with: { ref: "${{ inputs.candidate }}", path: cand }
+        with: { fetch-depth: 0 }      # every branch and tag, so a branch, a tag or a short commit id all resolve
+      - name: Check out both builds
+        env: { CHAMPION: "${{ inputs.champion }}", CANDIDATE: "${{ inputs.candidate }}" }
+        run: |
+          for pair in "champ $CHAMPION" "cand $CANDIDATE"; do
+            set -- $pair
+            git worktree add --detach "$1" "$(git rev-parse --verify "origin/$2^{commit}" 2>/dev/null || git rev-parse --verify "$2^{commit}")"
+          done
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Play this job's deals, 4 at a time
@@ -61,9 +65,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Score (A is the champion)
+        env: { CHAMPION: "${{ inputs.champion }}", CANDIDATE: "${{ inputs.candidate }}", DEALS: "${{ inputs.deals }}" }
         run: |
           {
-            echo "### ${{ inputs.candidate }} (B) against ${{ inputs.champion }} (A), ${{ inputs.deals }} deals a decision"
+            echo "### $CANDIDATE (B) against $CHAMPION (A), $DEALS deals a decision"
             echo '```'
             node lab/score.mjs out/*.jsonl
             echo '```'
