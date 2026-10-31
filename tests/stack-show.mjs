@@ -60,19 +60,22 @@ test("a spell of yours isn't shown: the computer's pass resolves it as before", 
   return (!s.stack.length && !s.shown) || `stack ${stackNames(s)}: held for the computer`;
 });
 test("whole games with the computer's spells shown reach their end", () => {
-  for (const seed of [3, 4, 5]) {
+  let shown = 0;
+  for (const seed of [3, 4, 5, 6, 7, 8, 9, 10]) {
     let c = restore(J(deal({ rng: seeded(seed) })));
     let steps = 0, seen = 0;
     while (!c.over && steps++ < 4000) {
       const who = toMove(c);
       const before = c.shown;
-      c = go(c, who, botMove(c, who, { rng: seeded(steps) }), { show: who === 1 });
+      // Medium plays both seats: the search bot would take over a minute here, and what's tested is the stop, not the play
+      c = go(c, who, botMove(c, who, { rng: seeded(steps), level: "medium" }), { show: who === 1 });
       if (c.shown !== before) seen++;
     }
     if (!c.over) return `seed ${seed}: no end in ${steps} moves`;
     console.log(`     seed ${seed}: over in ${steps} moves, ${seen} spells shown`);
+    shown += seen;
   }
-  return true;
+  return shown > 0 || "no spell was ever shown: the stop isn't being exercised";
 });
 console.log(bad ? `${bad} FAILED` : "all passed");
 process.exit(bad ? 1 : 0);

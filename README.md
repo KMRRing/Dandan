@@ -73,6 +73,27 @@ second turn ahead, scored by the trained value network), not a true chance of wi
 find what it doesn't model, so a stronger computer has to come from what each deal sees (the reads, how far ahead, the
 evaluation), not from more deals.
 
+## Medium, the quick player inside the search
+
+The search plays every move that isn't in its own tree with Medium (`policyMove` in `dandan-policy.js`, a hand-written
+scorer of moves): 50 to 80 percent of the moves in a look-ahead are Medium's, so how well Medium plays decides how
+good the look-ahead is. Measured against the search, over 1,411 decisions taken from a look-ahead (every candidate valued
+over 512 deals), Medium gave up about 1.6 win-percent points a decision and picked a different move from the search in a
+third to a half of them.
+
+The errors were sorted and the biggest corrected in `TUNE`, a handful of constants read by the scorer: a move must score
+a full point to be played rather than pass; counters are worth 0.4 less, and a counter on a counter keeps only 0.6 of its
+worth (it is tempo, not a spell); Dandân is cast a little more eagerly; Flood Plain and Izzet Boilerworks are played
+later. They were fitted on each half of the positions and judged on the other half, and only what both fits agreed on
+is kept (+0.4 to +0.5 points a decision on positions not fitted). One plain bug went with them: Narset's Reversal, held
+against the other side's Memory Lapse or Commit on one's own spell, wasn't seen as an answer.
+
+In a match of 126 games (63 deals, both seats each) at the same thinking time (about 610 ms a search against 560), the
+version with this scored 55.6% plus or minus 8.3 against the one without. That isn't a result a match of this size can
+prove, and it was stopped at 126 of the 160 planned; it was adopted at Korbi's call, a gain at no extra cost being
+reason enough. What would give more is replacing Medium in the rollouts with a policy learned from the search's own
+choices; that is not built.
+
 ## The computer's spells are shown
 
 A spell of Monte's that you have nothing to answer used to go on the stack and resolve inside the move that cast it, so
