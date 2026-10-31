@@ -88,10 +88,14 @@ later. They were fitted on each half of the positions and judged on the other ha
 is kept (+0.4 to +0.5 points a decision on positions not fitted). One plain bug went with them: Narset's Reversal, held
 against the other side's Memory Lapse or Commit on one's own spell, wasn't seen as an answer.
 
-In a match of 126 games (63 deals, both seats each) at the same thinking time (about 610 ms a search against 560), the
-version with this scored 55.6% plus or minus 8.3 against the one without. That isn't a result a match of this size can
-prove, and it was stopped at 126 of the 160 planned; it was adopted at Korbi's call, a gain at no extra cost being
-reason enough. What would give more is replacing Medium in the rollouts with a policy learned from the search's own
+The first match, 126 games (63 deals, both seats each) at the same thinking time (about 610 ms a search against 560),
+scored the version with this 55.6% plus or minus 8.3, and it was adopted on that at Korbi's call. It was a lucky start.
+The same match run on GitHub Actions until its stopping rule ended it (Matches, above) scored 51.8% over 480 deals (960
+games), 95% interval 48.8% to 54.7%: a gain of about two points that the match could not establish (it ended at its
+cap, undecided), which is what a fit worth half a point a decision on positions held out would lead one to expect. It is
+kept because it costs nothing and the evidence points the right way, not because it was shown better. A gain this size
+needs some 4,000 deals to prove, so the changes worth testing are those of five points or more.
+What would give more is replacing Medium in the rollouts with a policy learned from the search's own
 choices; that is not built.
 
 ## Matches
