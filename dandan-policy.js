@@ -38,16 +38,21 @@ export const WORTH = {
 /** What a card held is worth over using it now: part of its worth (a card kept is a card for later). */
 const KEEP = 0.75;
 /**
- * Constants Medium's scores are corrected by, fitted in the lab to what the search prefers (Medium's move against
- * Hard's at decisions inside a look-ahead). The values here are the hand-set play; a fit changes them.
+ * Constants Medium's scores are corrected by, fitted in the lab to what the search prefers: for 1,411 decisions inside
+ * a look-ahead (a few Medium moves on from a recorded position), every candidate move's value over 512 deals, and the
+ * constants chosen that make Medium's own move the one the search values most. Fitted on each half of the positions
+ * and judged on the other, the stable part of both fits is kept: +0.4 to +0.5 win-% points per decision on positions
+ * not fitted, of the 1.6 Medium gave up against the search. In short, Medium passes more (a move must score a full
+ * point), counters less (above all a counter on a counter, which is only tempo), casts Dandân more, and plays
+ * Flood Plain and Izzet Boilerworks later.
  */
 export const TUNE = {
-  pass: 0.05,                // what a move must score to be played rather than pass
-  counter: 0,                // taken off every counter's worth (Memory Lapse, Commit, Narset's Reversal on a spell)
-  counterOnCounter: 1,       // the share of a counter's worth kept when the spell it answers is itself a counter
+  pass: 1.0,                 // what a move must score to be played rather than pass (was 0.05)
+  counter: 0.4,              // taken off every counter's worth (Memory Lapse, Commit, Narset's Reversal on a spell)
+  counterOnCounter: 0.6,     // the share of a counter's worth kept when the spell it answers is itself a counter
   cycleLorien: 0, cycleLand: 0,   // added to cycling Lórien Revealed, and to cycling a land
-  cast: {},                  // added to a spell's cast, by the card cast
-  land: {},                  // added to a land drop, by the land
+  cast: { "Dandân": 0.75 },  // added to a spell's cast, by the card cast
+  land: { "Flood Plain": -1, "Izzet Boilerworks": -0.5 },   // added to a land drop, by the land
 };
 
 // ---------- what the seat knows ----------
