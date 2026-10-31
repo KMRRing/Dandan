@@ -96,17 +96,30 @@ choices; that is not built.
 
 ## Matches
 
-A change to the computer is kept only if it beats the current one in a match at the same thinking time. A match plays
-each deal twice with the seats swapped (so a lucky deal cancels), and the search is counted in deals, not seconds, so the
-result is the same on any machine. It is run from the Actions tab of the repository: Bot match, Run workflow, with the
-candidate (a branch, tag or commit), the champion (the `champion` branch unless told otherwise), how many deals (320 is
-640 games, about 25 minutes, error margin about 4 points) and the search deals a decision (256; the deepest setting
-is 2,048). Sixteen jobs of four processes share the deals out; the score, with its 95% interval, is in the run's
-summary, and the games are kept as a download. Adopting a candidate means merging it into `main` and moving `champion`
-to it (`git push origin main:champion`).
+A change to the computer is kept only if it is shown better than the current one in a match at the same thinking time.
+A match plays each deal twice with the seats swapped (so a lucky deal cancels), and the search is counted in deals, not
+seconds, so a result is the same on any machine. It is run from the Actions tab of the repository: Bot match, Run
+workflow, with the candidate (a branch, tag or commit), the champion (the `champion` branch unless told otherwise) and
+the search deals a decision (256; the deepest setting is 2,048).
 
-`lab/match.mjs` plays one run of deals between two checkouts of the repository, `lab/score.mjs` scores the games and
-`lab/shard.mjs` says which deals a job plays.
+It plays at least 30 deals (60 games), then looks again each time the deals played have doubled (60, 120, 240, 480), and
+stops when the candidate is **shown better** than even, when it **can no longer reach 55%** (a gain worth having), or when
+480 deals leave it undecided. Until then it goes on by itself: the last job of each run scores everything so far and
+starts the next run. A candidate at 48% after 30 deals goes on, for it may still be 55% (Korbi's rule). Each look has to
+clear a stricter bar than the one before (`lab/sequential.mjs`): stopping the first time an ordinary 95% interval clears
+50% would adopt a candidate that is no better in about one match in five, because every look is another chance for luck.
+With the error spent across the looks, an equal candidate is adopted in at most one match in twenty however it runs. Made-up
+matches (`tests/sequential.mjs`) show what to expect: a candidate truly at 60% is adopted nearly always, in about 100 deals;
+at 55% it is adopted about two times in three (the rest mostly end undecided at 480 deals: a 5-point gain is hard to
+prove beyond doubt, and takes some 500 deals); at 50% it is rejected in most matches and adopted in 4%; at 45% it is
+rejected in about 110 deals. A candidate that costs no more thinking and is undecided near 55% is a judgment call.
+
+The verdict after every run is in its annotation and summary, and every game is kept on the `match-results` branch
+(`results/<candidate>-<champion>-d<deals>/`: `games.jsonl`, `verdict.json`, `log.txt`). Adopting a candidate means merging
+it into `main` and moving `champion` to it (`git push origin main:champion`).
+
+`lab/match.mjs` plays a run of deals between two checkouts of the repository, `lab/sequential.mjs` is the stopping rule,
+`lab/score.mjs` scores games the old way (a fixed number, no stopping rule) and `lab/shard.mjs` says which deals a job plays.
 
 ## The computer's spells are shown
 
@@ -162,7 +175,7 @@ soon, it is tried again at the next game's end and the next time the page opens.
 - `tests/upkeep.mjs`, `tests/dandan-window.mjs`, `tests/hidden-info.mjs` and `tests/stack-show.mjs`, with `tests/dandan-scene.js`, which sets a game
   up at a chosen point. `hidden-info` holds the computer to the rule that it never uses what it can't see: dealt the
   cards it can't see again, its search weighs every move the same and picks the same one. Each runs in under a second.
-- `lab/` and `.github/workflows/match.yml`: the matches between two builds of the computer (Matches, above).
+- `lab/`, `tests/sequential.mjs` and `.github/workflows/match.yml`: the matches between two builds of the computer (Matches, above).
 
 The engine and the computer player are copies of the Almanac's; a rules fix there is made here by copying the file over
 (the shown spell is this page's alone: `show` in `act` and `showStop` in `dandan-engine.js`, which a copy must keep).

@@ -1,8 +1,11 @@
-# A match between two builds of the computer player, by hand from the Actions tab (Run workflow): the champion (a git
-# ref, normally the `champion` branch) against a candidate (any branch, tag or commit). Every deal is played twice with
-# the seats swapped; the deals are shared out over 16 jobs of 4 processes, so 320 deals (640 games) take about 25
-# minutes where one machine took two hours. The search is counted in deals, not seconds, so the result doesn't depend on the runner.
-# The score is in the run's summary (Actions > the run > Summary). README: "Matches".
+# A match between two builds of the computer player, started by hand from the Actions tab (Run workflow): the champion
+# (a git ref, normally the `champion` branch) against a candidate (any branch, tag or commit). Each deal is played twice
+# with the seats swapped. It plays at least 30 deals and goes on, each run as many deals again as have been played,
+# until the candidate is shown better than the champion, can no longer reach a gain worth having, or 480 deals are played
+# (lab/sequential.mjs has the rule and why). A run is one batch, shared over 16 jobs of 4 processes; the last job of
+# the run scores everything so far, saves the games to the `match-results` branch (results/<candidate>-<champion>-d<deals>/:
+# games.jsonl, verdict.json, log.txt) and starts the next run. The search is counted in deals, not seconds, so a result
+# doesn't depend on the runner. The verdict is the run's annotation and summary. README: "Matches".
 name: Bot match
 on:
   workflow_dispatch:
@@ -13,67 +16,121 @@ on:
       champion:
         description: Champion (branch, tag or commit)
         default: champion
-      pairs:
-        description: Deals to play (each is two games, one from each seat)
-        default: "320"
       deals:
         description: Search deals a decision, for both sides (the deepest setting is 2048)
         default: "256"
+      min:
+        description: Fewest deals before it may stop
+        default: "30"
+      max:
+        description: Most deals before it stops undecided
+        default: "480"
+      aim:
+        description: The score worth having; it stops when the candidate can't reach it
+        default: "0.55"
+      from:
+        description: Deals already played (the match sets this itself; leave 0)
+        default: "0"
+      batch:
+        description: Deals to play in this run (the match sets this itself; leave empty)
+        default: ""
+permissions: { contents: write, actions: write }
 jobs:
-  play:
+  plan:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    outputs:
+      champ: ${{ steps.r.outputs.champ }}
+      cand: ${{ steps.r.outputs.cand }}
+      batch: ${{ steps.r.outputs.batch }}
+      key: ${{ steps.r.outputs.key }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }      # every branch and tag, so a branch, a tag or a short commit id all resolve
+      - id: r
+        env: { CHAMPION: "${{ inputs.champion }}", CANDIDATE: "${{ inputs.candidate }}", BATCH: "${{ inputs.batch }}", MIN: "${{ inputs.min }}", DEALS: "${{ inputs.deals }}" }
+        run: |
+          full() { git rev-parse --verify "origin/$1^{commit}" 2>/dev/null || git rev-parse --verify "$1^{commit}"; }
+          champ=$(full "$CHAMPION"); cand=$(full "$CANDIDATE")     # fixed now, so a branch that moves mid-match can't mix builds
+          { echo "champ=$champ"; echo "cand=$cand"; echo "batch=${BATCH:-$MIN}"; echo "key=${cand:0:7}-${champ:0:7}-d$DEALS"; } >> "$GITHUB_OUTPUT"
+  play:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
         job: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }      # every branch and tag, so a branch, a tag or a short commit id all resolve
+        with: { fetch-depth: 0 }
       - name: Check out both builds
-        env: { CHAMPION: "${{ inputs.champion }}", CANDIDATE: "${{ inputs.candidate }}" }
-        run: |
-          for pair in "champ $CHAMPION" "cand $CANDIDATE"; do
-            set -- $pair
-            git worktree add --detach "$1" "$(git rev-parse --verify "origin/$2^{commit}" 2>/dev/null || git rev-parse --verify "$2^{commit}")"
-          done
+        env: { CHAMP: "${{ needs.plan.outputs.champ }}", CAND: "${{ needs.plan.outputs.cand }}" }
+        run: git worktree add --detach champ "$CHAMP" && git worktree add --detach cand "$CAND"
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Play this job's deals, 4 at a time
-        env: { PAIRS: "${{ inputs.pairs }}", DEALS: "${{ inputs.deals }}", JOB: "${{ matrix.job }}" }
+        env: { BATCH: "${{ needs.plan.outputs.batch }}", FROM: "${{ inputs.from }}", DEALS: "${{ inputs.deals }}", JOB: "${{ matrix.job }}" }
         run: |
           mkdir out
           pids=()
           for k in 0 1 2 3; do
-            read from n < <(node lab/shard.mjs "$PAIRS" 16 4 "$JOB" "$k")
+            read first n < <(node lab/shard.mjs "$BATCH" 16 4 "$JOB" "$k" "$FROM")
             if [ "$n" -gt 0 ]; then
-              node lab/match.mjs champ cand "$from" "$n" "out/m-$JOB-$k.jsonl" "$DEALS" "$DEALS" &
+              node lab/match.mjs champ cand "$first" "$n" "out/m-$JOB-$k.jsonl" "$DEALS" "$DEALS" &
               pids+=($!)
             fi
           done
-          for p in "${pids[@]}"; do wait "$p"; done   # a crashed match fails the job
+          for p in "${pids[@]}"; do wait "$p"; done   # a crashed match fails the job, and the run stops there
       - uses: actions/upload-artifact@v4
         with: { name: "games-${{ matrix.job }}", path: out, if-no-files-found: ignore }
-  score:
-    needs: play
-    if: ${{ !cancelled() }}
+  decide:
+    needs: [plan, play]
+    if: ${{ !cancelled() && needs.play.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with: { ref: match-results, path: results }
       - uses: actions/download-artifact@v4
-        with: { pattern: "games-*", merge-multiple: true, path: out }
+        with: { pattern: "games-*", merge-multiple: true, path: batch }
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - name: Score (A is the champion)
-        env: { CHAMPION: "${{ inputs.champion }}", CANDIDATE: "${{ inputs.candidate }}", DEALS: "${{ inputs.deals }}" }
+      - id: d
+        env: { KEY: "${{ needs.plan.outputs.key }}", CHAMP: "${{ needs.plan.outputs.champ }}", CAND: "${{ needs.plan.outputs.cand }}", DEALS: "${{ inputs.deals }}", MIN: "${{ inputs.min }}", MAX: "${{ inputs.max }}", AIM: "${{ inputs.aim }}" }
         run: |
-          {
-            echo "### $CANDIDATE (B) against $CHAMPION (A), $DEALS deals a decision"
-            echo '```'
-            node lab/score.mjs out/*.jsonl
-            echo '```'
-          } | tee -a "$GITHUB_STEP_SUMMARY"
-          # also as annotations: the API serves those to a session, where it can't fetch a log or an artifact
-          node lab/score.mjs out/*.jsonl | while read -r line; do echo "::notice title=Bot match::$CANDIDATE (B) against $CHAMPION (A): $line"; done
-      - uses: actions/upload-artifact@v4
-        with: { name: games, path: out }
+          dir="results/$KEY"; mkdir -p "$dir"
+          echo "candidate $CAND, champion $CHAMP, $DEALS search deals a decision" > "$dir/settings.txt"
+          cat batch/*.jsonl >> "$dir/games.jsonl"
+          node lab/sequential.mjs "$dir/games.jsonl" --min "$MIN" --max "$MAX" --aim "$AIM" > "$dir/verdict.json"
+          echo "$(date -u +%FT%TZ) $(jq -r .text "$dir/verdict.json")" | tee -a "$dir/log.txt"
+          { echo "next=$(jq -r .next "$dir/verdict.json")"; echo "n=$(jq -r .n "$dir/verdict.json")"; echo "verdict=$(jq -r .verdict "$dir/verdict.json")"; } >> "$GITHUB_OUTPUT"
+      - name: Keep the games
+        env: { KEY: "${{ needs.plan.outputs.key }}", VERDICT: "${{ steps.d.outputs.verdict }}", N: "${{ steps.d.outputs.n }}" }
+        run: |
+          cd results
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A; git commit -qm "$KEY: $VERDICT at $N deals"
+          for try in 1 2 3 4 5; do git push -q && break; git pull -q --rebase; done      # other matches share the branch
+      - name: Say what it found
+        env: { KEY: "${{ needs.plan.outputs.key }}", CAND: "${{ inputs.candidate }}", CHAMP: "${{ inputs.champion }}" }
+        run: |
+          text=$(jq -r .text "results/$KEY/verdict.json")
+          echo "### $CAND (candidate) against $CHAMP (champion): $text" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Bot match::$CAND against $CHAMP: $text"
+      - name: Start the next run
+        if: ${{ steps.d.outputs.next != '0' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEXT: ${{ steps.d.outputs.next }}
+          N: ${{ steps.d.outputs.n }}
+          CHAMP: ${{ needs.plan.outputs.champ }}
+          CAND: ${{ needs.plan.outputs.cand }}
+          DEALS: ${{ inputs.deals }}
+          MIN: ${{ inputs.min }}
+          MAX: ${{ inputs.max }}
+          AIM: ${{ inputs.aim }}
+          REF: ${{ github.ref_name }}
+        run: |
+          jq -n --arg ref "$REF" --arg cand "$CAND" --arg champ "$CHAMP" --arg deals "$DEALS" --arg min "$MIN" --arg max "$MAX" --arg aim "$AIM" --arg from "$N" --arg batch "$NEXT" \
+            '{ref: $ref, inputs: {candidate: $cand, champion: $champ, deals: $deals, min: $min, max: $max, aim: $aim, from: $from, batch: $batch}}' |
+            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/match.yml/dispatches" --input -
