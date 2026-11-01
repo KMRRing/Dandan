@@ -630,6 +630,13 @@ function lookActions() {
   } else {
     const ab = MV.find(m => m.t === "ability" && m.id === id);
     if (ab) out.push({ label: nm(id) === "Clue" ? "Crack" : "Fetch", sub: nm(id) === "Clue" ? "2 · draw" : "sacrifice", fn: () => act(ab) });
+    // an untapped land of yours may be tapped for its mana now, whichever way the tap switch is set (Korbi, 1 November 2026):
+    // the mana floats to the end of the step and pays for the next spell before any land does; one button for each way the land taps
+    const land = perm(S(), id);
+    if (land && payable(land)) {
+      const ways = manaAlts(land);
+      ways.forEach((alt, i) => out.push({ label: "Tap", sub: alt.map(c => `<i class="dd-pip ${c === "U" || c === "R" ? c : "g"}">${c}</i>`).join(""), fn: () => { ui.look = null; return act({ t: "mana", id, alt: i }); } }));
+    }
   }
   return out;
 }

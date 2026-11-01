@@ -11,7 +11,7 @@ import { CARDS, DECK, HALVES, NAMES, BASICS, parseCost } from "./dandan-cards.js
 import { shuffle } from "./seats.js";
 import {
   LIFE, HAND, other, list, withRng, say, nm, isLandId, perm, isLand, isCreature, pt, canAttack, unblockable, fetchTypes, typesOf, needType,
-  payPlan, payFrom, pay, draw, shuffleLib, pushItem, itemOf, leaveStack, enterBf, leaveBf, toGrave, toLib, toYard, fromYard, fromLib, fromHand,
+  payPlan, payFrom, pay, manaAlts, draw, shuffleLib, pushItem, itemOf, leaveStack, enterBf, leaveBf, toGrave, toLib, toYard, fromYard, fromLib, fromHand,
   mill, lands, permToLib, bounce, emptyPools, handToLib, toHandOpen, topKnown, isSpellCard, affords, tellsOf, freshTells, hushed,
 } from "./dandan-core.js";
 import { RES, T, same, targetLists, stillLegal, modesOf, hasType } from "./dandan-spells.js";
@@ -728,6 +728,24 @@ function answer(s, seat, m) {
 }
 
 /**
+ * A land tapped for its mana on its own, ahead of the spell it will pay for (Korbi, 1 November 2026: "when clicking an
+ * untapped land, the player should also get a choice to tap it to float mana, which will then be used by later spells if
+ * eligible"). { t: "mana", id, alt }: alt is which of the land's ways to tap (manaAlts), the first by default. It is a
+ * mana ability: it uses no stack and passes no priority, so the seat goes on holding it and nothing settles; the mana
+ * floats in the pool, which payPlan spends before any land, until the step ends. Not among moves(): the computer never
+ * floats mana, and a move that makes nothing happen is not one to search.
+ */
+function tapForMana(s, seat, m) {
+  if (s.pending) return s.pending.seat === seat ? "Answer the question first" : "It isn't your turn";
+  if (s.prio !== seat) return "You don't have priority";
+  const p = perm(s, m.id), alt = p && p.ctl === seat && !p.tapped && isLand(p) ? manaAlts(p)[m.alt ?? 0] : null;
+  if (!alt) return "That land can't be tapped for mana";
+  p.tapped = true;
+  (s.pool ||= ["", ""])[seat] += alt.join("");
+  say(s, `{s${seat}} taps ${nm(p.id)} for ${alt.join("")}`);
+  return s;
+}
+/**
  * A seat's move made on a game (the runner hands in a copy and keeps it if this returns one). quiet: no log (a game
  * played out in the computer's head). show: the seat's spell stays on the stack to be seen by a player who can't
  * answer it (settle). A seat may concede ({ t: "concede" }) whoever's decision it is, as in Magic a
@@ -739,6 +757,7 @@ export function act(s, seat, m, { rng, quiet = false, show = false } = {}) {
   return withRng(rng, () => {
     if (s.over) return "The game is over";
     if (m?.t === "concede") { gameOver(s, [seat], "conceded"); return s; }
+    if (m?.t === "mana") return tapForMana(s, seat, m);
     if (m?.t !== "pass" && !s.stack.length) s.by = seat;   // a move with nothing on the stack begins an action (an answer or a pass carries one on)
     const err = s.pending ? (s.pending.seat === seat ? answer(s, seat, m) : "It isn't your turn") : (s.prio === seat ? priorityMove(s, seat, m) : "You don't have priority");
     if (err) return err;

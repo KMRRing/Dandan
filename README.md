@@ -179,6 +179,23 @@ Inferior back in the computer's hand) and which spells count. It changes nothing
 above it is rated as before. A match could not show a gain from it (the position is rare); like the upkeep stop it is a mistake
 the computer can be shown to make.
 
+## Tapping a land for its mana on its own (1 November 2026)
+
+Korbi: "when clicking an untapped land, the player should also get a choice to tap it to float mana, which will then be used
+by later spells if eligible, whether or not manual tap mode is enabled." Tapping a land of yours that is untapped, while you
+hold priority, now shows a **Tap** button beside Pass on the card read (one for each way the land taps: a Thundering Falls
+offers blue and red, an Island blue). The mana floats in your pool, shown under your name ("U floating"), and the next spell
+or ability you pay for spends it before any land, so a Memory Lapse after a tapped Island taps one more land, not two. It
+goes when the step ends, as floating mana always did here (a land tapped for more than a cost needed already floated).
+
+It is the engine's `{ t: "mana", id, alt }` (`tapForMana` in `dandan-engine.js`): a mana ability, so it uses no stack,
+passes no priority and settles nothing: you hold priority as you did, with a spell on the stack too, to pay for the answer.
+It is kept in the game's moves like any other, so a game played again moves the same way. It is not among `moves()`, so the
+computer never floats mana and its search is not widened by it; it reads your pool as open mana, as it reads any (`openMana`).
+The manual tap switch is a different thing and is unchanged: it chooses which lands pay for a spell as you cast it; this taps
+one ahead of time. `node tests/mana-tap.mjs` checks the engine's side (the pool, priority kept, the order of payment, the
+step's end, what is refused).
+
 ## Where the results go
 
 Nothing about results is shown on the page. When a game ends, it is written to the Almanac's Firebase database
@@ -283,7 +300,7 @@ on screen waiting, and taking over when it went off screen; one found while off 
   `.github/workflows/games.yml` (collecting the games, above).
 - `tests/records.mjs` (a game kept with its moves plays again to the same state, move for move; the entry and the index line are plain
   data) and `tests/pull-games.mjs` (the collector against a stand-in database: each game once, a game it can't read said, nothing
-  kept lost); `tests/upkeep.mjs`, `tests/dandan-window.mjs`, `tests/hidden-info.mjs`, `tests/reversal-save.mjs` and `tests/stack-show.mjs`, with `tests/dandan-scene.js`, which sets a game
+  kept lost); `tests/upkeep.mjs`, `tests/dandan-window.mjs`, `tests/hidden-info.mjs`, `tests/reversal-save.mjs`, `tests/mana-tap.mjs` and `tests/stack-show.mjs`, with `tests/dandan-scene.js`, which sets a game
   up at a chosen point. `hidden-info` holds the computer to the rule that it never uses what it can't see: dealt the
   cards it can't see again, its search weighs every move the same and picks the same one. Each runs in under a second.
 - `pwa.js` (registers the worker, takes updates, the menu's offline line), `manifest.webmanifest`, `icons/`; `tools/offline.mjs`, `tools/build-sw.mjs`,
