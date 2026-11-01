@@ -191,6 +191,10 @@ secret is involved, and no change to the database's rules. The branch holds:
   went wrong (`errors`: the sign-in, the index, a game's room). Something is committed only when a game is new or the problems
   change, so the branch isn't a log of idle hours.
 
+Run it by hand with *check* ticked and it collects nothing: it writes a marked line into the index room, reads it back and takes it
+away, and `status.json` says (`check`: `write`, `read`, `delete`, `gone`) whether the page's own write is allowed by the database's
+rules. That is the first thing to look at if a game was played and nothing came.
+
 The repository is public, so the branch is too: the games, the names players gave and their anonymous ids can be read by
 anyone who looks (the database already lets anyone signed in read a room whose code they guess, four letters). A private
 repository for it would take a secret to push across; not done.

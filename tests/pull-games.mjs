@@ -14,6 +14,13 @@ const check = (ok, what) => { console.log(`${ok ? "ok  " : "FAIL"} ${what}`); if
 const db = { index: {}, rooms: {}, asked: [], refuse: false, signedIn: 0 };
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://x"), send = (code, body) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(body)); };
+  const rm = url.pathname.match(/^\/crates\/rooms\/DDIX\/games\/([^/]+)\.json$/);
+  if (rm && url.searchParams.get("auth") === "tok" && req.method !== "GET") {
+    if (req.method === "DELETE") { delete db.index[rm[1]]; return send(200, null); }
+    let body = ""; req.on("data", d => (body += d)); req.on("end", () => { db.index[rm[1]] = JSON.parse(body); send(200, db.index[rm[1]]); });
+    return;
+  }
+  if (rm && req.method === "GET" && url.searchParams.get("auth") === "tok") return send(200, db.index[rm[1]] ?? null);
   if (req.method === "POST" && url.pathname === "/signup") { db.signedIn++; return send(db.refuse ? 400 : 200, db.refuse ? { error: { message: "ADMIN_ONLY_OPERATION" } } : { idToken: "tok" }); }
   if (url.searchParams.get("auth") !== "tok") return send(401, { error: "Permission denied" });
   db.asked.push(url.pathname);
@@ -25,7 +32,7 @@ const server = http.createServer((req, res) => {
 });
 await new Promise(r => server.listen(0, "127.0.0.1", r));
 const port = server.address().port;
-const run = out => new Promise(r => execFile("node", ["tools/pull-games.mjs", out], { env: { ...process.env, IDENTITY_URL: `http://127.0.0.1:${port}/signup`, DB_URL: `http://127.0.0.1:${port}` } }, (e, stdout, stderr) => r({ code: e ? e.code : 0, stdout, stderr })));
+const run = (out, ...more) => new Promise(r => execFile("node", ["tools/pull-games.mjs", out, ...more], { env: { ...process.env, IDENTITY_URL: `http://127.0.0.1:${port}/signup`, DB_URL: `http://127.0.0.1:${port}/elsewhere,http://127.0.0.1:${port}` } }, (e, stdout, stderr) => r({ code: e ? e.code : 0, stdout, stderr })));
 const game = (key, name, won) => ({ line: { room: [...key].map(d => String.fromCharCode(65 + +d)).join(""), at: +key, name, uid: "u1", result: { name, won, started: +key, ended: +key + 1000, moves: 5 } }, branch: { game: { seed: 1, seats: 2, moves: "[[0,{\"t\":\"pass\"}]]", state: { log: [] } }, result: { name, won, started: +key, ended: +key + 1000, moves: 5 }, players: { u1: { name } } } });
 const put = (key, name, won) => { const g = game(key, name, won); db.index[key] = g.line; db.rooms[g.line.room] = g.branch; return g.line.room; };
 
@@ -87,6 +94,17 @@ r = await run(out);
   r = await run(empty);
   const status = JSON.parse(fs.readFileSync(path.join(empty, "status.json"), "utf8"));
   check(status.games === 0 && status.errors.length === 0 && !fs.existsSync(path.join(empty, "index.json")), "with no game yet the first run still says so, and has no error");
+}
+// the check: a line written to the index room, read back and removed, and the games collected after it are the same
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "games-"));
+  put("7000", "Tom", true);
+  r = await run(dir, "--check");
+  const status = JSON.parse(fs.readFileSync(path.join(dir, "status.json"), "utf8"));
+  check(status.check?.write && status.check.read && status.check.delete && status.check.gone && !Object.keys(db.index).some(k => k.startsWith("check-")) && !fs.existsSync(path.join(dir, "games")), "the check writes a marked line, reads it back and takes it away, and collects no game");
+  db.index["check-1"] = { room: "CHECK", check: true, at: 1 };            // one that was left behind is not mistaken for a game
+  r = await run(dir);
+  check(!fs.existsSync(path.join(dir, "games", "check-1.json")) && fs.existsSync(path.join(dir, "games", "7000.json")), "a check line left behind is not mistaken for a game");
 }
 server.close();
 if (bad) { console.log(`${bad} problems`); process.exit(1); }
