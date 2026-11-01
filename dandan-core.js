@@ -274,7 +274,9 @@ export function draw(s, seat, n = 1) {
     const id = s.lib.shift(), mask = knOf(s, id);
     knDrop(s, id);
     s.hand[seat].push(id);
-    if (mask & (1 << other(seat))) khSet(s, id, mask);           // the other player saw it on top: they know where it went
+    // the other player saw it on top: they know where it went, and the log says so (a draw is otherwise silent, and a
+    // Metamorphosed Dandân drawn in the caster's own upkeep looked like a card that had vanished from the top)
+    if (mask & (1 << other(seat))) { khSet(s, id, mask); say(s, `{s${seat}} draws ${nm(id)}, which was on top`); }
     s.drawn[seat]++;
     (s.draws ||= [0, 0])[seat]++;
     got++;

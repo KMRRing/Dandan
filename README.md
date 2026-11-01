@@ -263,6 +263,21 @@ a point a decision, ended undecided). Like the upkeep stop and the Reversal fix,
 to make, kept on that evidence and not on a match; a match from the Actions tab (candidate against `champion`) will say if
 it costs anything elsewhere.
 
+## A draw of a card you saw on top is in the log (1 November 2026)
+
+A tester wrote that his Dandân was hit by Metamorphose "but then wasn't the top card of the deck". The rules were right and
+the log was not: the computer had cast the Metamorphose in its own upkeep, so his Dandân went on top of the shared library
+and the computer drew it in the draw step, and a draw left no line, so the next thing the log showed (a Thundering Falls
+surveil of another card) looked like the Dandân had slipped out from under. It was found by rebuilding the game from its seed
+and the recorded log (no moves had been kept: a search over the legal moves, each checked against the log, found the one
+sequence the engine plays out as recorded) and stepping through it; the card was in the computer's hand from the draw step on.
+That is also a good play, since Metamorphose costs one card to take the Dandân for yourself.
+
+A draw is still silent when the other player didn't see the card. When they did (a spell put on top in the open, such as a
+Metamorphosed permanent or a countered Memory Lapse), `draw` in `dandan-core.js` adds "{seat} draws Dandân, which was on
+top", the same fact the other player's record of the hand (`kh`) already gets. `node tests/draw-log.mjs` plays Dave's
+upkeep and checks the line, the hand, what a surveil sees next, and that the cases without it stay silent.
+
 ## Where the results go
 
 Nothing about results is shown on the page. When a game ends, it is written to the Almanac's Firebase database
