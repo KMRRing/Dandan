@@ -205,6 +205,44 @@ The repository is public, so the branch is too: the games, the names players gav
 anyone who looks (the database already lets anyone signed in read a room whose code they guess, four letters). A private
 repository for it would take a secret to push across; not done.
 
+## Offline
+
+The game opens and plays with no connection, from the home screen too, once the page has been opened online once. `sw.js` (a
+service worker, the browser's own way of keeping a site on the device) holds every file of the app, about a megabyte: the page, its
+scripts, the computer's search worker, the styles, the font and the icons. A played game is saved in the browser as before, so the
+game you left is the game you come back to. Only the database needs the network, and only for the finished game's result, which
+`results.js` already keeps until it can send it; it now also sends it the moment the connection comes back (the `online` event),
+not at the next game's end. The menu's About part says whether it is ready ("Ready for offline play: version 7d9898") and has
+*Check for a new version*.
+
+The list is every file of the app's own kinds outside `tests/`, `tools/`, `lab/` and `.github/` (`tools/offline.mjs`). The app
+is small enough that "everything that ships" is simpler and safer than finding what each page loads, and `tests/offline.mjs`
+checks it the other way: every import, stylesheet `url()`, tag and manifest icon names a file that is kept, and a load whose path
+is built as the code runs (none but the database's address, which is another site) fails the test until it is looked at. Not kept:
+Firebase's scripts, which come from Google's servers (they are only for the result, which waits).
+
+A version is one set of files and is used whole: a page is never handed a file of another version than the rest, which matters
+here because the computer's search is a worker the page starts when it needs it. So an update downloads in the background (each
+file asked for at an address carrying its hash, past every cache; a file the site refuses fails the install, and the version in
+charge stays; an interrupted download finishes from where it stopped) and then waits. It takes over when the app goes off screen,
+or when *Check for a new version* finds one, and the page reloads onto it; the game is in the browser's storage, so it picks up
+where it was. The older copy is deleted only once the new one is in charge. The first install needs none of this (nothing older is
+there to be mixed up with) and takes the page that began it. An app left open is looked at for a new version when it is brought back
+(at most once a minute).
+
+`sw.js` is written by `.github/workflows/pages.yml` and by nobody else: on every push to `main` it runs every test (under ten
+seconds together; `tests/syntax.mjs` parses each script as the module it is, since `node --check` alone passes a broken module on
+Node 22) and, only if they pass, rebuilds `sw.js` (the list of files, each with a hash of its bytes, and a version from them all)
+and commits it as github-actions[bot]. Pages serves `main` as pushed, but installed copies move only when `sw.js` changes, so a push
+that fails a test never reaches them. Never commit `sw.js` by hand (pull before the next push: the bot's commit is on `main`);
+`node tools/build-sw.mjs --local` writes one to try offline play, which you don't commit. The manifest (`manifest.webmanifest`,
+icons in `icons/`, drawn from `icon.svg`, with a maskable one for Android) lets it be installed; the page links it.
+
+Tried in Chromium on a local server: installed, then the server stopped altogether and the page reloaded and played (the mulligan, a
+hand, the computer's worker loaded from the copy; no request failed); an unknown address offline opens the app; *Check for a new
+version* switching to a changed version and reloading with the game kept and the old copy gone; a version found while the app is
+on screen waiting, and taking over when it went off screen; one found while off screen taking over at once.
+
 ## Files
 
 - `index.html`, `dandan.js` (the page), `dandan.css`, `dandan-3d.js` and `-3d.css` (the table), `style.css` (the
@@ -220,6 +258,8 @@ repository for it would take a secret to push across; not done.
   kept lost); `tests/upkeep.mjs`, `tests/dandan-window.mjs`, `tests/hidden-info.mjs` and `tests/stack-show.mjs`, with `tests/dandan-scene.js`, which sets a game
   up at a chosen point. `hidden-info` holds the computer to the rule that it never uses what it can't see: dealt the
   cards it can't see again, its search weighs every move the same and picks the same one. Each runs in under a second.
+- `pwa.js` (registers the worker, takes updates, the menu's offline line), `manifest.webmanifest`, `icons/`; `tools/offline.mjs`, `tools/build-sw.mjs`,
+  `tools/service-worker.js` and `.github/workflows/pages.yml` (Offline, above); `tests/offline.mjs` and `tests/syntax.mjs`.
 - `lab/`, `tests/sequential.mjs` and `.github/workflows/match.yml`: the matches between two builds of the computer (Matches, above).
 
 The engine and the computer player are copies of the Almanac's; a rules fix there is made here by copying the file over

@@ -70,3 +70,4 @@ async function send(sync, entry) {
 }
 // the page opening again: what an earlier visit couldn't send
 addEventListener("load", () => setTimeout(flush, 3000));
+addEventListener("online", () => setTimeout(flush, 1000));   // a result kept while offline goes when the connection is back, without waiting for the next game

@@ -1,0 +1,45 @@
+# Every push to main is tested, and sw.js (the service worker that keeps the app on the device, so it opens with no connection:
+# README, "Offline") is published only when every test passes. GitHub Pages serves main as it is, but a device with the app installed
+# moves to a new version only when sw.js changes (it lists every file with a version from their contents), so a push that fails
+# a test never reaches installed copies: they stay on the last good version (a fresh visit to the site still gets the new files, so
+# don't leave it broken). sw.js is written by this workflow and by nobody else, so two people, or two Claudes, can push without
+# colliding on it. A newer push cancels an older run; a run that finds main has moved on leaves publishing to the newer one.
+# The bot's own commit doesn't start another run (a push made with the workflow's token never does).
+name: Test and publish
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: publish
+  cancel-in-progress: true
+jobs:
+  test-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tests
+        # all of them: together they take under ten seconds; the first that fails ends the step and prints its output
+        run: |
+          for t in tests/*.mjs; do
+            echo "::group::$t"
+            node "$t" || { echo "::error::$t failed"; exit 1; }
+            echo "::endgroup::"
+          done
+      - name: Publish sw.js
+        run: |
+          node tools/build-sw.mjs
+          if git diff --quiet -- sw.js && git ls-files --error-unmatch sw.js >/dev/null 2>&1; then echo "sw.js is already current"; exit 0; fi
+          if [ "$(git ls-remote origin refs/heads/main | cut -f1)" != "$(git rev-parse HEAD)" ]; then echo "main has moved on: its own run publishes"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add sw.js
+          git commit -q -m "sw.js for ${GITHUB_SHA::7}: its tests passed"
+          git push origin HEAD:main || echo "main moved on while publishing: its own run publishes"

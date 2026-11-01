@@ -12,6 +12,7 @@ import { nm, defOf, perm, pt, isLand, isCreature, manaAlts, payFrom, topKnown, n
 import { same } from "./dandan-spells.js";
 import { seatPage, fillNames } from "./seats-ui.js";
 import { part, choice, action, onPause, isPaused } from "./menu.js";
+import { offlineMenu } from "./pwa.js";
 import { savedName, askName } from "./name.js";
 import { recordResult } from "./results.js";
 import { sextant } from "./loading.js";
@@ -1044,6 +1045,7 @@ function openMenu() {
   play.append(action(`Name: ${page.name}`, changeName, "link"));
   const set = part(body, "settings");
   set.append(choice("Computer's pace", PACES, opts.pace, v => { opts.pace = v; saveOpts(); draw(); page.runner.kick(); }));
+  offlineMenu(part(body, "about"), toast);
   if (!$("menuDlg").open) $("menuDlg").showModal();
 }
 
