@@ -442,6 +442,8 @@ export function spellWorth(F, it) {
 
 // ---------- the player ----------
 const REMOVAL = new Set(["Piracy Charm", "Mind Bend", "Repulse", "Commit", "Metamorphose", "Gone Missing", "Deem Inferior"]);
+/** What takes a permanent off the table the moment it resolves (Mind Bend only changes what a Dandân looks for, at its upkeep; Piracy Charm kills only as its +2/−1). */
+const TAKES = new Set(["Repulse", "Commit", "Metamorphose", "Gone Missing", "Deem Inferior"]);
 
 export class Player {
   /** level: "medium" or "easy" (careless). */
@@ -949,6 +951,17 @@ export class Player {
     if (["Memory Lapse", "Commit", "Narset's Reversal"].includes(x.name)) gain *= TUNE.counterOnCounter;
     return gain - keep - pay * 0.5 - (half === "Commit" ? 0.2 : 0) - TUNE.counter;
   }
+  /**
+   * Whether a spell of theirs above `x` on the stack takes away a permanent `x` is aimed at before `x` resolves: a bounce, a trip to
+   * the library, or Piracy Charm's +2/−1, which kills. `x` would then fizzle; a copy of it made now sits above that spell and
+   * resolves first.
+   */
+  takenAway(x) {
+    const s = this.s, me = this.me, at = s.stack.findIndex(y => y.sid === x.sid), aims = x.targets.filter(t => t.k === "c");
+    if (at < 0 || !aims.length) return false;
+    return s.stack.slice(at + 1).some(y => y.ctl !== me && (TAKES.has(y.name) || (y.name === "Piracy Charm" && y.mode === 1))
+      && y.targets.some(t => t.k === "c" && aims.some(a => a.id === t.id)));
+  }
   /** Narset's Reversal on a spell: theirs goes back to their hand and we get a copy; ours, a copy and the card back. */
   reversal(x, keep, pay) {
     const F = this.F, me = this.me;
@@ -957,7 +970,9 @@ export class Player {
       // nothing, and the copy resolves: the spell happens and we keep the card (better than Reversing their counter, which
       // they keep)
       const countered = this.s.stack.some(y => y.ctl !== me && ["Memory Lapse", "Commit"].includes(y.name) && y.targets.some(t => t.k === "s" && t.sid === x.sid));
-      if (countered && x.card != null) return spellWorth(F, x) + 0.9 * cardWorth(F, x.card) + 0.5 - keep - pay;
+      // or what it is aimed at is about to be taken away by something above it (their Repulse on the Dandân our Deem Inferior is
+      // aimed at): the copy goes on top, so it resolves first, and that spell finds nothing to take away (Korbi, 1 November 2026)
+      if ((countered || this.takenAway(x)) && x.card != null) return spellWorth(F, x) + 0.9 * cardWorth(F, x.card) + 0.5 - keep - pay;
       const again = ["Lórien Revealed", "Take Inventory", "Chart a Course", "Memory Lapse"].includes(x.name) ? cardWorth(F, x.card) : 0;
       return again - keep - pay;
     }

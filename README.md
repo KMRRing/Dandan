@@ -151,6 +151,34 @@ top card or a Brainstorm or Predict for your draw. `anyUpkeepMove` in `dandan-en
 rule, and `node tests/upkeep.mjs` checks it. A Flood Plain with no Island or Plains card left in the library to fetch is
 not a reason to stop (cracking it would only shuffle); `node tests/dandan-window.mjs` checks that and the Flood Plain's own stop.
 
+## A Reversal on its own spell, when the target is about to go (a fix, 1 November 2026)
+
+Dave's game, turn 31: the computer cast a Deem Inferior on his Dandân, he answered with a Repulse on that same Dandân, and the
+computer passed. The Repulse resolved first (the Dandân to his hand, a card drawn) and the Deem Inferior found nothing. A
+Narset's Reversal on the Deem Inferior, with the Repulse still on the stack, would have put a copy of it above the Repulse: the
+copy resolves first and sends the Dandân to the library, the Repulse then has nothing to return (it fizzles, and draws him
+nothing), and the original Deem Inferior comes back to the computer's hand. Cast only after the Repulse had resolved, it saved
+the card and nothing else.
+
+The engine allowed it all along; the computer never rated it. Medium's value of a Reversal on a spell of its own was a copy
+that does nothing new (a card and two mana for a copy of what is already happening), except against a counter aimed at that
+spell. That scored below the cut-off at which Hard's search stops weighing a move (a move is weighed only if Medium rates it
+above −0.8), as soon as the computer held a Memory Lapse, or had little mana to spare (a score of −1.2 to −1.7; with plenty of
+mana it was −0.75, just inside, and the search then found it, which is why it is not always missed). So the line was never
+tried and Hard passed.
+
+Now a spell of theirs above the computer's, aimed at the permanent its spell is aimed at, and one that takes it off the table the
+moment it resolves (`takenAway` in `dandan-policy.js`: Repulse, Commit, Metamorphose, Gone Missing, Piracy Charm's +2/−1; not
+Mind Bend, which only changes what the Dandân looks for) is rated like a counter aimed at it: the spell happens, the card is
+kept and theirs is spent for nothing. In the position above it rates 1.6 to 2.5, first of the moves, and Hard plays it where it
+passed (tried with 5 to 9 lands and a Memory Lapse or a spare Dandân in hand). The mirror case holds too: its own Repulse on its own
+Dandân, answered by a Piracy Charm's +2/−1 that would kill it first, is copied by Hard (Medium rates a Reversal on the Charm
+higher there, 1.75 to 0.18; that is left as it was). `node tests/reversal-save.mjs` checks it:
+the rating, the search, the engine's own resolution (his Dandân to the bottom of the library, the Repulse fizzling, the Deem
+Inferior back in the computer's hand) and which spells count. It changes nothing else: a Reversal on its own spell with nothing
+above it is rated as before. A match could not show a gain from it (the position is rare); like the upkeep stop it is a mistake
+the computer can be shown to make.
+
 ## Where the results go
 
 Nothing about results is shown on the page. When a game ends, it is written to the Almanac's Firebase database
@@ -255,7 +283,7 @@ on screen waiting, and taking over when it went off screen; one found while off 
   `.github/workflows/games.yml` (collecting the games, above).
 - `tests/records.mjs` (a game kept with its moves plays again to the same state, move for move; the entry and the index line are plain
   data) and `tests/pull-games.mjs` (the collector against a stand-in database: each game once, a game it can't read said, nothing
-  kept lost); `tests/upkeep.mjs`, `tests/dandan-window.mjs`, `tests/hidden-info.mjs` and `tests/stack-show.mjs`, with `tests/dandan-scene.js`, which sets a game
+  kept lost); `tests/upkeep.mjs`, `tests/dandan-window.mjs`, `tests/hidden-info.mjs`, `tests/reversal-save.mjs` and `tests/stack-show.mjs`, with `tests/dandan-scene.js`, which sets a game
   up at a chosen point. `hidden-info` holds the computer to the rule that it never uses what it can't see: dealt the
   cards it can't see again, its search weighs every move the same and picks the same one. Each runs in under a second.
 - `pwa.js` (registers the worker, takes updates, the menu's offline line), `manifest.webmanifest`, `icons/`; `tools/offline.mjs`, `tools/build-sw.mjs`,
