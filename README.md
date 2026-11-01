@@ -158,15 +158,42 @@ Nothing about results is shown on the page. When a game ends, it is written to t
 room the database's rules already allow:
 
 - `players`: your name, under your anonymous id.
-- `game`: the game as the runner keeps it at its end: the seed, the seats and the whole state (the library's order,
-  both hands, the battlefield, the log of everything done, and the judge's chances after each action).
+- `game`: the game as the runner keeps it at its end: the seed, the seats, the state (the library's order, both hands, the
+  battlefield, the log of everything done, and the judge's chances after each action) and, since 1 November 2026, `moves`,
+  every move made, seat and move, in order, as one string (the database drops an empty list, and a move with no targets
+  has one). A game is played again from its seed and its moves (`replay` in `records.js`; each move's randomness comes from
+  the seed and its number, and nothing in the state depends on the clock), so it comes out move for move the same, and a
+  reader can stop at any move and see the table as it stood. A game kept before that has the state and its log, not the moves.
 - `result`: a summary: `name`, `won`, `drawn`, `winner` (the seat), `why` (how it ended; `conceded` too), `turns`,
-  `life` (both), `library` (cards left), `started`, `ended`, `ms`, and the settings it was played at (`level`, `think`,
-  `pace`, `view`) and the page.
+  `life` (both), `library` (cards left), `moves` (how many), `started`, `ended`, `ms`, and the settings it was played at
+  (`level`, `think`, `pace`, `view`) and the page.
 
-A result is kept on the device until the database has it (`dandan:unsent`): with no connection, or a tab closed too
+A line about the game also goes in one room that is always the same, `crates/rooms/DDIX/games/<started>` (a code with an I
+in it: the codes a table is given never have one, so no table is it): where the game is (`room`), who played (`name`, `uid`)
+and the summary. That is how the games can be found again, since the database's rules open a room only to someone who knows its
+code. A result is kept on the device until the database has it (`dandan:unsent`): with no connection, or a tab closed too
 soon, it is tried again at the next game's end and the next time the page opens. Each game is sent once, by when it began
-(`dandan:sent`). The game never waits on the database.
+(`dandan:sent`); once its room is made the code is kept with it, so a failure at the index never makes a second room. The game
+never waits on the database. A game not played to its end (the tab closed, the page left) is not kept.
+
+### Reading the games
+
+A session can't reach the database (the network it works from allows GitHub and little else), and the page can't list it, so
+`.github/workflows/games.yml` collects the games onto a branch, **`game-records`**, which anyone can read with git (a session
+fetches it). It runs every hour (the cron) and when started by hand (Actions → Game records → Run workflow; or `gh api -X
+POST repos/KMRRing/dandan/actions/workflows/games.yml/dispatches -f ref=main`). `tools/pull-games.mjs` signs in as any visitor to
+the page does (anonymously, with the page's own public key), reads the index room and fetches the games it doesn't have. No
+secret is involved, and no change to the database's rules. The branch holds:
+
+- `games/<started>.json`: one game: `{ key, room, line, game (the seed, seats, `moves` as a string, the final state), result, players }`.
+- `index.json`: every game's summary and room, oldest first: the table to start from for win rates, by name, level and day.
+- `status.json`: when it last found anything, how many games it has, how many are listed but unread (`unread`), and what
+  went wrong (`errors`: the sign-in, the index, a game's room). Something is committed only when a game is new or the problems
+  change, so the branch isn't a log of idle hours.
+
+The repository is public, so the branch is too: the games, the names players gave and their anonymous ids can be read by
+anyone who looks (the database already lets anyone signed in read a room whose code they guess, four letters). A private
+repository for it would take a secret to push across; not done.
 
 ## Files
 
@@ -175,11 +202,15 @@ soon, it is tried again at the next game's end and the next time the page opens.
 - `dandan-cards.js`, `-core.js`, `-spells.js`, `-engine.js`, `-rules.js` (the game); `-bot.js`, `-policy.js`, `-think.js`,
   `-eval.js`, `-reads.js`, `-observe.js`, `-advantage.js` (the computer player and the judge), `-worker.js` (the search,
   off the page's thread); `dandan-words.js` (move names, taken out of the Almanac's coach file so Hard reads as before).
-- `seats.js` (the game runner), `seats-ui.js` (here: solo only), `name.js`, `results.js`, `net.js`, `sync.js`.
-- `tests/upkeep.mjs`, `tests/dandan-window.mjs`, `tests/hidden-info.mjs` and `tests/stack-show.mjs`, with `tests/dandan-scene.js`, which sets a game
+- `seats.js` (the game runner; this copy also keeps every move), `seats-ui.js` (here: solo only), `name.js`, `results.js` and
+  `records.js` (what a game is kept as, and played again from), `net.js`, `sync.js`; `tools/pull-games.mjs` and
+  `.github/workflows/games.yml` (collecting the games, above).
+- `tests/records.mjs` (a game kept with its moves plays again to the same state, move for move; the entry and the index line are plain
+  data) and `tests/pull-games.mjs` (the collector against a stand-in database: each game once, a game it can't read said, nothing
+  kept lost); `tests/upkeep.mjs`, `tests/dandan-window.mjs`, `tests/hidden-info.mjs` and `tests/stack-show.mjs`, with `tests/dandan-scene.js`, which sets a game
   up at a chosen point. `hidden-info` holds the computer to the rule that it never uses what it can't see: dealt the
   cards it can't see again, its search weighs every move the same and picks the same one. Each runs in under a second.
 - `lab/`, `tests/sequential.mjs` and `.github/workflows/match.yml`: the matches between two builds of the computer (Matches, above).
 
 The engine and the computer player are copies of the Almanac's; a rules fix there is made here by copying the file over
-(the shown spell is this page's alone: `show` in `act` and `showStop` in `dandan-engine.js`, which a copy must keep).
+(the shown spell is this page's alone: `show` in `act` and `showStop` in `dandan-engine.js`, which a copy must keep). `seats.js` is the Almanac's with one change, which a copy must keep too: `applyMove` also keeps each move in `G.moves`.

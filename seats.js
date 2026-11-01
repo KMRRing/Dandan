@@ -22,7 +22,9 @@
 // names a seat as {s2}, filled with whoever sits there when it's said (a friend may have taken a computer's seat).
 //
 // The record of a game, wherever it's kept (solo: <id>:game on the device; at a table: the branch's game):
-//   G = { seq, seed, n (moves made), seats, options, state, started, say: { n, text, lang } }
+//   G = { seq, seed, n (moves made), seats, options, state, started, moves: [[seat, move]…], say: { n, text, lang } }
+// `moves` is every move made, in order (Dandan's copy of this file only: results.js sends it, and a game is played again
+// from the seed and these, records.js); a move that changes nothing is an error and is not kept.
 // Each move's randomness comes from the seed and the move's number, so a move worked out twice (a transaction run
 // again on a fresher copy) comes out the same.
 
@@ -77,7 +79,7 @@ export function applyMove(rules, G, seat, move, now = Date.now()) {
   const r = rules.act(st, seat, move, { rng: seeded(mix(G.seed, G.n + 1)), now });
   if (typeof r === "string") return { error: r };
   if (!r) return { error: "That can't be played" };
-  const next = { ...G, n: G.n + 1, state: r };
+  const next = { ...G, n: G.n + 1, moves: [...(G.moves || []), [seat, move]], state: r };
   takeSay(next, r);
   return { G: next };
 }
