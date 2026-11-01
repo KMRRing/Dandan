@@ -263,20 +263,20 @@ a point a decision, ended undecided). Like the upkeep stop and the Reversal fix,
 to make, kept on that evidence and not on a match; a match from the Actions tab (candidate against `champion`) will say if
 it costs anything elsewhere.
 
-## A draw of a card you saw on top is in the log (1 November 2026)
+## The log says when things resolve (1 November 2026)
 
-A tester wrote that his Dandân was hit by Metamorphose "but then wasn't the top card of the deck". The rules were right and
-the log was not: the computer had cast the Metamorphose in its own upkeep, so his Dandân went on top of the shared library
-and the computer drew it in the draw step, and a draw left no line, so the next thing the log showed (a Thundering Falls
-surveil of another card) looked like the Dandân had slipped out from under. It was found by rebuilding the game from its seed
-and the recorded log (no moves had been kept: a search over the legal moves, each checked against the log, found the one
-sequence the engine plays out as recorded) and stepping through it; the card was in the computer's hand from the draw step on.
-That is also a good play, since Metamorphose costs one card to take the Dandân for yourself.
+Two testers' games looked like a card had gone missing from the top of the library, and in both the engine was right and the log
+was silent. In the first the computer cast Metamorphose in its own upkeep, so the tester's Dandân went on top and the computer drew
+it in the draw step (found by rebuilding the game from its seed and log: no moves had been kept, so a search over the legal moves,
+each checked against the log, found the one sequence the engine plays out as recorded). In the second a Mind Bend was countered
+by a Memory Lapse onto the top of the library, and a Repulse that had been cast first then resolved and drew it, a card before the
+other player's draw: right by the stack (the last cast resolves first), but the log showed the casts and not the order they came off.
 
-A draw is still silent when the other player didn't see the card. When they did (a spell put on top in the open, such as a
-Metamorphosed permanent or a countered Memory Lapse), `draw` in `dandan-core.js` adds "{seat} draws Dandân, which was on
-top", the same fact the other player's record of the hand (`kh`) already gets. `node tests/draw-log.mjs` plays Dave's
-upkeep and checks the line, the hand, what a surveil sees next, and that the cases without it stay silent.
+So each item now says "Repulse resolves" (or "Thundering Falls trigger resolves", "Cycling resolves"…) as it comes off the stack
+(`resolveTop` in `dandan-engine.js`), before whatever it does; a spell countered never resolves, and one whose target has gone
+says it fizzles, not that it resolves. What is drawn is deliberately not in the log (the other player reads it too): a draw
+stays silent, and the order of resolutions is how a reader works out which card went where. `node tests/resolve-log.mjs` plays the
+Mind Bend game's stack and checks the order and that the draw is not named.
 
 ## Where the results go
 

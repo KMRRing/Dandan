@@ -393,6 +393,9 @@ function aim(s) {
 }
 
 // ---------- resolving ----------
+/** What a stack item that isn't a spell is called in the log. */
+const LOG_NAMES = { "@fetch": "Flood Plain's search", "@isle": "Islandcycling", "@cycle": "Cycling", "@clue": "Clue", "@dandan": "Dandân's sacrifice",
+  "@depths": "Halimar Depths trigger", "@falls": "Thundering Falls trigger", "@boil": "Izzet Boilerworks trigger", "@sanct": "Mystic Sanctuary trigger" };
 function resolveTop(s) {
   const it = s.stack[s.stack.length - 1];
   if (!stillLegal(s, it)) {
@@ -401,6 +404,9 @@ function resolveTop(s) {
     s.prio = s.active;
     return;
   }
+  // each item says when it comes off the stack: the last cast resolves first, and what it did (a draw, a card put on
+  // top) is then in its place in the order, which isn't obvious from the casts alone
+  say(s, `${LOG_NAMES[it.name] || it.name} resolves`);
   s.res = it.sid;
   if (RES[it.name](s, it) === "wait") return;
   finish(s, it);
