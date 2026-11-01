@@ -195,6 +195,12 @@ Run it by hand with *check* ticked and it collects nothing: it writes a marked l
 away, and `status.json` says (`check`: `write`, `read`, `delete`, `gone`) whether the page's own write is allowed by the database's
 rules. That is the first thing to look at if a game was played and nothing came.
 
+Games kept before the index existed have no line in it, so the hourly run can't see them. Tick *scan* and it asks every room (the
+four-letter codes: 24 letters, 331,776 rooms, each answer a few bytes, a few minutes) whether it holds a Dandan result, fetches
+the games it finds and adds them to `index.json` marked `scanned: true`; the later runs leave them alone. Run it once after
+this change, and again only if the index is ever lost. `status.json` says (`scan`) how many rooms it asked, how many held a game
+and how many failed.
+
 The repository is public, so the branch is too: the games, the names players gave and their anonymous ids can be read by
 anyone who looks (the database already lets anyone signed in read a room whose code they guess, four letters). A private
 repository for it would take a secret to push across; not done.

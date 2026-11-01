@@ -13,11 +13,16 @@ on:
         description: Collect nothing; try the page's own write to the index room (written, read back, removed) and say if it works
         type: boolean
         default: false
+      scan:
+        description: Collect nothing new from the index; ask every room for a Dandan result, for games kept before the index (a few minutes)
+        type: boolean
+        default: false
 permissions: { contents: write }
 concurrency: { group: game-records, cancel-in-progress: false }
 jobs:
   pull:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,11 +39,11 @@ jobs:
             git -C records rm -rf -q . || true
           fi
       - name: Collect the games
-        run: node tools/pull-games.mjs records ${{ inputs.check && '--check' || '' }}
+        run: node tools/pull-games.mjs records ${{ inputs.check && '--check' || inputs.scan && '--scan' || '' }}
       - name: Keep what is new
         run: |
           cd records
           git add -A
           if git diff --cached --quiet; then echo "nothing new"; exit 0; fi
-          git commit -q -m "Games: $(jq -r '"\(.games // 0) kept, \(.new // 0) new" + (if (.errors | length) > 0 then ", \(.errors | length) problems" else "" end) + (if .check then ", check " + (.check | tostring) else "" end)' status.json)"
+          git commit -q -m "Games: $(jq -r '"\(.games // 0) kept, \(.new // 0) new" + (if (.errors | length) > 0 then ", \(.errors | length) problems" else "" end) + (if .check then ", check " + (.check | tostring) else "" end) + (if .scan then ", scan " + (.scan | tostring) else "" end)' status.json)"
           git push origin HEAD:game-records

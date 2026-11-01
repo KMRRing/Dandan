@@ -24,6 +24,8 @@ const server = http.createServer((req, res) => {
   if (req.method === "POST" && url.pathname === "/signup") { db.signedIn++; return send(db.refuse ? 400 : 200, db.refuse ? { error: { message: "ADMIN_ONLY_OPERATION" } } : { idToken: "tok" }); }
   if (url.searchParams.get("auth") !== "tok") return send(401, { error: "Permission denied" });
   db.asked.push(url.pathname);
+  const sm = url.pathname.match(/^\/crates\/rooms\/([A-Z]{4})\/dandan\/result\.json$/);
+  if (sm) return send(200, db.rooms[sm[1]]?.result ?? null);
   const m = url.pathname.match(/^\/crates\/rooms\/([A-Z]{4})(\/games|\/dandan)?\.json$/);
   if (!m) return send(404, null);
   if (m[1] === INDEX_ROOM && m[2] === "/games") return send(200, Object.keys(db.index).length ? db.index : null);
@@ -32,7 +34,7 @@ const server = http.createServer((req, res) => {
 });
 await new Promise(r => server.listen(0, "127.0.0.1", r));
 const port = server.address().port;
-const run = (out, ...more) => new Promise(r => execFile("node", ["tools/pull-games.mjs", out, ...more], { env: { ...process.env, IDENTITY_URL: `http://127.0.0.1:${port}/signup`, DB_URL: `http://127.0.0.1:${port}/elsewhere,http://127.0.0.1:${port}` } }, (e, stdout, stderr) => r({ code: e ? e.code : 0, stdout, stderr })));
+const run = (out, ...more) => new Promise(r => execFile("node", ["tools/pull-games.mjs", out, ...more], { env: { ...process.env, SCAN_LETTERS: "ABCDEFGHIJ", IDENTITY_URL: `http://127.0.0.1:${port}/signup`, DB_URL: `http://127.0.0.1:${port}/elsewhere,http://127.0.0.1:${port}` } }, (e, stdout, stderr) => r({ code: e ? e.code : 0, stdout, stderr })));
 const game = (key, name, won) => ({ line: { room: [...key].map(d => String.fromCharCode(65 + +d)).join(""), at: +key, name, uid: "u1", result: { name, won, started: +key, ended: +key + 1000, moves: 5 } }, branch: { game: { seed: 1, seats: 2, moves: "[[0,{\"t\":\"pass\"}]]", state: { log: [] } }, result: { name, won, started: +key, ended: +key + 1000, moves: 5 }, players: { u1: { name } } } });
 const put = (key, name, won) => { const g = game(key, name, won); db.index[key] = g.line; db.rooms[g.line.room] = g.branch; return g.line.room; };
 
@@ -105,6 +107,23 @@ r = await run(out);
   db.index["check-1"] = { room: "CHECK", check: true, at: 1 };            // one that was left behind is not mistaken for a game
   r = await run(dir);
   check(!fs.existsSync(path.join(dir, "games", "check-1.json")) && fs.existsSync(path.join(dir, "games", "7000.json")), "a check line left behind is not mistaken for a game");
+}
+// the scan: games kept before the index (rooms with no line in it) are found by asking every code, once each
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "games-"));
+  db.index = {}; db.rooms = {};
+  db.rooms.BCDE = game("9000", "Dave", true).branch;          // played before the index: no line for it
+  db.rooms.JJAA = game("9100", "Eve", false).branch;
+  db.rooms.AAAA = { suite: 1 };                             // some other game's room
+  db.asked.length = 0;
+  r = await run(dir, "--scan");
+  const index = fs.existsSync(path.join(dir, "index.json")) ? JSON.parse(fs.readFileSync(path.join(dir, "index.json"), "utf8")) : [];
+  const status = JSON.parse(fs.readFileSync(path.join(dir, "status.json"), "utf8"));
+  check(index.map(g => g.name).join() === "Dave,Eve" && index.every(g => g.scanned) && status.scan.rooms === 10 ** 4 && status.scan.found === 2 && status.scan.added === 2, "the scan asks every code and keeps the games it finds, marked as scanned");
+  check(fs.existsSync(path.join(dir, "games", "9000.json")) && db.asked.filter(p => p.endsWith("/result.json")).length === 10 ** 4 && db.asked.filter(p => p.endsWith("/dandan.json")).length === 2, "it reads a room whole only when it has a Dandan result");
+  db.asked.length = 0;
+  r = await run(dir, "--scan");
+  check(JSON.parse(fs.readFileSync(path.join(dir, "index.json"), "utf8")).length === 2 && db.asked.filter(p => p.endsWith("/dandan.json")).length === 0, "a second scan finds the same games and fetches none again");
 }
 server.close();
 if (bad) { console.log(`${bad} problems`); process.exit(1); }

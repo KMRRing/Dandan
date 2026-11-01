@@ -7,6 +7,8 @@
 // usage: node tools/pull-games.mjs <folder> [--check]       (IDENTITY_URL and DB_URL are for the test, which runs a stand-in)
 // --check collects nothing: it writes a marked line into the index room, reads it back and takes it away, which shows that the
 // page's own write is allowed by the database's rules (the result is `check` in status.json).
+// --scan finds the games kept before the index existed (or that never got a line in it): a room's code is four letters, so it
+// asks every room (24 letters, 331,776 codes, each answer a few bytes) for its Dandan result, and keeps what it finds.
 import fs from "node:fs";
 import path from "node:path";
 import { INDEX_ROOM } from "../records.js";
@@ -19,7 +21,8 @@ const DBS = process.env.DB_URL ? process.env.DB_URL.split(",") : ["https://croat
 // a key can be limited to the pages that may use it; say we come from the page
 const HEADERS = { "content-type": "application/json", referer: "https://kmrring.github.io/", origin: "https://kmrring.github.io" };
 
-const dir = process.argv[2] || "records", CHECK = process.argv[3] === "--check";
+const dir = process.argv[2] || "records", CHECK = process.argv[3] === "--check", SCAN = process.argv[3] === "--scan";
+const LETTERS = process.env.SCAN_LETTERS || "ABCDEFGHJKLMNPQRSTUVWXYZ";             // the letters a table's code is made of
 const read = (file, fallback) => { try { return JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")); } catch { return fallback; } };
 const write = (file, v) => { fs.mkdirSync(path.dirname(path.join(dir, file)), { recursive: true }); fs.writeFileSync(path.join(dir, file), JSON.stringify(v)); };
 const errors = [];
@@ -45,6 +48,7 @@ async function main() {
   }
   if (!base) for (const [what, e] of passed) fail(what, e);
   if (CHECK && base) return selfCheck(base, token, before);
+  if (SCAN && base) return scan(base, token, before, index, have);
   let found = 0;
   for (const [key, line] of Object.entries(lines || {})) {
     if (have.has(key) || !line?.room || line.check) continue;
@@ -63,6 +67,47 @@ async function main() {
   if (found) write("index.json", index);
   if (found || !before.at || errors.join() !== (before.errors || []).join()) write("status.json", status);
   console.log(`${index.length} games, ${found} new, ${errors.length} problems`);
+}
+/** Every room asked for its Dandan result; what answers is fetched whole and kept like any game, marked `scanned`. */
+async function scan(base, token, before, index, have) {
+  const L = LETTERS.length, total = L ** 4, found = [], t0 = Date.now();
+  let next = 0, failed = 0, asked = 0;
+  const codeOf = i => LETTERS[Math.floor(i / L ** 3) % L] + LETTERS[Math.floor(i / L ** 2) % L] + LETTERS[Math.floor(i / L) % L] + LETTERS[i % L];
+  const get = async url => {
+    for (let attempt = 0; ; attempt++) {
+      try { return await json(url, { headers: HEADERS }); }
+      catch (e) { if (attempt >= 3) throw e; await new Promise(r => setTimeout(r, 300 * 2 ** attempt)); }
+    }
+  };
+  const worker = async () => {
+    while (failed < 500) {
+      const i = next++;
+      if (i >= total) return;
+      const room = codeOf(i);
+      try {
+        const result = await get(`${base}/crates/rooms/${room}/dandan/result.json?auth=${token}`);
+        if (result) found.push({ room, result });
+      } catch (e) { failed++; if (failed < 5) fail(`scan ${room}`, e); }
+      if (++asked % 25000 === 0) console.log(`asked ${asked} of ${total} rooms, ${found.length} games, ${failed} failed, ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+    }
+  };
+  await Promise.all(Array.from({ length: Number(process.env.SCAN_WIDTH) || 96 }, worker));
+  let added = 0;
+  for (const { room, result } of found) {
+    const key = String(result.started);
+    if (have.has(key)) continue;
+    try {
+      const branch = await get(`${base}/crates/rooms/${room}/dandan.json?auth=${token}`);
+      write(`games/${key}.json`, { key, room, line: null, scanned: true, game: branch.game, result: branch.result, players: branch.players });
+      index.push({ key, room, scanned: true, ...branch.result });
+      have.add(key); added++;
+    } catch (e) { fail(`game in ${room}`, e); }
+  }
+  index.sort((a, b) => (a.ended || 0) - (b.ended || 0));
+  if (added) write("index.json", index);
+  const scanned = { at: new Date().toISOString(), rooms: asked, found: found.length, added, failed };
+  write("status.json", { ...before, games: index.length, scan: scanned, errors });
+  console.log(`scan: ${JSON.stringify(scanned)}; ${index.length} games`);
 }
 /** The page's own write, tried: a marked line in the index room, read back, taken away. */
 async function selfCheck(base, token, before) {
