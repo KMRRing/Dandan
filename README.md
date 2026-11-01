@@ -339,8 +339,8 @@ service worker, the browser's own way of keeping a site on the device) holds eve
 scripts, the computer's search worker, the styles, the font and the icons. A played game is saved in the browser as before, so the
 game you left is the game you come back to. Only the database needs the network, and only for the finished game's result, which
 `results.js` already keeps until it can send it; it now also sends it the moment the connection comes back (the `online` event),
-not at the next game's end. The menu's About part says whether it is ready ("Ready for offline play: version 7d9898") and has
-*Check for a new version*.
+not at the next game's end. The menu's About part says whether it is ready ("Ready for offline play: version 7d9898"), and its Settings part has
+*Refresh to the latest version* (below).
 
 The list is every file of the app's own kinds outside `tests/`, `tools/`, `lab/` and `.github/` (`tools/offline.mjs`). The app
 is small enough that "everything that ships" is simpler and safer than finding what each page loads, and `tests/offline.mjs`
@@ -352,7 +352,7 @@ A version is one set of files and is used whole: a page is never handed a file o
 here because the computer's search is a worker the page starts when it needs it. So an update downloads in the background (each
 file asked for at an address carrying its hash, past every cache; a file the site refuses fails the install, and the version in
 charge stays; an interrupted download finishes from where it stopped) and then waits. It takes over when the app goes off screen,
-or when *Check for a new version* finds one, and the page reloads onto it; the game is in the browser's storage, so it picks up
+or when *Refresh* finds one, and the page reloads onto it; the game is in the browser's storage, so it picks up
 where it was. The older copy is deleted only once the new one is in charge. The first install needs none of this (nothing older is
 there to be mixed up with) and takes the page that began it. An app left open is looked at for a new version when it is brought back
 (at most once a minute).
@@ -365,9 +365,20 @@ that fails a test never reaches them. Never commit `sw.js` by hand (pull before 
 `node tools/build-sw.mjs --local` writes one to try offline play, which you don't commit. The manifest (`manifest.webmanifest`,
 icons in `icons/`, drawn from `icon.svg`, with a maskable one for Android) lets it be installed; the page links it.
 
+**Refresh (1 November 2026, Korbi: "add a 'refresh' button into settings that'll download latest version on the bookmarked app").**
+*Refresh to the latest version* is a button in the menu's Settings part (it replaces the quiet *Check for a new version* link in
+About, which was easy to miss and said only "Up to date."). It asks the site for `sw.js`, and if that names a newer version it
+puts the rete up with the stage ("Looking for a new version", "Downloading it", "Starting it"), downloads it, tells it to take over
+and reloads onto it, the game where it was. With nothing newer it says "This is the latest version (7d9898)", and with no
+connection or a failed download it says so and leaves the version on the device. It cannot fetch what hasn't been published: a
+push reaches the app only a minute or two after its tests pass (the workflow commits `sw.js` then), which is the design, so that
+a broken push never reaches the phone; the message says it. `refresh()` in `pwa.js`; `node tests/refresh.mjs` plays it against a
+stand-in for the browser's service worker (nothing newer, no connection, a download that takes a moment, one already waiting, one
+that fails, no service workers at all).
+
 Tried in Chromium on a local server: installed, then the server stopped altogether and the page reloaded and played (the mulligan, a
-hand, the computer's worker loaded from the copy; no request failed); an unknown address offline opens the app; *Check for a new
-version* switching to a changed version and reloading with the game kept and the old copy gone; a version found while the app is
+hand, the computer's worker loaded from the copy; no request failed); an unknown address offline opens the app; *Refresh*
+switching to a changed version and reloading with the game kept and the old copy gone; a version found while the app is
 on screen waiting, and taking over when it went off screen; one found while off screen taking over at once.
 
 ## Files
