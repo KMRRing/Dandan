@@ -445,12 +445,53 @@ const REMOVAL = new Set(["Piracy Charm", "Mind Bend", "Repulse", "Commit", "Meta
 /** What takes a permanent off the table the moment it resolves (Mind Bend only changes what a Dandân looks for, at its upkeep; Piracy Charm kills only as its +2/−1). */
 const TAKES = new Set(["Repulse", "Commit", "Metamorphose", "Gone Missing", "Deem Inferior"]);
 
+// ---------- the end of the library ----------
+// One library is shared, so a long game ends by one of them drawing from it empty: whoever makes the draw that finds nothing
+// loses. Draw steps alone would give it to the player whose step is the (L+1)th from now, but every card taken out
+// (a draw, a mill, a cycled card) or put in (a spell countered by Memory Lapse, a permanent sent to the library) moves the
+// count by one and so changes who it is: a move is worth what it does to that, and a draw of more cards than the library
+// holds is the end of the game for whoever makes it. (Nothing here read the library's size until 1 November 2026.)
+/** The library's size below which it is part of every decision. */
+export const RACE = 12;
+/** What a move of ours does to the library: { need: cards that must be there when it resolves (it loses if they aren't), net: how many it leaves fewer (negative: more) }. */
+export function libraryMove(s, F, m) {
+  const take = n => ({ need: n, net: n });
+  if (m.t === "cycle") return CARDS[front(m.card)]?.islandcycling ? { need: 0, net: 1 } : take(1);
+  if (m.t === "ability") return nm(perm(s, m.id)?.id) === "Clue" ? take(1) : { need: 0, net: 1 };   // a Flood Plain takes an Island out
+  if (m.t !== "cast") return null;
+  const half = m.from === "yard" ? halfOf(m.card, "yard") : front(m.card), t0 = m.targets[0];
+  switch (half) {
+    case "Brainstorm": return { need: 3, net: 1 };                       // draws three, puts two back on top
+    case "Lórien Revealed": return take(3);
+    case "Chart a Course": return take(2);
+    case "Quicken": return take(1);
+    case "Take Inventory": return take(1 + s.yard.filter(i => DECK[i] === "Take Inventory").length);
+    case "Predict": return take(F.known != null ? 3 : 2);                // mills one, draws one or two
+    case "Memory Lapse": case "Commit": {
+      const y = t0?.k === "s" ? itemOf(s, t0.sid) : null;
+      return y && !y.copy && y.card != null ? { need: 0, net: -1 } : null;   // the card it counters goes into the library
+    }
+    case "Metamorphose": case "Gone Missing": case "Deem Inferior": {
+      const p = t0?.k === "c" ? perm(s, t0.id) : null;
+      return p && !isToken(p.id) ? { need: 0, net: -1 } : null;
+    }
+    default: return null;
+  }
+}
+/** Who makes the draw that finds the library empty, with only draw steps to come: the next drawer's when the library holds an even number of cards, else the other's. */
+export const emptiedBy = (left, next) => (left % 2 === 0 ? next : other(next));
+/** What the end of the library is worth to the one who'd win it, in cards: all of it close to the end, little further off. */
+const raceWorth = left => (left <= 3 ? 5 : left <= 7 ? 3 : 1.5);
+/** How much of the race is left to win once the other player may put it back with a draw of their own, by the cards they hold: none, one, two, three or more. */
+const UNDONE = [1, 0.6, 0.35, 0.2];
+
 export class Player {
   /** level: "medium" or "easy" (careless). */
   constructor(s, me, { level = "medium", rng = Math.random } = {}) {
     this.s = s; this.me = me; this.opp = other(me); this.rng = rng;
     this.easy = level === "easy";
     this.F = facts(s, me);
+    this.low = s.lib.length <= RACE;
   }
 
   // ===== the questions =====
@@ -690,6 +731,10 @@ export class Player {
     return best;
   }
   score(m) {
+    const v = this.scoreMove(m);
+    return this.low ? v + this.libraryTerm(m) : v;
+  }
+  scoreMove(m) {
     switch (m.t) {
       case "land": return this.scoreLand(m);
       case "cast": return this.scoreCast(m);
@@ -697,6 +742,22 @@ export class Player {
       case "ability": return this.scoreAbility(m);
     }
     return 0;
+  }
+  /**
+   * What a move does to the end of the library, added to its score: drawing more than the library holds loses the game (any
+   * level); otherwise the move is worth the race it wins or loses, the player who'd draw from the empty library being the
+   * other one when it is done and not before (or the reverse), at the weight of how near the end is, less the more cards the
+   * other player holds, any of which may be a draw that puts it back (UNDONE).
+   */
+  libraryTerm(m) {
+    const s = this.s, F = this.F, L = s.lib.length, lm = libraryMove(s, F, m);
+    if (!lm || (!lm.need && !lm.net)) return 0;
+    if (lm.need > L) return -9;
+    if (this.easy) return 0;
+    const after = Math.max(0, L - lm.net);          // a card that isn't there can't be taken
+    const before = emptiedBy(L, F.next), now = emptiedBy(after, F.next);
+    if (before === now) return 0;
+    return (now === this.opp ? raceWorth(after) : -raceWorth(after)) * UNDONE[Math.min(3, s.hand[this.opp].length)];
   }
 
   // ----- when -----
@@ -981,7 +1042,10 @@ export class Player {
     let copy = 0;
     if (["Brainstorm", "Predict", "Quicken", "Chart a Course", "Take Inventory", "Lórien Revealed", "Mystic Retrieval"].includes(x.name)) copy = 0.8 * Math.abs(spellWorth(F, x));
     else if (["Piracy Charm", "Mind Bend", "Repulse"].includes(x.name) && F.theirs.length) copy = 0.7 * Math.max(...F.theirs.map(d => dandanWorth(this.s, d)));
-    return spellWorth(F, x) + copy - keep - pay * 0.5;
+    // the original goes back to their hand, not to the library as a counter would send it: they keep the card (a Lapse of theirs
+    // reversed is still theirs to cast again), and only its effect is denied
+    const back = !x.copy && x.card != null ? 0.9 * cardWorth(F, x.card, x.ctl) : 0;
+    return spellWorth(F, x) + copy - back - keep - pay * 0.5;
   }
 
   /**

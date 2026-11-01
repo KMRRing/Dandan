@@ -137,8 +137,13 @@ export function candidates(s, seat, { wide = 7 } = {}) {
   const add = m => { const k = key(m); if (!seen.has(k)) { seen.add(k); out.push(m); } };
   if (!p) {
     add(PASS);
-    for (const { m, v } of scored) if (v > -0.8) add(m);
-    return out.slice(0, wide);
+    // with something on the stack, every move there is (at the root, up to STACK_WIDE): which spell to counter or copy, or whether to
+    // draw in answer, turns on what the others do, which Medium's score doesn't see, and the search does (audited on 1,277
+    // decisions with two or more spells on the stack, every legal move valued: the best was outside the shortlist in 6.5%, and
+    // by two points or more in 2.7%, worth ten or more where it happened: README, The stack and the end of the library)
+    const stacked = (s.stack.length > 0 || endOfLibrary(s) > 0) && wide >= 7;
+    for (const { m, v } of scored) if (v > -0.8 || stacked) add(m);
+    return out.slice(0, stacked ? STACK_WIDE : wide);
   }
   switch (p.t) {
     case "attack": {
@@ -218,6 +223,16 @@ export function playOut(c, seat, to, rng, judge = winChance) {
 // deals where it was there to make), so each side comes to play what is best for it there, not only Medium's habit; a
 // node's choices widen as it's visited, and each deal grows the tree by one decision, Medium playing on from there.
 const WIDTH = 4, EXPLORE = 0.3;
+/**
+ * How many turns a look-ahead needs to see the game out when the library is nearly gone: the judge never saw a game end by
+ * drawing from an empty library (the games it learned from hardly ever got there), so two turns ahead says nothing of who
+ * will draw last. With RACE_TURNS cards or fewer left each draw step takes one, so the library is out within that many turns
+ * and the game ends within two more; the look-ahead plays on that far (the position's own result, not the judge's guess).
+ */
+const RACE_TURNS = 8;
+export const endOfLibrary = s => (s.lib.length <= RACE_TURNS ? s.lib.length + 2 : 0);
+/** The most moves weighed at the root with something on the stack (otherwise `wide`, 7). */
+const STACK_WIDE = 12;
 /**
  * A move as the seat sees it, so a decision's children are the same in every deal: cards by name, permanents by
  * controller and name, the other player's hidden choices (cards put back, put on the bottom, their order) by kind only.
@@ -331,7 +346,7 @@ export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide 
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
   const n = cands.length;
   if (n === 1) return { best: cands[0], list: [{ move: cands[0], mean: NaN, se: 0, n: 0 }], deals: 0, only: true };
-  const to = s.turn + turns, seed = seedOf(s, seat);
+  const to = s.turn + Math.max(turns, endOfLibrary(s)), seed = seedOf(s, seat);
   const vals = cands.map(() => []), seen = cands.map(() => []), roots = cands.map(newNode);
   let alive = cands.map((_, i) => i), d = 0;
   while (d < deals && alive.length > 1) {

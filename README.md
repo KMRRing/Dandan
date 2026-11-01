@@ -196,6 +196,73 @@ The manual tap switch is a different thing and is unchanged: it chooses which la
 one ahead of time. `node tests/mana-tap.mjs` checks the engine's side (the pool, priority kept, the order of payment, the
 step's end, what is refused).
 
+## The stack and the end of the library (1 November 2026)
+
+Korbi: make sure that every time the computer has the initiative it assesses the board and the stack correctly, above all
+when the library is nearly gone and the loser is whoever draws from it empty, and when several spells are on the stack and the
+order of resolution decides what fizzles and who draws what. This was audited before it was changed: positions from the
+games kept so far, every legal move valued over many deals with the look-ahead run out (the same machinery Hard uses), half
+the deals choosing the best move and the other half judging it, and a player's **regret** being how many points of win chance
+its move gives up against the best one. Two audits: 1,277 decisions with two or more spells on the stack, and 1,135 positions
+with the library cut to one to ten cards. What it found, and what was done:
+
+- **Medium did not read the library at all.** A Lórien Revealed (draw three) with an empty library scored +1.45, though it
+  loses on the spot. Now any move that draws more cards than the library holds scores
+  -9 at every level (`libraryTerm` in `dandan-policy.js`; `libraryMove` is what each card takes out of the library or puts
+  back: a draw, a mill, a cycled card, a Flood Plain's Island; a spell countered by Memory Lapse or Commit, a permanent sent
+  to the library). In the 8 of 1,135 positions where this changed Medium's pick, the regret went from 47 to 9
+  points (60 to 24 with an opponent that answers back); it is the one part that is right whoever the opponent is.
+- **Who draws from the empty library is a race, and Medium now plays it.** With only draw steps left the (L+1)th draw
+  loses, and every card taken out or put back moves that by one: a Brainstorm, a cycled land or a Quicken with three cards
+  left changes who runs out (`emptiedBy`; `tests/library-end.mjs` checks the count against the engine playing it out for
+  libraries of 0 to 7 cards). A move that changes who loses is worth 5, 3 or 1.5 cards depending on how near the end is
+  (3 cards or fewer, 7 or fewer, 12 or fewer), and the library is only looked at inside 12 cards. The other player can put
+  it back with a draw of their own, so the worth is cut by what they hold: whole with an empty hand, 0.6 with one card, 0.35
+  with two, 0.2 with three or more (`UNDONE`; set before the audit, not fitted to it). It is worth less than it looks. Counting the
+  check above, and with the opponent in the look-ahead not answering, regret fell from 8.2 to 7.6 points (0.64 plus or minus 0.29); with the
+  opponent answering as the race rule itself does, from 9.1 to 8.6 (0.49 plus or minus 0.33). Better in both, never worse,
+  and neither is far from noise; the full-weight race did 1.01 plus or minus 0.37 better in the first and 0.36 plus or minus
+  0.42 in the second, and was passed over for being less steady.
+- **Hard's look-ahead did not reach the end.** It looks two turns ahead and hands the rest to the judge, which has seen
+  almost no game end by an empty library (it knows only the size of the library, as a fraction of 80). So two turns ahead said
+  nothing about who would draw last. With 8 cards or fewer left the look-ahead now plays on to the end of the game (the
+  library plus two turns; `endOfLibrary` in `dandan-think.js`: the position's own result, not the judge's guess) and the
+  root weighs every move there is, up to twelve, not the seven or so Medium rates highest. Regret fell from 5.6 to 2.6 points
+  (a difference of 3.0 plus or minus 0.4 over the 1,135 positions, Hard's deals not the ones that judged) and from 6.9 to 2.5
+  against a look-ahead whose opponent answers like Medium with the race rule. It is the largest gain of the whole audit. The
+  cost is thinking time: a search of 48 deals took 85 ms on average with 40 cards left and 295 ms (at most 1.3 s) with 5, on
+  the machine it was measured on.
+- **With a spell on the stack Hard dropped the best move too often.** Hard weighs a move only if Medium rates it above -0.8,
+  which is a fair cut when the board is quiet and a bad one when several spells wait: which to counter or copy, or whether to
+  draw in answer, turns on what the others do, and Medium's score does not see that. In the 1,277 decisions the best move was
+  outside Hard's shortlist in 83 (6.5%), by two points or more in 35. With anything on the stack the root now weighs up to
+  twelve moves (`candidates`; inside the tree the width stays at four); misses fell to 17 of 1,065 (1.6%), by two points or
+  more in 9, and Hard's own shortfall against the best move from 0.14 to 0.04 points. Stack decisions took 104 ms on
+  average at 48 deals, now 162 (at most 0.6 s). `tests/stack-shortlist.mjs` rebuilds one: the computer's Commit aimed at his
+  Dandân, his Repulse answering on the same Dandân, and the Lapse on the Repulse that lets the Commit through is weighed.
+- **Medium charged nothing for the card a Narset's Reversal gives back.** The original spell goes back to its owner's hand
+  (it is not countered, the owner keeps the card and only its effect is denied), so a Reversal on a Memory Lapse of
+  theirs left them the Lapse to cast again, which the rating ignored. It now charges 0.9 of that card's worth. On the stack decisions, with this the only change to
+  Medium's play in that audit, its regret went from 3.4 to 2.9 points (1,277 positions before, 1,065 after).
+
+**Tried and left out.** A rating for countering a spell that frees the permanent one's own spell is aimed at (their Repulse
+on the Dandân our Commit targets), and treating a counter aimed at one of our own spells as a spell and not as tempo
+(`TUNE.counterOnCounter`), moved Medium's mistakes about without removing them: 2.83 against 2.84 points over 265 matched
+positions, passing less and countering too often. Reverted.
+
+**Not done, and not known.** The audit's idea of the best move is the same engine's, over 48 to 128 deals, with Medium
+playing on past the first few decisions; where two lines are close, its answer is noise (the regret figures carry the
+error given above). Some mistakes in it are not explained: Medium passes where drawing in answer to a counter aimed at its own
+spell is better (about 290 of the 1,277 positions, worth some 1,000 points of regret between them), and with a Memory Lapse
+of its own against a Lapse aimed at its Dandân the search is split between countering and letting it resolve, and Medium
+does not tell the cases apart. The
+judge itself still has no idea of the end of the library, which is why the look-ahead plays on to the end instead; inside the
+tree, Hard weighs four moves at a node, so a rare correct response may still not be tried. No Bot match was run: these are a small share of
+a game's decisions, and a match of 480 deals could not be expected to show a gain this size (Medium's earlier fit, worth half
+a point a decision, ended undecided). Like the upkeep stop and the Reversal fix, these are mistakes the computer can be shown
+to make, kept on that evidence and not on a match; a match from the Actions tab (candidate against `champion`) will say if
+it costs anything elsewhere.
+
 ## Where the results go
 
 Nothing about results is shown on the page. When a game ends, it is written to the Almanac's Firebase database
@@ -300,7 +367,7 @@ on screen waiting, and taking over when it went off screen; one found while off 
   `.github/workflows/games.yml` (collecting the games, above).
 - `tests/records.mjs` (a game kept with its moves plays again to the same state, move for move; the entry and the index line are plain
   data) and `tests/pull-games.mjs` (the collector against a stand-in database: each game once, a game it can't read said, nothing
-  kept lost); `tests/upkeep.mjs`, `tests/dandan-window.mjs`, `tests/hidden-info.mjs`, `tests/reversal-save.mjs`, `tests/mana-tap.mjs` and `tests/stack-show.mjs`, with `tests/dandan-scene.js`, which sets a game
+  kept lost); `tests/upkeep.mjs`, `tests/dandan-window.mjs`, `tests/hidden-info.mjs`, `tests/reversal-save.mjs`, `tests/mana-tap.mjs`, `tests/library-end.mjs`, `tests/stack-shortlist.mjs` and `tests/stack-show.mjs`, with `tests/dandan-scene.js`, which sets a game
   up at a chosen point. `hidden-info` holds the computer to the rule that it never uses what it can't see: dealt the
   cards it can't see again, its search weighs every move the same and picks the same one. Each runs in under a second.
 - `pwa.js` (registers the worker, takes updates, the menu's offline line), `manifest.webmanifest`, `icons/`; `tools/offline.mjs`, `tools/build-sw.mjs`,
