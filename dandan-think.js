@@ -380,8 +380,8 @@ export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide 
   });
   // the best of the moves still in the race, by their average over the same deals (a move dropped on a few deals keeps
   // the average of those, which may be lucky: it was clearly behind when it went, and stays behind). Medium's own move
-  // stands unless another beats it by more than the deals can explain (a standard error of the gap, deal by deal, and
-  // half a point): what two turns can't show, a land drop kept for nothing above all (the judge counts a land in hand
+  // stands unless another beats it by more than the deals can explain (MARGIN standard errors of the gap, deal by deal):
+  // what two turns can't show, a land drop kept for nothing above all (the judge counts a land in hand
   // nearly as one down), is in Medium's habits, and a gap that is mostly chance would otherwise decide it
   const byMean = (a, b) => b.mean - a.mean;
   const ranked = [...list.filter(c => alive.includes(c.i)).sort(byMean), ...list.filter(c => !alive.includes(c.i)).sort(byMean)];
@@ -392,7 +392,7 @@ export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide 
     const diffs = vals[best.i].slice(0, k).map((x, j) => x - vals[0][j]);
     const m = diffs.reduce((a, b) => a + b, 0) / k;
     const sd = Math.sqrt(diffs.reduce((a, x) => a + (x - m) ** 2, 0) / Math.max(1, k - 1));
-    if (m < sd / Math.sqrt(k) + 0.005) best = list[0];
+    if (m < MARGIN * sd / Math.sqrt(k)) best = list[0];
   }
   // nor does a pass at the end of the main phases outweigh the land Medium would play: it loses the drop for good, which
   // the look can't see past (the judge counts a land in hand nearly as one down: the search kept one back now and
@@ -421,6 +421,9 @@ export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide 
  * longer the search ran). The same rule makes the 2048-deal search better and quicker than the 4096-deal one it replaces.
  */
 const LOOK_FROM = 128;
+/** How far another move must beat Medium's, in standard errors of the gap, to be played instead. Judged on 424 positions in two halves of
+ * 48 deals (one picks, the other scores), 0.5 and none gave 0.16 points a decision more than 1 and half a point did. */
+const MARGIN = 0.5;
 const SPREAD = 0.06;
 function prune(alive, vals, cands, must) {
   const k = Math.min(...alive.map(i => vals[i].length));
