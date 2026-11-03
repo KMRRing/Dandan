@@ -125,6 +125,31 @@ it into `main` and moving `champion` to it (`git push origin main:champion`).
 `lab/match.mjs` plays a run of deals between two checkouts of the repository, `lab/sequential.mjs` is the stopping rule,
 `lab/score.mjs` scores games the old way (a fixed number, no stopping rule) and `lab/shard.mjs` says which deals a job plays.
 
+### Candidates and the rules check (3 November 2026)
+
+**Record, all at 256 search deals a decision against `champion` (2041b7f).** `main` itself (20be6b5): 50.6% over 480 deals
+(960 games), 95% interval 48.0 to 53.2, so a candidate built on `main` is read against an even field. A judge-guided opening
+hand (keep a seven if the judge puts it above what the next mulligan is worth; e91429b): 43.3% over 60 deals, stopped, and
+51.9% (48.3 to 55.5) over 344 deals of Medium against Medium; out of the policy, left at that commit. Hard playing another move
+over Medium's at half a standard error of the gap, not one and half a point (9878a15, `MARGIN` in `dandan-think.js`): MARGIN_RESULT.
+Nothing is adopted. A gain of two points needs several thousand deals to show against this field, and the match stops at 480.
+
+**The rules check** is `lab/rules-check.mjs`: random, Easy, Medium and Hard (8 deals) play each other as the page deals (the
+computer's spells shown, the loser first), and `lab/audit.mjs` checks every state against the rules as written, not against the
+engine's own helpers: each of the 80 cards in one place, every move offered one `check` accepts, the land drop offered when
+and only when it is allowed, the mana a seat can make against every way its lands can tap, nothing left alive that should have
+died, the result against the life totals and the library. About 1,900 games (the last 300, on this commit, 46,572 moves): no rule broken (the audit's own
+mistakes were the cases where a resolution is half done: Metamorphose asks before the state-based check, a Brainstorm
+into a short library). `tests/slow/dandan.mjs` is the old rules spec, run by hand (nine minutes): clean; four habits of Medium's
+that Hard corrects are reported as GAP.
+
+**A kept game plays again only under `shownRules`** (`dandan-rules.js`, which the page plays by): the computer's shown stops
+are among its moves, and who went first isn't in the seed (the last game's loser does; `replay` takes it from `state.first`).
+Under the plain `rules` the first computer spell is refused with "It isn't your turn". Of the 41 kept games, 12 carry their
+moves and all 12 replay; the earliest (1 November 14:05) lacks the computer's first move, its keep, and replays only with it put back.
+`lab/review.mjs` weighs a kept game's computer decisions again, `lab/regret.mjs` the gap between Medium's move and the best of the
+shortlist by kind of decision, `lab/quick-match.mjs` plays Medium against Medium between two checkouts in minutes.
+
 ## The computer's spells are shown
 
 A spell of Monte's that you have nothing to answer used to go on the stack and resolve inside the move that cast it, so
@@ -398,7 +423,7 @@ on screen waiting, and taking over when it went off screen; one found while off 
   cards it can't see again, its search weighs every move the same and picks the same one. Each runs in under a second.
 - `pwa.js` (registers the worker, takes updates, the menu's offline line), `manifest.webmanifest`, `icons/`; `tools/offline.mjs`, `tools/build-sw.mjs`,
   `tools/service-worker.js` and `.github/workflows/pages.yml` (Offline, above); `tests/offline.mjs` and `tests/syntax.mjs`.
-- `lab/`, `tests/sequential.mjs` and `.github/workflows/match.yml`: the matches between two builds of the computer (Matches, above).
+- `lab/`, `tests/sequential.mjs` and `.github/workflows/match.yml`: the matches between two builds of the computer (Matches, above); `tests/slow/dandan.mjs`, the rules spec, run by hand (Candidates and the rules check, above).
 
 The engine and the computer player are copies of the Almanac's; a rules fix there is made here by copying the file over
 (the shown spell is this page's alone: `show` in `act` and `showStop` in `dandan-engine.js`, which a copy must keep). `seats.js` is the Almanac's with one change, which a copy must keep too: `applyMove` also keeps each move in `G.moves`.
