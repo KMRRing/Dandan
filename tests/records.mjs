@@ -1,6 +1,6 @@
 // What a finished game is kept as (records.js): the moves go with it, so the game can be played again from its seed and
 // come out the same, move for move; the summary and the index line are what the back end reads, and survive being JSON.
-import { rules } from "../dandan-rules.js";
+import { rules, shownRules } from "../dandan-rules.js";
 import { newRecord, applyMove, botMove } from "../seats.js";
 import { entryOf, indexLine, replay, INDEX_ROOM } from "../records.js";
 
@@ -24,6 +24,22 @@ check(G.n >= 40 && G.moves.length === G.n && G.moves.every(m => Array.isArray(m)
   check([10, 25].every(k => J(replay(rules, G, k).state) === J(stood[k].state)), "and stopping part way gives the table as it stood");
   const wrong = { ...G, moves: [[1, G.moves[0][1]], ...G.moves.slice(1)] };
   check(replay(rules, wrong).error !== undefined, "a record that isn't the game's own (a move by the wrong seat) is refused, saying where");
+}
+
+// a game as the page plays it (the computer's spells shown, a game dealt after another so that its loser goes first) plays again,
+// from the seed and the moves, only under the rules it was played under, and with the first player taken from the state it ended in
+{
+  const prev = { state: { over: true, winner: 0 } };               // seat 1 lost the last game: it goes first
+  let P = newRecord(shownRules, { seats: 2, seed: 777, now: 1000, prev });
+  let stops = 0;
+  for (let i = 0; i < 160 && !shownRules.over(P.state); i++) {
+    const who = shownRules.toMove(P.state), r = applyMove(shownRules, P, who, botMove(shownRules, P, who, "medium"), 1000 + i);
+    if (r.error) break;
+    if (r.G.state.shown && r.G.state.shown !== P.state.shown) stops++;
+    P = r.G;
+  }
+  const again = replay(shownRules, P);
+  check(P.state.first === 1 && !again.error && J(again.state) === J(P.state), `a page game (first player from the last loser, ${stops} of the computer's spells shown) plays again to the same state under shownRules`);
 }
 
 // the entry that is sent

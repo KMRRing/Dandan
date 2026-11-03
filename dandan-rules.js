@@ -28,3 +28,10 @@ export const rules = {
   anytime: m => m?.t === "concede",
   restore,
 };
+
+/**
+ * The rules as the page plays them: you in seat 0, and the computer's spells (seat 1) shown, the engine stopping with each on the
+ * stack for you to pass (README, "The computer's spells are shown"). A game kept from the page has those stops among its moves,
+ * so it plays again only under these rules (records.js `replay`); the plain `rules` meet a pass at the wrong seat.
+ */
+export const shownRules = { ...rules, act: (s, seat, move, ctx) => rules.act(s, seat, move, { ...ctx, show: seat !== 0 }) };

@@ -31,7 +31,11 @@ export const indexLine = (entry, room) => ({ room, at: entry.at, name: entry.nam
  */
 export function replay(rules, game, until = Infinity) {
   const moves = typeof game.moves === "string" ? JSON.parse(game.moves) : game.moves || [];
-  let G = newRecord(rules, { seats: game.seats, options: game.options || {}, seed: game.seed, seq: game.seq || 1, now: game.started });
+  // who went first isn't in the seed when the game was dealt after another (the last game's loser goes first): it is in the state it
+  // ended in, and the deal is the same whichever way it was chosen. A game from the page plays again under shownRules (dandan-rules.js).
+  const first = game.state?.first;
+  const prev = first === 0 || first === 1 ? { state: { over: true, winner: 1 - first } } : null;
+  let G = newRecord(rules, { seats: game.seats, options: game.options || {}, seed: game.seed, seq: game.seq || 1, now: game.started, prev });
   for (let i = 0; i < moves.length && i < until; i++) {
     const [seat, move] = moves[i], r = applyMove(rules, G, seat, move, game.started);
     if (r.error) return { error: r.error, at: i };

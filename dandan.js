@@ -5,7 +5,7 @@
 // the graveyard between, yours below, then your hand and the buttons; in 3D, the battlefield seen at an angle. A card is
 // read by pointing at it or tapping it; what it can do now is a button, and a spell that needs a target lights the
 // legal ones on the table. A finished game's result goes to the database (results.js).
-import { rules } from "./dandan-rules.js";
+import { shownRules } from "./dandan-rules.js";
 import { moves, afterFetch, bottomFor, payment, MOST_MULLS } from "./dandan-engine.js";
 import { CARDS, DECK, HALVES, NAMES, BASICS, costWords, total, parseCost } from "./dandan-cards.js";
 import { nm, defOf, perm, pt, isLand, isCreature, manaAlts, payFrom, topKnown, needType, poolOf, knownIn, knOf, typesOf } from "./dandan-core.js";
@@ -151,9 +151,8 @@ function holdForBot() {
 }
 // The computer's spells are shown (engine `showStop`): you sit in seat 0, the computer in the other, and only its moves ask for it.
 const pageRules = {
-  ...rules,
-  act: (s, seat, move, ctx) => rules.act(s, seat, move, { ...ctx, show: seat !== 0 }),
-  bot: (s, seat, ctx) => (ctx.level === "hard" && botMoves.get(keyOf(s))) || rules.bot(s, seat, ctx),
+  ...shownRules,
+  bot: (s, seat, ctx) => (ctx.level === "hard" && botMoves.get(keyOf(s))) || shownRules.bot(s, seat, ctx),
 };
 // ---------- the computer's pace ----------
 // What the computer does stays on the table a while before its next move (1.5 s, 3 s), or until you tap Continue
