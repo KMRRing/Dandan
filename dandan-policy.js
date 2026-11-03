@@ -15,14 +15,13 @@
 //  · The graveyard is shared too, and a Mystic Retrieval in it is anyone's with red: a spell cast leaves its card there
 //    for the other player to take back, and a Retrieval cast from the hand leaves itself (gift).
 import { CARDS, DECK, NAMES, BASICS, HALVES, TOKEN_AT, total } from "./dandan-cards.js";
-import { moves, halfOf, nextDrawer, costOf, bottomFor, MOST_MULLS } from "./dandan-engine.js";
+import { moves, halfOf, nextDrawer, costOf } from "./dandan-engine.js";
 import {
   other, nm, isLandId, perm, isLand, isCreature, isToken, pt, lands, islands, creatures, typesOf, needType, manaAlts, topKnown, itemOf,
   knownIn, poolOf, isSpellCard,
 } from "./dandan-core.js";
-import { shuffle, seeded } from "./seats.js";
+import { shuffle } from "./seats.js";
 import { readsOf } from "./dandan-reads.js";
-import { winChance } from "./dandan-eval.js";
 
 export const PASS = { t: "pass" };
 const pickOne = (a, rng) => a[Math.floor(rng() * a.length)];
@@ -486,59 +485,6 @@ const raceWorth = left => (left <= 3 ? 5 : left <= 7 ? 3 : 1.5);
 /** How much of the race is left to win once the other player may put it back with a draw of their own, by the cards they hold: none, one, two, three or more. */
 const UNDONE = [1, 0.6, 0.35, 0.2];
 
-// ---------- the opening hand ----------
-// Which seven to keep, and which to put on the bottom, are asked of the judge (dandan-eval.js) instead of a count of lands
-// and good spells: a hand is worth what the judge makes of the start of turn 1 holding it (and the cards it keeps, after a
-// bottom), over other hands the opponent might hold, and a mulligan is worth the average of the hands it might bring, each
-// kept or sent back by the same rule (Bellman's: keep a hand if it is worth at least what the next mulligan is). The first
-// mulligan costs nothing here, so the value of sending a hand back is high, and a hand merely good is sent back. MULL holds those
-// values, worked out by lab/mull-values.mjs (sampled hands; the judge is the network of Medium's games), for the seat on the
-// play and the one on the draw: MULL[play][n] is the worth of a hand just dealt after n mulligans, played out well.
-export const MULL = {"play":[0.5746,0.558,0.529,0.4841,0.4231,0.3406,0.2569,0.1769],"draw":[0.5638,0.5436,0.5166,0.4749,0.4172,0.3396,0.2643,0.1803]};
-const HAND_SIZE = 7;
-const ALL_IDS = DECK.map((_, i) => i);
-/** Opponent hands to average a hand's worth over: the same hand always gets the same ones (and no use of the generator the moves use). */
-const FOES = 12;
-function foesOf(hand) {
-  let h = 2166136261;
-  for (const id of hand) { h ^= id + 1; h = Math.imul(h, 16777619) >>> 0; }
-  const rng = seeded(h), rest = ALL_IDS.filter(i => !hand.includes(i)), out = [];
-  for (let k = 0; k < FOES; k++) out.push(shuffle(rest, rng).slice(0, 7));
-  return out;
-}
-/** The judge's chance for the seat that holds `kept` at the start of turn 1, over `foes` (the opponent's hands). */
-function openingChance(kept, foes, play) {
-  let t = 0;
-  for (const f of foes) {
-    const used = new Set(kept);
-    for (const i of f) used.add(i);
-    t += winChance({ over: false, life: [20, 20], bf: [], stack: [], hand: [kept, f], yard: [], lib: ALL_IDS.filter(i => !used.has(i)), turn: 1, active: play ? 0 : 1 }, 0);
-  }
-  return t / foes.length;
-}
-/** What keeping `hand` is worth with b of its cards put on the bottom (the ones that keep the most): { v, bottom }. */
-export function keepValue(hand, b, play, foes = foesOf(hand)) {
-  if (!b) return { v: openingChance(hand, foes, play), bottom: [] };
-  let best = null;
-  const take = (from, k, chosen) => {
-    if (!k) { const v = openingChance(hand.filter(i => !chosen.includes(i)), foes, play); if (!best || v > best.v) best = { v, bottom: chosen }; return; }
-    for (let i = 0; i < from.length; i++) take(from.slice(i + 1), k - 1, [...chosen, from[i]]);
-  };
-  if (b <= 2) take(hand, b, []);
-  else {
-    // beyond two, the worst card by what the rest is worth, again
-    let cur = hand.slice();
-    const out = [];
-    for (let j = 0; j < b; j++) {
-      let top = null;
-      for (const c of cur) { const v = openingChance(cur.filter(x => x !== c), foes, play); if (!top || v > top.v) top = { v, c }; }
-      out.push(top.c); cur = cur.filter(x => x !== top.c);
-    }
-    best = { v: openingChance(cur, foes, play), bottom: out };
-  }
-  return best;
-}
-
 export class Player {
   /** level: "medium" or "easy" (careless). */
   constructor(s, me, { level = "medium", rng = Math.random } = {}) {
@@ -553,7 +499,7 @@ export class Player {
     const s = this.s, p = s.pending, F = this.F, me = this.me;
     switch (p.t) {
       case "mull": return this.mulligan(p);
-      case "bottom": return { t: "bottom", cards: this.bottom(p) };
+      case "bottom": return { t: "bottom", cards: this.worst(s.hand[me], p.n) };
       case "attack": return this.attacks(p);
       case "block": return this.blocks(p);
       case "discard": return { t: "discard", cards: this.worst(s.hand[me], p.n) };
@@ -570,22 +516,10 @@ export class Player {
     return PASS;
   }
 
-  /** The cards to put on the bottom at the keep: the ones whose absence leaves the judge's best opening hand (the worst by worth, for Easy or with no values worked out). */
-  bottom(p) {
-    const s = this.s, hand = s.hand[this.me], play = s.first === this.me;
-    if (this.easy || !MULL[play ? "play" : "draw"].length || hand.length !== HAND_SIZE) return this.worst(hand, p.n);
-    return keepValue(hand, p.n, play).bottom;
-  }
   mulligan(p) {
     if (p.free) return { t: "mull" };
     const h = this.s.hand[this.me], n = h.filter(isLandId).length;
     if (this.easy) return n >= 1 && n <= 6 || p.taken >= 1 ? { t: "keep" } : { t: "mull" };
-    // sent back if the judge puts the hand below what the next mulligan is worth (a hand kept costs the cards the count puts on the bottom)
-    const play = this.s.first === this.me, W = MULL[play ? "play" : "draw"];
-    if (W.length && h.length === HAND_SIZE) {
-      if (p.taken >= MOST_MULLS - 1) return { t: "keep" };
-      return keepValue(h, bottomFor(p.taken), play).v >= W[p.taken + 1] ? { t: "keep" } : { t: "mull" };
-    }
     const good = h.filter(id => !isLandId(id) && ["Memory Lapse", "Dandân", "Piracy Charm", "Mind Bend", "Brainstorm", "Predict"].includes(DECK[id])).length;
     // the first mulligan costs nothing (p.taken counts it), so each keep is one step pickier than when every mulligan
     // cost a card: after two, anything; after one, a seven that will be a six, two to five lands
