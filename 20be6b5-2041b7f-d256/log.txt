@@ -1,0 +1,1 @@
+2026-11-03T09:25:06Z CONTINUE: the candidate scores 48.3% over 30 deals (60 games), 95% interval 39.6% to 57.1%; look 1 (z 1.96): adopt above 58.8%, reject below 46.2%, 30 more deals
