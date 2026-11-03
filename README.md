@@ -131,8 +131,10 @@ it into `main` and moving `champion` to it (`git push origin main:champion`).
 (960 games), 95% interval 48.0 to 53.2, so a candidate built on `main` is read against an even field. A judge-guided opening
 hand (keep a seven if the judge puts it above what the next mulligan is worth; e91429b): 43.3% over 60 deals, stopped, and
 51.9% (48.3 to 55.5) over 344 deals of Medium against Medium; out of the policy, left at that commit. Hard playing another move
-over Medium's at half a standard error of the gap, not one and half a point (9878a15, `MARGIN` in `dandan-think.js`): MARGIN_RESULT.
-Nothing is adopted. A gain of two points needs several thousand deals to show against this field, and the match stops at 480.
+over Medium's at half a standard error of the gap, not one and half a point (9878a15, `MARGIN` in `dandan-think.js`; it
+scored 0.16 points a decision better on 424 positions, on deals it hadn't picked from): 50.8% over 480 deals (48.0 to 53.6),
+the cap, undecided; put back. Nothing is adopted. A gain of two points needs several thousand deals to show against this
+field, and the match stops at 480.
 
 **The rules check** is `lab/rules-check.mjs`: random, Easy, Medium and Hard (8 deals) play each other as the page deals (the
 computer's spells shown, the loser first), and `lab/audit.mjs` checks every state against the rules as written, not against the
