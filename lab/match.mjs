@@ -36,19 +36,21 @@ function midPosition(p) {
     const lands = s.bf.filter(q => q.ctl === x && core.isLand(q)).length, dd = s.bf.filter(q => q.ctl === x && DECK[q.id] === "Dandân").length, h = s.hand[x].length;
     return lands >= 8 && (!strict || (lands <= 15 && h >= 1 && h <= 4 && dd <= 1));
   });
-  let best = null;
+  let best = null, last = null;
   for (let attempt = 0; attempt < 12; attempt++) {
     const seed = 5000 + p + attempt * 100003;
     let G = newRecord(rules, { seats: 2, seed, now: 0 });
     for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
       const who = rules.toMove(G.state), s = rules.restore(J(G.state));
       if (!s.pending && !s.stack.length && s.step === "main1" && s.lib.length >= L && fits(s, attempt < 11)) { best = { G, attempt, seed }; break; }
+      if (!s.pending && !s.stack.length && s.step === "main1") last = { G, attempt, seed };
       Math.random = seeded(mix(seed, i + 1));
       G = applyMove(rules, G, who, policyMove(s, who, { rng: Math.random }), 0).G;
     }
     Math.random = realRandom;
     if (best) break;
   }
+  best ||= last;                                 // a game that never fit: its last main phase, so the deal still counts
   if (!best) return null;
   const { G } = best, s = G.state, rnd = seeded(mix(5000 + p, 77));
   const gone = new Set();
