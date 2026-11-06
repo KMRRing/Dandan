@@ -61,11 +61,20 @@ async function main() {
     } catch (e) { fail(`game ${key} in ${line.room}`, e); }
   }
   index.sort((a, b) => (a.ended || 0) - (b.ended || 0));
+  const kept = new Set(index.map(g => g.key));
+  // the games still being played (or never finished): kept as they stand, one file, rewritten when a game has moved on
+  let liveNote = null;
+  if (base) try {
+    const live = (await json(`${base}/crates/rooms/${INDEX_ROOM}/live.json?auth=${token}`, { headers: HEADERS })) || {};
+    for (const k of Object.keys(live)) if (kept.has(k) || live[k]?.check) delete live[k];     // a game that ended is in games/; a check's line is not a game
+    const text = JSON.stringify(live);
+    if (text !== JSON.stringify(read("live.json", {}))) { write("live.json", live); liveNote = Object.keys(live).length; }
+  } catch (e) { fail("live", e); }
   // the folder changes (and so is committed) only when there is something new to say, so the branch isn't a log of idle hours
-  const kept = new Set(index.map(g => g.key)), listed = Object.keys(lines || {});
+  const listed = Object.keys(lines || {});
   const status = { at: new Date().toISOString(), games: index.length, new: found, listed: listed.length, unread: listed.filter(k => !kept.has(k)).length, errors };
   if (found) write("index.json", index);
-  if (found || !before.at || errors.join() !== (before.errors || []).join()) write("status.json", status);
+  if (found || liveNote !== null || !before.at || errors.join() !== (before.errors || []).join()) write("status.json", { ...status, live: liveNote ?? before.live ?? 0 });
   console.log(`${index.length} games, ${found} new, ${errors.length} problems`);
 }
 /** Every room asked for its Dandan result; what answers is fetched whole and kept like any game, marked `scanned`. */
@@ -117,6 +126,10 @@ async function selfCheck(base, token, before) {
   await step("read", {}, v => v?.check === true);
   await step("delete", { method: "DELETE" }, () => true);
   await step("gone", {}, v => v === null);
+  // and the page's write of a game in progress (results.js recordProgress), under `live`
+  const lurl = `${base}/crates/rooms/${INDEX_ROOM}/live/check-${Date.now()}.json?auth=${token}`;
+  try { await json(lurl, { method: "PUT", headers: HEADERS, body: JSON.stringify({ check: true, at: Date.now() }) }); check.liveWrite = true; await json(lurl, { method: "DELETE", headers: HEADERS }); }
+  catch (e) { check.liveWrite = false; fail("check live write", e); }
   write("status.json", { ...before, check: { at: new Date().toISOString(), ...check }, errors });
   console.log(`check: ${JSON.stringify(check)}`);
 }

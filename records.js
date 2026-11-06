@@ -21,6 +21,39 @@ export function entryOf(v, how = {}, now = Date.now()) {
   return { key: String(v.G.started), name, result, game: { ...rest, moves: JSON.stringify(moves) }, at: now };
 }
 
+/**
+ * A game still being played, as the viewer needs it to play it again (games.js): the seed, the seats and the moves so far, not
+ * the state (the log and the judge's chances are rebuilt by playing the moves, so a write after each move stays small).
+ * It goes under the index room's `live`, by when the game began, and is written over after each move.
+ */
+export function liveEntry(v, how = {}, now = Date.now()) {
+  const s = v.state, name = v.seats?.[v.seat]?.name || "You", { moves = [], seats, options, seed, seq, started } = v.G;
+  const result = {
+    name, live: true, turns: s.turn, life: s.life, library: s.lib.length, moves: moves.length, started, ended: now, ms: now - started,
+    ...how, page: typeof location === "object" ? location.host + location.pathname : "",
+  };
+  return { key: String(started), name, result, game: { seats, options: options || {}, seed, seq: seq || 1, started, moves: JSON.stringify(moves), state: { first: s.first } }, at: now };
+}
+
+/**
+ * A kept game played through once, noting how long the log was after each move, so a line of it can be found and the table
+ * shown as it stood when it was written: { lens: [log length after move 0, 1, …], G: where it ends } or { error, at }.
+ */
+export function walk(rules, game) {
+  const moves = typeof game.moves === "string" ? JSON.parse(game.moves) : game.moves || [];
+  const first = game.state?.first;
+  const prev = first === 0 || first === 1 ? { state: { over: true, winner: 1 - first } } : null;
+  let G = newRecord(rules, { seats: game.seats, options: game.options || {}, seed: game.seed, seq: game.seq || 1, now: game.started, prev });
+  const lens = [];
+  for (let i = 0; i < moves.length; i++) {
+    const [seat, move] = moves[i], r = applyMove(rules, G, seat, move, game.started);
+    if (r.error) return { error: r.error, at: i, lens, G };
+    G = r.G;
+    lens.push(G.state.log.length);
+  }
+  return { lens, G };
+}
+
 /** The line about a game that goes in the index room: where the game is, and its summary. */
 export const indexLine = (entry, room) => ({ room, at: entry.at, name: entry.name, result: entry.result });
 

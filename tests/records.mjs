@@ -2,7 +2,8 @@
 // come out the same, move for move; the summary and the index line are what the back end reads, and survive being JSON.
 import { rules, shownRules } from "../dandan-rules.js";
 import { newRecord, applyMove, botMove } from "../seats.js";
-import { entryOf, indexLine, replay, INDEX_ROOM } from "../records.js";
+import { entryOf, indexLine, replay, liveEntry, walk, INDEX_ROOM } from "../records.js";
+import { keyOk } from "../games-key.js";
 
 let bad = 0;
 const check = (ok, what) => { console.log(`${ok ? "ok  " : "FAIL"} ${what}`); if (!ok) bad++; };
@@ -62,6 +63,22 @@ const entry = entryOf(v, { level: "easy", think: 1 }, 5000);
   check(line.room === "ABCD" && line.name === "Tom" && line.result.moves === G.n && !("game" in line), "a game's line in the index says where it is and carries its summary, not the game");
   check(/^[A-Z]{4}$/.test(INDEX_ROOM) && /[IO]/.test(INDEX_ROOM), "the index room's code fits the database's rule for a room, and has a letter no table's code ever has");
 }
+
+// a game still being played is kept as its seed, seats and moves so far (liveEntry): small, and the viewer plays it again from that
+{
+  const view = { state: G.state, seat: 0, seats: [{ name: "Dave" }, { name: "Monte" }], G };
+  const e = liveEntry(view, { level: "hard" }, 5000), g = JSON.parse(J(e.game));        // as the database hands it back
+  check(e.result.live === true && e.result.moves === G.n && e.key === String(G.started) && e.name === "Dave", "a game in progress is marked live, with its move count, start and name");
+  check(J(Object.keys(e.game).sort()) === J(["moves", "options", "seats", "seed", "seq", "started", "state"]) && J(e.game.state) === J({ first: G.state.first }), "and holds only what playing it again needs (the state is rebuilt from the moves)");
+  const again = replay(rules, g);
+  check(!again.error && J(again.state) === J(G.state), "played again from the live copy it comes out the same game, log and all");
+  const w = walk(rules, g);
+  check(!w.error && w.lens.length === G.n && w.lens.every((n, i) => i === 0 || n >= w.lens[i - 1]) && w.lens[w.lens.length - 1] === G.state.log.length, "walked through once, the log's length after each move is known, to jump to a line of it");
+  const mid = replay(rules, g, 20);
+  check(mid.state.log.length === w.lens[19], "and stopping at a move shows exactly the log that move left");
+}
+// the viewer's key: only its hash is kept in the page
+check(!(await keyOk("")) && !(await keyOk(null)) && !(await keyOk("guess")), "the viewer does not open without the right key");
 
 if (bad) { console.log(`${bad} problems`); process.exit(1); }
 console.log("records: a game is kept with its moves and plays again exactly; its summary and index line are plain data");

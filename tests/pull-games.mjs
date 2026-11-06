@@ -11,7 +11,7 @@ import { INDEX_ROOM } from "../records.js";
 let bad = 0;
 const check = (ok, what) => { console.log(`${ok ? "ok  " : "FAIL"} ${what}`); if (!ok) bad++; };
 
-const db = { index: {}, rooms: {}, asked: [], refuse: false, signedIn: 0 };
+const db = { index: {}, rooms: {}, live: {}, asked: [], refuse: false, signedIn: 0 };
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://x"), send = (code, body) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(body)); };
   const rm = url.pathname.match(/^\/crates\/rooms\/DDIX\/games\/([^/]+)\.json$/);
@@ -21,11 +21,18 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (rm && req.method === "GET" && url.searchParams.get("auth") === "tok") return send(200, db.index[rm[1]] ?? null);
+  const lm = url.pathname.match(/^\/crates\/rooms\/DDIX\/live\/([^/]+)\.json$/);
+  if (lm && url.searchParams.get("auth") === "tok") {                       // the page's write of a game in progress
+    if (req.method === "DELETE") { delete db.live[lm[1]]; return send(200, null); }
+    let body = ""; req.on("data", d => (body += d)); req.on("end", () => { db.live[lm[1]] = JSON.parse(body); send(200, db.live[lm[1]]); });
+    return;
+  }
   if (req.method === "POST" && url.pathname === "/signup") { db.signedIn++; return send(db.refuse ? 400 : 200, db.refuse ? { error: { message: "ADMIN_ONLY_OPERATION" } } : { idToken: "tok" }); }
   if (url.searchParams.get("auth") !== "tok") return send(401, { error: "Permission denied" });
   db.asked.push(url.pathname);
   const sm = url.pathname.match(/^\/crates\/rooms\/([A-Z]{4})\/dandan\/result\.json$/);
   if (sm) return send(200, db.rooms[sm[1]]?.result ?? null);
+  if (url.pathname === `/crates/rooms/${INDEX_ROOM}/live.json`) return send(200, Object.keys(db.live).length ? db.live : null);
   const m = url.pathname.match(/^\/crates\/rooms\/([A-Z]{4})(\/games|\/dandan)?\.json$/);
   if (!m) return send(404, null);
   if (m[1] === INDEX_ROOM && m[2] === "/games") return send(200, Object.keys(db.index).length ? db.index : null);
@@ -34,7 +41,7 @@ const server = http.createServer((req, res) => {
 });
 await new Promise(r => server.listen(0, "127.0.0.1", r));
 const port = server.address().port;
-const run = (out, ...more) => new Promise(r => execFile("node", ["tools/pull-games.mjs", out, ...more], { env: { ...process.env, SCAN_LETTERS: "ABCDEFGHIJ", IDENTITY_URL: `http://127.0.0.1:${port}/signup`, DB_URL: `http://127.0.0.1:${port}/elsewhere,http://127.0.0.1:${port}` } }, (e, stdout, stderr) => r({ code: e ? e.code : 0, stdout, stderr })));
+const run = (out, ...more) => new Promise(r => execFile("node", ["tools/pull-games.mjs", out, ...more], { env: { ...process.env, SCAN_LETTERS: "ABCDEFGHIJ", IDENTITY_URL: `http://127.0.0.1:${port}/signup`, DB_URL: `http://127.0.0.1:${port}/elsewhere,http://127.0.0.1:${port}` } }, (e, stdout, stderr) => { if (process.env.DEBUG && stderr) console.log("STDERR", stderr); r({ code: e ? e.code : 0, stdout, stderr }); }));
 const game = (key, name, won) => ({ line: { room: [...key].map(d => String.fromCharCode(65 + +d)).join(""), at: +key, name, uid: "u1", result: { name, won, started: +key, ended: +key + 1000, moves: 5 } }, branch: { game: { seed: 1, seats: 2, moves: "[[0,{\"t\":\"pass\"}]]", state: { log: [] } }, result: { name, won, started: +key, ended: +key + 1000, moves: 5 }, players: { u1: { name } } } });
 const put = (key, name, won) => { const g = game(key, name, won); db.index[key] = g.line; db.rooms[g.line.room] = g.branch; return g.line.room; };
 
@@ -124,6 +131,23 @@ r = await run(out);
   db.asked.length = 0;
   r = await run(dir, "--scan");
   check(JSON.parse(fs.readFileSync(path.join(dir, "index.json"), "utf8")).length === 2 && db.asked.filter(p => p.endsWith("/dandan.json")).length === 0, "a second scan finds the same games and fetches none again");
+}
+// a game in progress (the page's write under the index room's `live`) is kept as it stands, and dropped once the game has ended
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "live-"));
+  db.index = {}; db.rooms = {}; db.live = { 5000: { name: "Dave", uid: "u9", at: 5000, result: { live: true, moves: 7, started: 5000 }, game: { seed: 3, seats: 2, moves: "[]" } }, "check-1": { check: true } };
+  let r = await run(dir);
+  const live = JSON.parse(fs.readFileSync(path.join(dir, "live.json"), "utf8"));
+  check(r.code === 0 && Object.keys(live).join() === "5000" && live[5000].name === "Dave", "a game in progress is kept as it stands, a check's line is not");
+  const mt = fs.statSync(path.join(dir, "live.json")).mtimeMs;
+  r = await run(dir);
+  check(fs.statSync(path.join(dir, "live.json")).mtimeMs === mt, "and the file is not rewritten while the game hasn't moved");
+  db.live[5000].result.moves = 9;
+  r = await run(dir);
+  check(JSON.parse(fs.readFileSync(path.join(dir, "live.json"), "utf8"))[5000].result.moves === 9, "it is rewritten when the game has moved on");
+  put("5000", "Dave", true);
+  r = await run(dir);
+  check(Object.keys(JSON.parse(fs.readFileSync(path.join(dir, "live.json"), "utf8"))).length === 0, "and a game that has ended is no longer listed as in progress");
 }
 server.close();
 if (bad) { console.log(`${bad} problems`); process.exit(1); }

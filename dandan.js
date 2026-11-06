@@ -14,7 +14,7 @@ import { seatPage, fillNames } from "./seats-ui.js";
 import { part, choice, action, onPause, isPaused } from "./menu.js";
 import { offlineLine, refreshAction } from "./pwa.js";
 import { savedName, askName } from "./name.js";
-import { recordResult } from "./results.js";
+import { recordResult, recordProgress } from "./results.js";
 import { sextant } from "./loading.js";
 import { createTable3d } from "./dandan-3d.js";
 import { curveOf, worthDrawing, hasActions, byTurn, momentsOf, linesBetween, MIN_FALL, captionOf, readoutOf, chartSvg, pointAt, BOX } from "./dandan-advantage.js";
@@ -224,6 +224,7 @@ page = seatPage({
   onView: v => {
     noteFresh(V, v);
     V = v;
+    recordProgress(v, { level: opts.level, think: opts.think, pace: opts.pace, view: opts.view });
     const key = v.G ? `${v.G.seq}:${v.G.n}` : "";
     if (key !== uiKey) {
       // a move was made: the picks it was for are over, and the card sheet opened for them; a card being read in the

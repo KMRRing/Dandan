@@ -335,7 +335,7 @@ and the summary. That is how the games can be found again, since the database's 
 code. A result is kept on the device until the database has it (`dandan:unsent`): with no connection, or a tab closed too
 soon, it is tried again at the next game's end and the next time the page opens. Each game is sent once, by when it began
 (`dandan:sent`); once its room is made the code is kept with it, so a failure at the index never makes a second room. The game
-never waits on the database. A game not played to its end (the tab closed, the page left) is not kept.
+never waits on the database. A game not played to its end (the tab closed, the page left) has no result, but it is kept as far as it got ("Games in progress" below).
 
 ### Reading the games
 
@@ -365,6 +365,21 @@ and how many failed.
 The repository is public, so the branch is too: the games, the names players gave and their anonymous ids can be read by
 anyone who looks (the database already lets anyone signed in read a room whose code they guess, four letters). A private
 repository for it would take a secret to push across; not done.
+
+### Games in progress, and the viewer (6 November 2026)
+
+A game is also written as it is played (`recordProgress` in `results.js`, a couple of seconds after each move, and when the page is
+left): `crates/rooms/DDIX/live/<started>` holds the seed, the seats and the moves so far (`liveEntry` in `records.js`), which is all a
+game needs to be played again; the log and the rest are rebuilt from the moves. It is a copy for looking at: the result at a game's
+end is still written as before, and a game that ended is listed from `games`, not `live`. The collection keeps the games not ended in
+`live.json` on the `game-records` branch (rewritten only when one has moved on), and *check* also tries the page's write to `live`
+(`check.liveWrite` in `status.json`).
+
+`games.html?k=<key>` (Korbi: "make a suite with some param needed for access, so I can always access the games and who played
+them"; not linked from the game) lists the games, finished and not, by who played, and plays any of them again move by move with both
+hands open and the log searchable ("Repulse" jumps to the move that cast it). It reads the database as the page does. The key's
+SHA-256 is in `games-key.js`, not the key: a door for whoever has the link, not a vault, since the games are readable by anyone
+(above). Without the key it goes back to the game.
 
 ## Offline
 

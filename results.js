@@ -8,7 +8,7 @@
 // A result is kept on this device until the database has it (no connection, a closed tab: it is tried again at the next
 // game's end and the next time the page opens), and each game is sent once (by when it began).
 import { getSync } from "./net.js";
-import { entryOf, indexLine, INDEX_ROOM } from "./records.js";
+import { entryOf, indexLine, liveEntry, INDEX_ROOM } from "./records.js";
 
 const QUEUE = "dandan:unsent", SENT = "dandan:sent";
 const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ";   // a room's code, as the Almanac's: no I or O
@@ -71,3 +71,34 @@ async function send(sync, entry) {
 // the page opening again: what an earlier visit couldn't send
 addEventListener("load", () => setTimeout(flush, 3000));
 addEventListener("online", () => setTimeout(flush, 1000));   // a result kept while offline goes when the connection is back, without waiting for the next game
+
+// ---------- a game still being played ----------
+// The page also writes the game as it goes (the seed, the seats, the moves so far: records.js `liveEntry`) under the index room's
+// `live`, so a game that is never finished (the tab closed, the page left) can still be looked at: games.html lists it, and the
+// hourly collection (tools/pull-games.mjs) keeps a copy on the records branch. It is a copy for looking at: a game's result is
+// still the one written at its end. Never throws, never waits: the next move tries again.
+const LIVE_MS = 2500;
+let liveTimer = null, liveSent = "", liveView = null, liveHow = {};
+export function recordProgress(v, how = {}) {
+  try {
+    if (v.seat == null || v.over || !v.G?.n) return;
+    liveView = v; liveHow = how;
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(pushLive, LIVE_MS);
+  } catch (e) { console.error(e); }
+}
+async function pushLive() {
+  clearTimeout(liveTimer);
+  const v = liveView;
+  if (!v) return;
+  try {
+    const e = liveEntry(v, liveHow), sig = `${e.key}:${e.result.moves}`;
+    if (sig === liveSent) return;
+    const sync = await getSync();
+    await sync.update(`crates/rooms/${INDEX_ROOM}/live/${e.key}`, JSON.parse(JSON.stringify({ name: e.name, uid: sync.uid, at: e.at, result: e.result, game: e.game })));
+    liveSent = sig;
+  } catch (e) { console.warn("dandan: the game in progress is not saved yet", e); }
+}
+// leaving the page (or the phone going to sleep) sends what the timer was still holding
+addEventListener("pagehide", pushLive);
+addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") pushLive(); });
