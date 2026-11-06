@@ -24,3 +24,5 @@ body { background: var(--yard); color: var(--ink); margin: 0; }
 .gv-log li.hit { background: color-mix(in srgb, var(--brass) 25%, transparent); }
 .gv-found { list-style: none; margin: .25rem 0 0; padding: 0; }
 .gv-found button { width: 100%; text-align: left; margin-top: .25rem; }
+#gv { height: 100vh; height: 100svh; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.gv-remove .gv-lost { color: #E8806F; }

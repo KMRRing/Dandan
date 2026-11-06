@@ -451,3 +451,9 @@ on screen waiting, and taking over when it went off screen; one found while off 
 
 The engine and the computer player are copies of the Almanac's; a rules fix there is made here by copying the file over
 (the shown spell is this page's alone: `show` in `act` and `showStop` in `dandan-engine.js`, which a copy must keep). `seats.js` is the Almanac's with one change, which a copy must keep too: `applyMove` also keeps each move in `G.moves`.
+
+The viewer has a **Players** tab (games, wins, win rate, levels, devices per name) and can remove a game, or a player and all their
+games (asked once more in the page): it deletes the index line, the unfinished copy and the room's `dandan` node, and writes a mark
+under the index room's `removed`, which the hourly collection obeys (drops the game's file and index entry from `game-records`, never
+fetches it again). `--check` says (`removeWrite`) whether the database lets the page write that mark. Anything already pulled into the
+git history of `game-records` stays in that history.

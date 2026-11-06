@@ -11,7 +11,7 @@ import { INDEX_ROOM } from "../records.js";
 let bad = 0;
 const check = (ok, what) => { console.log(`${ok ? "ok  " : "FAIL"} ${what}`); if (!ok) bad++; };
 
-const db = { index: {}, rooms: {}, live: {}, asked: [], refuse: false, signedIn: 0 };
+const db = { index: {}, rooms: {}, live: {}, removed: {}, asked: [], refuse: false, signedIn: 0 };
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://x"), send = (code, body) => { res.writeHead(code, { "content-type": "application/json" }); res.end(JSON.stringify(body)); };
   const rm = url.pathname.match(/^\/crates\/rooms\/DDIX\/games\/([^/]+)\.json$/);
@@ -27,6 +27,13 @@ const server = http.createServer((req, res) => {
     let body = ""; req.on("data", d => (body += d)); req.on("end", () => { db.live[lm[1]] = JSON.parse(body); send(200, db.live[lm[1]]); });
     return;
   }
+  const dm = url.pathname.match(/^\/crates\/rooms\/DDIX\/removed\/([^/]+)\.json$/);
+  if (dm && url.searchParams.get("auth") === "tok") {
+    if (req.method === "DELETE") { delete db.removed[dm[1]]; return send(200, null); }
+    let body = ""; req.on("data", d => (body += d)); req.on("end", () => { db.removed[dm[1]] = JSON.parse(body); send(200, true); });
+    return;
+  }
+  if (url.pathname === `/crates/rooms/${INDEX_ROOM}/removed.json` && url.searchParams.get("auth") === "tok") return send(200, Object.keys(db.removed).length ? db.removed : null);
   if (req.method === "POST" && url.pathname === "/signup") { db.signedIn++; return send(db.refuse ? 400 : 200, db.refuse ? { error: { message: "ADMIN_ONLY_OPERATION" } } : { idToken: "tok" }); }
   if (url.searchParams.get("auth") !== "tok") return send(401, { error: "Permission denied" });
   db.asked.push(url.pathname);
@@ -131,6 +138,23 @@ r = await run(out);
   db.asked.length = 0;
   r = await run(dir, "--scan");
   check(JSON.parse(fs.readFileSync(path.join(dir, "index.json"), "utf8")).length === 2 && db.asked.filter(p => p.endsWith("/dandan.json")).length === 0, "a second scan finds the same games and fetches none again");
+}
+// a game removed in the viewer is marked in the index room: the collector drops its file and index entry and never fetches it again
+{
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "removed-"));
+  db.index = {}; db.rooms = {}; db.live = {}; db.removed = {};
+  put("7000", "Tom", true); put("8000", "Ann", false);
+  await run(dir);
+  db.removed = { 7000: true };                         // the viewer's marks stay; its delete of the index line may have gone through
+  delete db.index["7000"];
+  r = await run(dir);
+  const index = JSON.parse(fs.readFileSync(path.join(dir, "index.json"), "utf8"));
+  check(r.code === 0 && index.map(g => g.key).join() === "8000" && !fs.existsSync(path.join(dir, "games", "7000.json")) && fs.existsSync(path.join(dir, "games", "8000.json")), "a removed game's file and index entry are dropped, the others stay");
+  put("7000", "Tom", true);                            // even if its line came back, it is not fetched again
+  await run(dir);
+  check(!fs.existsSync(path.join(dir, "games", "7000.json")), "and a removed game is not fetched again");
+  r = await run(dir, "--check");
+  check(JSON.parse(fs.readFileSync(path.join(dir, "status.json"), "utf8")).check?.removeWrite === true, "the check says whether the viewer's mark is allowed");
 }
 // a game in progress (the page's write under the index room's `live`) is kept as it stands, and dropped once the game has ended
 {

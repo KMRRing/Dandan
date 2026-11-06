@@ -49,6 +49,16 @@ async function main() {
   if (!base) for (const [what, e] of passed) fail(what, e);
   if (CHECK && base) return selfCheck(base, token, before);
   if (SCAN && base) return scan(base, token, before, index, have);
+  // games the owner removed in the viewer: marked in the index room, gone from here too (and never fetched again)
+  let removedNow = 0;
+  if (base) try {
+    const removed = (await json(`${base}/crates/rooms/${INDEX_ROOM}/removed.json?auth=${token}`, { headers: HEADERS })) || {};
+    for (const key of Object.keys(removed)) {
+      if (lines) delete lines[key];
+      if (have.has(key)) { have.delete(key); index.splice(index.findIndex(g => g.key === key), 1); removedNow++; }
+      fs.rmSync(path.join(dir, "games", `${key}.json`), { force: true });
+    }
+  } catch (e) { fail("removed", e); }
   let found = 0;
   for (const [key, line] of Object.entries(lines || {})) {
     if (have.has(key) || !line?.room || line.check) continue;
@@ -73,8 +83,8 @@ async function main() {
   // the folder changes (and so is committed) only when there is something new to say, so the branch isn't a log of idle hours
   const listed = Object.keys(lines || {});
   const status = { at: new Date().toISOString(), games: index.length, new: found, listed: listed.length, unread: listed.filter(k => !kept.has(k)).length, errors };
-  if (found) write("index.json", index);
-  if (found || liveNote !== null || !before.at || errors.join() !== (before.errors || []).join()) write("status.json", { ...status, live: liveNote ?? before.live ?? 0 });
+  if (found || removedNow) write("index.json", index);
+  if (found || removedNow || liveNote !== null || !before.at || errors.join() !== (before.errors || []).join()) write("status.json", { ...status, live: liveNote ?? before.live ?? 0 });
   console.log(`${index.length} games, ${found} new, ${errors.length} problems`);
 }
 /** Every room asked for its Dandan result; what answers is fetched whole and kept like any game, marked `scanned`. */
@@ -130,6 +140,10 @@ async function selfCheck(base, token, before) {
   const lurl = `${base}/crates/rooms/${INDEX_ROOM}/live/check-${Date.now()}.json?auth=${token}`;
   try { await json(lurl, { method: "PUT", headers: HEADERS, body: JSON.stringify({ check: true, at: Date.now() }) }); check.liveWrite = true; await json(lurl, { method: "DELETE", headers: HEADERS }); }
   catch (e) { check.liveWrite = false; fail("check live write", e); }
+  // and the viewer's mark that a game was removed (games.js), which the collector obeys
+  const rurl = `${base}/crates/rooms/${INDEX_ROOM}/removed/check-${Date.now()}.json?auth=${token}`;
+  try { await json(rurl, { method: "PUT", headers: HEADERS, body: JSON.stringify(true) }); check.removeWrite = true; await json(rurl, { method: "DELETE", headers: HEADERS }); }
+  catch (e) { check.removeWrite = false; fail("check removed write", e); }
   write("status.json", { ...before, check: { at: new Date().toISOString(), ...check }, errors });
   console.log(`check: ${JSON.stringify(check)}`);
 }
