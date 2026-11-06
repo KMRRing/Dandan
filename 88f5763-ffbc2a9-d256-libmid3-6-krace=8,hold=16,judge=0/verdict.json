@@ -1,0 +1,1 @@
+{"n":60,"games":120,"mean":0.475,"se":0.03238408271912795,"look":1,"z":1.959963986120195,"ci95":[0.4115271978705092,0.5384728021294908],"verdict":"reject","next":0,"text":"REJECT: the candidate scores 47.5% over 60 deals (120 games), 95% interval 41.2% to 53.8%; look 1 (z 1.96): adopt above 56.3%, reject below 48.7%"}
