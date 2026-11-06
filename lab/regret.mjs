@@ -5,6 +5,7 @@
 // The kinds are what Medium decided: a pending question by its kind (attack, block, discard...), a move with priority by
 // the card it plays (land, cast <card>, cycle, pass).
 // usage: node lab/regret.mjs sample <first seed> <games> <keep probability> <out.jsonl>      positions from games
+// LIBCUT=lo-hi starts each sampled game with the library cut (as lab/match.mjs); LIBKEEP=lo-hi keeps only positions with that many cards left.
 //        node lab/regret.mjs value <in.jsonl> <shard> <shards> <deals> <out.jsonl>            their values
 //        node lab/regret.mjs report <in.jsonl>...                                             regret by kind
 import fs from "node:fs";
@@ -18,6 +19,7 @@ import { DECK } from "../dandan-cards.js";
 
 const [mode, ...args] = process.argv.slice(2);
 const key = m => JSON.stringify(m);
+const range = v => (v ? v.split("-").map(Number) : null), CUT = range(process.env.LIBCUT), KEEP = range(process.env.LIBKEEP);
 /** What kind of decision a move is, for the report. */
 export function kindOf(s, m) {
   if (s.pending) return s.pending.t;
@@ -35,13 +37,14 @@ if (mode === "sample") {
   const quick = { ...rules, act: (s, seat, move, ctx) => act(s, seat, move, ctx) };
   for (let g = 0; g < games; g++) {
     let G = newRecord(quick, { seats: 2, seed: from + g, now: 0 });
+    if (CUT) G.state.exile.push(...G.state.lib.splice(CUT[0] + ((from + g) % (CUT[1] - CUT[0] + 1))));
     for (let i = 0; i < 4000 && !quick.over(G.state); i++) {
       const who = quick.toMove(G.state), s = quick.restore(J(G.state));
       Math.random = seeded(mix(from + g, i + 1));
       const m = policyMove(s, who, { rng: Math.random });
       let n = 1;
       if (!["mull", "bottom", "name"].includes(s.pending?.t) && s.turn >= 1) { try { n = candidates(s, who).length; } catch { n = 1; } }
-      if (n >= 2 && rnd() < keep) fs.appendFileSync(out, JSON.stringify({ id: `${from + g}:${i}`, who, mine: m, st: J(s) }) + "\n");
+      if (n >= 2 && rnd() < keep && (!KEEP || (s.lib.length >= KEEP[0] && s.lib.length <= KEEP[1]))) fs.appendFileSync(out, JSON.stringify({ id: `${from + g}:${i}`, who, mine: m, st: J(s) }) + "\n");
       G = applyMove(quick, G, who, m, 0).G;
     }
   }

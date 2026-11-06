@@ -28,6 +28,9 @@ on:
       aim:
         description: The score worth having; it stops when the candidate can't reach it
         default: "0.55"
+      libcut:
+        description: "Start every game with the library cut to this many cards, as lo-hi (e.g. 8-20); empty: whole games"
+        default: ""
       from:
         description: Deals already played (the match sets this itself; leave 0)
         default: "0"
@@ -47,11 +50,11 @@ jobs:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }      # every branch and tag, so a branch, a tag or a short commit id all resolve
       - id: r
-        env: { CHAMPION: "${{ inputs.champion }}", CANDIDATE: "${{ inputs.candidate }}", BATCH: "${{ inputs.batch }}", MIN: "${{ inputs.min }}", DEALS: "${{ inputs.deals }}" }
+        env: { CHAMPION: "${{ inputs.champion }}", CANDIDATE: "${{ inputs.candidate }}", BATCH: "${{ inputs.batch }}", MIN: "${{ inputs.min }}", DEALS: "${{ inputs.deals }}", LIBCUT: "${{ inputs.libcut }}" }
         run: |
           full() { git rev-parse --verify "origin/$1^{commit}" 2>/dev/null || git rev-parse --verify "$1^{commit}"; }
           champ=$(full "$CHAMPION"); cand=$(full "$CANDIDATE")     # fixed now, so a branch that moves mid-match can't mix builds
-          { echo "champ=$champ"; echo "cand=$cand"; echo "batch=${BATCH:-$MIN}"; echo "key=${cand:0:7}-${champ:0:7}-d$DEALS"; } >> "$GITHUB_OUTPUT"
+          { echo "champ=$champ"; echo "cand=$cand"; echo "batch=${BATCH:-$MIN}"; echo "key=${cand:0:7}-${champ:0:7}-d$DEALS${LIBCUT:+-lib$LIBCUT}"; } >> "$GITHUB_OUTPUT"
   play:
     needs: plan
     runs-on: ubuntu-latest
@@ -69,7 +72,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Play this job's deals, 4 at a time
-        env: { BATCH: "${{ needs.plan.outputs.batch }}", FROM: "${{ inputs.from }}", DEALS: "${{ inputs.deals }}", JOB: "${{ matrix.job }}" }
+        env: { BATCH: "${{ needs.plan.outputs.batch }}", FROM: "${{ inputs.from }}", DEALS: "${{ inputs.deals }}", JOB: "${{ matrix.job }}", LIBCUT: "${{ inputs.libcut }}" }
         run: |
           mkdir out
           pids=()
@@ -129,8 +132,9 @@ jobs:
           MIN: ${{ inputs.min }}
           MAX: ${{ inputs.max }}
           AIM: ${{ inputs.aim }}
+          LIBCUT: ${{ inputs.libcut }}
           REF: ${{ github.ref_name }}
         run: |
-          jq -n --arg ref "$REF" --arg cand "$CAND" --arg champ "$CHAMP" --arg deals "$DEALS" --arg min "$MIN" --arg max "$MAX" --arg aim "$AIM" --arg from "$N" --arg batch "$NEXT" \
-            '{ref: $ref, inputs: {candidate: $cand, champion: $champ, deals: $deals, min: $min, max: $max, aim: $aim, from: $from, batch: $batch}}' |
+          jq -n --arg ref "$REF" --arg cand "$CAND" --arg champ "$CHAMP" --arg deals "$DEALS" --arg min "$MIN" --arg max "$MAX" --arg aim "$AIM" --arg libcut "$LIBCUT" --arg from "$N" --arg batch "$NEXT" \
+            '{ref: $ref, inputs: {candidate: $cand, champion: $champ, deals: $deals, min: $min, max: $max, aim: $aim, libcut: $libcut, from: $from, batch: $batch}}' |
             gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/match.yml/dispatches" --input -

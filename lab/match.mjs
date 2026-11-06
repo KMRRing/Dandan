@@ -1,5 +1,7 @@
 // A match between two builds of the computer player (A and B), each a snapshot directory of the page's modules. Every deal is
 // played twice with the seats swapped, so a lucky deal cancels. The arena (rules, runner) is A's; only the players differ.
+// LIBCUT=lo-hi (an environment variable): every game starts with the library cut to lo..hi cards (by the deal's number; the rest in exile),
+// so the games are decided by the end of the library, which a whole game rarely reaches (6 November 2026).
 // usage: node match.mjs <A dir> <B dir> <first pair> <pairs> <out.jsonl> [A budget "deals:ms"] [B budget]
 import fs from "node:fs";
 import path from "node:path";
@@ -20,9 +22,11 @@ const { rules } = await import(`${dirA}/dandan-rules.js`), { newRecord, applyMov
 const A = await player(dirA, bA), B = await player(dirB, bB);
 const done = new Set(fs.existsSync(out) ? fs.readFileSync(out, "utf8").trim().split("\n").filter(Boolean).map(l => { const r = JSON.parse(l); return r.pair * 2 + r.aSeat; }) : []);
 const realRandom = Math.random;
+const CUT = process.env.LIBCUT ? process.env.LIBCUT.split("-").map(Number) : null;
 for (let p = from; p < from + pairs; p++) for (const aSeat of [0, 1]) {
   if (done.has(p * 2 + aSeat)) continue;
   let G = newRecord(rules, { seats: 2, seed: 5000 + p, now: 0 }), t = [0, 0], n = [0, 0], moves = 0;
+  if (CUT) G.state.exile.push(...G.state.lib.splice(CUT[0] + (p % (CUT[1] - CUT[0] + 1))));
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state)), isA = who === aSeat, pl = isA ? A : B;
     Math.random = seeded(mix(5000 + p, i + 1));                       // the quick policy's own dice: the same in every run of this game

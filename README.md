@@ -454,8 +454,8 @@ The engine and the computer player are copies of the Almanac's; a rules fix ther
 (the shown spell is this page's alone: `show` in `act` and `showStop` in `dandan-engine.js`, which a copy must keep). `seats.js` is the Almanac's with one change, which a copy must keep too: `applyMove` also keeps each move in `G.moves`.
 
 A game that was in hand when the page first began recording moves (it was updated mid-game) has only the moves made since: the viewer says so
-(`n` in the record counts every move) instead of failing to replay. The chart's judge (`deckedChance` in `dandan-advantage.js`) is pulled
-toward the result of a short shared library (6 November 2026, Korbi, who won by emptying it); Hard's look-ahead still uses the plain judge.
+(`n` in the record counts every move) instead of failing to replay. The chart's judge (`deckedChance` in `dandan-eval.js`) is pulled
+toward the result of a short shared library (6 November 2026, Korbi, who won by emptying it); Hard's look-ahead uses it too (branch `deck-race`, below).
 
 The viewer has a **Players** tab (games, wins, win rate, levels, devices per name) and can remove a game, or a player and all their
 games (asked once more in the page): it deletes the index line, the unfinished copy and the room's `dandan` node, and writes a mark

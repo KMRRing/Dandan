@@ -15,9 +15,9 @@
 import { act, toMove, moves, MOST_MULLS } from "./dandan-engine.js";
 import { DECK, NAMES } from "./dandan-cards.js";
 import { other, knownIn, knOf } from "./dandan-core.js";
-import { Player, policyMove, PASS, unseenOf } from "./dandan-policy.js";
+import { Player, policyMove, PASS, unseenOf, libraryMove } from "./dandan-policy.js";
 import { readsOf, likelihood } from "./dandan-reads.js";
-import { winChance } from "./dandan-eval.js";
+import { winChance, deckedChance } from "./dandan-eval.js";
 import { moveName } from "./dandan-words.js";
 import { seeded, mix, shuffle } from "./seats.js";
 
@@ -143,7 +143,15 @@ export function candidates(s, seat, { wide = 7 } = {}) {
     // by two points or more in 2.7%, worth ten or more where it happened: README, The stack and the end of the library)
     const stacked = (s.stack.length > 0 || endOfLibrary(s) > 0) && wide >= 7;
     for (const { m, v } of scored) if (v > -0.8 || stacked) add(m);
-    return out.slice(0, stacked ? STACK_WIDE : wide);
+    const list = out.slice(0, stacked ? STACK_WIDE : wide);
+    if (s.lib.length <= HOLD_LIB && !s.stack.length) {
+      let n = 0;
+      for (const { m } of scored) {
+        if (n >= HOLD_MOST) break;
+        if ((m.t === "cast" || m.t === "cycle" || m.t === "ability") && !m.hold && libraryMove(s, P.F, m)) { list.push({ ...m, hold: true }); n++; }
+      }
+    }
+    return list;
   }
   switch (p.t) {
     case "attack": {
@@ -206,8 +214,10 @@ export function candidates(s, seat, { wide = 7 } = {}) {
 }
 
 // ---------- playing a move out ----------
+/** The judge Hard ends its games with: the network's, pulled toward the end of a short shared library (dandan-eval.js `deckedChance`). */
+const hardJudge = (globalThis.DANDAN_DECK_JUDGE ?? 1) ? deckedChance : winChance;
 /** Plays a dealt game on with Medium moving both seats until the turn `to` begins (or the game ends); the seat's chance there. */
-export function playOut(c, seat, to, rng, judge = winChance) {
+export function playOut(c, seat, to, rng, judge = hardJudge) {
   for (let i = 0; i < 4000 && !c.over; i++) {
     if (c.turn >= to && !c.stack.length) break;
     const who = toMove(c);
@@ -229,8 +239,19 @@ const WIDTH = 4, EXPLORE = 0.3;
  * will draw last. With RACE_TURNS cards or fewer left each draw step takes one, so the library is out within that many turns
  * and the game ends within two more; the look-ahead plays on that far (the position's own result, not the judge's guess).
  */
-const RACE_TURNS = 8;
+// The three of them are set from outside (globalThis.DANDAN_RACE_TURNS, _HOLD_LIB, _DECK_JUDGE) only by the lab, to set one against
+// another; a page never sets them.
+const RACE_TURNS = globalThis.DANDAN_RACE_TURNS ?? 14;
 export const endOfLibrary = s => (s.lib.length <= RACE_TURNS ? s.lib.length + 2 : 0);
+/**
+ * With this many cards left or fewer, a cast, cycling or ability that moves the library may be made holding priority, for both
+ * seats in the search: the caster keeps the stack and may answer its own spell (Take Inventory on an empty library would lose the
+ * game, but a Memory Lapse on it sends the card back into the library, and the draw that was to find it empty falls to the other
+ * seat). The moves Medium plays never hold priority, so these lines were not in the search at all, and Medium's score of such a
+ * spell (-9) kept it from the shortlist even if they had been (6 November 2026, Korbi).
+ */
+const HOLD_LIB = globalThis.DANDAN_HOLD_LIB ?? 16;
+const HOLD_MOST = 4;
 /** The most moves weighed at the root with something on the stack (otherwise `wide`, 7). */
 const STACK_WIDE = 12;
 /**
@@ -288,7 +309,7 @@ function choose(node, ms, c, seat, who, at, explore = EXPLORE) {
  * the deals'. seen: where it was left, and the other player's first choice on the way (their answer, for the coach's
  * words).
  */
-export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE) {
+export function treePlay(c, seat, root, to, rng, judge = hardJudge, seen = null, explore = EXPLORE) {
   const opp = other(seat), path = [];
   let node = root, growing = true;
   for (let i = 0; i < 4000 && !c.over; i++) {
@@ -340,7 +361,7 @@ function where(c, seat) {
  * time), judge (the chance of winning where a game is left), explore (the tree's: how much benefit of the doubt a
  * choice tried less gets).
  */
-export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE } = {}) {
+export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = hardJudge, explore = EXPLORE } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);

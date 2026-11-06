@@ -1,6 +1,5 @@
 // The chart's judge sees a short shared library: the seat that must draw from the empty one loses (Korbi, 6 November 2026).
-import { deckedChance } from "../dandan-advantage.js";
-import { winChance } from "../dandan-eval.js";
+import { deckedChance, winChance } from "../dandan-eval.js";
 import { scene, islandsOf } from "./dandan-scene.js";
 
 let bad = 0;
