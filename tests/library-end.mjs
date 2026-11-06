@@ -99,9 +99,9 @@ for (const n of [0, 1, 2]) {
 // near the end Hard weighs every move there is at the root, as with a spell on the stack (up to twelve)
 {
   const hand = ["Brainstorm", "Lórien Revealed", "Predict", "Quicken", "Take Inventory", "Chart a Course", "Mind Bend", "Piracy Charm", "Repulse"];
-  const near = position(5, { hand }), far = position(12, { hand });
+  const near = position(5, { hand }), far = position(20, { hand });
   const legal = moves(near, 1).length + 1, n = candidates(near, 1).length, f = candidates(far, 1).length;
-  check(n === Math.min(legal, 12) && n > 7 && f <= 7, `with 5 cards left ${n} of ${legal} moves are weighed; with 12, ${f} (at most seven)`);
+  check(n === Math.min(legal, 12) && n > 7 && f <= 7, `with 5 cards left ${n} of ${legal} moves are weighed; with 20, ${f} (at most seven)`);
 }
 // far from the end, nothing changes
 {
