@@ -167,7 +167,7 @@ function noteFresh(prev, v) {
   const ln = s.ln || 0;
   if (v.G.seq !== fresh.game) { fresh = { game: v.G.seq, ln, n: 0, at: 0, mine: true }; tapped = 0; return; }
   if (ln <= fresh.ln) return;
-  if (!s.log.some(e => e.n > fresh.ln && !/^Turn \d+:/.test(e.t))) { fresh.ln = ln; return; }
+  if (!s.log.some(e => e.n > fresh.ln && !e.st && !/^Turn \d+:/.test(e.t))) { fresh.ln = ln; return; }
   // (the page's own pass that lets the computer's spell resolve is not a move of yours: what it did stays on the table)
   const mine = !!prev?.G && prev.G.seq === v.G.seq && prev.seat != null && prev.toMove === prev.seat && autoKey !== `${prev.G.seq}:${prev.G.n}`;
   fresh = { game: v.G.seq, ln, n: fresh.n + 1, at: Date.now(), mine };
@@ -377,7 +377,7 @@ function readHead(q = question()) {
   return q ? q.say
     : ui.tap ? `<p class="dd-q">${esc(ui.tap.label)}: tap the lands to pay with</p><p class="dd-sub">It costs ${pips(costText(ui.tap.cost))}: ${ui.tap.ids.length} chosen${tapDone() ? "" : ", not enough yet"}.</p>`
     : ui.arm ? `<p class="dd-q">${esc(ui.arm.label)}: choose ${ui.arm.moves[0].targets[0].k === "p" ? "a player" : ui.arm.moves[0].targets[0].k === "g" ? "a card in the graveyard" : "a target"}</p><p class="dd-sub">The lit ones are legal.</p>`
-    : s.over ? `<p class="dd-q">${esc(words(s.log[s.log.length - 1]?.t || ""))}</p>` : "";
+    : s.over ? `<p class="dd-q">${esc(words(s.log.findLast(e => !e.st)?.t || ""))}</p>` : "";
 }
 function drawRead(q = question()) {
   const s = S(), armed = armedKeys(), head = readHead(q);
@@ -445,7 +445,7 @@ function drawHand(q) {
 
 function drawLog() {
   const box = $("log");
-  box.innerHTML = S().log.map(e => `<li>${esc(words(e.t))}</li>`).join("");
+  box.innerHTML = S().log.map(e => `<li${e.st ? ' class="st"' : ""}>${esc(words(e.t))}</li>`).join("");
   box.scrollTop = box.scrollHeight;
 }
 
@@ -871,7 +871,7 @@ function fillView() {
   if (VIEW === "log") {
     const dlg = $("viewDlg"), atFoot = dlg.scrollTop + dlg.clientHeight >= dlg.scrollHeight - 4;
     $("viewHead").textContent = "Log";
-    body.innerHTML = `<ol class="dd-logsheet">${s.log.map(e => `<li>${esc(words(e.t))}</li>`).join("")}</ol>`;
+    body.innerHTML = `<ol class="dd-logsheet">${s.log.map(e => `<li${e.st ? ' class="st"' : ""}>${esc(words(e.t))}</li>`).join("")}</ol>`;
     if (atFoot) dlg.scrollTop = dlg.scrollHeight;   // following the game, unless you've scrolled back to read
     VROWS = [];
     return;

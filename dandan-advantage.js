@@ -49,7 +49,7 @@ export function noteAction(s, by, after = 0) {
   adv.push(pack(s.turn, chanceOf(s), { kind: 1, by, ln: s.ln }));
 }
 /** The log's lines from place `from` (not including it) to `to`. */
-export const linesBetween = (log, from, to) => (log || []).filter(e => e.n > from && e.n <= to).map(e => e.t);
+export const linesBetween = (log, from, to) => (log || []).filter(e => e.n > from && e.n <= to && !e.st).map(e => e.t);
 
 // ---------- the game's curve ----------
 /** Whose turn it is (turns alternate, from the seat that went first). */

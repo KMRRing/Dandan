@@ -305,6 +305,13 @@ says it fizzles, not that it resolves. What is drawn is deliberately not in the 
 stays silent, and the order of resolutions is how a reader works out which card went where. `node tests/resolve-log.mjs` plays the
 Mind Bend game's stack and checks the order and that the draw is not named.
 
+**6 November 2026** (Korbi, after a tester's Dandân seemed to return to the wrong hand): a cast names its target with the player who
+controls it ("Dave casts Repulse on Monte's Dandân"), a Repulse says whose hand the card goes to ("Dandân returns to Monte's
+hand"; in this format a card belongs to whoever played it), and each step of the turn is a dim line of its own (`step` in
+`dandan-engine.js`, entries marked `st: 1`): Untap, Upkeep, "Draw: Monte draws a card" or "Draw (skip)", Main 1, Attack or
+"Combat (skip)", Blocks, Damage, Main 2, End step. A draw by a spell is still silent and no card is named; step lines are not
+"the newest thing done" and the 3D view's one line skips them.
+
 ## Where the results go
 
 Nothing about results is shown on the page. When a game ends, it is written to the Almanac's Firebase database

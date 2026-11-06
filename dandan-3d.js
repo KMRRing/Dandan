@@ -183,7 +183,7 @@ export function createTable3d(c) {
       ${shown.map((id, j) => `<span class="d3-fc${id != null ? " known" : ""}" style="--j:${j - (shown.length - 1) / 2}"${id != null ? ` data-id="${id}"` : ""}>${id != null ? art(nm(id)) : back()}</span>`).join("")}<b class="d3-fn2">${n}</b></button>`;
     fill($("d3foe"), `${avatar(foe)}<span class="d3-who"><span class="d3-l1"><b class="d3-name">${esc(c.nameOf(foe))}</b></span><span class="d3-meta">${landsWords(foe)}${known.length ? ` · ${known.length} known` : ""}${floating(foe)}</span></span>${fan}`);
     // yours: the avatar, the latest line of the log (tapped for all of it), the track of the turn's steps
-    const at = STEPS.indexOf(s.step), line = s.log[s.log.length - 1];
+    const at = STEPS.indexOf(s.step), line = s.log.findLast(e => !e.st);
     const track = `<span class="d3-track ${c.isMe(s.active) ? "mine" : "theirs"}" aria-label="Turn ${s.turn}, ${STEP_SHORT[s.step] || s.step}">
       <span class="d3-ticks">${STEPS.map((st, i) => `<i class="${i === at ? "on" : i < at ? "past" : ""}"></i>`).join("")}</span><b>${s.step === "mull" ? STEP_SHORT.mull : `${s.turn} · ${STEP_SHORT[s.step] || s.step}`}</b></span>`;
     // while a target is chosen, the line says so (the lit ones are on the table: the middle stays clear of them)

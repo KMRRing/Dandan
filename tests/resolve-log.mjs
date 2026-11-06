@@ -3,7 +3,7 @@
 // show it). The last cast resolves first; each item says so as it comes off. Draws stay unnamed in the log.
 // Run: node tests/resolve-log.mjs
 import { DECK } from "../dandan-cards.js";
-import { scene, islandsOf, go, cast, answer, pass, resolveStack, idIn, onBf, names, sidOf } from "./dandan-scene.js";
+import { scene, islandsOf, go, cast, answer, pass, resolveStack, drive, idIn, onBf, names, sidOf } from "./dandan-scene.js";
 
 let bad = 0;
 const test = (what, fn) => {
@@ -36,7 +36,7 @@ test("each item says it resolves, the last cast first: Memory Lapse, then Repuls
 });
 test("…and the Repulse drew the card Memory Lapse put on top, which the log doesn't name", () => {
   const s = resolveStack(stack());
-  return names(s.hand[0]).includes("Mind Bend") && !lines(s).some(t => /draws/.test(t)) || `${names(s.hand[0])} / ${lines(s).filter(t => /draw/.test(t))}`;
+  return names(s.hand[0]).includes("Mind Bend") && !s.log.filter(l => !l.st).some(l => /draws/.test(l.t)) || `${names(s.hand[0])} / ${lines(s).filter(t => /draw/.test(t))}`;
 });
 test("a trigger and an ability say so too", () => {
   let s = scene({ active: 1, step: "main1", hand: [[], ["Thundering Falls"]], lib: ["Island", "Island"], bf: [[1, "Island"], [0, "Island"]] });
@@ -52,6 +52,34 @@ test("a spell whose target has gone fizzles and doesn't say it resolves", () => 
   s = resolveStack(s);
   const l = lines(s);
   return l.filter(x => x === "Repulse resolves").length === 1 && l.includes("Repulse fizzles: its target is gone") || l.join(" | ");
+});
+
+// 6 November 2026, Korbi, from a game where a Dandân came back to the wrong hand (or looked it): the log names the target
+// with whoever controls it, says whose hand a returned card goes to, and marks each step of the turn.
+test("a cast names its target with the player who controls it, and a Repulse says whose hand the Dandân goes to", () => {
+  let s = scene({ active: 0, step: "main1", hand: [["Repulse"], []], lib: ["Island", "Island"], bf: [[1, "Dandân"], ...islandsOf(1, 3), ...islandsOf(0, 3)] });
+  const dd = onBf(s, 1, "Dandân");
+  s = cast(s, 0, "Repulse", [{ k: "c", id: dd, oid: oidOf(s, dd) }]);
+  s = resolveStack(s);
+  const l = lines(s);
+  return l.includes("{s0} casts Repulse on {s1}'s Dandân") && l.includes("Dandân returns to {s1}'s hand") && names(s.hand[1]).includes("Dandân") && !names(s.hand[0]).includes("Dandân")
+    || l.join(" | ");
+});
+test("a spell targeting a spell names its caster too", () => {
+  const l = lines(stack());
+  return l.includes("{s0} casts Memory Lapse on {s1}'s Mind Bend") || l.join(" | ");
+});
+test("each step of a turn is a line of its own: untap, upkeep, the draw (who drew), main, a skipped combat", () => {
+  let s = scene({ active: 0, step: "end", prio: 0, turn: 5, drawn: [0, 0], hand: [[], []], lib: ["Island", "Island"], bf: [...islandsOf(0, 2), ...islandsOf(1, 2)] });
+  s = drive(s, c => c.active === 1 && c.step === "main2");
+  const steps = s.log.filter(l => l.st).map(l => l.t);
+  return steps.join("|") === "Untap|Upkeep|Draw: {s1} draws a card|Main 1|Combat (skip)|Main 2" || steps.join("|");
+});
+test("the first turn's draw is a skip, and step lines are never counted as something done", () => {
+  let s = scene({ active: 0, step: "end", prio: 0, turn: 0, hand: [[], []], lib: ["Island", "Island"], bf: [] });
+  s = drive(s, c => c.step === "main1");
+  const l = s.log.filter(x => x.st).map(x => x.t);
+  return (s.turn === 1 ? l.includes("Draw (skip)") : l.some(t => /^Draw/.test(t))) && s.log.filter(x => x.st).every(x => x.st === 1) || `${s.turn} ${l.join("|")}`;
 });
 
 if (bad) { console.log(`${bad} failed`); process.exit(1); }

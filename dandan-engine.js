@@ -117,7 +117,11 @@ function startTurn(s) {
   s.passes = 0;
   say(s, `Turn ${s.turn}: {s${s.active}}`);
   turnAt = s.ln;
+  step(s, "Untap");
+  step(s, "Upkeep");
 }
+/** A line that marks a step of the turn (or says it is skipped), so the log shows where each thing was done. */
+const step = (s, text) => say(s, text, true);
 function endTurn(s) {
   for (const p of s.bf) { delete p.dmg; delete p.pump; delete p.walk; }
   startTurn(s);
@@ -132,28 +136,34 @@ function cleanup(s) {
 function advance(s) {
   const act = s.active;
   switch (s.step) {
-    case "upkeep": toStep(s, "draw"); if (s.turn > 1) draw(s, act, 1); break;
-    case "draw": toStep(s, "main1"); break;
+    case "upkeep":
+      toStep(s, "draw");
+      if (s.turn > 1) step(s, draw(s, act, 1) ? `Draw: {s${act}} draws a card` : "Draw: nothing left to draw");
+      else step(s, "Draw (skip)");
+      break;
+    case "draw": toStep(s, "main1"); step(s, "Main 1"); break;
     case "main1": {
       const ids = s.bf.filter(p => canAttack(s, p)).map(p => p.id);
-      if (ids.length) { toStep(s, "attackers"); s.pending = { t: "attack", seat: act, ids }; return; }
+      if (ids.length) { toStep(s, "attackers"); step(s, "Attack"); s.pending = { t: "attack", seat: act, ids }; return; }
       toStep(s, "main2");
+      step(s, "Combat (skip)"); step(s, "Main 2");
       break;
     }
     case "attackers": {
       const att = (s.combat ? s.combat.att : []).filter(id => perm(s, id));
-      if (!att.length) { s.combat = null; toStep(s, "main2"); break; }
+      if (!att.length) { s.combat = null; toStep(s, "main2"); step(s, "Combat (skip)"); step(s, "Main 2"); break; }
       s.combat.att = att;
       toStep(s, "blockers");
       const def = other(act);
       const blockers = s.bf.filter(p => p.ctl === def && isCreature(p) && !p.tapped).map(p => p.id);
       const attackers = att.filter(id => !unblockable(s, perm(s, id)));
-      if (blockers.length && attackers.length) { s.pending = { t: "block", seat: def, blockers, attackers }; return; }
+      if (blockers.length && attackers.length) { step(s, "Blocks"); s.pending = { t: "block", seat: def, blockers, attackers }; return; }
+      step(s, "Blocks (skip)");
       break;
     }
-    case "blockers": toStep(s, "damage"); combatDamage(s); break;
-    case "damage": toStep(s, "main2"); s.combat = null; break;
-    case "main2": toStep(s, "end"); break;
+    case "blockers": toStep(s, "damage"); step(s, "Damage"); combatDamage(s); break;
+    case "damage": toStep(s, "main2"); s.combat = null; step(s, "Main 2"); break;
+    case "main2": toStep(s, "end"); step(s, "End step"); break;
     case "end": cleanup(s); return;
   }
   s.prio = s.active;
@@ -472,10 +482,10 @@ export function checkCast(s, seat, m) {
 }
 /** A target in words, for the log. */
 export function targetWords(s, t) {
-  if (t.k === "s") return itemOf(s, t.sid)?.name || "a spell";
+  if (t.k === "s") { const x = itemOf(s, t.sid); return x ? `{s${x.ctl}}'s ${x.name}` : "a spell"; }
   if (t.k === "p") return `{s${t.seat}}`;
   const p = perm(s, t.id);
-  return p ? `${nm(t.id)}${isLand(p) || nm(t.id) === "Clue" ? "" : ` ({s${p.ctl}})`}` : nm(t.id);
+  return p ? `{s${p.ctl}}'s ${nm(t.id)}` : nm(t.id);
 }
 /**
  * Priority after a spell or ability goes on the stack: with the other seat to answer it, or (holding priority) kept by the
@@ -690,7 +700,7 @@ function answer(s, seat, m) {
       }
       if (id !== null) {
         if (p.for === "drop") { fromHand(s, seat, id); enterBf(s, id, seat); say(s, `{s${seat}} puts ${nm(id)} onto the battlefield`); }
-        else if (p.for === "boil") { bounce(s, id); say(s, `{s${seat}} returns ${nm(id)} to hand`); }
+        else if (p.for === "boil") { bounce(s, id); say(s, `{s${seat}} returns ${nm(id)} to {s${seat}}'s hand`); }
       }
       resume(s);
       return null;

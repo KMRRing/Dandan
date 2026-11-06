@@ -108,7 +108,7 @@ export const RES = {
   "Metamorphose"(s, it) {
     if (it.step === 0) {
       const p = perm(s, it.targets[0].id), opp = p.ctl;
-      say(s, `${nm(p.id)} goes on top of the library`);
+      say(s, `{s${opp}}'s ${nm(p.id)} goes on top of the library`);
       permToLib(s, p.id, "top");
       const ids = s.hand[opp].filter(id => ["creature", "land"].includes(defOf(id).type));
       if (ids.length) return ask(s, it, { t: "pick", seat: opp, ids, for: "drop", optional: true }, 1);
@@ -127,7 +127,7 @@ export const RES = {
     if (it.step === 0) {
       const x = itemOf(s, it.targets[0].sid);
       const c = pushItem(s, { kind: "spell", name: x.name, card: x.card, ctl: it.ctl, targets: x.targets.map(t => ({ ...t })), mode: x.mode || 0, copy: true });
-      say(s, `${x.name} is copied, and the original returns to its owner's hand`);
+      say(s, `${x.name} is copied, and the original returns to {s${x.ctl}}'s hand`);
       leaveStack(s, x, "hand");
       if (c.targets.length) {
         // new targets for the copy, when there's a choice: another target, or the one legal target in place of a lost one.
@@ -157,8 +157,9 @@ export const RES = {
   },
   "Quicken"(s, it) { s.quick[it.ctl] = true; draw(s, it.ctl, 1); return "done"; },
   "Repulse"(s, it) {
-    const id = it.targets[0].id;
-    say(s, `${nm(id)} returns to its owner's hand`);
+    const id = it.targets[0].id, p = perm(s, id);
+    // the format has no owner but the one who played a card: a card goes back to the hand of whoever controls it
+    say(s, `${nm(id)} returns to {s${p ? p.ctl : it.ctl}}'s hand`);
     bounce(s, id);
     draw(s, it.ctl, 1);
     return "done";

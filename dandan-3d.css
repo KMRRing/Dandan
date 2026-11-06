@@ -308,6 +308,8 @@
 .dd-logsheet { margin: 0; padding: 0; list-style: none; font-size: .88rem; }
 .dd-logsheet li { padding: .28rem 0; border-bottom: 1px solid var(--rule); line-height: 1.3; }
 .dd-logsheet li:last-child { border-bottom: 0; font-weight: 700; }
+/* a step of the turn (Untap, Upkeep, Draw…), quieter than what was done */
+.dd-logsheet li.st { padding: .1rem 0; border-bottom: 0; font-size: .78rem; font-weight: 400; color: var(--ink-soft); }
 
 /* ---------- a short phone: the bars and the hand give way first ---------- */
 @media (max-height: 640px) and (orientation: portrait) {

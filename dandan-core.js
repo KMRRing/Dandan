@@ -27,12 +27,14 @@ export const random = () => rng();
 export const hushed = () => quiet;
 
 // ---------- the log: a line for each thing that happens, {s0} for whoever sits in seat 0 ----------
+// A step line (st: 1) marks where the turn is (Untap, Upkeep, Draw…); it is not something done, so the page shows it dim and
+// neither the "newest thing done" nor a chart point's words count it.
 // The whole game is kept, for Copy log (a game runs to two or three hundred lines); the bound is against one that never ends.
 const LOG_LINES = 1000;
-export function say(s, text) {
+export function say(s, text, step = false) {
   if (quiet) return;
   s.ln = (s.ln || 0) + 1;
-  s.log.push({ n: s.ln, t: text });
+  s.log.push(step ? { n: s.ln, t: text, st: 1 } : { n: s.ln, t: text });
   if (s.log.length > LOG_LINES) s.log.splice(0, s.log.length - LOG_LINES);
 }
 
