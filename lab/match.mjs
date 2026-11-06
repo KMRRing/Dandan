@@ -10,6 +10,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { J, hr } from "./lib.mjs";
+// KNOBS=race=14,hold=-1,judge=0 (an environment variable): the candidate's deck-race settings (dandan-think.js reads them from globalThis),
+// to try its changes one at a time; the champion's code does not read them.
+for (const kv of (process.env.KNOBS || "").split(",").filter(Boolean)) { const [k, v] = kv.split("="); globalThis[{ race: "DANDAN_RACE_TURNS", hold: "DANDAN_HOLD_LIB", judge: "DANDAN_DECK_JUDGE" }[k]] = Number(v); }
 const [dirA, dirB, from, pairs, out, bA, bB] = [path.resolve(process.argv[2]), path.resolve(process.argv[3]), Number(process.argv[4]), Number(process.argv[5]), process.argv[6], process.argv[7], process.argv[8]];
 // "deals", "deals:ms" or "deals:ms:first" (the deals before the first look; ms may be empty); none: the build's own deepest
 const budgetOf = (spec, DEPTH) => {

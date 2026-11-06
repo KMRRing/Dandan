@@ -31,6 +31,9 @@ on:
       libcut:
         description: "Start every game with the library cut to this many cards, as lo-hi (e.g. 8-20); empty: whole games"
         default: ""
+      knobs:
+        description: "Settings of the candidate's three deck-race changes, e.g. race=14,hold=-1,judge=0 (race: cards left from which the look-ahead plays to the end, the champion's is 8; hold: cards left from which spells may hold priority, -1 off; judge: 1 pulls the judge toward a decked library, 0 off); empty: the build's own"
+        default: ""
       from:
         description: Deals already played (the match sets this itself; leave 0)
         default: "0"
@@ -50,11 +53,11 @@ jobs:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }      # every branch and tag, so a branch, a tag or a short commit id all resolve
       - id: r
-        env: { CHAMPION: "${{ inputs.champion }}", CANDIDATE: "${{ inputs.candidate }}", BATCH: "${{ inputs.batch }}", MIN: "${{ inputs.min }}", DEALS: "${{ inputs.deals }}", LIBCUT: "${{ inputs.libcut }}" }
+        env: { CHAMPION: "${{ inputs.champion }}", CANDIDATE: "${{ inputs.candidate }}", BATCH: "${{ inputs.batch }}", MIN: "${{ inputs.min }}", DEALS: "${{ inputs.deals }}", LIBCUT: "${{ inputs.libcut }}", KNOBS: "${{ inputs.knobs }}" }
         run: |
           full() { git rev-parse --verify "origin/$1^{commit}" 2>/dev/null || git rev-parse --verify "$1^{commit}"; }
           champ=$(full "$CHAMPION"); cand=$(full "$CANDIDATE")     # fixed now, so a branch that moves mid-match can't mix builds
-          { echo "champ=$champ"; echo "cand=$cand"; echo "batch=${BATCH:-$MIN}"; echo "key=${cand:0:7}-${champ:0:7}-d$DEALS${LIBCUT:+-lib$LIBCUT}"; } >> "$GITHUB_OUTPUT"
+          { echo "champ=$champ"; echo "cand=$cand"; echo "batch=${BATCH:-$MIN}"; echo "key=${cand:0:7}-${champ:0:7}-d$DEALS${LIBCUT:+-lib$LIBCUT}${KNOBS:+-k$KNOBS}"; } >> "$GITHUB_OUTPUT"
   play:
     needs: plan
     runs-on: ubuntu-latest
@@ -72,7 +75,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: Play this job's deals, 4 at a time
-        env: { BATCH: "${{ needs.plan.outputs.batch }}", FROM: "${{ inputs.from }}", DEALS: "${{ inputs.deals }}", JOB: "${{ matrix.job }}", LIBCUT: "${{ inputs.libcut }}" }
+        env: { BATCH: "${{ needs.plan.outputs.batch }}", FROM: "${{ inputs.from }}", DEALS: "${{ inputs.deals }}", JOB: "${{ matrix.job }}", LIBCUT: "${{ inputs.libcut }}", KNOBS: "${{ inputs.knobs }}" }
         run: |
           mkdir out
           pids=()
@@ -133,8 +136,9 @@ jobs:
           MAX: ${{ inputs.max }}
           AIM: ${{ inputs.aim }}
           LIBCUT: ${{ inputs.libcut }}
+          KNOBS: ${{ inputs.knobs }}
           REF: ${{ github.ref_name }}
         run: |
-          jq -n --arg ref "$REF" --arg cand "$CAND" --arg champ "$CHAMP" --arg deals "$DEALS" --arg min "$MIN" --arg max "$MAX" --arg aim "$AIM" --arg libcut "$LIBCUT" --arg from "$N" --arg batch "$NEXT" \
-            '{ref: $ref, inputs: {candidate: $cand, champion: $champ, deals: $deals, min: $min, max: $max, aim: $aim, libcut: $libcut, from: $from, batch: $batch}}' |
+          jq -n --arg ref "$REF" --arg cand "$CAND" --arg champ "$CHAMP" --arg deals "$DEALS" --arg min "$MIN" --arg max "$MAX" --arg aim "$AIM" --arg libcut "$LIBCUT" --arg knobs "$KNOBS" --arg from "$N" --arg batch "$NEXT" \
+            '{ref: $ref, inputs: {candidate: $cand, champion: $champ, deals: $deals, min: $min, max: $max, aim: $aim, libcut: $libcut, knobs: $knobs, from: $from, batch: $batch}}' |
             gh api -X POST "repos/$GITHUB_REPOSITORY/actions/workflows/match.yml/dispatches" --input -
