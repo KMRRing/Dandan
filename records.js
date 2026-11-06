@@ -27,12 +27,12 @@ export function entryOf(v, how = {}, now = Date.now()) {
  * It goes under the index room's `live`, by when the game began, and is written over after each move.
  */
 export function liveEntry(v, how = {}, now = Date.now()) {
-  const s = v.state, name = v.seats?.[v.seat]?.name || "You", { moves = [], seats, options, seed, seq, started } = v.G;
+  const s = v.state, name = v.seats?.[v.seat]?.name || "You", { moves = [], seats, options, seed, seq, started, n } = v.G;
   const result = {
     name, live: true, turns: s.turn, life: s.life, library: s.lib.length, moves: moves.length, started, ended: now, ms: now - started,
     ...how, page: typeof location === "object" ? location.host + location.pathname : "",
   };
-  return { key: String(started), name, result, game: { seats, options: options || {}, seed, seq: seq || 1, started, moves: JSON.stringify(moves), state: { first: s.first } }, at: now };
+  return { key: String(started), name, result, game: { seats, options: options || {}, seed, seq: seq || 1, started, n, moves: JSON.stringify(moves), state: { first: s.first } }, at: now };
 }
 
 /**

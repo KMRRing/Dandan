@@ -69,7 +69,7 @@ const entry = entryOf(v, { level: "easy", think: 1 }, 5000);
   const view = { state: G.state, seat: 0, seats: [{ name: "Dave" }, { name: "Monte" }], G };
   const e = liveEntry(view, { level: "hard" }, 5000), g = JSON.parse(J(e.game));        // as the database hands it back
   check(e.result.live === true && e.result.moves === G.n && e.key === String(G.started) && e.name === "Dave", "a game in progress is marked live, with its move count, start and name");
-  check(J(Object.keys(e.game).sort()) === J(["moves", "options", "seats", "seed", "seq", "started", "state"]) && J(e.game.state) === J({ first: G.state.first }), "and holds only what playing it again needs (the state is rebuilt from the moves)");
+  check(J(Object.keys(e.game).sort()) === J(["moves", "n", "options", "seats", "seed", "seq", "started", "state"]) && J(e.game.state) === J({ first: G.state.first }), "and holds only what playing it again needs (the state is rebuilt from the moves), and how many moves were made, to tell a game whose first ones were never kept");
   const again = replay(rules, g);
   check(!again.error && J(again.state) === J(G.state), "played again from the live copy it comes out the same game, log and all");
   const w = walk(rules, g);

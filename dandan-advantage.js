@@ -21,7 +21,22 @@ export function unpack(v) {
   const base = Math.floor(v / STEP), code = Math.floor((v % STEP) / PLACE), kind = code >> 1;
   return { turn: Math.floor(base / 1000), pct: base % 1000, kind, by: kind ? code & 1 : null, ln: v % PLACE };
 }
-const chanceOf = s => Math.round(winChance(s, 0) * 100);
+/**
+ * The library is one, shared: when it runs out the seat that must draw from it loses, and the draws alternate, so a short library
+ * all but decides who. The judge was learned from games that were never decided so (its one library feature is a count), so
+ * its figure is pulled toward that end the shorter the library is (6 November 2026, Korbi, winning by emptying it: "the judge
+ * doesn't see it at all"). The pull is less the longer it is, since a cantrip or a mill can turn the order round. For the chart
+ * only: Hard's look-ahead ends its games with the judge as it was.
+ */
+const DECK_PULL = [0.9, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2];
+export function deckedChance(s, me = 0) {
+  const p = winChance(s, me), n = s.lib.length;
+  if (s.over || n >= DECK_PULL.length) return p;
+  const first = s.step === "upkeep" && s.turn > 1 ? s.active : 1 - s.active;     // who draws next (the engine's nextDrawer)
+  const loser = n % 2 === 0 ? first : 1 - first;                                   // the draw that finds it empty
+  return p + DECK_PULL[n] * ((loser === me ? 0.05 : 0.95) - p);
+}
+const chanceOf = s => Math.round(deckedChance(s, 0) * 100);
 /** A turn has begun: seat 0's chance by the judge, in the state's `adv` (a turn is noted once; the judge was learned
  *  from the start of turns, so that is where it is asked). */
 export function noteTurn(s) {
