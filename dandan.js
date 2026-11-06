@@ -684,7 +684,8 @@ async function act(m) {
     if (t) { ui.tap = t; ui.look = null; closeView(); draw(); return; }
   }
   // holding priority keeps it after a spell or ability goes on the stack, to answer it yourself (fetch a land to shuffle, cycle another card to draw first); a cycled card always does (Korbi, 23 October 2026), and the game moves on where there is nothing you could do
-  const hold = m.t === "cycle" || (opts.hold && (m.t === "cast" || m.t === "ability"));
+  // a land you play whose trigger goes on the stack is stopped at too, whatever you hold (Korbi, 6 November 2026: Halimar Depths "should ask the player if they want to do anything before it resolves")
+  const hold = m.t === "cycle" || m.t === "land" || (opts.hold && (m.t === "cast" || m.t === "ability"));
   const why = await page.move(hold ? { ...m, hold: true } : m);
   if (why) { toast(why); return; }
   closeView();

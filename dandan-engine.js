@@ -267,7 +267,7 @@ const UPKEEP = new Set(["Brainstorm", "Predict"]);
  * there in every simulated turn (200 games, with it against without: 53% +- 7, at the same thinking time).
  */
 export function wants(s, seat) {
-  if (s.stack.length) return hasMove(s, seat);
+  if (s.stack.length) { const top = s.stack[s.stack.length - 1]; return hasMove(s, seat) || (!!top.stop && top.ctl === seat && s.prio === seat); }
   if (s.step === "upkeep") return upkeepStop(s, seat) || (hushed() ? predrawMove(s, seat) : fetchWindow(s, seat) || anyUpkeepMove(s, seat));
   if (!(seat === s.active ? MY_STOPS : THEIR_STOPS).has(s.step)) return false;
   return hasMove(s, seat, s.step === "attackers" || s.step === "blockers" ? COMBAT : null);
@@ -573,6 +573,9 @@ function priorityMove(s, seat, m) {
       tellsOf(s, seat).lands++;
       s.passes = 0;
       say(s, `{s${seat}} plays ${nm(r.id)}`);
+      // the page asks for a land played by a person: its trigger waits for them to pass (wants), though they could do nothing else
+      const top = s.stack[s.stack.length - 1];
+      if (m.hold && top?.kind === "trigger" && top.ctl === seat) top.stop = true;
       break;
     }
     case "cast": doCast(s, seat, r, !!m.hold); break;

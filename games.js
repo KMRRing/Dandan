@@ -18,83 +18,26 @@ const names = seats => String(seats?.[0]?.name ?? "").length ? seats : [{ name: 
 const words = (text, seats) => String(text || "").replace(/\{s(\d+)\}/g, (_, i) => seats[Number(i)]?.name ?? `Seat ${Number(i) + 1}`);
 const once = (sync, path) => new Promise((res, rej) => { let off = null, done = false; off = sync.watch(path, v => { if (done) return; done = true; res(v); queueMicrotask(() => off?.()); }, rej); });
 
-let sync = null, rows = [], filter = { name: "", state: "" }, open = null;
+let stamp = 0, sync = null, rows = [], filter = { name: "", state: "" }, open = null;
 
 async function main() {
   document.documentElement.classList.add("ready");            // style.css shows the large mark until a page says it is ready
   if (!(await keyOk(new URLSearchParams(location.search).get("k")))) { location.replace("./"); return; }
+  await load();
+}
+/** Reads the index and the unfinished games again (the page keeps no live feed: Refresh is how a game just finished shows). */
+async function load() {
   root.innerHTML = '<h1>Dandan games</h1><p class="gv-sub">Loading the games…</p>';
   try {
-    sync = await getSync();
+    sync ||= await getSync();
     const [games, live] = await Promise.all([once(sync, `crates/rooms/${INDEX_ROOM}/games`), once(sync, `crates/rooms/${INDEX_ROOM}/live`)]);
     rows = [];
     for (const [key, g] of Object.entries(games || {})) if (!g?.check && g?.result) rows.push({ key, name: g.name, uid: g.uid, room: g.room, result: g.result, live: false });
     for (const [key, g] of Object.entries(live || {})) if (!g?.check && !(games || {})[key] && g?.result) rows.push({ key, name: g.name, uid: g.uid, result: g.result, game: g.game, live: true });
     rows.sort((a, b) => Number(b.key) - Number(a.key));
-    list();
-  } catch (e) { root.innerHTML = `<h1>Dandan games</h1><p class="gv-sub">Could not read the games: ${esc(e?.message || e)}</p>`; }
-}
-
-
-// ---- tabs, players, removing ----
-let sure = null;                                           // what is waiting for a second tap: "player" or a game's key
-const tabs = on => `<div class="gv-bar"><button type="button" data-tab="games"${on === "games" ? ' class="on"' : ""}>Games</button><button type="button" data-tab="players"${on === "players" ? ' class="on"' : ""}>Players</button></div>`;
-function wireTabs() { root.querySelectorAll("[data-tab]").forEach(b => { b.onclick = () => { sure = null; b.dataset.tab === "players" ? players() : list(); }; }); }
-// a remove button that asks once more in the page itself (no browser pop-ups)
-const removeBar = (rs, what, id = "player") => rs.length ? `<div class="gv-bar gv-remove">${sure === id
-  ? `<span class="gv-lost">Remove ${what} and all their data?</span><button type="button" data-yes="1">Yes, remove</button><button type="button" data-no="1">Cancel</button>`
-  : `<button type="button" data-ask="${id}">Remove ${id === "player" ? "this player and their games" : "this game"}…</button>`}<span class="gv-sub" id="gvMsg"></span></div>` : "";
-function wireRemove(getRows, after, id = "player") {
-  const q = s => root.querySelector(s);
-  if (q("[data-ask]")) q("[data-ask]").onclick = () => { sure = id; redraw(); };
-  if (q("[data-no]")) q("[data-no]").onclick = () => { sure = null; redraw(); };
-  if (q("[data-yes]")) q("[data-yes]").onclick = async () => {
-    q("[data-yes]").disabled = true;
-    const bad = await removeGames(getRows());
-    sure = null;
-    if (bad.length) { redraw(); const m = root.querySelector("#gvMsg"); if (m) m.textContent = `Not everything went: ${bad.slice(0, 3).join("; ")}`; return; }
-    after(); open = null; list();
-  };
-}
-const redraw = () => (open ? draw() : (view === "players" ? players() : list()));
-let view = "games";
-/** Takes the games out of the index, the unfinished list and their rooms, and leaves a mark the collector obeys (its copy on the records branch goes at its next run). */
-async function removeGames(rs) {
-  const bad = [], gone = new Set();
-  const step = async (what, fn) => { try { await fn(); return true; } catch (e) { bad.push(`${what} (${e?.message || e})`); return false; } };
-  for (const r of rs) {
-    const base = `crates/rooms/${INDEX_ROOM}`;
-    const ok = [await step("mark", () => sync.update(`${base}/removed`, { [r.key]: true })),
-      await step("index", () => sync.update(`${base}/games`, { [r.key]: null })),
-      await step("unfinished", () => sync.update(`${base}/live`, { [r.key]: null }))];
-    if (r.room) await step("room", () => sync.update(`crates/rooms/${r.room}`, { dandan: null }));
-    if (ok.every(Boolean)) gone.add(r.key);
-  }
-  rows = rows.filter(r => !gone.has(r.key));
-  return bad;
-}
-const rate = (n, d) => (d ? Math.round(100 * n / d) + "%" : "—");
-function players() {
-  view = "players"; open = null;
-  const by = new Map();
-  for (const r of rows) {
-    const p = by.get(r.name) || { name: r.name, n: 0, done: 0, won: 0, lost: 0, conceded: 0, drawn: 0, live: 0, turns: 0, last: 0, ids: new Set(), levels: {} };
-    by.set(r.name, p);
-    p.n++; p.ids.add(r.uid); p.last = Math.max(p.last, Number(r.key));
-    if (r.live) { p.live++; continue; }
-    p.done++; p.turns += r.result.turns || 0;
-    if (r.result.conceded) p.conceded++;
-    if (r.result.drawn) p.drawn++; else if (r.result.won) p.won++; else p.lost++;
-    const l = r.result.level || "?"; (p.levels[l] ||= { w: 0, n: 0 }); p.levels[l].n++; if (r.result.won && !r.result.drawn) p.levels[l].w++;
-  }
-  const ps = [...by.values()].sort((a, b) => b.last - a.last);
-  root.innerHTML = `<h1>Dandan games</h1>${tabs("players")}
-    <p class="gv-sub">${ps.length} players, ${rows.length} games.</p>
-    <ol class="gv-list">${ps.map(p => `<li><button type="button" data-p="${esc(p.name)}"><span class="meta">${when(p.last)}</span>
-      <span><span class="who">${esc(p.name)}</span> <span class="meta">${p.done} finished · ${p.won} won · ${p.lost} lost${p.conceded ? ` (${p.conceded} conceded)` : ""}${p.drawn ? ` · ${p.drawn} drawn` : ""}${p.live ? ` · ${p.live} not finished` : ""}<br>
-      win rate ${rate(p.won, p.done)} · ${p.done ? "avg " + Math.round(p.turns / p.done) + " turns" : ""} · ${Object.entries(p.levels).map(([l, x]) => `${esc(l)} ${x.w}/${x.n}`).join(", ")} · ${p.ids.size} device${p.ids.size > 1 ? "s" : ""}</span></span><span class="res">›</span></button></li>`).join("")}</ol>`;
-  wireTabs();
-  root.querySelector(".gv-list").onclick = e => { const b = e.target.closest("[data-p]"); if (b) { filter.name = b.dataset.p; view = "games"; list(); } };
+    stamp = Date.now();
+    view === "players" ? players() : list();
+  } catch (e) { root.innerHTML = `<h1>Dandan games</h1><p class="gv-sub">Could not read the games: ${esc(e?.message || e)}</p><div class="gv-bar"><button type="button" id="retry">Try again</button></div>`; root.querySelector("#retry").onclick = load; }
 }
 
 const verdict = r => (r.live ? ["in progress", "gv-live"] : r.result.conceded ? [r.result.won ? "won (conceded)" : "conceded", "gv-lost"] : r.result.drawn ? ["drawn", ""] : r.result.won ? ["won", "gv-won"] : ["lost", "gv-lost"]);

@@ -26,7 +26,8 @@ What you can change:
 - **Computer's pace** (Menu): 3 s, which keeps what the computer did on the table for three seconds before its next
   move, or Tap to continue, which waits for you after each thing it does.
 - **Hold priority when I cast** and **Choose which lands to tap**, the two small switches at the top of the screen
-  (lit while on). Both are kept on the device.
+  (lit while on). Both are kept on the device. A land you play whose trigger goes on the stack (Halimar Depths, Thundering Falls,
+  Izzet Boilerworks, Mystic Sanctuary) always waits for your Pass before the trigger resolves (6 November 2026, Korbi).
 - **Name** (Menu). You are asked it when you first open the page, and it can be changed any time. It is kept on the
   device (`dandan:name`).
 - **Concede** (a concession counts as a loss). There is no New game in the menu: a game is played out or conceded, and
