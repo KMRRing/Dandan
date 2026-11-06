@@ -1,0 +1,1 @@
+{"n":30,"games":60,"mean":0.5,"se":0.03651483716701107,"look":1,"z":1.959963986120195,"ci95":[0.4284309191526583,0.5715690808473417],"verdict":"continue","next":30,"text":"CONTINUE: the candidate scores 50.0% over 30 deals (60 games), 95% interval 42.8% to 57.2%; look 1 (z 1.96): adopt above 57.2%, reject below 47.8%, 30 more deals"}
