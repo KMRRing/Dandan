@@ -9,3 +9,4 @@
 2026-11-06T15:24:13Z CONTINUE: the candidate scores 41.4% over 29 deals (58 games), 95% interval 30.4% to 52.3%; first look at 30 deals
 2026-11-06T15:25:06Z CONTINUE: the candidate scores 41.4% over 29 deals (58 games), 95% interval 30.4% to 52.3%; first look at 30 deals
 2026-11-06T15:25:56Z CONTINUE: the candidate scores 41.4% over 29 deals (58 games), 95% interval 30.4% to 52.3%; first look at 30 deals
+2026-11-06T15:26:54Z CONTINUE: the candidate scores 41.4% over 29 deals (58 games), 95% interval 30.4% to 52.3%; first look at 30 deals
