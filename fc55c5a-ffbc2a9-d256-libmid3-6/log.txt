@@ -1,0 +1,1 @@
+2026-11-06T15:39:32Z REJECT: the candidate scores 41.7% over 30 deals (60 games), 95% interval 31.1% to 52.3%; look 1 (z 1.96): adopt above 60.6%, reject below 44.4%
