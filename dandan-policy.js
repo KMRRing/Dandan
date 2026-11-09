@@ -384,20 +384,33 @@ export function answerWorth(F, id, seat, mana) {
 export const yardWorth = (F, yard, seat, mana, inHand = 0) => yardPick(F, yard, seat, mana, inHand).v;
 /** yardWorth's working: { v, id (the card it would find), kill (it would answer a Dandân the same turn), flash (by flashback) }. */
 export function yardPick(F, yard, seat, mana, inHand = 0) {
+  // the same graveyard is valued again for every move the decision weighs (each adds or removes a card), and each card's worth
+  // is the same every time: both are kept with the facts, which are the decision's own
+  // (nothing to flash back and none in the hand: nothing found, with no need to look)
+  const flash = yard.findIndex(id => DECK[id] === "Mystic Retrieval"), canFlash = flash >= 0 && mana >= 3 && hasRed(F.s, seat);
+  if (!canFlash && !(inHand > 0 && mana >= 4)) return { v: 0, id: null, kill: false, flash: false };
+  const memo = F.yardMemo ??= { picks: new Map(), card: new Map(), kill: new Map() };
+  // (the graveyard as a string of its cards' numbers, which is cheaper to make than a list joined)
+  let pickKey = String.fromCharCode(seat, mana + 8, Math.round(inHand * 1000));
+  for (let i = 0; i < yard.length; i++) pickKey += String.fromCharCode(yard[i]);
+  const kept = memo.picks.get(pickKey);
+  if (kept) return kept;
   const pull = (ids, left) => {
     let best = { v: 0, id: null, kill: false };
     for (const id of ids) {
       if (!isSpellCard(id)) continue;
-      const card = cardWorth(F, id, seat), kill = answerWorth(F, id, seat, left);
+      const ck = id * 2 + seat, kk = ck * 256 + left + 64;
+      let card = memo.card.get(ck), kill = memo.kill.get(kk);
+      if (card === undefined) memo.card.set(ck, card = cardWorth(F, id, seat));
+      if (kill === undefined) memo.kill.set(kk, kill = answerWorth(F, id, seat, left));
       const v = Math.max(card, kill);
       if (v > best.v) best = { v, id, kill: kill > card };
     }
     return best;
   };
   let out = { v: 0, id: null, kill: false, flash: false };
-  const flash = yard.findIndex(id => DECK[id] === "Mystic Retrieval");
   // flashed back it's exiled: worth what it finds, less the turn's mana (a little)
-  if (flash >= 0 && mana >= 3 && hasRed(F.s, seat)) {
+  if (canFlash) {
     const p = pull(yard.filter((_, i) => i !== flash), mana - 3);
     out = { ...p, v: p.v - 0.2, flash: true };
   }
@@ -407,6 +420,7 @@ export function yardPick(F, yard, seat, mana, inHand = 0) {
     if (v > out.v) out = { ...p, v, flash: false };
   }
   if (out.v < 0) out = { v: 0, id: null, kill: false, flash: false };
+  memo.picks.set(pickKey, out);
   return out;
 }
 
