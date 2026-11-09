@@ -1,0 +1,1 @@
+quick-pair.mjs {shard} {shards} {out} 6000 main medium-fit-2 medium (commit abc55d7f18bf6a46e653780549b41a04fda4efd6)
