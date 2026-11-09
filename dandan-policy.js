@@ -54,6 +54,21 @@ export const TUNE = {
   cast: { "Dandân": 0.75 },  // added to a spell's cast, by the card cast
   land: { "Flood Plain": -1, "Izzet Boilerworks": -0.5 },   // added to a land drop, by the land
 };
+/**
+ * 9 November 2026: a second fit (lab/fit-medium.mjs) of additions to Medium's scores, to what the search values, on 800 games of Hard
+ * against Hard at 256 deals (93,092 priority decisions: lab/selfplay.mjs, lab/fit-medium-data.mjs). Fitted on the even-numbered
+ * games and judged on the odd, and the reverse; what both fits agreed on, the smaller of the two, is here: 0.17 to 0.21 win-%
+ * points a decision on games not fitted. Added in `score` (only to a move worth more than -0.9, as TUNE.cast is), over TUNE.
+ * hold: a cast in the second main phase with nothing on the stack.
+ */
+export const ADJ = {
+  pass: 0.25,                // added to what a move must beat to be played rather than pass, with nothing on the stack
+  cast: { "Memory Lapse": 0.75, "Commit": -1.25, "Brainstorm": 1, "Chart a Course": 0.75, "Memory": -0.75, "Repulse": -0.5, "Piracy Charm": 0.25, "Deem Inferior": 0.25 },
+  hold: { "Dandân": -0.5 },
+  land: { "Island": 0.25, "Lonely Sandbar": 1, "Remote Isle": 0.5 },
+  cycle: { "Lonely Sandbar": 1.5 },
+  ability: { "Flood Plain": 2 },
+};
 
 // ---------- what the seat knows ----------
 /** Each card's name as a number (its place in NAMES), and how many copies of each the deck has: counted once. */
@@ -722,7 +737,7 @@ export class Player {
     const list = moves(this.s, this.me);
     if (!list.length) return PASS;
     if (this.easy && this.rng() < 0.12) return this.rng() < 0.4 ? PASS : pickOne(list, this.rng);
-    let best = PASS, top = TUNE.pass;
+    let best = PASS, top = TUNE.pass + (this.stack || this.easy ? 0 : ADJ.pass);
     for (const m of list) {
       let v = this.score(m);
       if (this.easy) v += (this.rng() - 0.5) * 0.8;
@@ -731,8 +746,22 @@ export class Player {
     return best;
   }
   score(m) {
-    const v = this.scoreMove(m);
-    return this.low ? v + this.libraryTerm(m) : v;
+    const v = this.scoreMove(m), w = this.low ? v + this.libraryTerm(m) : v;
+    return w > -0.9 && !this.easy ? w + this.adjust(m) : w;
+  }
+  /** ADJ's addition to a move's score. */
+  adjust(m) {
+    const s = this.s;
+    switch (m.t) {
+      case "cast": {
+        const half = m.from === "yard" ? halfOf(m.card, "yard") : front(m.card);
+        return (ADJ.cast[half] ?? 0) + (s.step === "main2" && !this.stack ? ADJ.hold[half] ?? 0 : 0);
+      }
+      case "land": return ADJ.land[DECK[m.card]] ?? 0;
+      case "cycle": return ADJ.cycle[DECK[m.card]] ?? 0;
+      case "ability": return ADJ.ability[nm(perm(s, m.id)?.id)] ?? 0;
+    }
+    return 0;
   }
   scoreMove(m) {
     switch (m.t) {
