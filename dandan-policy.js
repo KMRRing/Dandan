@@ -38,21 +38,33 @@ export const WORTH = {
 /** What a card held is worth over using it now: part of its worth (a card kept is a card for later). */
 const KEEP = 0.75;
 /**
- * Constants Medium's scores are corrected by, fitted in the lab to what the search prefers: for 1,411 decisions inside
- * a look-ahead (a few Medium moves on from a recorded position), every candidate move's value over 512 deals, and the
- * constants chosen that make Medium's own move the one the search values most. Fitted on each half of the positions
- * and judged on the other, the stable part of both fits is kept: +0.4 to +0.5 win-% points per decision on positions
- * not fitted, of the 1.6 Medium gave up against the search. In short, Medium passes more (a move must score a full
- * point), counters less (above all a counter on a counter, which is only tempo), casts Dandân more, and plays
- * Flood Plain and Izzet Boilerworks later.
+ * Constants Medium's scores are corrected by. The first set (TUNE) was fitted in the lab to what the search prefers, move by
+ * move; played against the unfitted Medium in matches, the pass threshold of 1.0 it chose was far too high, so it is no
+ * longer taken as the guide: see ADJ, which is set by matches.
  */
 export const TUNE = {
-  pass: 1.0,                 // what a move must score to be played rather than pass (was 0.05)
-  counter: 0.4,              // taken off every counter's worth (Memory Lapse, Commit, Narset's Reversal on a spell)
-  counterOnCounter: 0.6,     // the share of a counter's worth kept when the spell it answers is itself a counter
-  cycleLorien: 0, cycleLand: 0,   // added to cycling Lórien Revealed, and to cycling a land
+  pass: 1.0,                 // what a move must score to be played rather than pass with a spell on the stack (ADJ.pass lowers it with none)
+  counter: 0,                // taken off every counter's worth (Memory Lapse, Commit, Narset's Reversal on a spell)
+  counterOnCounter: 1.0,     // the share of a counter's worth kept when the spell it answers is itself a counter
+  cycleLorien: 0, cycleLand: 0.5,   // added to cycling Lórien Revealed, and to cycling a land
   cast: { "Dandân": 0.75 },  // added to a spell's cast, by the card cast
   land: { "Flood Plain": -1, "Izzet Boilerworks": -0.5 },   // added to a land drop, by the land
+};
+/**
+ * 9 November 2026: additions to Medium's scores, set by matches against Medium without them (lab/tune-round.mjs on Actions: each
+ * constant nudged by 0.5 up and down, every nudge played over 1,200 deals with the seats swapped, then the best sets played
+ * over 6,000 fresh deals). Won 78.6% of games (+-0.7) over the Medium of the day, of which the pass threshold is 75.5%.
+ * pass: added to what a move must beat to be played rather than pass, with nothing on the stack (TUNE.pass 1.0 + -1: any
+ * move worth more than 0). Added in `score` (only to a move worth more than -0.9, as TUNE.cast is), over TUNE.
+ * hold: a cast in the second main phase with nothing on the stack.
+ */
+export const ADJ = {
+  pass: -1,                  // added to what a move must beat to be played rather than pass, with nothing on the stack
+  cast: { "Memory Lapse": 0.5 },
+  hold: {},
+  land: { "Island": -0.5, "Mystic Sanctuary": 0.5 },
+  cycle: {},
+  ability: { "Flood Plain": 0.5 },
 };
 
 // ---------- what the seat knows ----------
@@ -722,7 +734,7 @@ export class Player {
     const list = moves(this.s, this.me);
     if (!list.length) return PASS;
     if (this.easy && this.rng() < 0.12) return this.rng() < 0.4 ? PASS : pickOne(list, this.rng);
-    let best = PASS, top = TUNE.pass;
+    let best = PASS, top = TUNE.pass + (this.stack || this.easy ? 0 : ADJ.pass);
     for (const m of list) {
       let v = this.score(m);
       if (this.easy) v += (this.rng() - 0.5) * 0.8;
@@ -731,8 +743,22 @@ export class Player {
     return best;
   }
   score(m) {
-    const v = this.scoreMove(m);
-    return this.low ? v + this.libraryTerm(m) : v;
+    const v = this.scoreMove(m), w = this.low ? v + this.libraryTerm(m) : v;
+    return w > -0.9 && !this.easy ? w + this.adjust(m) : w;
+  }
+  /** ADJ's addition to a move's score. */
+  adjust(m) {
+    const s = this.s;
+    switch (m.t) {
+      case "cast": {
+        const half = m.from === "yard" ? halfOf(m.card, "yard") : front(m.card);
+        return (ADJ.cast[half] ?? 0) + (s.step === "main2" && !this.stack ? ADJ.hold[half] ?? 0 : 0);
+      }
+      case "land": return ADJ.land[DECK[m.card]] ?? 0;
+      case "cycle": return ADJ.cycle[DECK[m.card]] ?? 0;
+      case "ability": return ADJ.ability[nm(perm(s, m.id)?.id)] ?? 0;
+    }
+    return 0;
   }
   scoreMove(m) {
     switch (m.t) {
