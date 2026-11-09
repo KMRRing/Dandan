@@ -22,15 +22,23 @@ const names = [...new Set(DECK)];
 const spells = ["Brainstorm", "Commit", "Memory", "Memory Lapse", "Metamorphose", "Mind Bend", "Narset's Reversal", "Piracy Charm", "Predict", "Quicken", "Repulse", "Chart a Course", "Deem Inferior", "Gone Missing", "Lórien Revealed", "Mystic Retrieval", "Take Inventory", "Dandân"];
 const lands = ["Flood Plain", "Halimar Depths", "Island", "Izzet Boilerworks", "Lonely Sandbar", "Mystic Sanctuary", "Remote Isle", "Thundering Falls"];
 for (const n of [...spells.filter(n => !names.includes(n) && !names.some(d => d.split(" // ").includes(n))), ...lands.filter(n => !names.includes(n))]) throw new Error("unknown card " + n);
-const params = ["pass", ...spells.map(n => "cast:" + n), "hold:Dandân", ...lands.map(n => "land:" + n), "cycle:Lonely Sandbar", "cycle:Remote Isle", "cycle:Flood Plain", "ability:Flood Plain", "ability:Mystic Sanctuary", "ability:Thundering Falls", "ability:Izzet Boilerworks"];
-const put = (ADJ, k, v) => { if (k === "pass") ADJ.pass = v; else { const [g, n] = k.split(":"); ADJ[g] ??= {}; ADJ[g][n] = v; } };
+const params = ["pass", ...spells.map(n => "cast:" + n), "hold:Dandân", ...lands.map(n => "land:" + n), "cycle:Lonely Sandbar", "cycle:Remote Isle", "cycle:Flood Plain", "ability:Flood Plain", "ability:Mystic Sanctuary", "ability:Thundering Falls", "ability:Izzet Boilerworks", "tune:pass", "tune:counter", "tune:counterOnCounter", "tune:cycleLorien", "tune:cycleLand", "tuneCast:Dandân", "tuneLand:Flood Plain", "tuneLand:Izzet Boilerworks"];
+const TUNE0 = J(polB.TUNE); // Medium's TUNE as the fit build has it: a "tune:" or "tuneCast:" or "tuneLand:" constant is a change to that
+const put = (ADJ, k, v) => {
+  const [g, n] = k.split(":");
+  if (k === "pass") ADJ.pass = v;
+  else if (g === "tune") { polB.TUNE[n] = TUNE0[n] + v; if (n === "pass") ADJ.pass -= v; } // the stack threshold moves; the no-stack one stays where "pass" put it
+  else if (g === "tuneCast") polB.TUNE.cast[n] = (TUNE0.cast[n] ?? 0) + v;
+  else if (g === "tuneLand") polB.TUNE.land[n] = (TUNE0.land[n] ?? 0) + v;
+  else { ADJ[g] ??= {}; ADJ[g][n] = v; }
+};
 const cands = [];
 for (const k of params) for (const d of [step, -step]) cands.push({ k, d });
 cands.push({ k: "pass", d: 0 }); // the base itself, last, so earlier numbers stay put
 const use = pick === "all" ? cands.map((_, i) => i) : pick.split(",").map(Number);
 if (shard === 0 && process.env.LIST) console.log(cands.map((c, i) => `${i} ${c.k} ${c.d}`).join("\n"));
 function load(c) { // set polB.ADJ to the base plus the nudge
-  const A = polB.ADJ; for (const g of ["cast", "hold", "land", "cycle", "ability"]) for (const n of Object.keys(A[g] ?? {})) delete A[g][n]; A.pass = 0;
+  const A = polB.ADJ; for (const g of ["cast", "hold", "land", "cycle", "ability"]) for (const n of Object.keys(A[g] ?? {})) delete A[g][n]; A.pass = 0; Object.assign(polB.TUNE, J(TUNE0)); polB.TUNE.cast = J(TUNE0.cast); polB.TUNE.land = J(TUNE0.land);
   for (const [k, v] of Object.entries(state.base)) put(A, k, v);
   if (c) put(A, c.k, (state.base[c.k] ?? 0) + c.d);
 }
