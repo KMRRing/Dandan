@@ -1,14 +1,15 @@
 // One round of tuning Medium by matches. Candidates are the fit build's ADJ constants (dandan-policy.js on the champion ref's
 // side is plain main), each nudged up and down by `step` from the base in lab/tune-state.json. Every candidate plays the same
 // deals against main Medium with the seats swapped; a row is the candidate's score for one deal (0, 0.5 or 1 per game, averaged).
-// usage: node lab/tune-round.mjs <shard> <shards> <out.jsonl> <pairs per candidate> <first pair> <candidates: all | list of numbers 0,3,17> [fit ref medium-fit-2] [step]
+// usage: node lab/tune-round.mjs <shard> <shards> <out.jsonl> <pairs per candidate> <first pair> <candidates: all | list of numbers 0,3,17> [fit ref medium-fit-2] [step] [base pass]
 // Tuning deals start at pair 100000 (+ first pair), so they never overlap the quick-pair confirmation deals (0 up).
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { J } from "./lib.mjs";
-const [shard, shards, out, perCand, first0, pick = "all", fitRef = "medium-fit-2", stepArg] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5]), Number(process.argv[6]), process.argv[7], process.argv[8], process.argv[9]];
+const [shard, shards, out, perCand, first0, pick = "all", fitRef = "medium-fit-2", stepArg, passArg] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5]), Number(process.argv[6]), process.argv[7], process.argv[8], process.argv[9], process.argv[10]];
 const state = JSON.parse(fs.readFileSync(new URL("./tune-state.json", import.meta.url), "utf8"));
+if (passArg !== undefined) (state.base ??= {}).pass = Number(passArg); // base pass, overriding the state file
 const step = stepArg ? Number(stepArg) : state.step ?? 0.5;
 const git = (...a) => execFileSync("git", a, { stdio: ["ignore", "pipe", "inherit"] }).toString().trim();
 const dirA = path.resolve(".");
@@ -25,6 +26,7 @@ const params = ["pass", ...spells.map(n => "cast:" + n), "hold:Dandân", ...land
 const put = (ADJ, k, v) => { if (k === "pass") ADJ.pass = v; else { const [g, n] = k.split(":"); ADJ[g] ??= {}; ADJ[g][n] = v; } };
 const cands = [];
 for (const k of params) for (const d of [step, -step]) cands.push({ k, d });
+cands.push({ k: "pass", d: 0 }); // the base itself, last, so earlier numbers stay put
 const use = pick === "all" ? cands.map((_, i) => i) : pick.split(",").map(Number);
 if (shard === 0 && process.env.LIST) console.log(cands.map((c, i) => `${i} ${c.k} ${c.d}`).join("\n"));
 function load(c) { // set polB.ADJ to the base plus the nudge
