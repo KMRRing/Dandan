@@ -1,0 +1,1 @@
+selfplay.mjs {shard} {shards} {out} 256 800 (commit e35655bf6e314a7a0eb108328a2be0d6aee6f4f8)
