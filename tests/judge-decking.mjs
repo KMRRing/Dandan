@@ -13,5 +13,10 @@ check(deckedChance(s, 0) < 0.2, "the same library with the draw the other way ro
 const long = scene({ active: 0, step: "main1", turn: 12, bf: [...islandsOf(0, 3), ...islandsOf(1, 3)] });
 check(deckedChance(long, 0) === winChance(long, 0), "a long library leaves the judge as it was");
 check(Math.abs(deckedChance(s, 0) + deckedChance(s, 1) - 1) < 1e-9, "the two seats' chances still add up to one");
+// 9 November 2026: a board that decides leaves the judge alone (the 56-turn game: the chart said 30% for the player who won that turn)
+const race = scene({ active: 0, step: "upkeep", turn: 12, lib: ["Island", "Island"], bare: true, life: [20, 4], bf: [...islandsOf(0, 3), ...islandsOf(1, 3), [0, "Dandân"]] });
+check(deckedChance(race, 0) === winChance(race, 0), "a Dandân that can reach their life before the library ends: the chart is the plain judge");
+race.life[1] = 20;
+check(deckedChance(race, 0) !== winChance(race, 0), "the same board with their life too high to reach: the pull stays");
 if (bad) process.exit(1);
 console.log("judge-decking: a short shared library pulls the chart's judge toward the seat that will not have to draw from it");

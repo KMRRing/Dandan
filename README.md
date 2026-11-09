@@ -448,6 +448,7 @@ on screen waiting, and taking over when it went off screen; one found while off 
   cards it can't see again, its search weighs every move the same and picks the same one. Each runs in under a second.
 - `pwa.js` (registers the worker, takes updates, the menu's offline line), `manifest.webmanifest`, `icons/`; `tools/offline.mjs`, `tools/build-sw.mjs`,
   `tools/service-worker.js` and `.github/workflows/pages.yml` (Offline, above); `tests/offline.mjs` and `tests/syntax.mjs`.
+- `.github/workflows/lab.yml` (Actions → Lab): runs a `lab/` script over the kept games, or a share of its work, on up to 20 machines and keeps what it prints on the `lab-results` branch (`lab/review.mjs` weighs a seat's decisions, `lab/endgame-count.mjs` counts what an exact end-of-library search would have to look at).
 - `lab/`, `tests/sequential.mjs` and `.github/workflows/match.yml`: the matches between two builds of the computer (Matches, above); `tests/slow/dandan.mjs`, the rules spec, run by hand (Candidates and the rules check, above).
 
 The engine and the computer player are copies of the Almanac's; a rules fix there is made here by copying the file over
@@ -455,7 +456,7 @@ The engine and the computer player are copies of the Almanac's; a rules fix ther
 
 A game that was in hand when the page first began recording moves (it was updated mid-game) has only the moves made since: the viewer says so
 (`n` in the record counts every move) instead of failing to replay. The chart's judge (`deckedChance` in `dandan-advantage.js`) is pulled
-toward the result of a short shared library (6 November 2026, Korbi, who won by emptying it); Hard's look-ahead still uses the plain judge.
+toward the result of a short shared library (6 November 2026, Korbi, who won by emptying it); Hard's look-ahead still uses the plain judge. On 9 November the pull was made to stand aside when a seat's Dandâns can reach the other's life before the library ends (in Korbi's 56-turn game it had drawn 30% for the player who won that turn; the plain judge said 69%), and actions are no longer noted on the chart: the judge was learned from the starts of turns only.
 
 The viewer has a **Players** tab (games, wins, win rate, levels, devices per name) and can remove a game, or a player and all their
 games (asked once more in the page): it deletes the index line, the unfinished copy and the room's `dandan` node, and writes a mark

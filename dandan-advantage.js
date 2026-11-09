@@ -5,6 +5,8 @@
 // state's `adv`, so it is the same on both phones at a table and survives a reload; the page draws it. Pure, no page:
 // tests/dandan-advantage.mjs.
 import { winChance } from "./dandan-eval.js";
+import { DECK } from "./dandan-cards.js";
+import { islands } from "./dandan-core.js";
 
 // ---------- noting it as the game is played ----------
 // An entry of the state's `adv` is one number: the database drops nulls from a list, so a list of pairs would lose its
@@ -29,10 +31,26 @@ export function unpack(v) {
  * only: Hard's look-ahead ends its games with the judge as it was.
  */
 const DECK_PULL = [0.9, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2];
+/**
+ * 9 November 2026 (Korbi's 56-turn game): the pull knew nothing of the board, so with Monte at 8 life and two Dandâns about to
+ * attack it still pulled the chart to 30% for the player who won that turn (the plain judge said 69%, the look-ahead 93+%).
+ * It now stands aside when a seat's Dandâns (on the table or in hand, 4 damage each) can reach the other's life in the
+ * attacks it will still get before the library runs out and the other has an Island to be attacked: then the board decides.
+ */
+function boardDecides(s, first, n) {
+  for (const x of [0, 1]) {
+    const dandans = s.bf.filter(q => q.ctl === x && DECK[q.id] === "Dandân").length + s.hand[x].filter(id => DECK[id] === "Dandân").length;
+    const draws = x === first ? Math.ceil(n / 2) : Math.floor(n / 2);          // its own turns still to start before the empty draw
+    const attacks = draws + (s.active === x && !s.attacked ? 1 : 0);
+    if (dandans && islands(s, 1 - x).length && 4 * dandans * attacks >= s.life[1 - x]) return true;
+  }
+  return false;
+}
 export function deckedChance(s, me = 0) {
   const p = winChance(s, me), n = s.lib.length;
   if (s.over || n >= DECK_PULL.length) return p;
   const first = s.step === "upkeep" && s.turn > 1 ? s.active : 1 - s.active;     // who draws next (the engine's nextDrawer)
+  if (boardDecides(s, first, n)) return p;
   const loser = n % 2 === 0 ? first : 1 - first;                                   // the draw that finds it empty
   return p + DECK_PULL[n] * ((loser === me ? 0.05 : 0.95) - p);
 }
@@ -48,6 +66,7 @@ export function noteTurn(s) {
   }
   adv.push(pack(s.turn, chanceOf(s), { kind: 0, by: 0, ln: s.ln }));
 }
+const NOTE_ACTIONS = false;
 /**
  * An action has finished resolving (the stack empty, no question asked, the game on): the judge's chance now, and whose
  * action it was, if the log has moved since the last entry (a pass that only moves a step says nothing, and `after` is
@@ -57,6 +76,10 @@ export function noteTurn(s) {
  * once it has resolved. A game with no entry yet, or whose last is of the old kind (it has no log place), gets none.
  */
 export function noteAction(s, by, after = 0) {
+  // 9 November 2026: not noted any more. The judge was learned from the starts of turns only, and asked after every action
+  // it swung by 20 to 30 points inside one turn (Korbi's 56-turn game, turns 29 to 31) on positions it never saw. Games
+  // kept before this have their action points and are drawn as they were; the viewer and the page cope with none.
+  if (!NOTE_ACTIONS) return;
   const adv = s.adv;
   if (!adv?.length || s.over || s.pending || s.stack.length) return;
   const last = unpack(adv[adv.length - 1]);
