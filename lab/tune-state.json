@@ -1,33 +1,11 @@
 {
  "step": 0.5,
  "base": {
-  "pass": -1
+  "pass": -1,
+  "cast:Memory Lapse": 0.5,
+  "land:Island": -0.5,
+  "land:Mystic Sanctuary": 0.5,
+  "ability:Flood Plain": 0.5
  },
- "combos": {
-  "P1": {
-   "pass": -1
-  },
-  "P2": {
-   "pass": -1,
-   "tune:counter": -0.4,
-   "tune:counterOnCounter": 0.4
-  },
-  "P3": {
-   "pass": -1,
-   "tune:counter": -0.4,
-   "tune:counterOnCounter": 0.4,
-   "cast:Memory Lapse": 0.5,
-   "ability:Flood Plain": 0.5
-  },
-  "P4": {
-   "pass": -1,
-   "tune:counter": -0.4,
-   "tune:counterOnCounter": 0.4,
-   "cast:Memory Lapse": 0.5,
-   "ability:Flood Plain": 0.5,
-   "tune:cycleLand": 0.5,
-   "land:Island": -0.5,
-   "land:Mystic Sanctuary": 0.5
-  }
- }
+ "combos": {}
 }
