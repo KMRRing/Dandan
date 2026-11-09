@@ -29,12 +29,12 @@ for (let g = first; g < first + n; g++) {
     else {
       const ask = (M, f) => { const st = M.rules.restore(J(G.state)); Math.random = seeded(seed); return f(M, st); };
       move = ask(N, (M, st) => M.th.thinkMove(st, who, { deals, ms: 1e9 }));
-      if (N.eng.moves(s, who, true).length > 1 || p) {
+      if (N.eng.moves(s, who, true).length >= 1 || p) { // a choice besides passing, or an answer to a prompt
         const oh = ask(O, (M, st) => M.th.thinkMove(st, who, { deals, ms: 1e9 }));
         const nm = ask(N, (M, st) => M.pol.policyMove(st, who, { rng: Math.random }));
         const om = ask(O, (M, st) => M.pol.policyMove(st, who, { rng: Math.random }));
         const nameOf = (M, m) => M.words.moveName(m, M.rules.restore(J(G.state)), who);
-        fs.appendFileSync(out, JSON.stringify({ game: g, i, seat: who, turn: s.turn, step: s.step, lib: s.lib.length, stack: s.stack.length, life: s.life,
+        fs.appendFileSync(out, JSON.stringify({ game: g, i, pend: p?.t ?? null, nht: move.t, oht: oh.t, nmt: nm.t, omt: om.t, seat: who, turn: s.turn, step: s.step, lib: s.lib.length, stack: s.stack.length, life: s.life,
           nh: nameOf(N, move), oh: nameOf(O, oh), nm: nameOf(N, nm), om: nameOf(O, om),
           hh: key(move) === key(oh) ? 1 : 0, nhm: key(move) === key(nm) ? 1 : 0, ohm: key(oh) === key(om) ? 1 : 0, mm: key(nm) === key(om) ? 1 : 0 }) + "\n");
       }
