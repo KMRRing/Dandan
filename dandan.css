@@ -370,3 +370,15 @@ html[data-theme="office"] :is(.dd-zone, .dd-card, .dd-pile, .dd-st, .dd-cre) { b
 .dd-name input { width: 100%; box-sizing: border-box; min-height: 2.75rem; padding: .4rem .7rem; font: inherit; font-size: 1rem; color: var(--ink);
   background: var(--tile); border: 1.5px solid var(--brass); border-radius: 4px; }
 .dd-name input:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+/* the cards to choose from (a search of the library) as cards, not a list of words */
+.dd-opts.tiles { grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: .5rem; }
+.dd-tilerow { position: relative; display: grid; }
+.dd-tile { display: grid; justify-items: center; align-content: center; gap: .2rem; min-height: 5.6rem; padding: 1.5rem .5rem .6rem; text-align: center; border-top: 3px solid var(--rule); }
+.dd-tile.creature { border-top-color: var(--dd-in); }
+.dd-tile.instant { border-top-color: var(--dd-inst); }
+.dd-tile.sorcery { border-top-color: var(--dd-sorc); }
+.dd-tile b { font-size: .95rem; font-stretch: normal; text-transform: none; letter-spacing: 0; white-space: normal; }
+.dd-tile small { font-size: .7rem; opacity: .75; }
+.dd-tilerow .dd-info { position: absolute; top: .25rem; right: .25rem; min-width: 1.6rem; padding: .1rem .35rem; }
+.dd-yard li.dim { opacity: .45; }

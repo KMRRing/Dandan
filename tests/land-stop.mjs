@@ -1,5 +1,6 @@
 // A land its player plays, whose trigger goes on the stack, waits for them to pass (Korbi, 6 November 2026: Halimar Depths "should
-// ask the player if they want to do anything before it resolves"), though they hold nothing to answer it with.
+// ask the player if they want to do anything before it resolves"), though they hold nothing to answer it with. (The page asks for
+// the stop only while the hold-priority switch is on, Korbi, 9 November 2026; the engine keeps it for the move marked hold.)
 import { toMove } from "../dandan-engine.js";
 import { scene, islandsOf, go, idIn } from "./dandan-scene.js";
 

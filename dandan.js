@@ -287,7 +287,7 @@ function draw() {
 
 // ---------- the two sides ----------
 const targetKey = t => `${t.k}:${t.sid ?? t.id ?? t.seat}`;
-const armedKeys = () => new Set((ui.arm?.moves || []).map(m => targetKey(m.targets[0])));
+const armedKeys = () => new Set([...(ui.arm?.moves || []).map(m => targetKey(m.targets[0])), ...(question()?.tgt?.keys() ?? [])]);
 
 function drawZone(box, seat, q) {
   const s = S(), armed = armedKeys();
@@ -530,17 +530,28 @@ function dialogQuestion(q, send, say) {
   const list = (rows, none) => ({ rows, none });
   switch (q.t) {
     case "search": {
-      const rows = group(q.ids).map(([name, ids]) => ({ label: name, sub: ids.length > 1 ? `× ${ids.length}` : "", card: ids[0], ring: `o:${name}`, fn: () => send({ t: "search", card: ids[0] }) }));
-      return { say: say(q.to === "bf" ? "Fetch a land" : "Find an Island"), buttons: [reopen()], dlg: { title: q.to === "bf" ? "Fetch a land" : "Find an Island", ...list(rows, { label: "Find nothing", ring: "o:none", fn: () => send({ t: "search", card: null }) }) } };
+      // the cards to choose from, shown as cards (no list of words): a tap on one finds it
+      const rows = group(q.ids).map(([name, ids]) => ({ label: name, card: ids[0], ring: `o:${name}`, fn: () => send({ t: "search", card: ids[0] }) }));
+      const title = q.to === "bf" ? "Fetch a land" : "Find an Island";
+      return { say: say(title), buttons: [reopen()], dlg: { title, tiles: true, ...list(rows, { label: "Find nothing", ring: "o:none", fn: () => send({ t: "search", card: null }) }) } };
     }
     case "pick": {
-      if (q.for === "boil") {
-        const rows = q.ids.map(id => { const p = perm(s, id); return { label: nm(id), sub: p?.tapped ? "tapped" : "untapped", card: id, ring: `o:id:${id}`, fn: () => send({ t: "pick", card: id }) }; });
-        return { say: say("Return a land you control to your hand"), buttons: [reopen()], dlg: { title: "Return a land to your hand", ...list(rows) } };
+      if (q.for === "boil") {                        // a land of yours on the table, tapped there
+        const tgt = new Map(q.ids.map(id => [`c:${id}`, () => send({ t: "pick", card: id })]));
+        return { say: say("Return a land you control to your hand", "Tap one of the lit lands."), buttons: [], tgt };
       }
-      const title = q.for === "drop" ? "Put a creature or land from your hand onto the battlefield" : "Put an instant or sorcery from the graveyard on top of the library";
-      const rows = group(q.ids).map(([name, ids]) => ({ label: name, sub: ids.length > 1 ? `× ${ids.length}` : "", card: ids[0], ring: `o:${name}`, fn: () => send({ t: "pick", card: ids[0] }) }));
-      return { say: say(title), buttons: [reopen()], dlg: { title, ...list(rows, q.optional ? { label: "None", ring: "o:none", fn: () => send({ t: "pick", card: null }) } : null) } };
+      if (q.for === "drop") {                        // a card of your hand, tapped there and confirmed
+        const sub = q.optional ? "Tap a card in your hand, or choose none." : "Tap a card in your hand.";
+        return {
+          pick: "drop", n: 1, say: say("Put a creature or land from your hand onto the battlefield", sub),
+          buttons: [...(q.optional ? [{ label: "None", fn: () => send({ t: "pick", card: null }) }] : []),
+            { label: "Put it down", sub: `${ui.picks.length} of 1`, kind: "primary", off: ui.picks.length !== 1, fn: () => send({ t: "pick", card: ui.picks[0] }) }],
+        };
+      }
+      // a card of the graveyard: the graveyard opens with every card in it, the ones that can be chosen marked
+      const title = "Put an instant or sorcery from the graveyard on top of the library";
+      const yard = new Map(q.ids.map(id => [id, () => { closeView(); send({ t: "pick", card: id }); }]));
+      return { say: say(title, "Choose a card in the graveyard."), buttons: [reopen()], yard, yardNone: q.optional ? () => { closeView(); send({ t: "pick", card: null }); } : null };
     }
     case "bend": {
       const p = perm(s, q.target), from = q.froms.length === 1 ? q.froms[0] : ui.bend;
@@ -552,13 +563,17 @@ function dialogQuestion(q, send, say) {
       return { say: say(title), buttons: [reopen()], dlg: { title, note, rows } };
     }
     case "name": {
-      const seen = new Map();
-      for (const id of [...s.hand[V.seat], ...s.yard, ...s.exile, ...s.bf.map(p => p.id), ...s.stack.map(i => i.card).filter(c => c != null)]) { const k = DECK[id]; if (k) seen.set(k, (seen.get(k) || 0) + 1); }
-      const rows = NAMES.map(n => ({ label: n, sub: `${DECK.filter(x => x === n).length - (seen.get(n) || 0)} unseen`, card: DECK.indexOf(n), ring: `o:${n}`, fn: () => send({ t: "name", name: n }) }));
-      return { say: say("Name a card"), buttons: [reopen()], dlg: { title: "Name a card", note: "Unseen: not in your hand, the graveyard, exile or on the table. Those are in the library or the other hand.", rows, cols: true } };
+      // every card of the game, with nothing about how many are left or which you have seen: that is for you to remember
+      const rows = NAMES.map(n => ({ label: n, card: DECK.indexOf(n), ring: `o:${n}`, fn: () => send({ t: "name", name: n }) }));
+      return { say: say("Name a card"), buttons: [reopen()], dlg: { title: "Name a card", rows, cols: true } };
     }
     case "retarget": {
       // the Reversal resolving is a target too: a copied counter aimed at it does nothing
+      const keys = q.options.map(o => targetKey(o[0]));
+      if (new Set(keys).size === keys.length) {      // each choice is a different thing on the table or the stack: tapped there
+        const tgt = new Map(q.options.map((o, i) => [keys[i], () => send({ t: "retarget", targets: o })]));
+        return { say: say("Choose a new target for the copy", "Tap one of the lit targets, or keep the targets it has."), buttons: [{ label: "Keep the targets", fn: () => send({ t: "retarget" }) }], tgt };
+      }
       const self = q.sid, labels = q.options.map(o => (o[0].k === "s" && o[0].sid === self ? "Narset’s Reversal itself: the copy does nothing" : o.map(tword).join(", "))), seen = {};
       const rows = q.options.map((o, i) => ({ label: labels.filter(l => l === labels[i]).length > 1 ? `${labels[i]} · ${(seen[labels[i]] = (seen[labels[i]] || 0) + 1)}` : labels[i], ring: `o:t:${targetKey(o[0])}`, fn: () => send({ t: "retarget", targets: o }) }));
       return { say: say("Choose new targets for the copy"), buttons: [reopen()], dlg: { title: "New target for the copy", ...list(rows, { label: "Keep the targets", ring: "o:none", fn: () => send({ t: "retarget" }) }) } };
@@ -684,8 +699,8 @@ async function act(m) {
     if (t) { ui.tap = t; ui.look = null; closeView(); draw(); return; }
   }
   // holding priority keeps it after a spell or ability goes on the stack, to answer it yourself (fetch a land to shuffle, cycle another card to draw first); a cycled card always does (Korbi, 23 October 2026), and the game moves on where there is nothing you could do
-  // a land you play whose trigger goes on the stack is stopped at too, whatever you hold (Korbi, 6 November 2026: Halimar Depths "should ask the player if they want to do anything before it resolves")
-  const hold = m.t === "cycle" || m.t === "land" || (opts.hold && (m.t === "cast" || m.t === "ability"));
+  // a land you play whose trigger goes on the stack resolves at once, unless you hold priority (Korbi, 9 November 2026, over 6 November's stop at Halimar Depths)
+  const hold = m.t === "cycle" || (opts.hold && (m.t === "cast" || m.t === "ability" || m.t === "land"));
   const why = await page.move(hold ? { ...m, hold: true } : m);
   if (why) { toast(why); return; }
   closeView();
@@ -713,6 +728,12 @@ function boardTap(e) {
     const hit = ui.arm.moves.find(m => targetKey(m.targets[0]) === tk);
     if (hit) act(hit);
     else toast("That isn’t a legal target");
+    return;
+  }
+  const asked = tk && question()?.tgt;
+  if (asked) {                                       // a question answered on the table: a land to return, a new target for a copy
+    const go = asked.get(tk);
+    if (go) go(); else toast("That isn’t a legal target");
     return;
   }
   if (el.dataset.perm != null) { permTap(Number(el.dataset.perm)); return; }
@@ -772,7 +793,7 @@ function permTap(id) {
 /** A pick made from a card's sheet: in or out of the hand's picks (bottom, discard, put back), or the order of the top cards. */
 function pickTap(id) {
   const q = question();
-  if (q?.pick && ["bottom", "discard", "putback"].includes(q.pick)) {
+  if (q?.pick && ["bottom", "discard", "putback", "drop"].includes(q.pick)) {
     const i = ui.picks.indexOf(id);
     if (i >= 0) ui.picks.splice(i, 1);
     else if (q.n === 1) ui.picks = [id];
@@ -794,11 +815,11 @@ function closeCard() { CARD = null; if ($("cardDlg").open) $("cardDlg").close();
 function cardActs(id) {
   const s = S(), q = question();
   if (!q) return [];
-  if (q.pick && ["bottom", "discard", "putback"].includes(q.pick) && s.hand[V.seat].includes(id)) {
+  if (q.pick && ["bottom", "discard", "putback", "drop"].includes(q.pick) && s.hand[V.seat].includes(id) && (q.pick !== "drop" || s.pending.ids.includes(id))) {
     const at = ui.picks.indexOf(id);
-    if (at >= 0) return [{ label: q.pick === "putback" ? "Take it back" : "Keep it", fn: () => pickTap(id) }];
+    if (at >= 0) return [{ label: q.pick === "putback" || q.pick === "drop" ? "Take it back" : "Keep it", fn: () => pickTap(id) }];
     const full = q.n > 1 && ui.picks.length >= q.n;
-    const label = q.pick === "bottom" ? "Put on the bottom" : q.pick === "discard" ? "Discard it" : ui.picks.length === 0 ? (q.n > 1 ? "Put back on top" : "Put it back") : "Put back under it";
+    const label = q.pick === "bottom" ? "Put on the bottom" : q.pick === "discard" ? "Discard it" : q.pick === "drop" ? "Put it down" : ui.picks.length === 0 ? (q.n > 1 ? "Put back on top" : "Put it back") : "Put back under it";
     return [{ label, kind: "primary", off: full, sub: full ? `${q.n} chosen` : "", fn: () => pickTap(id) }];
   }
   if (s.pending.t === "order" && s.pending.cards.includes(id)) {
@@ -828,16 +849,18 @@ $("cardDlg").addEventListener("close", () => { CARD = null; });
 // ---------- sheets: the question's list, the graveyard, the library ----------
 function syncDialogs(q) {
   const dlg = $("askDlg");
+  if (q?.yard && !ui.dlgOff && VIEW !== "yard") openYard();               // a card of the graveyard to choose: all of it, open
   if (q?.dlg && !ui.dlgOff) {
     $("askHead").textContent = q.dlg.title;
     const d = q.dlg, rows = d.rows || [];
     ASK = [];
     // a row that is a card has a second button beside it, to read the card first
     const opt = r => `<button type="button" class="btn dd-opt${r.on ? " primary" : ""}${r.ring && RING.has(r.ring) ? " advised" : ""}" data-d="${ASK.push(r) - 1}"><b>${esc(r.label)}</b>${r.sub ? `<small>${esc(r.sub)}</small>` : ""}</button>`;
-    const btn = r => (r.card == null ? opt(r) : `<div class="dd-optrow">${opt(r)}<button type="button" class="btn dd-info" data-look="${r.card}" aria-label="Read ${esc(nm(r.card))}">?</button></div>`);
+    const tile = r => `<div class="dd-tilerow"><button type="button" class="btn dd-tile ${defOf(r.card).type}${r.ring && RING.has(r.ring) ? " advised" : ""}" data-d="${ASK.push(r) - 1}">${pips(defOf(r.card).cost)}<b>${esc(SOFT[short(r.label)] || short(r.label))}</b><small>${TYPE_WORDS[defOf(r.card).type]}</small></button><button type="button" class="btn dd-info" data-look="${r.card}" aria-label="Read ${esc(nm(r.card))}">?</button></div>`;
+    const btn = r => (r.card == null ? opt(r) : d.tiles ? tile(r) : `<div class="dd-optrow">${opt(r)}<button type="button" class="btn dd-info" data-look="${r.card}" aria-label="Read ${esc(nm(r.card))}">?</button></div>`);
     const sections = [];                           // a heading starts a new list of options
     for (const r of rows) { if (r.head || !sections.length) sections.push({ head: r.head, rows: [] }); if (!r.head) sections[sections.length - 1].rows.push(r); }
-    $("askBody").innerHTML = `${d.note ? `<p class="dd-ask-note">${esc(d.note)}</p>` : ""}${sections.map(sec => `${sec.head ? `<h4>${esc(sec.head)}</h4>` : ""}<div class="dd-opts${d.cols ? " cols" : ""}">${sec.rows.map(btn).join("")}</div>`).join("")}${d.none ? `<div class="dd-opts none">${btn(d.none)}</div>` : ""}`;
+    $("askBody").innerHTML = `${d.note ? `<p class="dd-ask-note">${esc(d.note)}</p>` : ""}${sections.map(sec => `${sec.head ? `<h4>${esc(sec.head)}</h4>` : ""}<div class="dd-opts${d.cols ? " cols" : ""}${d.tiles ? " tiles" : ""}">${sec.rows.map(btn).join("")}</div>`).join("")}${d.none ? `<div class="dd-opts none">${btn(d.none)}</div>` : ""}`;
     if (!dlg.open) { dlg.showModal(); document.activeElement?.blur?.(); }   // opened by the game, not a tap: no focus ring on its first button
   } else if (dlg.open) dlg.close();
   if ($("viewDlg").open) fillView();
@@ -895,8 +918,9 @@ function fillView() {
     VROWS = [];
     return;
   }
-  const armG = ui.arm && ui.arm.moves[0].targets[0].k === "g";
-  $("viewHead").textContent = armG ? "Choose a card" : `Graveyard · ${s.yard.length}`;
+  const armG = ui.arm && ui.arm.moves[0].targets[0].k === "g", asked = question()?.yard;
+  const choose = armG ? new Map(ui.arm.moves.map(m => [m.targets[0].id, () => act2(m)])) : asked ?? null;
+  $("viewHead").textContent = choose ? "Choose a card" : `Graveyard · ${s.yard.length}`;
   const by = new Map();
   for (let i = s.yard.length - 1; i >= 0; i--) { const id = s.yard[i], k = DECK[id]; if (!by.has(k)) by.set(k, []); by.get(k).push(id); }
   VROWS = [];
@@ -904,21 +928,21 @@ function fillView() {
   for (const [name, ids] of by) {
     const half = HALVES[name] ? HALVES[name][1] : name;
     const casts = MV.filter(m => m.t === "cast" && m.from === "yard" && DECK[m.card] === name);
-    let btn = "";
-    if (armG) {
-      const hit = ui.arm.moves.find(m => m.targets[0].id === ids[0]);
-      if (!hit) continue;
-      VROWS.push(() => act2(hit));
-      btn = `<button type="button" class="btn dd-sm primary" data-v="${VROWS.length - 1}">Choose</button>`;
+    let btn = "", dim = "";
+    if (choose) {                                    // every card of the graveyard is shown; the ones that can be chosen carry a button
+      const hit = ids.find(id => choose.has(id));
+      if (hit == null) dim = " dim";
+      else { VROWS.push(choose.get(hit)); btn = `<button type="button" class="btn dd-sm primary" data-v="${VROWS.length - 1}">Choose</button>`; }
     } else if (casts.length) {
       const label = CARDS[half].flashback ? `Flashback ${costWords(CARDS[half].flashback)}` : `Cast ${half}`;
       VROWS.push(() => { closeView(); cast(casts.map(m => ({ ...m, card: ids[0] })), half); });
       btn = `<button type="button" class="btn dd-sm primary" data-v="${VROWS.length - 1}">${esc(label)}</button>`;
     }
-    rows.push(`<li><button type="button" class="dd-chip dd-name" data-look="${ids[0]}">${esc(name)}</button>${ids.length > 1 ? `<span class="n">× ${ids.length}</span>` : ""}${btn}</li>`);
+    rows.push(`<li class="${dim.trim()}"><button type="button" class="dd-chip dd-name" data-look="${ids[0]}">${esc(name)}</button>${ids.length > 1 ? `<span class="n">× ${ids.length}</span>` : ""}${btn}</li>`);
   }
-  body.innerHTML = `${rows.length ? `<ol class="dd-yard">${rows.join("")}</ol>` : `<p class="dd-sub">${armG ? "No card here is a legal target." : "Empty."}</p>`}
-    ${s.exile.length && !armG ? `<h4>Exiled</h4><p class="dd-sub">${s.exile.map(id => esc(nm(id))).join(", ")}</p>` : ""}`;
+  const none = asked && question().yardNone ? (VROWS.push(question().yardNone), `<p><button type="button" class="btn dd-sm" data-v="${VROWS.length - 1}">Choose none</button></p>`) : "";
+  body.innerHTML = `${rows.length ? `<ol class="dd-yard">${rows.join("")}</ol>` : `<p class="dd-sub">Empty.</p>`}${none}
+    ${s.exile.length && !choose ? `<h4>Exiled</h4><p class="dd-sub">${s.exile.map(id => esc(nm(id))).join(", ")}</p>` : ""}`;
 }
 const act2 = m => { closeView(); return act(m); };
 $("viewBody").addEventListener("click", e => {
@@ -927,7 +951,7 @@ $("viewBody").addEventListener("click", e => {
   const b = e.target.closest("[data-v]");
   if (b) VROWS[Number(b.dataset.v)]?.();
 });
-$("viewClose").addEventListener("click", () => { closeView(); if (ui.arm) { ui.arm = null; draw(); } });
+$("viewClose").addEventListener("click", () => { closeView(); if (ui.arm) { ui.arm = null; draw(); } else if (question()?.yard) { ui.dlgOff = true; draw(); } });
 $("viewDlg").addEventListener("close", () => { VIEW = ""; });
 
 /** A finished game's result goes to the database, once (a finished game opened again, a reload, is over again). */
