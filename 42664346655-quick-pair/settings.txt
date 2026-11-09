@@ -1,0 +1,1 @@
+quick-pair.mjs {shard} {shards} {out} 400 main medium-p4 hard32 (commit 61dc78fce596528a58c5c88dfe554a6c225b8d9b)
