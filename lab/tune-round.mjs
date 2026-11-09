@@ -2,6 +2,7 @@
 // side is plain main), each nudged up and down by `step` from the base in lab/tune-state.json. Every candidate plays the same
 // deals against main Medium with the seats swapped; a row is the candidate's score for one deal (0, 0.5 or 1 per game, averaged).
 // usage: node lab/tune-round.mjs <shard> <shards> <out.jsonl> <pairs per candidate> <first pair> <candidates: all | list of numbers 0,3,17> [fit ref medium-fit-2] [step] [base pass]
+// a candidate list item @name plays the set of constants named in lab/tune-state.json "combos", as it stands (not nudged)
 // Tuning deals start at pair 100000 (+ first pair), so they never overlap the quick-pair confirmation deals (0 up).
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -35,12 +36,14 @@ const put = (ADJ, k, v) => {
 const cands = [];
 for (const k of params) for (const d of [step, -step]) cands.push({ k, d });
 cands.push({ k: "pass", d: 0 }); // the base itself, last, so earlier numbers stay put
-const use = pick === "all" ? cands.map((_, i) => i) : pick.split(",").map(Number);
+// a name with an @ in front is a whole set of constants from "combos" in the state file, played as it is, not as a nudge of the base
+const combos = state.combos ?? {};
+const use = pick === "all" ? cands.map((_, i) => i) : pick.split(",").map(t => { if (!t.startsWith("@")) return Number(t); if (!combos[t.slice(1)]) throw new Error("no combo " + t); cands.push({ k: t, d: 0, set: combos[t.slice(1)] }); return cands.length - 1; });
 if (shard === 0 && process.env.LIST) console.log(cands.map((c, i) => `${i} ${c.k} ${c.d}`).join("\n"));
 function load(c) { // set polB.ADJ to the base plus the nudge
   const A = polB.ADJ; for (const g of ["cast", "hold", "land", "cycle", "ability"]) for (const n of Object.keys(A[g] ?? {})) delete A[g][n]; A.pass = 0; Object.assign(polB.TUNE, J(TUNE0)); polB.TUNE.cast = J(TUNE0.cast); polB.TUNE.land = J(TUNE0.land);
-  for (const [k, v] of Object.entries(state.base)) put(A, k, v);
-  if (c) put(A, c.k, (state.base[c.k] ?? 0) + c.d);
+  for (const [k, v] of Object.entries(c?.set ?? state.base)) put(A, k, v);
+  if (c && !c.set) put(A, c.k, (state.base[c.k] ?? 0) + c.d);
 }
 const play = (pol, ADJmode) => ({ move: (s, seat) => pol.policyMove(s, seat, { rng: Math.random }) });
 const PA = play(polA), PB = play(polB);
