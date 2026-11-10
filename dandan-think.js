@@ -14,7 +14,8 @@
 // What the other player knew of the library stays with the places they knew, whatever card is there now.
 import { act, toMove, moves, MOST_MULLS } from "./dandan-engine.js";
 import { DECK, NAMES } from "./dandan-cards.js";
-import { other, knownIn, knOf } from "./dandan-core.js";
+import { other, knownIn, knOf, perm } from "./dandan-core.js";
+import { bendable } from "./dandan-spells.js";
 import { Player, policyMove, PASS, unseenOf } from "./dandan-policy.js";
 import { readsOf, likelihood } from "./dandan-reads.js";
 import { winChance } from "./dandan-eval.js";
@@ -131,6 +132,18 @@ function orders(a) {
  * The moves Hard weighs at a decision: Medium's own choice always, and the others it would consider (a question's
  * reasonable answers; with priority, passing and the best-scored moves), at most `wide`.
  */
+/**
+ * A move that does nothing: a Mind Bend at a permanent with no basic land type in its text (a Halimar Depths, a Mystic
+ * Sanctuary). Legal, and spends a card for nothing; with the stack open every move is weighed, and in the noise of a few
+ * deals such a move could come out on top (Korbi, 10 November 2026: Monte at 4 life Mind Bent Dave's Halimar Depths while
+ * its Izzet Boilerworks trigger was on the stack).
+ */
+function idle(s, m) {
+  if (m.t !== "cast" || DECK[m.card] !== "Mind Bend") return false;
+  const p = m.targets?.[0] && perm(s, m.targets[0].id);
+  return !!p && !bendable(p).length;
+}
+
 export function candidates(s, seat, { wide = 7 } = {}) {
   const P = new Player(s, seat), p = s.pending;
   // with priority, Medium's move is the first of its scored moves worth more than passing (priority()'s, scored once)
@@ -145,7 +158,7 @@ export function candidates(s, seat, { wide = 7 } = {}) {
     // decisions with two or more spells on the stack, every legal move valued: the best was outside the shortlist in 6.5%, and
     // by two points or more in 2.7%, worth ten or more where it happened: README, The stack and the end of the library)
     const stacked = (s.stack.length > 0 || endOfLibrary(s) > 0) && wide >= 7;
-    for (const { m, v } of scored) if (v > -0.8 || stacked) add(m);
+    for (const { m, v } of scored) if ((v > -0.8 || stacked) && !idle(s, m)) add(m);
     return out.slice(0, stacked ? STACK_WIDE : wide);
   }
   switch (p.t) {
