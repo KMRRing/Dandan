@@ -18,7 +18,7 @@ import { CARDS, DECK, NAMES, BASICS, HALVES, TOKEN_AT, total } from "./dandan-ca
 import { moves, halfOf, nextDrawer, costOf } from "./dandan-engine.js";
 import {
   other, nm, isLandId, perm, isLand, isCreature, isToken, pt, lands, islands, creatures, typesOf, needType, manaAlts, topKnown, itemOf,
-  knownIn, poolOf, isSpellCard,
+  knownIn, poolOf, isSpellCard, isIsland,
 } from "./dandan-core.js";
 import { shuffle } from "./seats.js";
 import { readsOf } from "./dandan-reads.js";
@@ -90,7 +90,7 @@ export function facts(s, me) {
   for (const id of s.exile) see(id);
   for (const p of s.bf) see(p.id);
   for (const it of s.stack) if (it.kind === "spell" && !it.copy) see(it.card);
-  for (const [id, m] of s.kn) if (m & (1 << me)) see(id);
+  for (let i = 0; i < s.kn.length; i++) if (s.kn[i][1] & (1 << me)) see(s.kn[i][0]);
   const theirKnown = knownIn(s, opp, me);
   for (const id of theirKnown) see(id);
   let unknown = 0;
@@ -99,10 +99,12 @@ export function facts(s, me) {
     s, me, opp, left, unknown, theirKnown, hidden: Math.max(0, s.hand[opp].length - theirKnown.length), reads: readsOf(s, opp),
     known: topKnown(s, me), next: nextDrawer(s), myTurn: s.active === me,
     my: openMana(s, me), their: openMana(s, opp),
-    mine: creatures(s, me), theirs: creatures(s, opp), myIsl: islands(s, me).length, theirIsl: islands(s, opp).length,
+    mine: creatures(s, me), theirs: creatures(s, opp), myIsl: countIslands(s, me), theirIsl: countIslands(s, opp),
   };
 }
-const countOf = (str, c) => { let n = 0; for (const x of str) if (x === c) n++; return n; };
+/** How many Islands a seat controls (islands(), counted: no list made). */
+const countIslands = (s, seat) => { let n = 0; for (const p of s.bf) if (p.ctl === seat && isIsland(p)) n++; return n; };
+const countOf = (str, c) => { let n = 0; for (let i = 0; i < str.length; i++) if (str[i] === c) n++; return n; };
 /** The mana a seat has open: its pool and its untapped lands at their most, how many of them make blue, and red. */
 export function openMana(s, seat) {
   const pool = poolOf(s, seat);
@@ -111,9 +113,12 @@ export function openMana(s, seat) {
     if (l.ctl !== seat || l.tapped || !isLand(l)) continue;
     const alts = manaAlts(l);
     if (!alts.length) continue;
-    n += Math.max(...alts.map(a => a.length));
-    if (alts.some(a => a.includes("U"))) u++;
-    if (alts.some(a => a.includes("R"))) r++;
+    // (the most one tap makes, and whether any way of tapping makes blue, red: looked at once, with no lists made)
+    let big = 0, blue = false, red = false;
+    for (const a of alts) { if (a.length > big) big = a.length; if (a.includes("U")) blue = true; if (a.includes("R")) red = true; }
+    n += big;
+    if (blue) u++;
+    if (red) r++;
   }
   return { n, u, r };
 }
