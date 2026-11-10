@@ -178,20 +178,20 @@ export function dandanWorth(s, p) {
  *     mana spared counts for little;
  * a quarter at the least. TUNE.urgency Infinity: always whole (as before).
  */
-function threatShare(F, seat) {
-  if (!Number.isFinite(TUNE.urgency)) return 1;
+function threatShare(F, seat, o = TUNE) {
+  if (!Number.isFinite(o.urgency ?? Infinity)) return 1;
   const s = F.s, hitters = 1 + creatures(s, other(seat)).filter(d => islandsOfType(s, seat, needType(d)) > 0).length;
   const turns = Math.ceil(Math.max(1, s.life[seat]) / (4 * hitters));
-  let share = Math.min(1, TUNE.urgency / turns);
-  if (TUNE.answerCut) {
+  let share = Math.min(1, o.urgency / turns);
+  if (o.answerCut) {
     let none = 1;
     for (const [half, stays] of Object.entries(STAYS)) {
       const has = seat === F.me ? (s.hand[seat].some(id => front(id) === half) ? 1 : 0) : holds(F, half === "Commit" ? "Commit // Memory" : half);
       none *= 1 - stays * has;
     }
-    share *= 1 - TUNE.answerCut * (1 - none);
+    share *= 1 - o.answerCut * (1 - none);
   }
-  if (TUNE.handFade) share = 1 - (1 - share) * Math.min(1, Math.min(s.hand[0].length, s.hand[1].length) / TUNE.handFade);
+  if (o.handFade) share = 1 - (1 - share) * Math.min(1, Math.min(s.hand[0].length, s.hand[1].length) / o.handFade);
   return Math.max(0.25, share);
 }
 /** A Dandân about to come in under seat: what it will be worth (a card thrown away when there's no Island to keep it). */
@@ -537,14 +537,28 @@ export function libraryMove(s, F, m) {
 export const emptiedBy = (left, next) => (left % 2 === 0 ? next : other(next));
 /** What the end of the library is worth to the one who'd win it, in cards: all of it close to the end, little further off. */
 const raceWorth = left => (left <= 3 ? 5 : left <= 7 ? 3 : 1.5);
+/**
+ * The plans a Medium can play (lab/PLANS.md; Korbi, 10 November 2026). tempo is today's Medium, every setting neutral.
+ * squeeze (version 1): win the exchange, then the game. It keeps mana back for its answers (keep: the weight of what
+ * spending into its reserve costs), lets a Dandân come when far from death and holding a cheap answer for it (urgency,
+ * answerCut: threatShare), doesn't feed counters with a Dandân while holding answers and the other hand isn't empty
+ * (holdBack, cards of its worth), presses with Dandâns once the other hand is down to one card or none (close), and puts
+ * its land drop first (land, added to every land played).
+ */
+export const STYLES = {
+  tempo: { keep: 1, urgency: null, answerCut: 0, holdBack: 0, close: 0, land: 0 },
+  squeeze: { keep: 2, urgency: 3, answerCut: 0.5, holdBack: 0.6, close: 0.8, land: 0.4 },
+};
+
 /** How much of the race is left to win once the other player may put it back with a draw of their own, by the cards they hold: none, one, two, three or more. */
 const UNDONE = [1, 0.6, 0.35, 0.2];
 
 export class Player {
-  /** level: "medium" or "easy" (careless). */
-  constructor(s, me, { level = "medium", rng = Math.random } = {}) {
+  /** level: "medium" or "easy" (careless); style: the plan it plays (STYLES: "tempo", today's Medium, or "squeeze"). */
+  constructor(s, me, { level = "medium", rng = Math.random, style = "tempo" } = {}) {
     this.s = s; this.me = me; this.opp = other(me); this.rng = rng;
     this.easy = level === "easy";
+    this.style = STYLES[style] ?? STYLES.tempo;
     this.F = facts(s, me);
     this.low = s.lib.length <= RACE;
   }
@@ -849,7 +863,7 @@ export class Player {
   manaCost(mana, exclude = null) {
     const left = this.F.my.n - mana, res = this.reserve(exclude);
     if (left >= res) return 0;
-    return 0.45 * Math.min(res, res - left) * (this.F.myTurn ? 1 : 0.8);
+    return 0.45 * this.style.keep * Math.min(res, res - left) * (this.F.myTurn ? 1 : 0.8);
   }
 
   scoreLand(m) {
@@ -885,7 +899,7 @@ export class Player {
       v += lapse && this.canDrawFirst() ? 0.4 : -0.05;
     }
     if (this.easy) v += (this.rng() - 0.5) * 0.6;
-    return v + (TUNE.land[n] ?? 0);
+    return v + (TUNE.land[n] ?? 0) + this.style.land;
   }
   /** Whether we could draw the top card before the other player on our own turn: an instant that draws, and the mana for it after a land. */
   canDrawFirst() {
@@ -1050,17 +1064,23 @@ export class Player {
   }
 
   /** A Dandân cast now: what it's worth in against the chance it's countered and goes on top for them to draw. */
+  /** threatShare under this player's plan (its own settings when it has them, else TUNE's). */
+  share(seat) { return threatShare(this.F, seat, this.style.urgency ? this.style : TUNE); }
+
   castDandan(keep, pay) {
-    const s = this.s, F = this.F, me = this.me;
-    const w = newDandanWorth(s, me) * threatShare(F, this.opp);
+    const s = this.s, F = this.F, me = this.me, st = this.style;
+    const w = newDandanWorth(s, me) * this.share(this.opp);
     if (w <= 0) return -3;
+    // squeeze: hold back while there are answers to keep mana for and the other hand isn't empty; press once it is
+    const held = s.hand[me].some(id => STAYS[front(id)] || ["Memory Lapse", "Narset's Reversal"].includes(front(id)));
+    const theirs = s.hand[this.opp].length, plan = (held && theirs >= 2 ? -st.holdBack : 0) + (theirs <= 1 ? st.close : 0);
     let p = counterRisk(F, "Dandân");
     // two more open for our own Lapse: their counter can be countered
     if (!this.easy && s.hand[me].some(id => DECK[id] === "Memory Lapse") && F.my.n >= 4) p *= 0.35;
     if (this.easy) p *= 0.3;
     // countered on our turn, it goes on top and they draw it: our card gone and theirs gained, their Lapse spent
     const lost = 1.4 + 1.4 - 1.1;
-    let v = (1 - p) * w - p * lost - keep * 0.6 - pay;
+    let v = (1 - p) * w - p * lost - keep * 0.6 - pay + plan;
     if (s.step === "main1" && F.mine.some(d => !d.tapped && d.ent < s.turn) && F.theirIsl) v -= 0.1;   // after the attack
     return v;
   }
@@ -1071,7 +1091,7 @@ export class Player {
     if (!x) return -1;
     if (half === "Narset's Reversal") return this.reversal(x, keep, pay);
     if (x.ctl === me) return -3;
-    let gain = spellWorth(F, x) * (x.name === "Dandân" ? threatShare(F, me) : 1);
+    let gain = spellWorth(F, x) * (x.name === "Dandân" ? this.share(me) : 1);
     if (!x.copy) {
       // where the countered card goes: on top (Lapse) to whoever draws next; second from the top (Commit) to the one after
       const to = half === "Memory Lapse" ? F.next : other(F.next);
@@ -1214,7 +1234,7 @@ function permutations(a) {
 }
 
 /** The player's move: an answer to the question put to it, or the best thing to do with priority (passing if nothing is worth it). */
-export function policyMove(s, seat, { rng = Math.random, level = "medium" } = {}) {
-  const p = new Player(s, seat, { level, rng });
+export function policyMove(s, seat, { rng = Math.random, level = "medium", style = "tempo" } = {}) {
+  const p = new Player(s, seat, { level, rng, style });
   return s.pending ? p.answer() : p.priority();
 }
