@@ -1,7 +1,7 @@
 // Hard with another judge (a lab/judge-train.mjs job's weights) against Hard with the game's judge: every deal played
 // twice, seats swapped, both at the same thinking. One row a deal: { pair, a: A's score over its two games (0, 0.5, 1;
 // a draw a half), games: [winner from A's side, …] }. lab/judge-match-sum.mjs reads them.
-// usage: node lab/judge-match.mjs <shard> <shards> <out> <judge job> [deals 64] [pairs 600] [first seed 120000]
+// usage: node lab/judge-match.mjs <shard> <shards> <out> <judge job, or job:variant> [deals 64] [pairs 600] [first seed 120000]
 import fs from "node:fs";
 import { readParts } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
@@ -11,7 +11,10 @@ import { makeJudge, winChance } from "../dandan-eval.js";
 
 const [shard, shards, out, job] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5]];
 const deals = Number(process.argv[6] ?? 64), pairs = Number(process.argv[7] ?? 600), first = Number(process.argv[8] ?? 120000);
-const judgeA = makeJudge(JSON.parse((await readParts(job))[0].split("\n")[0]).layers);
+// a judge job's weights: its first line, or with "job:N" the line of variant N (lab/judge-variants.mjs)
+const [jobId, pick] = job.split(":");
+const lines = (await readParts(jobId)).flatMap(t => t.split("\n").filter(Boolean)).map(l => JSON.parse(l));
+const judgeA = makeJudge((pick == null ? lines[0] : lines.find(l => l.variant === Number(pick))).layers);
 const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random;
 
 function game(seed, aSeat) {

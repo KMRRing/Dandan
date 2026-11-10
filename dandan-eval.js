@@ -86,6 +86,39 @@ export function features(s, me, out = new Float32Array(N)) {
   return out;
 }
 
+// ---------- the squeeze inputs (lab, 11 November 2026) ----------
+// Korbi: the computer misses the mid/late-game squeeze, where card advantage, a mana lead and answers held win slowly. For
+// judges trained in the lab (lab/judge-variants.mjs) each seat also has: its card lead and land lead over the other, the
+// answers, counters, draw spells and Dandâns it holds, how many of the other's hits it can take, and whether it holds a
+// counter with the mana open for it. A judge reads them when its first layer is wide enough (PLUS more inputs).
+const ANSWER = new Set(["Mind Bend", "Piracy Charm", "Metamorphose", "Repulse", "Commit // Memory", "Deem Inferior", "Gone Missing"]);
+const COUNTER = new Set(["Memory Lapse", "Narset's Reversal"]);
+const DRAW = new Set(["Predict", "Brainstorm", "Chart a Course", "Lórien Revealed", "Take Inventory", "Quicken", "Mystic Retrieval"]);
+export const PLUS = 8;
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+function seatPlus(s, x, out, k) {
+  const foe = other(x), mine = s.hand[x], theirs = s.hand[foe];
+  const landsOf = seat => { let n = 0, open = 0; for (const p of s.bf) if (p.ctl === seat && isLand(p)) { n++; if (!p.tapped) open++; } return [n, open]; };
+  const [nl, open] = landsOf(x), [fl] = landsOf(foe);
+  let answers = 0, counters = 0, draws = 0, dandans = 0;
+  for (const id of mine) { const n = DECK[id]; if (ANSWER.has(n)) answers++; else if (COUNTER.has(n)) counters++; else if (DRAW.has(n)) draws++; else if (n === "Dandân") dandans++; }
+  let att = 0;
+  for (const d of creatures(s, foe)) if (hasType(s, x, needType(d))) att++;
+  out[k++] = clamp((mine.length - theirs.length) / 5, -1, 1);
+  out[k++] = clamp((nl - fl) / 5, -1, 1);
+  out[k++] = Math.min(3, answers) / 3; out[k++] = Math.min(3, counters) / 3; out[k++] = Math.min(3, draws) / 3; out[k++] = Math.min(3, dandans) / 3;
+  out[k++] = att ? Math.min(6, Math.ceil(Math.max(0, s.life[x]) / (4 * att))) / 6 : 1;
+  out[k++] = counters && open >= 2 ? 1 : 0;
+  return k;
+}
+/** The features and the squeeze inputs after them: mine, then the other seat's (so a swap of sides swaps both blocks). */
+export function featuresPlus(s, me, out = new Float32Array(N + 2 * PLUS)) {
+  features(s, me, out);
+  let k = seatPlus(s, me, out, N);
+  seatPlus(s, other(me), out, k);
+  return out;
+}
+
 // ---------- the network ----------
 // Each layer's weights (inputs by outputs) as signed bytes, base64, with a scale for each output; the hidden layers'
 // biases (the last layer's would cancel in g(mine) − g(theirs)). Trained in float and rounded so, which moves a chance
@@ -103,7 +136,7 @@ function build(layers) {
     if (L.b.length) b.set(L.b);
     return { nIn, nOut, W, b, y: new Float32Array(nOut) };
   });
-  if (net[0].nIn !== N) throw new Error("dandan-eval: the network reads a different number of features");
+  if (net[0].nIn !== N && net[0].nIn !== N + 2 * PLUS) throw new Error("dandan-eval: the network reads a different number of features");
   return net;
 }
 
@@ -131,15 +164,16 @@ function score(net, x) {
  * its place, as think() takes any judge.
  */
 export function makeJudge(layers) {
-  const net = build(layers), mine = new Float32Array(N), theirs = new Float32Array(N), half = (N - 3 - SPELLS.length) / 2;
+  const net = build(layers), plus = net[0].nIn > N, M = net[0].nIn, mine = new Float32Array(M), theirs = new Float32Array(M), half = (N - 3 - SPELLS.length) / 2;
   return (s, me) => {
     if (s.over) return s.winner < 0 ? 0.5 : s.winner === me ? 1 : 0;
     // the other side's view is the same numbers with the seats' halves swapped and the turn the other way round
-    features(s, me, mine);
+    if (plus) featuresPlus(s, me, mine); else features(s, me, mine);
     theirs.set(mine.subarray(half, 2 * half), 0);
     theirs.set(mine.subarray(0, half), half);
-    theirs.set(mine.subarray(2 * half), 2 * half);
+    theirs.set(mine.subarray(2 * half, N), 2 * half);
     theirs[2 * half] = 1 - mine[2 * half];
+    if (plus) { theirs.set(mine.subarray(N + PLUS, N + 2 * PLUS), N); theirs.set(mine.subarray(N, N + PLUS), N + PLUS); }
     return 1 / (1 + Math.exp(score(net, theirs) - score(net, mine)));
   };
 }
