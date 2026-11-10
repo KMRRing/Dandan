@@ -6,14 +6,18 @@
 // (with a pull back towards them, as a few hundred games are little beside the 45,000 it learned from).
 // Every fifth game is held out: the judge as it is and as trained are both scored on those, by library size, so the gain
 // from each batch of games can be followed. The trained layers are written to <out> as one JSON line, in dandan-eval's form.
-// usage: node lab/judge-train.mjs <shard> <shards> <out> <job ids, comma-separated: spb01,spb02> [blend 0.5] [epochs 40] [pull 1e-4] [lr 3e-4]
+// `hand` (11 November 2026, Korbi: a card in hand may never lower its holder's score): the judge put its holder higher
+// without the card for 5% of held cards (lab/judge-hand.mjs: Commit // Memory 38% of the time). With hand > 0 each position
+// is also seen with one card taken from each hand (a count and the hand size one lower: the hand is counts by name), and
+// the network is charged `hand` times by how much higher its holder stands without it (or the other lower without theirs).
+// usage: node lab/judge-train.mjs <shard> <shards> <out> <job ids, comma-separated: spb01,spb02> [blend 0.5] [epochs 40] [pull 1e-4] [lr 3e-4] [hand 0]
 import fs from "node:fs";
 import { readParts } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove } from "../seats.js";
 import { features, FEATURES } from "../dandan-eval.js";
 
-const [, , , , out, ids, blend = 0.5, epochs = 40, pull = 1e-4, lr = 3e-4] = process.argv.map((a, i) => (i >= 6 ? Number(a) : a));
+const [, , , , out, ids, blend = 0.5, epochs = 40, pull = 1e-4, lr = 3e-4, hand = 0] = process.argv.map((a, i) => (i >= 6 ? Number(a) : a));
 const N = FEATURES.length, HALF = (N - 3 - 17) / 2;
 
 // ---------- the present network, from dandan-eval.js's source ----------
@@ -57,6 +61,37 @@ function backward(net, acts, dOut, grads) {           // dOut: d loss / d g, add
 }
 const swap = a => { const t = new Float64Array(N); t.set(a.subarray(HALF, 2 * HALF), 0); t.set(a.subarray(0, HALF), HALF); t.set(a.subarray(2 * HALF), 2 * HALF); t[2 * HALF] = 1 - a[2 * HALF]; return t; };
 const chance = (net, a, b) => 1 / (1 + Math.exp(forward(net, b).at(-1)[0] - forward(net, a).at(-1)[0]));
+// a side's hand in its features: the hand size at 14 (of 7), then the cards by name from 15 (17 spells, 7 kinds of land)
+const HAND_AT = 14, NAMES_AT = 15, NAMES = 24;
+/** The features with one card of `side`'s hand (0: mine, HALF: theirs) taken out, the k-th name it holds; null if none. */
+function without(a, side, pick) {
+  const held = [];
+  for (let i = 0; i < NAMES; i++) if (a[side + NAMES_AT + i] > 0) held.push(i);
+  if (!held.length) return null;
+  const x = Float64Array.from(a), i = held[Math.floor(pick * held.length)];
+  x[side + NAMES_AT + i] -= 1;
+  x[side + HAND_AT] = Math.max(0, x[side + HAND_AT] - 1 / 7);
+  return x;
+}
+/** dLoss/dp at p = chance(a, swap a) into the grads. */
+function pGrad(net, a, coef, G) {
+  const b = swap(a), A = forward(net, a), B = forward(net, b), p = 1 / (1 + Math.exp(B.at(-1)[0] - A.at(-1)[0])), d = coef * p * (1 - p);
+  backward(net, A, d, G); backward(net, B, -d, G);
+  return p;
+}
+/** On held-out positions: the share of cards (each hand, one at random) whose going moves the chance the wrong way by over a point. */
+function handFlaws(net) {
+  let n = 0, bad = 0, r = 777;
+  for (const row of test) for (const side of [0, HALF]) {
+    r = (r * 1103515245 + 12345) >>> 0;
+    const x = without(row.a, side, r / 2 ** 32);
+    if (!x) continue;
+    n++;
+    const d = chance(net, x, swap(x)) - chance(net, row.a, row.b);
+    if (side === 0 ? d > 0.01 : d < -0.01) bad++;
+  }
+  return n ? +(bad / n).toFixed(4) : 0;
+}
 
 // ---------- the positions ----------
 const data = [];
@@ -94,6 +129,7 @@ function report(net, tag) {
   console.log(`${tag.padEnd(12)} ${parts.join(" | ")}`);
 }
 report(NET0, "judge now");
+console.log(`hand flaws now ${handFlaws(NET0)}`);
 
 // ---------- training: cross-entropy on the blended label, Adam, a pull towards the present weights ----------
 const zero = () => NET.map(L => ({ W: new Float64Array(L.W.length), b: new Float64Array(L.b.length) }));
@@ -109,6 +145,16 @@ for (let e = 1; e <= epochs; e++) {
     for (const i of batch) {
       const r = train[i], A = forward(NET, r.a), B = forward(NET, r.b), p = 1 / (1 + Math.exp(B.at(-1)[0] - A.at(-1)[0]));
       backward(NET, A, (p - r.y) / batch.length, G); backward(NET, B, -(p - r.y) / batch.length, G);
+      if (hand > 0) for (const side of [0, HALF]) {
+        // a card of mine gone must not raise my chance; one of theirs gone must not lower it
+        const x = without(r.a, side, rand());
+        if (!x) continue;
+        const q = chance(NET, x, swap(x)), gap = side === 0 ? q - p : p - q;
+        if (gap <= 0) continue;
+        const c = hand / batch.length, sign = side === 0 ? 1 : -1;
+        pGrad(NET, x, sign * c, G);
+        pGrad(NET, r.a, -sign * c, G);
+      }
     }
     t++;
     NET.forEach((L, l) => {
@@ -129,5 +175,6 @@ for (let e = 1; e <= epochs; e++) {
 console.log(`best epoch ${best.epoch}, held-out loss ${best.loss.toFixed(4)}`);
 const layers = best.net.map((L, l) => quant(L, l === best.net.length - 1));
 report(best.net, "judge new");
+console.log(`hand flaws new ${handFlaws(best.net)}`);
 report(layers.map(dequant), "as rounded");
 fs.writeFileSync(out, JSON.stringify({ ids, blend, epoch: best.epoch, layers }) + "\n");
