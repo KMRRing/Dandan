@@ -50,6 +50,7 @@ export const TUNE = {
   cast: { "Dandân": 0.75 },  // added to a spell's cast, by the card cast
   land: { "Flood Plain": -1, "Izzet Boilerworks": -0.5 },   // added to a land drop, by the land
   urgency: Infinity,         // how many turns from death a Dandân's threat still counts in full (threatShare); Infinity: always
+  answerCut: 0, handFade: 0, // threatShare: less by the defender's cheap answers held; back towards whole below that many cards a hand
 };
 /**
  * 9 November 2026: additions to Medium's scores, set by matches against Medium without them (lab/tune-round.mjs on Actions: each
@@ -169,14 +170,29 @@ export function dandanWorth(s, p) {
 /**
  * The share of a new Dandân's worth that its threat to `seat` carries (10 November 2026, Korbi: "when you're not close to death,
  * even a Dandân isn't scary"; a player ahead on mana lets it come, answers it later and cheaply, and goes one for one while
- * drawing ahead). Whole when it and the Dandâns already able to hit would kill `seat` within TUNE.urgency of its turns, less
- * the further off that is (a quarter at the least); used for what countering one is worth to `seat` and casting one at it.
+ * drawing ahead). Used for what countering one is worth to `seat` and casting one at it:
+ *   whole when it and the Dandâns already able to hit would kill `seat` within TUNE.urgency of its turns, less the further off;
+ *   less again by the cheap answers `seat` holds for later (TUNE.answerCut): in its hand when `seat` is the one deciding,
+ *     else by the read of the hidden hand (holds: a chance passed up to answer our Dandân counts against them holding one);
+ *   and with few cards on both sides (TUNE.handFade) back towards whole, as a counter or two then swings the game and the
+ *     mana spared counts for little;
+ * a quarter at the least. TUNE.urgency Infinity: always whole (as before).
  */
-function threatShare(s, seat) {
+function threatShare(F, seat) {
   if (!Number.isFinite(TUNE.urgency)) return 1;
-  const hitters = 1 + creatures(s, other(seat)).filter(d => islandsOfType(s, seat, needType(d)) > 0).length;
+  const s = F.s, hitters = 1 + creatures(s, other(seat)).filter(d => islandsOfType(s, seat, needType(d)) > 0).length;
   const turns = Math.ceil(Math.max(1, s.life[seat]) / (4 * hitters));
-  return Math.max(0.25, Math.min(1, TUNE.urgency / turns));
+  let share = Math.min(1, TUNE.urgency / turns);
+  if (TUNE.answerCut) {
+    let none = 1;
+    for (const [half, stays] of Object.entries(STAYS)) {
+      const has = seat === F.me ? (s.hand[seat].some(id => front(id) === half) ? 1 : 0) : holds(F, half === "Commit" ? "Commit // Memory" : half);
+      none *= 1 - stays * has;
+    }
+    share *= 1 - TUNE.answerCut * (1 - none);
+  }
+  if (TUNE.handFade) share = 1 - (1 - share) * Math.min(1, Math.min(s.hand[0].length, s.hand[1].length) / TUNE.handFade);
+  return Math.max(0.25, share);
 }
 /** A Dandân about to come in under seat: what it will be worth (a card thrown away when there's no Island to keep it). */
 function newDandanWorth(s, seat) {
@@ -1036,7 +1052,7 @@ export class Player {
   /** A Dandân cast now: what it's worth in against the chance it's countered and goes on top for them to draw. */
   castDandan(keep, pay) {
     const s = this.s, F = this.F, me = this.me;
-    const w = newDandanWorth(s, me) * threatShare(s, this.opp);
+    const w = newDandanWorth(s, me) * threatShare(F, this.opp);
     if (w <= 0) return -3;
     let p = counterRisk(F, "Dandân");
     // two more open for our own Lapse: their counter can be countered
@@ -1055,7 +1071,7 @@ export class Player {
     if (!x) return -1;
     if (half === "Narset's Reversal") return this.reversal(x, keep, pay);
     if (x.ctl === me) return -3;
-    let gain = spellWorth(F, x) * (x.name === "Dandân" ? threatShare(s, me) : 1);
+    let gain = spellWorth(F, x) * (x.name === "Dandân" ? threatShare(F, me) : 1);
     if (!x.copy) {
       // where the countered card goes: on top (Lapse) to whoever draws next; second from the top (Commit) to the one after
       const to = half === "Memory Lapse" ? F.next : other(F.next);
