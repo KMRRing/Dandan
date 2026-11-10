@@ -1,7 +1,7 @@
 // Hard against Hard, every decision kept with all that the search weighed (9 November 2026). The data to teach Medium from the
 // search: at each decision with more than one move worth weighing, the position as the mover sees it, each candidate's mean
 // win chance over the deals with its standard error and the deals it had, which candidate is Medium's own move (`med`, the
-// first the look-ahead is given) and which the search played (`pick`). Written as gzipped lines, one per game:
+// first the look-ahead is given) and which the search played (`pick`). Written as lines, one per game as it ends:
 //   { game, seed, winner, why, turns, moves: [[seat, move]…], dec: [{ i (index in moves), seat, turn, step, lib, life, hand
 //     (the mover's, by name), bf ([name, seat, tapped]…), yard, stack, hands (sizes), list: [[name, move, mean, se, n, out]…],
 //     med (index in list or -1), pick }] }
@@ -9,7 +9,6 @@
 // Run by the Lab workflow, a share of the games in each job:
 // usage: node lab/selfplay.mjs <shard> <shards> <out> <deals 256> <games 800> [first seed 7000]
 import fs from "node:fs";
-import zlib from "node:zlib";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../seats.js";
 import { think } from "../dandan-think.js";
@@ -22,7 +21,6 @@ import { J } from "./lib.mjs";
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5] || 256), Number(process.argv[6] || 800), Number(process.argv[7] || 7000)];
 const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);
 const nm = id => DECK[id] ?? "token";
-const lines = [];
 const realRandom = Math.random;
 for (let g = first; g < first + n; g++) {
   let G = newRecord(rules, { seats: 2, seed: seed0 + g, now: 0 }), dec = [];
@@ -51,6 +49,6 @@ for (let g = first; g < first + n; g++) {
   }
   Math.random = realRandom;
   const st = G.state;
-  lines.push(JSON.stringify({ game: g, seed: seed0 + g, winner: st.winner, why: st.why, turns: st.turn, moves: log, dec }));
+  // a line each game as it ends, so a machine taken away mid-share loses only the game it was playing
+  fs.appendFileSync(out, JSON.stringify({ game: g, seed: seed0 + g, winner: st.winner, why: st.why, turns: st.turn, moves: log, dec }) + "\n");
 }
-fs.writeFileSync(out.replace(/\.jsonl$/, "") + ".jsonl.gz", zlib.gzipSync(lines.join("\n") + "\n"));
