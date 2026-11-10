@@ -357,7 +357,14 @@ function where(c, seat) {
  * time), judge (the chance of winning where a game is left), explore (the tree's: how much benefit of the doubt a
  * choice tried less gets), open (the other hand known: the lab's analysis only, see determinize).
  */
-export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = false } = {}) {
+/**
+ * Up to 256 deals (Quick, Long, the coach) the first look is at EARLY deals, with passing never dropped (hold): measured on
+ * 1,490 decisions at 64 deals and 487 at 256 (lab/halving.mjs, 11 November 2026), it chose as the full search did in all but
+ * one of each, neither worth two points, for 17% and 12% fewer deals (a third fewer where eight or more moves are weighed).
+ * Deeper searches keep their first look at LOOK_FROM, as measured for them.
+ */
+const EARLY = 16;
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
