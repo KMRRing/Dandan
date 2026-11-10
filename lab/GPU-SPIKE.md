@@ -48,3 +48,12 @@ Under that, stop: the CPU lab with faster code and the smarter search is the che
 
 First numbers, on the lab's sandbox (no GPU): JavaScript, one core, 180,000–280,000 games a second; PyTorch on two CPU
 threads, 78,000 at a batch of 100,000. The bar for the 3080: about 20 times one core, some 4–5 million games a second.
+
+## Result on the RTX 3080 (10 November 2026, 23:30)
+
+PyTorch 2.6 with CUDA 12.4: 3,600 games a second at a batch of 1,000; 31,000 at 10,000; 278,000 at 100,000; 1,148,000
+at 1,000,000 (the same win counts as the CPU and JavaScript versions). One JavaScript core plays the same game at
+180,000–280,000 a second, so the card is worth some 4–6 cores at its best batch, well under the bar of 20. A bigger batch
+would gain a little more (from 100,000 to 1,000,000 it went up four times), but the full rules would lose more than that.
+Verdict: no GPU rules engine. The 3080 stays the place to train networks, if Hard ever plays its look-aheads with a
+learned policy instead of Medium; for now its CPU (12 threads) is more use as a lab worker.
