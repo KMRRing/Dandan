@@ -27,9 +27,12 @@ class Games:
         B = len(seeds)
         self.B, self.dev = B, dev
         z = lambda *shape: torch.zeros(*shape, dtype=torch.int64, device=dev)
-        self.x = torch.tensor([((s * 2654435761) & M32) or 1 for s in seeds], dtype=torch.int64, device=dev)
+        sd = torch.as_tensor(seeds, dtype=torch.int64, device=dev)
+        self.x = (sd * 2654435761) & M32
+        self.x = torch.where(self.x == 0, torch.ones_like(self.x), self.x)
         deck = [I] * 26 + [D] * 12 + [L] * 10 + [C] * 12
-        self.lib = torch.cat([torch.tensor(deck, dtype=torch.int64, device=dev).repeat(B, 1), z(B, 4)], 1)  # room to put back
+        # int16: the library is most of the memory (64 cards a game), and 10 million games must fit in the card's 10 GB
+        self.lib = torch.cat([torch.tensor(deck, dtype=torch.int16, device=dev).repeat(B, 1), torch.zeros(B, 4, dtype=torch.int16, device=dev)], 1)  # room to put back
         rows = torch.arange(B, device=dev)
         for a in range(59, 0, -1):            # Fisher–Yates from the top, as in mini.mjs
             self.x = nxt(self.x)
@@ -48,7 +51,7 @@ class Games:
         for _ in range(7):
             for s in (0, 1):
                 self.p -= 1
-                self.hand[rows, s, self.lib[rows, self.p]] += 1
+                self.hand[rows, s, self.lib[rows, self.p].long()] += 1
 
     def end(self, mask, winner, turn):
         self.over |= mask
@@ -61,7 +64,7 @@ class Games:
         self.end(empty, 1 - s, turn)
         ok = mask & (self.p > 0)
         self.p -= ok.long()
-        card = self.lib[self.rows, self.p.clamp(max=63)]
+        card = self.lib[self.rows, self.p.clamp(max=63)].long()
         self.hand[self.rows, s, card] += ok.long()
 
     def turn(self, t):
@@ -96,7 +99,7 @@ class Games:
             kl = counter.long()
             self.hand[:, o, L] -= kl; self.mana[:, o] -= 2 * kl
             at = self.p.clamp(max=63)
-            self.lib[self.rows, at] = torch.where(counter, card, self.lib[self.rows, at])
+            self.lib[self.rows, at] = torch.where(counter, card.to(torch.int16), self.lib[self.rows, at])
             self.p += kl
             res = cast & ~counter
             self.sick[:, a] += (res & (card == D)).long()
@@ -122,16 +125,23 @@ def bench():
     gpu = torch.cuda.is_available()
     print(json.dumps({"torch": torch.__version__, "gpu": torch.cuda.get_device_name(0) if gpu else None, "cpu threads": torch.get_num_threads()}))
     for dev in (["cuda"] if gpu else []) + ["cpu"]:
-        for B in [1_000, 10_000, 100_000, 1_000_000]:
+        for B in [1_000, 10_000, 100_000, 1_000_000, 2_000_000, 5_000_000, 10_000_000]:
             if dev == "cpu" and B > 100_000:
                 continue
-            seeds = list(range(1, B + 1))
+            if dev == "cuda" and B * 64 * 2 > 0.6 * torch.cuda.get_device_properties(0).total_memory:
+                print(json.dumps({"engine": "torch cuda", "games": B, "skipped": "too big for the card's memory"}))
+                continue
+            seeds = torch.arange(1, B + 1, dtype=torch.int64, device=dev)
             Games(seeds[:1000], dev).play()                      # warm up
             if dev == "cuda": torch.cuda.synchronize()
-            t0 = time.perf_counter()
-            g = Games(seeds, dev).play()
-            if dev == "cuda": torch.cuda.synchronize()
-            sec = time.perf_counter() - t0
+            try:
+                t0 = time.perf_counter()
+                g = Games(seeds, dev).play()
+                if dev == "cuda": torch.cuda.synchronize()
+                sec = time.perf_counter() - t0
+            except torch.cuda.OutOfMemoryError:
+                print(json.dumps({"engine": "torch cuda", "games": B, "skipped": "ran out of the card's memory"}))
+                break
             w = torch.bincount(g.winner, minlength=3).tolist()
             print(json.dumps({"engine": f"torch {dev}", "games": B, "seconds": round(sec, 3), "gamesPerSec": round(B / sec), "wins": w}))
 
