@@ -1272,7 +1272,25 @@ function permutations(a) {
 }
 
 /** The player's move: an answer to the question put to it, or the best thing to do with priority (passing if nothing is worth it). */
+/**
+ * A spell cast in our main phase before the land we'd play anyway: an Island played first gives the same mana after, and
+ * one more open while the spell is on the stack, to fight for it (Korbi, 10 November 2026: Monte cast a Dandân, then played
+ * its Island, and had nothing open for the Memory Lapse that could follow). Not when the spell draws or looks at cards
+ * (Brainstorm, Predict, Chart a Course, Lórien Revealed, Take Inventory, Quicken, Memory): what it finds can change which
+ * land is the one to play. Returns the Island to play first, or null.
+ */
+const DIGS = new Set(["Brainstorm", "Predict", "Chart a Course", "Lórien Revealed", "Take Inventory", "Quicken", "Memory"]);
+export function landFirst(s, seat, m) {
+  if (m.t !== "cast" || s.pending || s.stack.length || s.active !== seat || s.played || (s.step !== "main1" && s.step !== "main2")) return null;
+  const half = m.from === "yard" ? halfOf(m.card, "yard") : front(m.card);
+  if (DIGS.has(half)) return null;
+  const island = s.hand[seat].find(id => DECK[id] === "Island");
+  return island == null ? null : { t: "land", card: island };
+}
+
 export function policyMove(s, seat, { rng = Math.random, level = "medium", style = "tempo" } = {}) {
   const p = new Player(s, seat, { level, rng, style });
-  return s.pending ? p.answer() : p.priority();
+  if (s.pending) return p.answer();
+  const m = p.priority();
+  return (level !== "easy" && landFirst(s, seat, m)) || m;
 }
