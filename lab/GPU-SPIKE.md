@@ -57,3 +57,7 @@ at 1,000,000 (the same win counts as the CPU and JavaScript versions). One JavaS
 would gain a little more (from 100,000 to 1,000,000 it went up four times), but the full rules would lose more than that.
 Verdict: no GPU rules engine. The 3080 stays the place to train networks, if Hard ever plays its look-aheads with a
 learned policy instead of Medium; for now its CPU (12 threads) is more use as a lab worker.
+
+Second run, the library in 2-byte numbers and batches to 10 million (23:38): 1.84 million games a second at 1 million,
+then flat: 2.03 million at 2 million, 2.03 at 5 million, 2.06 at 10 million. The card is full at about 2 million games
+a second, some 7–11 JavaScript cores' worth. Still under the bar; the verdict stands.
