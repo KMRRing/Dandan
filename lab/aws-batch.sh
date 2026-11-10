@@ -2,7 +2,7 @@
 # Lab workers on AWS Batch (10 November 2026). Needs the Batch compute environment "Dandan" (managed, spot) made in the console.
 # Run in AWS CloudShell, in that environment's region:
 #   curl -fsSL https://raw.githubusercontent.com/KMRRing/Dandan/main/lab/aws-batch.sh | KEY=<the key, base64> N=4 bash
-# It caps the compute environment at N x 16 cores (the cost guard), makes the job queue "dandan-lab" and the job definition
+# It caps the compute environment at 16 cores a worker, for the N new and any already queued or running (the cost guard), makes the job queue "dandan-lab" and the job definition
 # "dandan-lab" (Node 22 container that clones the repo and runs lab/worker.mjs against the Google bucket, LAB_FILL on), and
 # submits N workers of 16 cores each. A worker reclaimed by spot is retried (up to 5 times); each stops after HOURS.
 #   stop all:  curl -fsSL https://raw.githubusercontent.com/KMRRing/Dandan/main/lab/aws-batch.sh | STOP=1 bash
@@ -27,9 +27,17 @@ if [ -z "${KEY:-}" ]; then  # reuse the key from the last job definition, so a r
   echo "using the key from the last job definition"
 fi
 
+# workers already queued or running stay, so the cap is theirs plus the new ones
+HAVE=0
+for st in SUBMITTED PENDING RUNNABLE STARTING RUNNING; do
+  for id in $(aws batch list-jobs --job-queue "$Q" --job-status $st --query 'jobSummaryList[].jobId' --output text 2>/dev/null); do
+    n=$(aws batch describe-jobs --jobs "$id" --query 'jobs[0].arrayProperties.size' --output text); [ "$n" = None ] && n=1
+    HAVE=$((HAVE + n))
+  done
+done
 aws batch update-compute-environment --compute-environment "$ENV" --state ENABLED \
-  --compute-resources minvCpus=0,maxvCpus=$((N * CORES)) >/dev/null
-echo "compute environment $ENV capped at $((N * CORES)) cores"
+  --compute-resources minvCpus=0,maxvCpus=$(((HAVE + N) * CORES)) >/dev/null
+echo "compute environment $ENV capped at $(((HAVE + N) * CORES)) cores ($HAVE workers already there, $N new)"
 
 if [ "$(aws batch describe-job-queues --job-queues "$Q" --query 'length(jobQueues)' --output text)" = 0 ]; then
   aws batch create-job-queue --job-queue-name "$Q" --priority 1 --state ENABLED \
