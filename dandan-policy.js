@@ -223,8 +223,8 @@ export function cardWorth(F, id, seat = F.me) {
     if ((CARDS[name].subs || []).includes("Island")) v += creatures(s, seat).length || (seat === F.me && s.hand[seat].some(i => DECK[i] === "Dandân")) ? 0.2 : 0.05;
     return v;
   }
-  if (name === "Take Inventory") return 0.7 + 0.3 * s.yard.filter(i => DECK[i] === name).length;
-  if (name === "Dandân") return islands(s, seat).length || landCount(F, seat) >= 2 ? 1.4 : 1.0;
+  if (name === "Take Inventory") { let n = 0; for (const i of s.yard) if (DECK[i] === name) n++; return 0.7 + 0.3 * n; }
+  if (name === "Dandân") return countIslands(s, seat) || landCount(F, seat) >= 2 ? 1.4 : 1.0;
   if (name === "Mystic Retrieval") return 0.6 + (s.yard.some(i => DECK[i] === "Memory Lapse") ? 0.3 : 0);
   return WORTH[name] ?? 0.7;
 }
@@ -880,9 +880,17 @@ export class Player {
    */
   reserve(exclude = null) {
     if (this.easy || this.theirEnd) return 0;
-    const s = this.s, F = this.F, hand = s.hand[this.me].filter(id => id !== exclude).map(id => DECK[id]);
-    let r = hand.includes("Memory Lapse") || hand.includes("Narset's Reversal") ? 2 : 0;
-    if ((hand.includes("Piracy Charm") || hand.includes("Mind Bend")) && F.theirs.some(d => islandsOfType(s, this.me, needType(d)))) r += 1;
+    const s = this.s, F = this.F;
+    // (the hand looked through once for what it holds, with no list made of it)
+    let counter = false, answer = false;
+    for (const id of s.hand[this.me]) {
+      if (id === exclude) continue;
+      const name = DECK[id];
+      if (name === "Memory Lapse" || name === "Narset's Reversal") counter = true;
+      else if (name === "Piracy Charm" || name === "Mind Bend") answer = true;
+    }
+    let r = counter ? 2 : 0;
+    if (answer && F.theirs.some(d => islandsOfType(s, this.me, needType(d)))) r += 1;
     return r;
   }
   /** What spending `mana` now costs us in answers we can't make later: nothing within the spare, more the more of the reserve it eats. */
@@ -1250,7 +1258,11 @@ export function hitValue(life) {
   return h <= 1 ? 4 : 3 / h;
 }
 /** How many lands of a type a seat controls. */
-function islandsOfType(s, seat, type) { return s.bf.filter(l => l.ctl === seat && isLand(l) && typesOf(l).includes(type)).length; }
+function islandsOfType(s, seat, type) {
+  let n = 0;
+  for (const l of s.bf) if (l.ctl === seat && isLand(l) && typesOf(l).includes(type)) n++;
+  return n;
+}
 /** Every order of a few cards. */
 function permutations(a) {
   if (a.length <= 1) return [a.slice()];
