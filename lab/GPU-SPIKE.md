@@ -35,3 +35,16 @@ lab bucket.
 A rented GPU costs about what 12–16 spot cores do; the 3080 costs nothing but power. Go on to the full engine only if
 the cut-down game runs at least 20× faster on the 3080 than on one core, since the full rules will lose some of that.
 Under that, stop: the CPU lab with faster code and the smarter search is the cheaper road.
+
+## Built (10 November 2026)
+
+- `lab/gpu/mini.mjs`: the cut-down game one game at a time, branching, as the real engine is written.
+- `lab/gpu/mini.py`: the same game in PyTorch, every game of a batch stepped at once with masks. Same random numbers
+  (xorshift32, six a turn whatever happens), so the same seeds give the same games: checked on 3,000 games, all equal
+  (winner, turns, lives), and the win counts of 100,000 equal too.
+- `lab/gpu/run-gpu-spike.bat`: for Korbi's PC. Double-click; it fetches both from the site, uses the CUDA PyTorch Forge
+  already installed (else Python 3.12's, else installs one), runs the benchmark, and puts the result in Notepad and
+  on the clipboard.
+
+First numbers, on the lab's sandbox (no GPU): JavaScript, one core, 180,000–280,000 games a second; PyTorch on two CPU
+threads, 78,000 at a batch of 100,000. The bar for the 3080: about 20 times one core, some 4–5 million games a second.
