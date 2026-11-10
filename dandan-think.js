@@ -28,9 +28,11 @@ const REDEALS = 24;
 // ---------- the cards the seat can't see, dealt ----------
 /**
  * The seat's view of the game, with the cards it can't see dealt at random (a copy; the log left behind); weigh: the
- * other hand dealt by what their play has shown (a reading of a pass deals plainly, for speed: dandan-observe.js).
+ * other hand dealt by what their play has shown (a reading of a pass deals plainly, for speed: dandan-observe.js);
+ * open: the other hand as it is, only the library's order dealt (no one knows it): the lab's analysis with all the
+ * information there is (lab/analysis.mjs), never the game's.
  */
-export function determinize(s, seat, rng, weigh = true) {
+export function determinize(s, seat, rng, weigh = true, open = false) {
   const c = { ...s, log: [] };
   c.hand = s.hand.map(h => h.slice());
   c.lib = s.lib.slice();
@@ -54,6 +56,7 @@ export function determinize(s, seat, rng, weigh = true) {
   // a search under way: the seat is looking through the library, so the cards it may find stay there
   if (s.pending?.t === "search" && s.pending.seat === seat) for (const id of s.pending.ids) pinned.add(id);
   for (const id of knownIn(s, opp, seat)) pinned.add(id);
+  if (open) for (const id of c.hand[opp]) pinned.add(id);
   const pool = [], handSlots = [], libSlots = [];
   c.hand[opp].forEach((id, i) => { if (!pinned.has(id)) { pool.push(id); handSlots.push(i); } });
   c.lib.forEach((id, i) => { if (!pinned.has(id)) { pool.push(id); libSlots.push(i); } });
@@ -338,9 +341,9 @@ function where(c, seat) {
  * opts: deals (most), first (deals before the first look), turns (how far ahead: the turn after next, 2; the tree
  * may reach as far), wide (moves weighed), must (a move to keep to the end: the coach's check), ms (a backstop on the
  * time), judge (the chance of winning where a game is left), explore (the tree's: how much benefit of the doubt a
- * choice tried less gets).
+ * choice tried less gets), open (the other hand known: the lab's analysis only, see determinize).
  */
-export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE } = {}) {
+export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
@@ -351,7 +354,7 @@ export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide 
   let alive = cands.map((_, i) => i), d = 0;
   while (d < deals && alive.length > 1) {
     const rng = seeded(mix(seed, d + 1));
-    const base = determinize(s, seat, rng), runSeed = mix(seed ^ 0x5eed, d + 7);
+    const base = determinize(s, seat, rng, true, open), runSeed = mix(seed ^ 0x5eed, d + 7);
     for (const i of alive) {
       const c = fork(base), r = seeded(runSeed);
       const res = act(c, seat, cands[i], { rng: r, quiet: true });
