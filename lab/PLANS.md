@@ -31,18 +31,37 @@ only then turn the advantage into a win.
 2. **Count every exchange.** Prefer plays that leave the card count even or better: one for one at worst, two for one when
    offered (a counter on a spell that would gain them a card, an answer that also strands a second card, a Retrieval or
    Memory denied when they are behind on cards). Never spend two cards on one, nor a card on something that would not have
-   gained them anything.
-3. **Don't feed their counters.** Cast threats when the other player is tapped low or has just spent a counter, or with a
-   counter of your own to back it, not into open mana and likely answers (the reads of their hand: a chance to answer our
-   Dandân passed up counts against them holding one).
-4. **Grow the mana.** A land every turn, ahead of anything else; cycle or dig to find it. Leave mana open on their turn and,
-   when it isn't needed, spend it at their end step on drawing (Quicken, Brainstorm, Predict, Chart a Course's like): mana
-   unspent is the one resource wasted.
+   gained them anything. Keep count of the Take Inventories in the graveyard (each makes the next one draw more): theirs to
+   deny, yours to build.
+3. **Don't feed their counters; hold two up.** Holding two mana open for a squeezing answer comes before casting a Dandân
+   whenever there is something in hand to squeeze with. Cast threats when the other player is tapped low or has just spent
+   a counter, or with a counter of your own to back it, not into open mana and likely answers (the reads of their hand: a
+   chance to answer our Dandân passed up counts against them holding one).
+4. **Grow the mana, and plan to stay ahead on it.** A land every turn, ahead of anything else; cycle or dig to find it, and
+   keep the next land drops in sight (lands in hand, the draws to find them), not just this turn's. Leave mana open on
+   their turn and, when it isn't needed, spend it at their end step on drawing (Quicken, Brainstorm, Predict, Chart a
+   Course's like): mana unspent at their end step, about to untap, is the one resource wasted.
 5. **Own the equalizers.** Cast Mystic Retrieval and Memory when the mana edge lets you back them with a counter; deny
    theirs: hold a counter for their Memory when they are behind on cards, keep what their Retrieval would find out of the
    graveyard when they have its mana.
 6. **Close when it's safe.** Once three or more cards ahead with a counter in hand and the clock comfortable, deploy threats
    with backup: the squeeze ends in tempo, on your terms.
+
+## Shared by every plan: the tactics
+
+Korbi: squeeze must play the smartest of all, and much of it belongs to every plan bot, as some of these plays are extremely
+powerful. Every time priority comes to a bot with an action available, it weighs its options (never an automatic pass).
+Open mana is worth a lot during the other player's turn and little at their end step, when it is about to untap.
+
+The tactics, a growing list (each one also a puzzle in the tests: a position where it is the right play, which every bot
+must find):
+
+- **Repulse at our Dandân (or any targeted spell at it):** Mind Bend the target again so it is no longer a legal target,
+  and the spell fizzles.
+- **Mystic Retrieval at a spell in the graveyard:** take that spell first, at instant speed, with Mystic Sanctuary (it
+  goes on top of the library instead), and the Retrieval fizzles.
+- **Predict:** draw the known card first, shuffle the library, or cast our own Predict before theirs resolves.
+- **Take Inventory:** count the copies in the graveyard (each adds a card to the next).
 
 ## Deck: win the library race
 
