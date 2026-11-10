@@ -921,24 +921,26 @@ function fillView() {
   const armG = ui.arm && ui.arm.moves[0].targets[0].k === "g", asked = question()?.yard;
   const choose = armG ? new Map(ui.arm.moves.map(m => [m.targets[0].id, () => act2(m)])) : asked ?? null;
   $("viewHead").textContent = choose ? "Choose a card" : `Graveyard · ${s.yard.length}`;
-  const by = new Map();
-  for (let i = s.yard.length - 1; i >= 0; i--) { const id = s.yard[i], k = DECK[id]; if (!by.has(k)) by.set(k, []); by.get(k).push(id); }
   VROWS = [];
+  // every card of the graveyard on its own row, the newest first; a card some item on the stack already aims at is marked
+  // (what aims at it, small, in the upper right) and lit, so two copies of a card can be told apart and the aimed one chosen on purpose
+  const aimed = new Map();
+  for (const it of s.stack) for (const t of it.targets ?? []) if (t.k === "g") aimed.set(t.id, [...(aimed.get(t.id) ?? []), stackName(it)]);
   const rows = [];
-  for (const [name, ids] of by) {
-    const half = HALVES[name] ? HALVES[name][1] : name;
+  for (let i = s.yard.length - 1; i >= 0; i--) {
+    const id = s.yard[i], name = DECK[id], half = HALVES[name] ? HALVES[name][1] : name;
     const casts = MV.filter(m => m.t === "cast" && m.from === "yard" && DECK[m.card] === name);
     let btn = "", dim = "";
     if (choose) {                                    // every card of the graveyard is shown; the ones that can be chosen carry a button
-      const hit = ids.find(id => choose.has(id));
-      if (hit == null) dim = " dim";
-      else { VROWS.push(choose.get(hit)); btn = `<button type="button" class="btn dd-sm primary" data-v="${VROWS.length - 1}">Choose</button>`; }
+      if (!choose.has(id)) dim = "dim";
+      else { VROWS.push(choose.get(id)); btn = `<button type="button" class="btn dd-sm primary" data-v="${VROWS.length - 1}">Choose</button>`; }
     } else if (casts.length) {
       const label = CARDS[half].flashback ? `Flashback ${costWords(CARDS[half].flashback)}` : `Cast ${half}`;
-      VROWS.push(() => { closeView(); cast(casts.map(m => ({ ...m, card: ids[0] })), half); });
+      VROWS.push(() => { closeView(); cast(casts.map(m => ({ ...m, card: id })), half); });
       btn = `<button type="button" class="btn dd-sm primary" data-v="${VROWS.length - 1}">${esc(label)}</button>`;
     }
-    rows.push(`<li class="${dim.trim()}"><button type="button" class="dd-chip dd-name" data-look="${ids[0]}">${esc(name)}</button>${ids.length > 1 ? `<span class="n">× ${ids.length}</span>` : ""}${btn}</li>`);
+    const by = aimed.get(id);
+    rows.push(`<li class="${[dim, by ? "aimed" : ""].filter(Boolean).join(" ")}"><button type="button" class="dd-chip dd-name" data-look="${id}">${esc(name)}</button>${btn}${by ? `<small class="dd-aim" title="Aimed at by ${esc(by.join(", "))}">${esc(by.join(", "))}</small>` : ""}</li>`);
   }
   const none = asked && question().yardNone ? (VROWS.push(question().yardNone), `<p><button type="button" class="btn dd-sm" data-v="${VROWS.length - 1}">Choose none</button></p>`) : "";
   body.innerHTML = `${rows.length ? `<ol class="dd-yard">${rows.join("")}</ol>` : `<p class="dd-sub">Empty.</p>`}${none}

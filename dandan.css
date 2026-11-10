@@ -382,3 +382,7 @@ html[data-theme="office"] :is(.dd-zone, .dd-card, .dd-pile, .dd-st, .dd-cre) { b
 .dd-tile small { font-size: .7rem; opacity: .75; }
 .dd-tilerow .dd-info { position: absolute; top: .25rem; right: .25rem; min-width: 1.6rem; padding: .1rem .35rem; }
 .dd-yard li.dim { opacity: .45; }
+.dd-yard li { position: relative; }
+.dd-yard li.aimed { background: var(--dd-soft); outline: 2px solid var(--dd-in); outline-offset: -2px; border-radius: .3rem; padding-top: 1.1rem; }
+.dd-yard li.aimed.dim { opacity: 1; }
+.dd-aim { position: absolute; top: .15rem; right: .4rem; font-size: .65rem; line-height: 1; padding: .12rem .35rem; border-radius: .6rem; background: var(--dd-in); color: var(--sheet, #fff); white-space: nowrap; }
