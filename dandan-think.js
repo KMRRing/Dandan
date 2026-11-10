@@ -305,7 +305,7 @@ function choose(node, ms, c, seat, who, at, explore = EXPLORE) {
  * the deals'. seen: where it was left, and the other player's first choice on the way (their answer, for the coach's
  * words).
  */
-export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE) {
+export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null) {
   const opp = other(seat), path = [];
   let node = root, growing = true;
   for (let i = 0; i < 4000 && !c.over; i++) {
@@ -324,7 +324,7 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
         if (pick.k.node) node = pick.k.node;
         else { pick.k.node = newNode(); growing = false; }
       } else m = ms[0];
-    } else m = policyMove(c, who, { rng });
+    } else m = rollout ? rollout(c, who, rng) : policyMove(c, who, { rng });
     // their answer, for the coach: what they do first in their own main phase (their turn's plan), else first at all
     // (a land is no answer)
     if (seen && who === opp && m.t !== "pass" && m.t !== "land" && !seen.main && c.turn < to) {
@@ -364,7 +364,7 @@ function where(c, seat) {
  * Deeper searches keep their first look at LOOK_FROM, as measured for them.
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM } = {}) {
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
@@ -381,11 +381,11 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
       const res = act(c, seat, cands[i], { rng: r, quiet: true });
       const at = {};
       if (typeof res === "string") vals[i].push(-1);
-      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore));
+      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout));
       seen[i].push(at);
     }
     d++;
-    if (d >= first && (d & (d - 1)) === 0) alive = prune(alive, vals, cands, must, hold);   // a look at 128, 256, 512...
+    if (d >= first && (d & (d - 1)) === 0) alive = prune(alive, vals, cands, must, hold, z);   // a look at 128, 256, 512...
     if (Date.now() - t0 > ms) break;
   }
   const list = cands.map((move, i) => {
@@ -447,11 +447,13 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
 const LOOK_FROM = 128;
 const SPREAD = 0.06;
 /**
+ * `z`: how many standard errors behind a move must be to go (3; the lab tries fewer). `rollout` (lab): what moves both
+ * seats past the tree, in place of Medium (a learned policy, dandan-netpolicy.js).
  * `hold` (lab, 10 November 2026: looks from 16 deals, to spend the deals on the moves still in it): passing is never
  * dropped. Holding back pays only in the deals where the other player shows the spell it waits for (keeping a Mystic
  * Sanctuary's mana for their Retrieval, Korbi), so over a few deals it can trail by chance and still be the move.
  */
-function prune(alive, vals, cands, must, hold = false) {
+function prune(alive, vals, cands, must, hold = false, z = 3) {
   const k = Math.min(...alive.map(i => vals[i].length));
   const mean = i => vals[i].slice(0, k).reduce((a, b) => a + b, 0) / k;
   const lead = alive.reduce((b, i) => (mean(i) > mean(b) ? i : b), alive[0]);
@@ -460,7 +462,7 @@ function prune(alive, vals, cands, must, hold = false) {
     const diffs = vals[i].slice(0, k).map((x, j) => vals[lead][j] - x);
     const m = diffs.reduce((a, b) => a + b, 0) / k;
     const sd = Math.sqrt(diffs.reduce((a, x) => a + (x - m) ** 2, 0) / Math.max(1, k - 1));
-    return m < 3 * Math.max(sd, SPREAD) / Math.sqrt(k) + 0.01;
+    return m < z * Math.max(sd, SPREAD) / Math.sqrt(k) + 0.01;
   });
 }
 

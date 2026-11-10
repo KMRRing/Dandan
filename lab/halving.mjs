@@ -6,7 +6,8 @@
 // way to choose differently is to drop the best early. One row a decision:
 //   { seed, i, n: candidates, full, half: the moves, same, gap: the full search's value of its move less that of the
 //     halved one's (0 when the same), work: deals spent { full, half } }
-// usage: node lab/halving.mjs <shard> <shards> <out> <self-play job ids> [deals 64] [first 16] [every 3]
+// `z`: how many standard errors behind a move must be to go (3 as Hard has it; fewer cuts harder).
+// usage: node lab/halving.mjs <shard> <shards> <out> <self-play job ids> [deals 64] [first 16] [every 3] [z 3]
 import fs from "node:fs";
 import { readParts } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
@@ -15,7 +16,7 @@ import { think } from "../dandan-think.js";
 import { moveName } from "../dandan-words.js";
 
 const [shard, shards, out, ids] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5]];
-const deals = Number(process.argv[6] ?? 64), first = Number(process.argv[7] ?? 16), every = Number(process.argv[8] ?? 3);
+const deals = Number(process.argv[6] ?? 64), first = Number(process.argv[7] ?? 16), every = Number(process.argv[8] ?? 3), z = Number(process.argv[9] ?? 3);
 const J = x => JSON.parse(JSON.stringify(x));
 const keyOf = m => JSON.stringify(m);
 const work = r => r.list.reduce((a, c) => a + (c.n || 0), 0);
@@ -29,9 +30,9 @@ for (const id of ids.split(",")) for (const text of await readParts(id)) for (co
     const [seat, move] = rec.moves[i];
     if (k++ % (every * shards) === shard * every) {
       const s = () => rules.restore(J(G.state));
-      const full = think(s(), seat, { deals, ms: 1e9 });
+      const full = think(s(), seat, { deals, ms: 1e9, first: 128, hold: false });
       if (!full.only) {
-        const half = think(s(), seat, { deals, ms: 1e9, first, hold: true });
+        const half = think(s(), seat, { deals, ms: 1e9, first, hold: true, z });
         const same = keyOf(full.best) === keyOf(half.best);
         const valueIn = (r, m) => r.list.find(c => keyOf(c.move) === keyOf(m))?.mean ?? NaN;
         fs.appendFileSync(out, JSON.stringify({
