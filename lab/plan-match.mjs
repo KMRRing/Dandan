@@ -5,7 +5,8 @@
 //   end  the library at 20 cards or fewer
 // A deal is played by two tempo Medium (today's) until the first quiet main phase in the setting; from there the two plans
 // play it out, then again from the same position with the seats swapped. A deal that never reaches the setting is skipped.
-// One row a game: { pair, aSeat, aWon (plan A's score), skip?, phase, from: { lib, life, hands, lands }, turns, why }.
+// One row a game: { pair, aSeat, aWon (plan A's score), skip?, phase, from: { lib, life, hands, lands }, turns, why,
+//   after: plan A's lead six turns in (lands, cards in hand, life: its own less the other's; absent when the game ended sooner) }.
 // usage: node lab/plan-match.mjs <shard> <shards> <out.jsonl> <pairs> <plan A> <plan B> <mid | end> [first deal 0]
 import fs from "node:fs";
 import { rules } from "../dandan-rules.js";
@@ -39,9 +40,13 @@ for (let p = first; p < first + n; p++) {
   if (rules.over(G.state) || i >= 4000) { for (const aSeat of [0, 1]) fs.appendFileSync(out, JSON.stringify({ pair: p, aSeat, skip: 1, phase }) + "\n"); continue; }
   const st = G.state, start = { lib: st.lib.length, life: [...st.life], hands: [st.hand[0].length, st.hand[1].length], lands: [0, 1].map(x => st.bf.filter(l => l.ctl === x && isLand(l)).length) };
   for (const aSeat of [0, 1]) {
-    let H = J(G), k = i;
-    for (; k < 6000 && !rules.over(H.state); k++) H = move(H, k, who => (who === aSeat ? A : B));
+    let H = J(G), k = i, after;
+    const lead = st2 => { const l = x => st2.bf.filter(q => q.ctl === x && isLand(q)).length, b = other(aSeat); return { lands: l(aSeat) - l(b), hand: st2.hand[aSeat].length - st2.hand[b].length, life: st2.life[aSeat] - st2.life[b] }; };
+    for (; k < 6000 && !rules.over(H.state); k++) {
+      if (!after && H.state.turn >= st.turn + 6) after = lead(H.state);
+      H = move(H, k, who => (who === aSeat ? A : B));
+    }
     const w = H.state.winner;
-    fs.appendFileSync(out, JSON.stringify({ pair: p, aSeat, aWon: w === aSeat ? 1 : w < 0 ? 0.5 : 0, phase, from: start, turns: H.state.turn, why: H.state.why }) + "\n");
+    fs.appendFileSync(out, JSON.stringify({ pair: p, aSeat, aWon: w === aSeat ? 1 : w < 0 ? 0.5 : 0, phase, from: start, turns: H.state.turn, why: H.state.why, ...(after ? { after } : {}) }) + "\n");
   }
 }
