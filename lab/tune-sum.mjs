@@ -1,23 +1,8 @@
 // Sums one tune-round job: what each candidate scored over the pairs it played, and against the base candidate (d 0) on the same pairs.
 // usage: node lab/tune-sum.mjs <job id> [top 25]      reads results/<id>/part-*.jsonl from LAB_BUCKET (on a Google machine) or LAB_DIR (a folder queue)
-import fs from "node:fs";
-import path from "node:path";
+import { readParts } from "./lib.mjs";
 const [id, top = 25] = [process.argv[2], Number(process.argv[3] ?? 25)];
-const parts = [];
-if (process.env.LAB_DIR) {
-  const dir = path.join(process.env.LAB_DIR, "results", id);
-  for (const f of fs.readdirSync(dir).filter(f => /^part-\d+\.jsonl$/.test(f))) parts.push(fs.readFileSync(path.join(dir, f), "utf8"));
-} else {
-  const bucket = process.env.LAB_BUCKET, api = `https://storage.googleapis.com/storage/v1/b/${bucket}/o`;
-  const { access_token } = await (await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } })).json();
-  const H = { authorization: "Bearer " + access_token };
-  let list = [], pageToken = "";
-  do {
-    const r = await (await fetch(`${api}?prefix=${encodeURIComponent(`results/${id}/part-`)}${pageToken ? "&pageToken=" + pageToken : ""}`, { headers: H })).json();
-    list.push(...(r.items ?? []).map(o => o.name)); pageToken = r.nextPageToken ?? "";
-  } while (pageToken);
-  for (const name of list) parts.push(await (await fetch(`${api}/${encodeURIComponent(name)}?alt=media`, { headers: H })).text());
-}
+const parts = await readParts(id);
 const by = new Map(); // candidate -> { k, d, rows: Map pair -> score }
 for (const text of parts) for (const line of text.split("\n")) {
   if (!line) continue;
