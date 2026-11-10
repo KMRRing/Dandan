@@ -6,8 +6,10 @@
 //   hard   by Hard at `think` deals, against Hard at `think` deals
 //   <plan> by a Medium playing that plan, against the same Hard
 // One row a position: { seed, i, phase, seat, lib, life, hands, lands, hardMove, hard: its score, plans: { name: { move, score } } }.
-// The positions where a plan scores well above Hard are the finds. usage:
-// node lab/locks.mjs <shard> <shards> <out> <self-play job ids, comma-separated> [plans squeeze] [deals 24] [think 16] [every 6th quiet turn]
+// The positions where a plan scores well above Hard are the finds. With `turn` 1 the plan plays only the rest of this turn and
+// Hard the rest of the game, so the difference is the plan's decision, not Medium's weaker play after it (al1: a plan playing
+// to the end against Hard scored ~25 points under Hard everywhere); positions where the plan's move is Hard's are skipped. usage:
+// node lab/locks.mjs <shard> <shards> <out> <self-play job ids, comma-separated> [plans squeeze] [deals 24] [think 16] [every 6th quiet turn] [turn 0]
 import fs from "node:fs";
 import { readParts } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
@@ -22,6 +24,7 @@ const plans = (process.argv[6] ?? "squeeze").split(","), deals = Number(process.
 const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random;
 const threat = (st, seat) => 8 * creatures(st, other(seat)).filter(d => st.bf.some(l => l.ctl === seat && isLand(l) && typesOf(l).includes(needType(d)))).length;
 const phaseOf = st => (st.lib.length <= 20 ? "end" : st.lib.length <= 55 && st.life.every(l => l >= 12) && [0, 1].every(x => threat(st, x) < st.life[x]) ? "mid" : null);
+const turnOnly = process.argv[10] === "1";
 const hard = { deals: depth, ms: 1e9 };
 
 /** The side `seat` played by `mine` (a move function) from G to the end, the other by Hard: 1 won, 0 lost, a half drawn. */
@@ -32,7 +35,7 @@ function playOut(G, seat, mine, salt) {
   for (let i = 0; i < 4000 && !rules.over(H.state); i++) {
     const who = rules.toMove(H.state), s = rules.restore(J(H.state));
     Math.random = seeded(mix(salt, i + 1));
-    const m = who === seat ? mine(s, who) : thinkMove(s, who, hard);
+    const m = who === seat && (!turnOnly || H.state.turn === G.state.turn) ? mine(s, who) : thinkMove(s, who, hard);
     Math.random = realRandom;
     const r = applyMove(rules, H, who, m, 0);
     if (r.error) throw new Error(r.error);
@@ -52,8 +55,9 @@ for (const id of ids.split(",")) for (const text of await readParts(id)) for (co
     const ph = phaseOf(st);
     if (ph && st.turn !== lastTurn && seat === st.active && !st.stack.length && !st.pending && st.step === "main1") {
       lastTurn = st.turn;
-      if (quietTurns++ % every === 0 && k++ % shards === shard) {
-        const s = rules.restore(J(st)), row = { seed: rec.seed, i, phase: ph, seat, lib: st.lib.length, life: [...st.life], hands: [st.hand[0].length, st.hand[1].length], lands: [0, 1].map(x => st.bf.filter(l => l.ctl === x && isLand(l)).length), hardMove: moveName(move, s, seat), plans: {} };
+      if (quietTurns++ % every === 0 && k++ % shards === shard) lock: {
+        const s = rules.restore(J(st)), firsts = Object.fromEntries(plans.map(p => [p, moveName(policyMove(rules.restore(J(st)), seat, { rng: seeded(1), style: p }), s, seat)])), row = { seed: rec.seed, i, phase: ph, seat, lib: st.lib.length, life: [...st.life], hands: [st.hand[0].length, st.hand[1].length], lands: [0, 1].map(x => st.bf.filter(l => l.ctl === x && isLand(l)).length), hardMove: moveName(move, s, seat), plans: {} };
+        if (turnOnly && plans.every(p => firsts[p] === row.hardMove)) break lock; // the plan would do what Hard did
         let sum = 0;
         for (let d = 0; d < deals; d++) sum += playOut(G, seat, (s2, who) => thinkMove(s2, who, hard), mix(rec.seed * 31 + i, d + 1));
         row.hard = +(sum / deals).toFixed(3);
@@ -61,7 +65,7 @@ for (const id of ids.split(",")) for (const text of await readParts(id)) for (co
           const mine = (s2, who) => policyMove(s2, who, { rng: Math.random, style: plan });
           let t = 0;
           for (let d = 0; d < deals; d++) t += playOut(G, seat, mine, mix(rec.seed * 31 + i, d + 1));
-          row.plans[plan] = { move: moveName(policyMove(rules.restore(J(st)), seat, { rng: seeded(1), style: plan }), s, seat), score: +(t / deals).toFixed(3) };
+          row.plans[plan] = { move: firsts[plan], score: +(t / deals).toFixed(3) };
         }
         fs.appendFileSync(out, JSON.stringify(row) + "\n");
       }
