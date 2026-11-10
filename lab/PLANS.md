@@ -63,6 +63,21 @@ must find):
 - **Predict:** draw the known card first, shuffle the library, or cast our own Predict before theirs resolves.
 - **Take Inventory:** count the copies in the graveyard (each adds a card to the next).
 
+### Holding mana (Korbi, 10 November 2026)
+
+Hold mana open in their turn when either:
+1. we hold an instant draw (Predict) and don't need the card now, because the land for the turn is already played; or
+2. we hold many reactive spells, counterspells above all.
+
+His examples, each a test position (4 mana in all of them):
+- Take Inventory + Memory Lapse: cast Take Inventory, unless we *know* they hold a counterspell (read: one they have
+  shown, or one implied by what they didn't do).
+- Take Inventory + 2 Memory Lapse: cast nothing, keep it all open.
+- Predict + Take Inventory + Memory Lapse, land for the turn not yet played: cast Take Inventory (most likely), since it
+  can find the land.
+- Same hand, land already played: keep Predict and Memory Lapse open. Predict when they make a play at the top of the
+  library; Memory Lapse a strong play of theirs, or a spell aimed at stopping our Predict.
+
 ## Deck: win the library race
 
 The library is shared; whoever must draw from it empty loses. A player behind on the board but ahead on answers can win by
