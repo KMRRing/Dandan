@@ -438,11 +438,13 @@ function prune(alive, vals, cands, must) {
 /**
  * How much weighing each use gets: Hard's move; the coach's weighing (a Hint, Always) and its check of a move of
  * yours, wider and in more deals; and the same on the page's own thread, where a browser has no worker.
+ * The deals decide; the time is a backstop for a slow phone, 10 s since 10 November 2026 (Korbi: a recent iPhone is
+ * far quicker than the 2.5 s allowed for, and the late game, played to its end, needs the room).
  */
 export const BUDGET = {
-  move: { deals: 64, ms: 2500 },
-  think: { deals: 96, wide: 9, ms: 6000 },
-  check: { deals: 96, wide: 9, ms: 7000 },
+  move: { deals: 64, ms: 10000 },
+  think: { deals: 96, wide: 9, ms: 10000 },
+  check: { deals: 96, wide: 9, ms: 10000 },
   here: { deals: 32, wide: 7, ms: 1500 },
 };
 
