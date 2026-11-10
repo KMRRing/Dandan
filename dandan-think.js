@@ -343,7 +343,7 @@ function where(c, seat) {
  * time), judge (the chance of winning where a game is left), explore (the tree's: how much benefit of the doubt a
  * choice tried less gets), open (the other hand known: the lab's analysis only, see determinize).
  */
-export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false } = {}) {
+export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = false } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
@@ -364,7 +364,7 @@ export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide 
       seen[i].push(at);
     }
     d++;
-    if (d >= first && (d & (d - 1)) === 0) alive = prune(alive, vals, cands, must);   // a look at 128, 256, 512...
+    if (d >= first && (d & (d - 1)) === 0) alive = prune(alive, vals, cands, must, hold);   // a look at 128, 256, 512...
     if (Date.now() - t0 > ms) break;
   }
   const list = cands.map((move, i) => {
@@ -425,12 +425,17 @@ export function think(s, seat, { deals = 48, first = LOOK_FROM, turns = 2, wide 
  */
 const LOOK_FROM = 128;
 const SPREAD = 0.06;
-function prune(alive, vals, cands, must) {
+/**
+ * `hold` (lab, 10 November 2026: looks from 16 deals, to spend the deals on the moves still in it): passing is never
+ * dropped. Holding back pays only in the deals where the other player shows the spell it waits for (keeping a Mystic
+ * Sanctuary's mana for their Retrieval, Korbi), so over a few deals it can trail by chance and still be the move.
+ */
+function prune(alive, vals, cands, must, hold = false) {
   const k = Math.min(...alive.map(i => vals[i].length));
   const mean = i => vals[i].slice(0, k).reduce((a, b) => a + b, 0) / k;
   const lead = alive.reduce((b, i) => (mean(i) > mean(b) ? i : b), alive[0]);
   return alive.filter(i => {
-    if (i === lead || (must && key(cands[i]) === key(must))) return true;
+    if (i === lead || (must && key(cands[i]) === key(must)) || (hold && cands[i].t === "pass")) return true;
     const diffs = vals[i].slice(0, k).map((x, j) => vals[lead][j] - x);
     const m = diffs.reduce((a, b) => a + b, 0) / k;
     const sd = Math.sqrt(diffs.reduce((a, x) => a + (x - m) ** 2, 0) / Math.max(1, k - 1));
