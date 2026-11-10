@@ -61,7 +61,8 @@ must find):
 - **Mystic Retrieval at a spell in the graveyard:** take that spell first, at instant speed, with Mystic Sanctuary (it
   goes on top of the library instead), and the Retrieval fizzles.
 - **Predict:** draw the known card first, shuffle the library, or cast our own Predict before theirs resolves.
-- **Take Inventory:** count the copies in the graveyard (each adds a card to the next).
+- **Take Inventory:** count the copies in the graveyard (each adds a card to the next). Don't cast the first one into
+  an opponent known to hold one: let them go first and draw the extra card off theirs.
 
 ### Holding mana (Korbi, 10 November 2026)
 
@@ -70,8 +71,8 @@ Hold mana open in their turn when either:
 2. we hold many reactive spells, counterspells above all.
 
 His examples, each a test position (4 mana in all of them):
-- Take Inventory + Memory Lapse: cast Take Inventory, unless we *know* they hold a counterspell (read: one they have
-  shown, or one implied by what they didn't do).
+- Take Inventory + Memory Lapse: cast Take Inventory, unless we *know* they hold a Take Inventory too: ours in the
+  graveyard would give theirs an extra card. Never be the one who sets up their Take Inventory.
 - Take Inventory + 2 Memory Lapse: cast nothing, keep it all open.
 - Predict + Take Inventory + Memory Lapse, land for the turn not yet played: cast Take Inventory (most likely), since it
   can find the land.
