@@ -416,6 +416,40 @@ export function answerWorth(F, id, seat, mana) {
  * the chance it holds one). `mana`: what it will have.
  */
 export const yardWorth = (F, yard, seat, mana, inHand = 0) => yardPick(F, yard, seat, mana, inHand).v;
+/**
+ * What the best card of a graveyard (all but the one at `skip`, a flashed-back Retrieval) is worth to `seat` with `left` mana:
+ * { v, id, kill }. A graveyard is long and is gone through again for every move the decision weighs, so each card's value
+ * there (the better of what it is worth as a card and as an answer, with how it was reached) is kept in `memo` in a table by
+ * card, one for each seat and mana: a number to read instead of a worth to work out. (The first of equal values wins, as ever.)
+ */
+function pull(F, memo, seat, ids, skip, left) {
+  const tk = seat * 256 + left + 64;
+  let tab = memo.tabs.get(tk);
+  if (!tab) memo.tabs.set(tk, tab = { v: new Float64Array(DECK.length).fill(NaN), kill: new Uint8Array(DECK.length) });
+  const vals = tab.v;
+  let best = { v: 0, id: null, kill: false };
+  for (let i = 0; i < ids.length; i++) {
+    if (i === skip) continue;
+    const id = ids[i];
+    let v = vals[id];
+    if (v !== v) {
+      // not seen at this mana yet: -1 for what is no spell, else its value
+      if (!isSpellCard(id)) v = -1;
+      else {
+        // (a card's worth as a card is the same at any mana: kept once for the seat)
+        const ck = id * 2 + seat;
+        let card = memo.card[ck];
+        if (card !== card) memo.card[ck] = card = cardWorth(F, id, seat);
+        const kill = STAYS[front(id)] != null ? answerWorth(F, id, seat, left) : 0;
+        v = Math.max(card, kill);
+        tab.kill[id] = kill > card ? 1 : 0;
+      }
+      vals[id] = v;
+    }
+    if (v > best.v) best = { v, id, kill: tab.kill[id] === 1 };
+  }
+  return best;
+}
 /** yardWorth's working: { v, id (the card it would find), kill (it would answer a Dandân the same turn), flash (by flashback) }. */
 export function yardPick(F, yard, seat, mana, inHand = 0) {
   // the same graveyard is valued again for every move the decision weighs (each adds or removes a card), and each card's worth
@@ -423,34 +457,21 @@ export function yardPick(F, yard, seat, mana, inHand = 0) {
   // (nothing to flash back and none in the hand: nothing found, with no need to look)
   const flash = yard.findIndex(id => DECK[id] === "Mystic Retrieval"), canFlash = flash >= 0 && mana >= 3 && hasRed(F.s, seat);
   if (!canFlash && !(inHand > 0 && mana >= 4)) return { v: 0, id: null, kill: false, flash: false };
-  const memo = F.yardMemo ??= { picks: new Map(), card: new Map(), kill: new Map() };
+  const memo = F.yardMemo ??= { picks: new Map(), tabs: new Map(), card: new Float64Array(DECK.length * 2).fill(NaN) };
   // (the graveyard as a string of its cards' numbers, which is cheaper to make than a list joined)
   let pickKey = String.fromCharCode(seat, mana + 8, Math.round(inHand * 1000));
   for (let i = 0; i < yard.length; i++) pickKey += String.fromCharCode(yard[i]);
   const kept = memo.picks.get(pickKey);
   if (kept) return kept;
-  const pull = (ids, left) => {
-    let best = { v: 0, id: null, kill: false };
-    for (const id of ids) {
-      if (!isSpellCard(id)) continue;
-      const ck = id * 2 + seat, kk = ck * 256 + left + 64;
-      let card = memo.card.get(ck), kill = memo.kill.get(kk);
-      if (card === undefined) memo.card.set(ck, card = cardWorth(F, id, seat));
-      if (kill === undefined) memo.kill.set(kk, kill = answerWorth(F, id, seat, left));
-      const v = Math.max(card, kill);
-      if (v > best.v) best = { v, id, kill: kill > card };
-    }
-    return best;
-  };
   let out = { v: 0, id: null, kill: false, flash: false };
   // flashed back it's exiled: worth what it finds, less the turn's mana (a little)
   if (canFlash) {
-    const p = pull(yard.filter((_, i) => i !== flash), mana - 3);
+    const p = pull(F, memo, seat, yard, flash, mana - 3);
     out = { ...p, v: p.v - 0.2, flash: true };
   }
   // from the hand it's a card spent on the one it finds
   if (inHand > 0 && mana >= 4) {
-    const p = pull(yard, mana - 4), v = inHand * (p.v - 0.6);
+    const p = pull(F, memo, seat, yard, -1, mana - 4), v = inHand * (p.v - 0.6);
     if (v > out.v) out = { ...p, v, flash: false };
   }
   if (out.v < 0) out = { v: 0, id: null, kill: false, flash: false };

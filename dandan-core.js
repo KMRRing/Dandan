@@ -46,7 +46,8 @@ export const isLandId = id => defOf(id).type === "land";
 /** A card's name for the log. */
 export const nm = id => (id >= TOKEN_AT ? "Clue" : DECK[id]);
 /** Whether a card is an instant or a sorcery (the split card is both, in the graveyard). */
-export const isSpellCard = id => id < TOKEN_AT && (defOf(id).type === "instant" || defOf(id).type === "sorcery" || !!HALVES[DECK[id]]);
+const SPELL_CARD = Uint8Array.from(DECK, (n, id) => (DEFS[id].type === "instant" || DEFS[id].type === "sorcery" || HALVES[n] ? 1 : 0));
+export const isSpellCard = id => id < TOKEN_AT && SPELL_CARD[id] === 1;
 
 // ---------- permanents ----------
 export const perm = (s, id) => s.bf.find(p => p.id === id);
