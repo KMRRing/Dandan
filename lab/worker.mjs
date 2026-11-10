@@ -19,12 +19,13 @@
 //
 // usage: node lab/worker.mjs            (on Google: LAB_BUCKET=<bucket>)      a worker stops when nothing has come for LAB_IDLE_MIN
 //        LAB_DIR=<folder> node lab/worker.mjs   (the same queue in a folder, for trying it out)
-// settings (environment): LAB_FILL (above), LAB_SLOTS cores to use (all), LAB_IDLE_MIN minutes without work before it stops (15), LAB_POLL_SEC (15),
+// settings (environment): LAB_KEY a service-account key file, off Google; LAB_FILL (above), LAB_SLOTS cores to use (all), LAB_IDLE_MIN minutes without work before it stops (15), LAB_POLL_SEC (15),
 //        LAB_MAX_HOURS the most it ever runs (8), LAB_WORK where it works (/tmp/lab-work), LAB_REPO the repo to run (the public one).
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn, execFileSync } from "node:child_process";
+import { googleToken } from "./lib.mjs";
 
 const env = process.env;
 const SLOTS = Number(env.LAB_SLOTS) || os.cpus().length, WORK = env.LAB_WORK || "/tmp/lab-work";
@@ -56,13 +57,7 @@ function folderStore(root) {
   };
 }
 function bucketStore(bucket) {
-  let tok = null, exp = 0;
-  const token = async () => {
-    if (tok && Date.now() < exp) return tok;
-    const r = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
-    if (!r.ok) throw new Error("no access token from the metadata server: " + r.status);
-    const j = await r.json(); tok = j.access_token; exp = Date.now() + (j.expires_in - 120) * 1000; return tok;
-  };
+  const token = googleToken;   // the machine's own account on Google, a service-account key (LAB_KEY) elsewhere
   const call = async (url, init = {}) => {
     for (let tries = 0; ; tries++) {
       try {
