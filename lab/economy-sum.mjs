@@ -6,8 +6,8 @@ const ref = rows.reduce((a, r) => a + r.refWork, 0);
 for (const b of Object.keys(rows[0]?.by ?? {})) {
   const xs = rows.map(r => r.by[b]), lost = xs.map(x => x.lost).filter(Number.isFinite);
   console.log(JSON.stringify({
-    deals: Number(b), decisions: xs.length, same: +(xs.filter(x => x.same).length / xs.length).toFixed(4),
+    variant: b, decisions: xs.length, same: +(xs.filter(x => x.same).length / xs.length).toFixed(4),
     lostPerDecision: +(lost.reduce((a, x) => a + x, 0) / xs.length).toFixed(5), over2points: lost.filter(x => x > 0.02).length, over5points: lost.filter(x => x > 0.05).length,
-    workShare: +(xs.reduce((a, x) => a + x.work, 0) / ref).toFixed(3),
+    workShare: +(xs.reduce((a, x) => a + x.work, 0) / ref).toFixed(3), ...(xs[0].ms != null ? { ms: xs.reduce((a, x) => a + x.ms, 0) } : {}),
   }));
 }

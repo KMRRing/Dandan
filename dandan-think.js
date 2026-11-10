@@ -298,6 +298,35 @@ function choose(node, ms, c, seat, who, at, explore = EXPLORE) {
   }
   return { k: best, m };
 }
+// ---------- positions met again: one node for each ----------
+/**
+ * A position as the searching seat sees it, for merging the tree where two lines meet (Korbi, 11 November 2026: "anytime
+ * two paths, anywhere, get to the same position, the paths should merge"): land then spell and spell then land, a counter
+ * war resolved in either order. Only what that seat could know goes in (its own hand, the other's by count and by the
+ * cards it has seen there, the table, the stack, the graveyard, lives, the step, who is to act), so deals that differ in
+ * what it can't see share the node, as they share a node by path today. The statistics of a merged node are the sum of
+ * every line's visits, so a position reached two ways is weighed on the evidence of both.
+ */
+function posKey(c, seat) {
+  const opp = other(seat), nm = id => DECK[id] ?? "Clue", sorted = a => a.map(nm).sort().join(",");
+  const bf = c.bf.map(p => `${p.ctl}${nm(p.id)}${p.tapped ? "t" : ""}${p.sick ? "s" : ""}${p.tc ? JSON.stringify(p.tc) : ""}${p.dmg || ""}`).sort().join(";");
+  const st = c.stack.map(x => `${x.ctl}${x.name}:${(x.targets || []).map(t => t.k + (t.k === "c" ? nm(t.id) : t.k === "g" ? nm(t.id) : t.k === "s" ? t.sid : t.seat)).join("/")}`).join(";");
+  return [c.turn, c.step, c.active, toMove(c), c.pending?.t ?? "", c.life.join(","), c.lib.length, c.played ? 1 : 0, c.attacked ? 1 : 0,
+    sorted(c.hand[seat]), c.hand[opp].length, sorted(knownIn(c, opp, seat)), bf, st, sorted(c.yard), (c.pool || []).join("|"),
+    c.combat ? JSON.stringify(c.combat) : ""].join("#");
+}
+/** The search's nodes: by path (a node per edge, as before) or, with merging, by position (a table the search may keep). */
+const tables = new Map();
+/** A kept table for this game and seat (reuse): the last search's, while the game goes on, so the next decision starts from what it found. */
+function tableFor(s, seat) {
+  // one game at a time: a new game (the turn goes back) or a gap of more than a turn starts afresh
+  let t = tables.get(seat);
+  if (!t || t.turn > s.turn || s.turn - t.turn > 1) { t = { turn: s.turn, map: new Map() }; tables.set(seat, t); }
+  t.turn = s.turn;
+  if (t.map.size > 200000) t.map.clear();
+  return t.map;
+}
+
 /**
  * One deal of a move weighed, down its tree: each player's decisions searched (choose) until a new one is reached,
  * Medium moving both seats from there until the turn `to` begins; the seat's chance there (the judge), counted back up
@@ -305,7 +334,7 @@ function choose(node, ms, c, seat, who, at, explore = EXPLORE) {
  * the deals'. seen: where it was left, and the other player's first choice on the way (their answer, for the coach's
  * words).
  */
-export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null) {
+export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null) {
   const opp = other(seat), path = [];
   let node = root, growing = true;
   for (let i = 0; i < 4000 && !c.over; i++) {
@@ -316,12 +345,16 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
     if (growing && c.turn < to) {
       const ms = candidates(c, who, { wide: WIDTH });
       if (ms.length > 1) {
+        // merged: the node is the position's, wherever it was reached from; one not met before ends the tree for this deal
+        let fresh = false;
+        if (table) { const k = posKey(c, seat); node = table.get(k); if (!node) { node = newNode(); table.set(k, node); fresh = true; } }
         // a decision's children are keyed by who decides and where, as well as by the move: in other deals the same
         // line can reach another seat's decision first (a hand with nothing to do there is passed over)
         const pick = choose(node, ms, c, seat, who, `${who}${c.step}${c.stack.length}${c.pending?.t ?? ""}:`, explore);
         m = pick.m;
         path.push([pick.k, who]);
-        if (pick.k.node) node = pick.k.node;
+        if (table) { if (fresh) growing = false; }
+        else if (pick.k.node) node = pick.k.node;
         else { pick.k.node = newNode(); growing = false; }
       } else m = ms[0];
     } else m = rollout ? rollout(c, who, rng) : policyMove(c, who, { rng });
@@ -364,7 +397,7 @@ function where(c, seat) {
  * Deeper searches keep their first look at LOOK_FROM, as measured for them.
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null } = {}) {
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, merge = false, reuse = false, steady = 0 } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
@@ -372,6 +405,8 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
   if (n === 1) return { best: cands[0], list: [{ move: cands[0], mean: NaN, se: 0, n: 0 }], deals: 0, only: true };
   const to = s.turn + Math.max(turns, endOfLibrary(s)), seed = seedOf(s, seat);
   const vals = cands.map(() => []), seen = cands.map(() => []), roots = cands.map(newNode);
+  const table = reuse ? tableFor(s, seat) : merge ? new Map() : null;
+  let lead = -1, steadyLooks = 0;
   let alive = cands.map((_, i) => i), d = 0;
   while (d < deals && alive.length > 1) {
     const rng = seeded(mix(seed, d + 1));
@@ -381,11 +416,21 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
       const res = act(c, seat, cands[i], { rng: r, quiet: true });
       const at = {};
       if (typeof res === "string") vals[i].push(-1);
-      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout));
+      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table));
       seen[i].push(at);
     }
     d++;
-    if (d >= first && (d & (d - 1)) === 0) alive = prune(alive, vals, cands, must, hold, z);   // a look at 128, 256, 512...
+    if (d >= first && (d & (d - 1)) === 0) {
+      alive = prune(alive, vals, cands, must, hold, z);   // a look at 128, 256, 512...
+      // steady (lab): stop once the same move has led clearly at `steady` looks in a row, not at the first one that
+      // shows it ahead (Korbi: "if the leader is clear for x amount of time, ditch it"; a depth hit can come late)
+      if (steady && alive.length > 1) {
+        const top = clearLeader(alive, vals);
+        steadyLooks = top >= 0 && top === lead ? steadyLooks + 1 : top >= 0 ? 1 : 0;
+        lead = top;
+        if (steadyLooks >= steady) break;
+      }
+    }
     if (Date.now() - t0 > ms) break;
   }
   const list = cands.map((move, i) => {
@@ -445,6 +490,20 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
  * longer the search ran). The same rule makes the 2048-deal search better and quicker than the 4096-deal one it replaces.
  */
 const LOOK_FROM = 128;
+/** The move leading every other by more than three standard errors of the gap over their shared deals, or -1. */
+function clearLeader(alive, vals) {
+  const k = Math.min(...alive.map(i => vals[i].length));
+  const mean = i => { let t = 0; for (let j = 0; j < k; j++) t += vals[i][j]; return t / k; };
+  const lead = alive.reduce((b, i) => (mean(i) > mean(b) ? i : b), alive[0]);
+  for (const i of alive) {
+    if (i === lead) continue;
+    const diffs = vals[lead].slice(0, k).map((x, j) => x - vals[i][j]);
+    const m = diffs.reduce((a, b) => a + b, 0) / k;
+    const sd = Math.sqrt(diffs.reduce((a, x) => a + (x - m) ** 2, 0) / Math.max(1, k - 1));
+    if (m < 3 * Math.max(sd, SPREAD) / Math.sqrt(k)) return -1;
+  }
+  return lead;
+}
 const SPREAD = 0.06;
 /**
  * `z`: how many standard errors behind a move must be to go (3; the lab tries fewer). `rollout` (lab): what moves both
