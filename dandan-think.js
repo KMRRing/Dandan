@@ -229,7 +229,7 @@ const WIDTH = 4, EXPLORE = 0.3;
  * will draw last. With RACE_TURNS cards or fewer left each draw step takes one, so the library is out within that many turns
  * and the game ends within two more; the look-ahead plays on that far (the position's own result, not the judge's guess).
  */
-const RACE_TURNS = 8;
+const RACE_TURNS = 20;
 export const endOfLibrary = s => (s.lib.length <= RACE_TURNS ? s.lib.length + 2 : 0);
 /** The most moves weighed at the root with something on the stack (otherwise `wide`, 7). */
 const STACK_WIDE = 12;
