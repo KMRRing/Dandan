@@ -301,8 +301,9 @@ function choose(node, ms, c, seat, who, at, explore = EXPLORE) {
 // ---------- positions met again: one node for each ----------
 /**
  * A position as the searching seat sees it, for merging the tree where two lines meet (Korbi, 11 November 2026: "anytime
- * two paths, anywhere, get to the same position, the paths should merge"): land then spell and spell then land, a counter
- * war resolved in either order. Only what that seat could know goes in (its own hand, the other's by count and by the
+ * two paths, anywhere, get to the same position, the paths should merge"):  land then spell and spell then land, a counter
+ * war resolved in either order, when the other player did nothing different along the way (Korbi: in practice they
+ * often do, and then the positions differ and nothing merges). Only what that seat could know goes in (its own hand, the other's by count and by the
  * cards it has seen there, the table, the stack, the graveyard, lives, the step, who is to act), so deals that differ in
  * what it can't see share the node, as they share a node by path today. The statistics of a merged node are the sum of
  * every line's visits, so a position reached two ways is weighed on the evidence of both.
@@ -313,7 +314,10 @@ function posKey(c, seat) {
   const st = c.stack.map(x => `${x.ctl}${x.name}:${(x.targets || []).map(t => t.k + (t.k === "c" ? nm(t.id) : t.k === "g" ? nm(t.id) : t.k === "s" ? t.sid : t.seat)).join("/")}`).join(";");
   return [c.turn, c.step, c.active, toMove(c), c.pending?.t ?? "", c.life.join(","), c.lib.length, c.played ? 1 : 0, c.attacked ? 1 : 0,
     sorted(c.hand[seat]), c.hand[opp].length, sorted(knownIn(c, opp, seat)), bf, st, sorted(c.yard), (c.pool || []).join("|"),
-    c.combat ? JSON.stringify(c.combat) : ""].join("#");
+    c.combat ? JSON.stringify(c.combat) : "",
+    // what their passes have ruled out (dandan-observe.js): a line where they let the spell by, holding up mana, says
+    // something the line where they had no chance to doesn't, so the two aren't the same position to the searcher
+    [...new Set((c.obs || []).filter(o => o.s === opp).flatMap(o => o.out))].sort().join(",")].join("#");
 }
 /** The search's nodes: by path (a node per edge, as before) or, with merging, by position (a table the search may keep). */
 const tables = new Map();
