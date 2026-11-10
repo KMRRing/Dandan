@@ -11,14 +11,17 @@ import { nm } from "./dandan-core.js";
 
 import { keyOk } from "./games-key.js";
 
-const root = document.getElementById("gv");
+const root = typeof document !== "undefined" ? document.getElementById("gv") : null;
 const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const when = ms => new Date(Number(ms)).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-const names = seats => String(seats?.[0]?.name ?? "").length ? seats : [{ name: "You" }, { name: "Monte" }];
+// an older game kept no seat names: the player is the one the index names
+const names = (seats, me) => String(seats?.[0]?.name ?? "").length ? seats : [{ name: me || "You" }, { name: "Monte" }];
 const words = (text, seats) => String(text || "").replace(/\{s(\d+)\}/g, (_, i) => seats[Number(i)]?.name ?? `Seat ${Number(i) + 1}`);
 const once = (sync, path) => new Promise((res, rej) => { let off = null, done = false; off = sync.watch(path, v => { if (done) return; done = true; res(v); queueMicrotask(() => off?.()); }, rej); });
 
 let stamp = 0, sync = null, rows = [], filter = { name: "", state: "" }, open = null;
+// a search through every game's log: the words looked for, and what was found ({ r, i: log line, t: its words })
+let search = { q: "", hits: [], busy: false, done: 0, of: 0, failed: 0 };
 
 async function main() {
   document.documentElement.classList.add("ready");            // style.css shows the large mark until a page says it is ready
@@ -112,32 +115,85 @@ function list() {
     <select id="fState"><option value="">All games</option><option value="live"${filter.state === "live" ? " selected" : ""}>Not finished</option><option value="done"${filter.state === "done" ? " selected" : ""}>Finished</option></select>
     <span class="gv-sub">${shown.length} of ${rows.length}</span></div>
     ${filter.name ? removeBar(shown, `${esc(filter.name)}: ${shown.length} games`) : ""}
+    <form class="gv-bar" id="sAll"><input type="text" id="sQ" placeholder="Search every log: Monte casts Mind Bend + Halimar" value="${esc(search.q)}"><button type="submit">Search</button>${search.q ? '<button type="button" id="sClear">Clear</button>' : ""}</form>
+    ${search.q ? found() : ""}
     <ol class="gv-list">${shown.map(r => { const [v, c] = verdict(r); return `<li><button type="button" data-k="${r.key}"><span class="meta">${when(r.key)}</span><span><span class="who">${esc(r.name)}</span> <span class="meta">${esc(r.result.level || "")} · turn ${r.result.turns} · ${r.result.moves} moves</span></span><span class="res ${c}">${v}</span></button></li>`; }).join("")}</ol>`;
   wireTabs(); wireRemove(() => shown, () => { filter.name = ""; });
   root.querySelector("#fName").onchange = e => { filter.name = e.target.value; list(); };
   root.querySelector("#fState").onchange = e => { filter.state = e.target.value; list(); };
   root.querySelector(".gv-list").onclick = e => { const b = e.target.closest("[data-k]"); if (b) show(rows.find(r => r.key === b.dataset.k)); };
+  root.querySelector("#sAll").onsubmit = e => { e.preventDefault(); searchAll(root.querySelector("#sQ").value.trim(), shown); };
+  const clear = root.querySelector("#sClear"); if (clear) clear.onclick = () => { search = { q: "", hits: [], busy: false, done: 0, of: 0, failed: 0 }; list(); };
+  root.querySelectorAll("[data-hit]").forEach(b => { b.onclick = () => { const h = search.hits[Number(b.dataset.hit)]; show(h.r, h.i); }; });
 }
 
-async function show(r) {
+// ---- searching every game's log ----
+/**
+ * Does a log line match? The search as a phrase, any case ("monte casts mind bend" finds Monte's Mind Bends, not Dave's at
+ * Monte's cards); phrases joined with + must all be in the line, in any order ("monte casts mind bend + halimar").
+ */
+export const matches = (line, q) => { const t = String(line).toLowerCase(); return q.toLowerCase().split("+").map(w => w.trim()).filter(Boolean).every(w => t.includes(w)); };
+/** A game read and played through once, kept with its row so a second search (or opening it) doesn't read or play it again. */
+async function walked(r) {
+  if (!r.run) {
+    const game = r.game || (r.room ? await once(sync, `crates/rooms/${r.room}/dandan/game`) : null);
+    if (!game) throw new Error("no record");
+    r.game = game; r.seats = names(game.seats, r.name); r.run = walk(shownRules, game);
+  }
+  return r;
+}
+/** Looks through the logs of the games in the list (as filtered), newest first, showing what it has found as it goes. */
+async function searchAll(q, among) {
+  if (!q) return;
+  const mine = search = { q, hits: [], busy: true, done: 0, of: among.length, failed: 0 };
+  list();
+  for (const r0 of among) {
+    if (search !== mine) return;                              // a newer search, or Clear
+    try {
+      const r = await walked(r0);
+      (r.run.G?.state?.log || []).forEach((e, i) => { const t = words(e.t, r.seats); if (e.t && matches(t, q)) mine.hits.push({ r, i, t }); });
+    } catch { mine.failed++; }
+    mine.done++;
+    if (mine.done % 5 === 0 && !open) list();                // keep the page alive on a long search
+    await new Promise(res => setTimeout(res));
+  }
+  mine.busy = false;
+  if (!open && search === mine) list();
+}
+function found() {
+  const { hits, busy, done, of, failed } = search, games = new Set(hits.map(h => h.r.key)).size;
+  return `<p class="gv-sub">${busy ? `Searching… ${done} of ${of} games` : `${of} games searched`} · ${hits.length} line${hits.length === 1 ? "" : "s"} in ${games} game${games === 1 ? "" : "s"}${failed ? ` · ${failed} could not be read` : ""}</p>
+    <ol class="gv-found">${hits.slice(0, 200).map((h, n) => `<li><button type="button" data-hit="${n}"><span class="meta">${when(h.r.key)} · ${esc(h.r.name)} · turn ${turnOf(h)}</span><br>${esc(h.t)}</button></li>`).join("")}</ol>
+    ${hits.length > 200 ? `<p class="gv-sub">The first 200 are shown: add a word to narrow it.</p>` : ""}`;
+}
+/** The turn a found line was written in: the last "Turn n" line before it. */
+function turnOf(h) {
+  const log = h.r.run.G.state.log;
+  for (let i = h.i; i >= 0; i--) { const m = /^Turn (\d+)/.exec(String(log[i].t || "")); if (m) return m[1]; }
+  return "?";
+}
+
+async function show(r, line = null) {
   root.innerHTML = `<h1>Dandan games</h1><p class="gv-sub">Opening the game…</p>`;
   let game = r.game;
   try {
     if (!game) game = (await once(sync, `crates/rooms/${r.room}/dandan/game`));
   } catch (e) { root.innerHTML = `<p class="gv-sub">Could not open it: ${esc(e?.message || e)}</p><button id="back">Back</button>`; root.querySelector("#back").onclick = list; return; }
-  const seats = names(game.seats), run = walk(shownRules, game), total = run.lens.length;
+  const seats = names(game.seats, r.name), run = r.run || walk(shownRules, game), total = run.lens.length;
   // a game begun before the page recorded moves has only the moves made since (the page was updated while it was in hand), so it
   // cannot be played again from the deal: `n` counts every move, and a game with the first one missing starts at a land, not a keep
   const kept = typeof game.moves === "string" ? JSON.parse(game.moves) : game.moves || [], first = kept[0]?.[1]?.t;
   run.partial = (game.n > kept.length) ? game.n - kept.length : (run.error && run.at === 0 && first && !["keep", "mull"].includes(first)) ? -1 : 0;
-  open = { r, game, seats, run, total, at: total, find: "" };
+  // opened from a search: at the move after which the line found is in the log, with the search words to find it again
+  const after = line == null ? total : (i => (i < 0 ? total : i + 1))(run.lens.findIndex(n => n > line));
+  open = { r, game, seats, run, total, at: after, find: line == null ? "" : search.q };
   draw();
 }
 
 function draw() {
   const { r, game, seats, run, total, at, find } = open, [v, c] = verdict(r);
   const G = replay(shownRules, game, at), s = G.error ? null : G.state;
-  const hits = find ? run.G.state.log.map((e, i) => ({ e, i })).filter(x => x.e.t && words(x.e.t, seats).toLowerCase().includes(find.toLowerCase())).slice(0, 40) : [];
+  const hits = find ? run.G.state.log.map((e, i) => ({ e, i })).filter(x => x.e.t && matches(words(x.e.t, seats), find)).slice(0, 40) : [];
   const cards = ids => ids.map(id => nm(id)).join(", ") || "—";
   const bf = seat => (s.bf || []).filter(p => p.ctl === seat).map(p => nm(p.id) + (p.tapped ? " (tapped)" : "")).join(", ") || "—";
   root.innerHTML = `<h1>Dandan games</h1>
