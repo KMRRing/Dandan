@@ -83,12 +83,11 @@ function players() {
   view = "players"; open = null;
   const by = new Map();
   for (const r of rows) {
-    const p = by.get(r.name) || { name: r.name, n: 0, done: 0, won: 0, lost: 0, conceded: 0, drawn: 0, live: 0, turns: 0, last: 0, ids: new Set(), levels: {} };
+    const p = by.get(r.name) || { name: r.name, n: 0, done: 0, won: 0, lost: 0, drawn: 0, live: 0, turns: 0, last: 0, ids: new Set(), levels: {} };
     by.set(r.name, p);
     p.n++; p.ids.add(r.uid); p.last = Math.max(p.last, Number(r.key));
     if (r.live) { p.live++; continue; }
     p.done++; p.turns += r.result.turns || 0;
-    if (r.result.conceded) p.conceded++;
     if (r.result.drawn) p.drawn++; else if (r.result.won) p.won++; else p.lost++;
     const l = r.result.level || "?"; (p.levels[l] ||= { w: 0, n: 0 }); p.levels[l].n++; if (r.result.won && !r.result.drawn) p.levels[l].w++;
   }
@@ -96,13 +95,14 @@ function players() {
   root.innerHTML = `<h1>Dandan games</h1>${tabs("players")}
     <p class="gv-sub">${ps.length} players, ${rows.length} games.</p>
     <ol class="gv-list">${ps.map(p => `<li><button type="button" data-p="${esc(p.name)}"><span class="meta">${when(p.last)}</span>
-      <span><span class="who">${esc(p.name)}</span> <span class="meta">${p.done} finished · ${p.won} won · ${p.lost} lost${p.conceded ? ` (${p.conceded} conceded)` : ""}${p.drawn ? ` · ${p.drawn} drawn` : ""}${p.live ? ` · ${p.live} not finished` : ""}<br>
+      <span><span class="who">${esc(p.name)}</span> <span class="meta">${p.done} finished · ${p.won} won · ${p.lost} lost${p.drawn ? ` · ${p.drawn} drawn` : ""}${p.live ? ` · ${p.live} not finished` : ""}<br>
       win rate ${rate(p.won, p.done)} · ${p.done ? "avg " + Math.round(p.turns / p.done) + " turns" : ""} · ${Object.entries(p.levels).map(([l, x]) => `${esc(l)} ${x.w}/${x.n}`).join(", ")} · ${p.ids.size} device${p.ids.size > 1 ? "s" : ""}</span></span><span class="res">›</span></button></li>`).join("")}</ol>`;
   wireTabs();
   root.querySelector(".gv-list").onclick = e => { const b = e.target.closest("[data-p]"); if (b) { filter.name = b.dataset.p; view = "games"; list(); } };
 }
 
-const verdict = r => (r.live ? ["in progress", "gv-live"] : r.result.conceded ? [r.result.won ? "won (conceded)" : "conceded", "gv-lost"] : r.result.drawn ? ["drawn", ""] : r.result.won ? ["won", "gv-won"] : ["lost", "gv-lost"]);
+// a conceded game is a lost one (10 November 2026, Korbi: a player concedes once they know they have lost), so it shows as that
+const verdict = r => (r.live ? ["in progress", "gv-live"] : r.result.drawn ? ["drawn", ""] : r.result.won ? ["won", "gv-won"] : ["lost", "gv-lost"]);
 function list() {
   open = null; view = "games";
   const people = [...new Set(rows.map(r => r.name))].sort();
