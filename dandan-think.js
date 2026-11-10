@@ -308,16 +308,17 @@ function choose(node, ms, c, seat, who, at, explore = EXPLORE) {
  * what it can't see share the node, as they share a node by path today. The statistics of a merged node are the sum of
  * every line's visits, so a position reached two ways is weighed on the evidence of both.
  */
-function posKey(c, seat) {
+function posKey(c, seat, reads = false) {
   const opp = other(seat), nm = id => DECK[id] ?? "Clue", sorted = a => a.map(nm).sort().join(",");
   const bf = c.bf.map(p => `${p.ctl}${nm(p.id)}${p.tapped ? "t" : ""}${p.sick ? "s" : ""}${p.tc ? JSON.stringify(p.tc) : ""}${p.dmg || ""}`).sort().join(";");
   const st = c.stack.map(x => `${x.ctl}${x.name}:${(x.targets || []).map(t => t.k + (t.k === "c" ? nm(t.id) : t.k === "g" ? nm(t.id) : t.k === "s" ? t.sid : t.seat)).join("/")}`).join(";");
   return [c.turn, c.step, c.active, toMove(c), c.pending?.t ?? "", c.life.join(","), c.lib.length, c.played ? 1 : 0, c.attacked ? 1 : 0,
     sorted(c.hand[seat]), c.hand[opp].length, sorted(knownIn(c, opp, seat)), bf, st, sorted(c.yard), (c.pool || []).join("|"),
     c.combat ? JSON.stringify(c.combat) : "",
-    // what their passes have ruled out (dandan-observe.js): a line where they let the spell by, holding up mana, says
-    // something the line where they had no chance to doesn't, so the two aren't the same position to the searcher
-    [...new Set((c.obs || []).filter(o => o.s === opp).flatMap(o => o.out))].sort().join(",")].join("#");
+    // with merge "reads": what their passes have ruled out (dandan-observe.js) too: a line where they let the spell by,
+    // holding up mana, says something the line where they had no chance to doesn't (Korbi: marginal, and fewer merges
+    // cost compute, so both are tried)
+    reads ? [...new Set((c.obs || []).filter(o => o.s === opp).flatMap(o => o.out))].sort().join(",") : ""].join("#");
 }
 /** The search's nodes: by path (a node per edge, as before) or, with merging, by position (a table the search may keep). */
 const tables = new Map();
@@ -351,7 +352,7 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
       if (ms.length > 1) {
         // merged: the node is the position's, wherever it was reached from; one not met before ends the tree for this deal
         let fresh = false;
-        if (table) { const k = posKey(c, seat); node = table.get(k); if (!node) { node = newNode(); table.set(k, node); fresh = true; } }
+        if (table) { const k = posKey(c, seat, table.reads); node = table.get(k); if (!node) { node = newNode(); table.set(k, node); fresh = true; } }
         // a decision's children are keyed by who decides and where, as well as by the move: in other deals the same
         // line can reach another seat's decision first (a hand with nothing to do there is passed over)
         const pick = choose(node, ms, c, seat, who, `${who}${c.step}${c.stack.length}${c.pending?.t ?? ""}:`, explore);
@@ -410,6 +411,7 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
   const to = s.turn + Math.max(turns, endOfLibrary(s)), seed = seedOf(s, seat);
   const vals = cands.map(() => []), seen = cands.map(() => []), roots = cands.map(newNode);
   const table = reuse ? tableFor(s, seat) : merge ? new Map() : null;
+  if (table) table.reads = merge === "reads";
   let lead = -1, steadyLooks = 0;
   let alive = cands.map((_, i) => i), d = 0;
   while (d < deals && alive.length > 1) {
