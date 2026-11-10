@@ -17,19 +17,36 @@ export async function labStore() {
     };
   }
   const api = `https://storage.googleapis.com/storage/v1/b/${process.env.LAB_BUCKET}/o`;
-  const H = { authorization: "Bearer " + (await googleToken()) };
   return {
     async list(prefix) {
       const names = [];
       let pageToken = "";
       do {
-        const r = await (await fetch(`${api}?prefix=${encodeURIComponent(prefix)}${pageToken ? "&pageToken=" + pageToken : ""}`, { headers: H })).json();
+        const r = await (await call(`${api}?prefix=${encodeURIComponent(prefix)}${pageToken ? "&pageToken=" + pageToken : ""}`)).json();
         names.push(...(r.items ?? []).map(o => o.name)); pageToken = r.nextPageToken ?? "";
       } while (pageToken);
       return names;
     },
-    async get(name) { const r = await fetch(`${api}/${encodeURIComponent(name)}?alt=media`, { headers: H }); return r.ok ? r.text() : null; },
+    async get(name) { const r = await call(`${api}/${encodeURIComponent(name)}?alt=media`); return r.ok ? r.text() : null; },
   };
+}
+
+/**
+ * A bucket request, retried: a script that reads its input in turns (one job's results, an hour of games, then the next's)
+ * comes back to a connection the far end has closed meanwhile (al1, al2, 10 November 2026: every shard died on "write EPIPE"
+ * when it reached its second input). The token is fetched for each call, so one older than its hour is renewed.
+ */
+async function call(url, init = {}) {
+  for (let tries = 0; ; tries++) {
+    try {
+      const r = await fetch(url, { ...init, headers: { ...(init.headers || {}), authorization: "Bearer " + (await googleToken()) } });
+      if ((r.status === 429 || r.status >= 500) && tries < 5) { await new Promise(res => setTimeout(res, 1000 * 2 ** tries)); continue; }
+      return r;
+    } catch (e) {
+      if (tries >= 5) throw e;
+      await new Promise(res => setTimeout(res, 1000 * 2 ** tries));
+    }
+  }
 }
 
 /** The text of each part-<n>.jsonl a lab job wrote. */
@@ -54,14 +71,21 @@ export async function googleToken() {
     const b64 = x => Buffer.from(typeof x === "string" ? x : JSON.stringify(x)).toString("base64url");
     const body = `${b64({ alg: "RS256", typ: "JWT" })}.${b64({ iss: key.client_email, scope: "https://www.googleapis.com/auth/devstorage.read_write", aud: key.token_uri || "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600 })}`;
     const jwt = `${body}.${createSign("RSA-SHA256").update(body).sign(key.private_key).toString("base64url")}`;
-    const r = await fetch(key.token_uri || "https://oauth2.googleapis.com/token", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt }) });
+    const r = await retried(() => fetch(key.token_uri || "https://oauth2.googleapis.com/token", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt }) }));
     if (!r.ok) throw new Error("no access token for the key: " + r.status + " " + (await r.text()));
     j = await r.json();
   } else {
-    const r = await fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } });
+    const r = await retried(() => fetch("http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token", { headers: { "Metadata-Flavor": "Google" } }));
     if (!r.ok) throw new Error("no access token from the metadata server: " + r.status);
     j = await r.json();
   }
   tokenCache = { tok: j.access_token, exp: Date.now() + (j.expires_in - 120) * 1000 };
   return tokenCache.tok;
+}
+
+/** f() again after a network error, up to five times, waiting 1, 2, 4, 8, 16 s. */
+async function retried(f) {
+  for (let tries = 0; ; tries++) {
+    try { return await f(); } catch (e) { if (tries >= 5) throw e; await new Promise(res => setTimeout(res, 1000 * 2 ** tries)); }
+  }
 }
