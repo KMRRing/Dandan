@@ -15,5 +15,5 @@ deals against itself, seeds 7000 + 120(n−1) on) and, for each finished batch, 
 | tune2 | constant search, 87 candidates ±0.5 | 512 new pairs, vs main | nothing: best Mystic Retrieval +0.5 at 0.5195 ± 0.009 (z 2.2), 2 of 86 over z 2 = chance; round-1 leaders gone. TUNE/ADJ sit at a local optimum at this step |
 | head1 | headroom: Hard 256 vs Medium | 240 pairs | Hard 86.9% ± 1.5 (82% up to 20 turns, 91% 21–30, 87% over 30); 8 of 480 ended by the library |
 | jc1 | the judge against 64 Medium playouts to the end, by library size | 480 games planned, stopped at 80 (4× slower than estimated) | judge off by 12 points (rmse) at 21–80 cards, 22 at 13–20, worse below; below 20 it predicts the winner half as well as playouts. 2,000 positions |
-| late1 | late-game match: main vs `race20` (Hard plays to the end from 20 cards, not 8) | Hard 64, games start at 24 cards, 1,600 deals (about 430 reach it) | running |
+| late1 | late-game match: main vs `race20` (Hard plays to the end from 20 cards, not 8) | Hard 64, games start at 24 cards, 1,600 deals | rejected: race20 48.6% ± 0.7 over 626 pairs (46 of 48 shards). 541 of 626 pairs split 1–1: from 24 cards the position mostly decides the game, only 85 pairs told the builds apart |
 | spb01… | self-play batches | Hard 256 vs itself, 120 games a batch | running |
