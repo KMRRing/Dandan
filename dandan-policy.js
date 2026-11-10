@@ -49,7 +49,7 @@ export const TUNE = {
   cycleLorien: 0, cycleLand: 0.5,   // added to cycling Lórien Revealed, and to cycling a land
   cast: { "Dandân": 0.75 },  // added to a spell's cast, by the card cast
   land: { "Flood Plain": -1, "Izzet Boilerworks": -0.5 },   // added to a land drop, by the land
-  urgency: Infinity,         // how many turns from death a Dandân's threat still counts in full (threatShare); Infinity: always
+  urgency: 3,         // how many turns from death a Dandân's threat still counts in full (threatShare); Infinity: always
 };
 /**
  * 9 November 2026: additions to Medium's scores, set by matches against Medium without them (lab/tune-round.mjs on Actions: each
