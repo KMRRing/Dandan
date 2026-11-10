@@ -30,7 +30,7 @@ const rows = [...by.values()].map(c => {
   const s = stat([...c.rows.values()]);
   const diffs = base && c !== base ? [...c.rows].filter(([p]) => base.rows.has(p)).map(([p, v]) => v - base.rows.get(p)) : [];
   const d = diffs.length ? stat(diffs) : null;
-  return { cand: c.cand, name: `${c.k} ${c.d >= 0 ? "+" : ""}${c.d}`, n: s.n, mean: s.m, se: s.se, vs: d ? d.m : null, vsz: d ? d.m / d.se : null };
+  return { cand: c.cand, name: `${c.k} ${c.d >= 0 ? "+" : ""}${c.d}`, n: s.n, mean: s.m, se: s.se, vs: d ? d.m : null, vsz: d ? (d.se > 0 ? d.m / d.se : 0) : null }; // a candidate that played every pair like the base has no spread: z 0
 });
 console.log(`candidates ${rows.length}, pairs per candidate ${rows[0]?.n}; base ${base ? base.k + " " + base.d : "missing"}: ${base ? stat([...base.rows.values()]).m.toFixed(4) : ""}`);
 console.log("cand  name                                   mean   se     vs base  z");
