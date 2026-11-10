@@ -10,7 +10,8 @@
 //                               a claim not renewed for LEASE is taken over, so a machine that is gone (Spot) loses its shards)
 //     results/<id>/part-<shard>.jsonl, stdout-<shard>.txt, done-<shard>   what a shard wrote, what it printed, and how it ended
 //   A job's spec may also say why it was run (`purpose`) and, once read, what came of it (`outcome`): lab/ledger.mjs lists them
-//   all, kept for good whether a job led anywhere or not, so nothing is run twice by mistake.
+//   all, kept for good whether a job led anywhere or not, so nothing is run twice by mistake. A job stopped before its end
+//   is moved to retired/<id>.json, out of the workers' sight but still in the ledger.
 //
 // LAB_FILL=1 (10 November 2026, Korbi: keep the machines on something useful at all times): when no shard is left the worker
 // queues the next batch of self-play (spb<n>, 120 games of Hard at 256 deals against itself, seeds after the batch before) and,
