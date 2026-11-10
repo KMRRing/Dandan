@@ -4,18 +4,29 @@
 // to move, against whether that player won: the mean of (won - judge) in each bucket of land difference, hand difference,
 // Dandâns and life. A judge that knew the game would be about 0 in every bucket; if a mana lead wins more often than it
 // says, the land buckets climb from left to right.
-// Games: self-play jobs in the bucket (job ids, comma-separated: spb01,spb02) or a folder of kept games (games/*.json).
-// usage: node lab/residuals.mjs <shard> <shards> <out> <job ids | folder>     (shard arguments for the lab; it runs whole)
+// Games: self-play jobs in the bucket (job ids, comma-separated: spb01,spb02), a folder of kept games (games/*.json), or
+// "kept": the kept games fetched from the game-records branch. judge: a lab/judge-train.mjs job whose network to use in place
+// of the game's (to see whether a trained judge prices these positions better); the Brier score of the judge is printed too.
+// usage: node lab/residuals.mjs <shard> <shards> <out> <job ids | folder | kept> [judge job]     (it runs whole)
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { execSync } from "node:child_process";
 import { readParts } from "./lib.mjs";
 import { shownRules, rules } from "../dandan-rules.js";
 import { newRecord, applyMove } from "../seats.js";
-import { winChance } from "../dandan-eval.js";
+import { winChance, makeJudge } from "../dandan-eval.js";
 import { isLand } from "../dandan-core.js";
 import { DECK } from "../dandan-cards.js";
 
-const src = process.argv[5];
+let src = process.argv[5];
+const judgeJob = process.argv[6];
+const judge = judgeJob ? makeJudge(JSON.parse((await readParts(judgeJob))[0].split("\n")[0]).layers) : winChance;
+if (src === "kept") {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "games-"));
+  execSync(`git fetch -q --depth=1 origin game-records && git archive FETCH_HEAD games | tar -x -C ${tmp}`, { stdio: "inherit" });
+  src = path.join(tmp, "games");
+}
 const games = []; // { start: newRecord options, moves: [[seat, move]], kind }
 if (fs.existsSync(src) && fs.statSync(src).isDirectory()) {
   for (const f of fs.readdirSync(src).filter(f => f.endsWith(".json"))) {
@@ -40,7 +51,7 @@ for (const { R, opts, moves, now } of games) {
       last = s.turn;
       const me = s.active, foe = 1 - me, lands = x => s.bf.filter(p => p.ctl === x && p.id < 80 && isLand(p)).length;
       const dd = x => s.bf.filter(p => p.ctl === x && DECK[p.id] === "Dandân").length;
-      here.push({ me, p: winChance(R.restore(JSON.parse(JSON.stringify(s))), me), land: lands(me) - lands(foe), hand: s.hand[me].length - s.hand[foe].length, ddMine: dd(me), ddTheirs: dd(foe), life: s.life[me], lib: s.lib.length });
+      here.push({ me, p: judge(R.restore(JSON.parse(JSON.stringify(s))), me), land: lands(me) - lands(foe), hand: s.hand[me].length - s.hand[foe].length, ddMine: dd(me), ddTheirs: dd(foe), life: s.life[me], lib: s.lib.length });
     }
     const r = applyMove(R, G, seat, move, now);
     if (r.error) { ok = false; break; }
@@ -57,7 +68,8 @@ const line = (name, b) => {
 };
 const all = rows.filter(r => r.lib >= 15), who = process.env.MOVER;   // MOVER=0 or 1: only positions with that seat to move
 const mid = who === undefined ? all : all.filter(r => r.me === Number(who));
-console.log(`games ${games.length}, positions ${rows.length} (library 15+: ${mid.length}); the player to move, start of the turn`);
+const brier = mid.reduce((a, r) => a + (r.p - r.won) ** 2, 0) / mid.length;
+console.log(`games ${games.length}, positions ${rows.length} (library 15+: ${mid.length}); the player to move, start of the turn; judge ${judgeJob || "the game's"}, Brier ${brier.toFixed(4)}`);
 console.log("by lands, theirs subtracted:");
 for (const [n, lo, hi] of [["3+ fewer", -99, -3], ["2 fewer", -2, -2], ["1 fewer", -1, -1], ["even", 0, 0], ["1 more", 1, 1], ["2 more", 2, 2], ["3+ more", 3, 99]]) line(n, mid.filter(r => r.land >= lo && r.land <= hi));
 console.log("by cards in hand, theirs subtracted:");
