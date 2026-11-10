@@ -5,8 +5,11 @@
 // game: the other hand dealt from what it has seen, `deals` deals), and for every decision of either seat the judge's chance
 // for the human just before and just after it. One row a decision:
 //   { file, turn, i (move number), seat, step, lib, life, hands, lands, played, best, gap (Hard's best less the move played,
-//     from the human's side; null when Hard had no say), jBefore, jAfter, won, behind (the human was at 35% or less by the
-//     judge with 5+ turns left in this game) }
+//     from the human's side; null when Hard had no say), hardBest, hardPlayed (Hard's chance for the human with its own move
+//     and with the move played; hardPlayed null for a move it dropped early or didn't weigh), jBefore, jAfter (the judge just
+//     before and after), qBefore, qAfter (the judge at the last position with nothing on the stack before the move and the
+//     first one after it, so a spell's cost and its effect are counted together), won, behind (the human was at 35% or less
+//     by the judge with 5+ turns left in this game) }
 // lab/audit-sum.mjs ranks them. usage: node lab/audit.mjs <shard> <shards> <out.jsonl> [deals 1024] [games folder]
 import fs from "node:fs";
 import os from "node:os";
@@ -35,30 +38,39 @@ for (let k = shard; k < files.length; k += shards) {
   if (!moves?.length || moves.length !== g.n || rec.result?.drawn) continue;
   let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
   const rows = [], curve = [];
-  let ok = true;
+  let ok = true, quiet = null, open = [];   // the judge at the last quiet position, and the rows since it
   for (let i = 0; i < moves.length; i++) {
     const [seat, move] = moves[i], st = G.state, s = shownRules.restore(J(st));
     const jBefore = winChance(s, 0);
-    if (!st.stack.length && !st.pending) curve.push({ turn: st.turn, p: jBefore });
-    let best = null, gap = null;
+    if (!st.stack.length && !st.pending) {
+      curve.push({ turn: st.turn, p: jBefore });
+      for (const row of open) row.qAfter = +jBefore.toFixed(4);
+      open = []; quiet = jBefore;
+    }
+    let best = null, gap = null, hardBest = null, hardPlayed = null;
     if (seat === 0 && move.t !== "keep" && move.t !== "mull") {
       const r = think(s, 0, { deals, ms: 1e9 });
       if (!r.only) {
         const mine = r.list.find(c => key(c.move) === key(move)), top = r.list[0];
         best = moveName(top.move, s, 0);
-        gap = mine && Number.isFinite(mine.mean) ? +(top.mean - mine.mean).toFixed(4) : null;
+        hardBest = +top.mean.toFixed(4);
+        hardPlayed = mine && Number.isFinite(mine.mean) ? +mine.mean.toFixed(4) : null;
+        gap = hardPlayed != null ? +(top.mean - mine.mean).toFixed(4) : null;
       }
     }
     const lands = x => st.bf.filter(p => p.ctl === x && p.id < 80 && isLand(p)).length;
-    const row = { file: files[k], turn: st.turn, i, seat, step: st.step, lib: st.lib.length, life: [...st.life], hands: [st.hand[0].length, st.hand[1].length], lands: [lands(0), lands(1)], played: moveName(move, s, seat), best, gap, jBefore: +jBefore.toFixed(4) };
+    const row = { file: files[k], turn: st.turn, i, seat, step: st.step, lib: st.lib.length, life: [...st.life], hands: [st.hand[0].length, st.hand[1].length], lands: [lands(0), lands(1)], played: moveName(move, s, seat), best, gap, hardBest, hardPlayed, jBefore: +jBefore.toFixed(4), qBefore: quiet == null ? null : +quiet.toFixed(4) };
+    open.push(row);
     const r = applyMove(shownRules, G, seat, move, g.started);
     if (r.error) { ok = false; break; }
     G = r.G;
     row.jAfter = +winChance(shownRules.restore(J(G.state)), 0).toFixed(4);
-    if (seat === 0 && best != null || Math.abs(row.jAfter - row.jBefore) >= 0.1) rows.push(row);
+    rows.push(row);
   }
   if (!ok || !shownRules.over(G.state)) continue;
+  for (const row of open) row.qAfter = G.state.winner === 0 ? 1 : 0;
   const won = G.state.winner === 0 ? 1 : 0, turns = G.state.turn;
   const behind = won === 1 && curve.some(c => c.p <= 0.35 && turns - c.turn >= 5);
-  for (const row of rows) fs.appendFileSync(out, JSON.stringify({ ...row, won, behind }) + "\n");
+  // kept: the human's weighed moves, and any move the judge moved 10+ points over from quiet position to quiet position
+  for (const row of rows) if (row.best != null || (row.qBefore != null && Math.abs(row.qAfter - row.qBefore) >= 0.1)) fs.appendFileSync(out, JSON.stringify({ ...row, won, behind }) + "\n");
 }
