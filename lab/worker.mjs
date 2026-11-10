@@ -9,10 +9,16 @@
 //     claims/<id>/<shard>       who is running it and when it last said so (made only if absent: the claim is atomic;
 //                               a claim not renewed for LEASE is taken over, so a machine that is gone (Spot) loses its shards)
 //     results/<id>/part-<shard>.jsonl, stdout-<shard>.txt, done-<shard>   what a shard wrote, what it printed, and how it ended
+//   A job's spec may also say why it was run (`purpose`) and, once read, what came of it (`outcome`): lab/ledger.mjs lists them
+//   all, kept for good whether a job led anywhere or not, so nothing is run twice by mistake.
+//
+// LAB_FILL=1 (10 November 2026, Korbi: keep the machines on something useful at all times): when no shard is left the worker
+// queues the next batch of self-play (spb<n>, 120 games of Hard at 256 deals against itself, seeds after the batch before) and,
+// for each finished batch, a training of the judge on all batches up to it (jt<n>); a worker filling never stops for want of work.
 //
 // usage: node lab/worker.mjs            (on Google: LAB_BUCKET=<bucket>)      a worker stops when nothing has come for LAB_IDLE_MIN
 //        LAB_DIR=<folder> node lab/worker.mjs   (the same queue in a folder, for trying it out)
-// settings (environment): LAB_SLOTS cores to use (all), LAB_IDLE_MIN minutes without work before it stops (15), LAB_POLL_SEC (15),
+// settings (environment): LAB_FILL (above), LAB_SLOTS cores to use (all), LAB_IDLE_MIN minutes without work before it stops (15), LAB_POLL_SEC (15),
 //        LAB_MAX_HOURS the most it ever runs (8), LAB_WORK where it works (/tmp/lab-work), LAB_REPO the repo to run (the public one).
 import fs from "node:fs";
 import os from "node:os";
@@ -93,7 +99,27 @@ const store = env.LAB_DIR ? folderStore(path.resolve(env.LAB_DIR)) : bucketStore
 
 // ---------- finding a shard to run ----------
 const claimBody = () => JSON.stringify({ by: NAME, t: Date.now() });
-const finished = new Set();
+const finished = new Set(), FILL = env.LAB_FILL === "1";
+const doneCount = async id => (await store.list(`results/${id}/`)).filter(r => /\/done-\d+$/.test(r.name)).length;
+const batch = n => `spb${String(n).padStart(2, "0")}`;
+/** The queue run dry, with LAB_FILL: a training of the judge for each finished self-play batch not yet trained on, and the next batch. */
+async function refill() {
+  const ids = new Set((await store.list("jobs/")).map(o => path.basename(o.name, ".json")));
+  const nums = [...ids].filter(i => /^spb\d+$/.test(i)).map(i => Number(i.slice(3))).sort((a, b) => a - b);
+  const last = nums.at(-1) ?? 0, made = { by: NAME, at: new Date().toISOString() };
+  const put = spec => store.put(`jobs/${spec.id}.json`, JSON.stringify({ ref: "main", repo: REPO, ...spec, made }), { ifAbsent: true });
+  for (const n of nums) {
+    const id = `jt${String(n).padStart(2, "0")}`;
+    if (ids.has(id) || (await doneCount(batch(n))) < 24) continue;
+    const upTo = nums.filter(k => k <= n).map(batch);
+    await put({ id, script: "judge-train.mjs", args: `{shard} {shards} {out} ${upTo.join(",")}`, shards: 1, timeoutMin: 240,
+      purpose: `the judge trained on Hard self-play ${upTo[0]}..${upTo.at(-1)} (${upTo.length * 120} games); held-out scores by library size show what the batch adds` });
+  }
+  if (nums.length && (await doneCount(batch(last))) < 24 && !(await allClaimed(batch(last)))) return;
+  await put({ id: batch(last + 1), script: "selfplay.mjs", args: `{shard} {shards} {out} 256 120 ${7000 + 120 * last}`, shards: 24, timeoutMin: 120,
+    purpose: "Hard (256 deals) against itself, every decision with the search's value of each move: data to teach the judge and Medium" });
+}
+const allClaimed = async id => (await store.list(`claims/${id}/`)).length >= 24;
 /** The next shard nobody has (or whose claim lapsed): claimed for this worker, or null. */
 async function nextShard() {
   for (const o of await store.list("jobs/")) {
@@ -155,7 +181,8 @@ async function slotLoop(slot) {
       idleSince = Date.now();
       continue;
     }
-    if (Date.now() - idleSince > IDLE_MS) return;
+    if (FILL) { try { await refill(); } catch (e) { log("refill:", e.message); } }
+    else if (Date.now() - idleSince > IDLE_MS) return;
     await sleep(POLL_MS + Math.random() * 3000);
   }
 }
