@@ -49,6 +49,7 @@ export const TUNE = {
   cycleLorien: 0, cycleLand: 0.5,   // added to cycling Lórien Revealed, and to cycling a land
   cast: { "Dandân": 0.75 },  // added to a spell's cast, by the card cast
   land: { "Flood Plain": -1, "Izzet Boilerworks": -0.5 },   // added to a land drop, by the land
+  urgency: Infinity,         // how many turns from death a Dandân's threat still counts in full (threatShare); Infinity: always
 };
 /**
  * 9 November 2026: additions to Medium's scores, set by matches against Medium without them (lab/tune-round.mjs on Actions: each
@@ -164,6 +165,18 @@ export function dandanWorth(s, p) {
   if (homes <= 1) v *= 0.85;
   if (pt(p)[1] <= 0) return 0;
   return v;
+}
+/**
+ * The share of a new Dandân's worth that its threat to `seat` carries (10 November 2026, Korbi: "when you're not close to death,
+ * even a Dandân isn't scary"; a player ahead on mana lets it come, answers it later and cheaply, and goes one for one while
+ * drawing ahead). Whole when it and the Dandâns already able to hit would kill `seat` within TUNE.urgency of its turns, less
+ * the further off that is (a quarter at the least); used for what countering one is worth to `seat` and casting one at it.
+ */
+function threatShare(s, seat) {
+  if (!Number.isFinite(TUNE.urgency)) return 1;
+  const hitters = 1 + creatures(s, other(seat)).filter(d => islandsOfType(s, seat, needType(d)) > 0).length;
+  const turns = Math.ceil(Math.max(1, s.life[seat]) / (4 * hitters));
+  return Math.max(0.25, Math.min(1, TUNE.urgency / turns));
 }
 /** A Dandân about to come in under seat: what it will be worth (a card thrown away when there's no Island to keep it). */
 function newDandanWorth(s, seat) {
@@ -1023,7 +1036,7 @@ export class Player {
   /** A Dandân cast now: what it's worth in against the chance it's countered and goes on top for them to draw. */
   castDandan(keep, pay) {
     const s = this.s, F = this.F, me = this.me;
-    const w = newDandanWorth(s, me);
+    const w = newDandanWorth(s, me) * threatShare(s, this.opp);
     if (w <= 0) return -3;
     let p = counterRisk(F, "Dandân");
     // two more open for our own Lapse: their counter can be countered
@@ -1042,7 +1055,7 @@ export class Player {
     if (!x) return -1;
     if (half === "Narset's Reversal") return this.reversal(x, keep, pay);
     if (x.ctl === me) return -3;
-    let gain = spellWorth(F, x);
+    let gain = spellWorth(F, x) * (x.name === "Dandân" ? threatShare(s, me) : 1);
     if (!x.copy) {
       // where the countered card goes: on top (Lapse) to whoever draws next; second from the top (Commit) to the one after
       const to = half === "Memory Lapse" ? F.next : other(F.next);
