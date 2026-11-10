@@ -95,19 +95,23 @@ const LAYERS = [
   {"n":[32,16],"q":"7hFqHQkaAyj0Ln+y/PYbAP1r2fcGHh0LHs9DwicgBgD2ierY0hbuCNMJAuX2QuoALpfx29G5vcLX5kRc/yj1ABEr6vXEtvLXt9Db8X/c7ADq6jDE6QC7BTI4XPjxRVgA5zs5HZUuH8B0CecUTNfbADHpJxlKFD46TlIUN8dTLgDlWhMYKQoIyxGvCUwKHtMAJQEOxNnuwy+fCwrUBUschj3RsxTkwdX4HbUugeYs5QDh4FANT5kr9RA0Djhf2iD+3EccC/7qAfAH7bnzGBjKABP+Jvh/19Q9zvA0+QxJCwAw8jf8TdzJ7tsbIhMq/NQAIpb166Tv/dolzQfbMdeBAH/QNeJgoOcFJVFPN9sMXAAY2hYKQwjnVhP03yvjMyQANS0A89BE9//F+bL0E4ziAMAWWAQhMu00zCbO00ucEwAD2hTuG/PS17+BYiklf4j/8Au9x/guEvod4ey9G0/mABEg5jAW6Bsd0/AvDyD2nwC8DXQfHxwDPB8D5kZ4tteBEf9yBdezsg3ZGBqmwjlOAPwf3WOYXCTQIhfTC0r5GQAcWPYxNGx/+TcqHQ0LHyIA67Zz2wnl+dQkVQwvJKo/AOix0yHbwg32DIMA0Ba/rQAlgYELorO0K4EtaAPBZRoAETbzfzx/AD3kJSg8tXkQ/xLc/enOF1uBpj3G4AybPAA=","s":[0.0091346,0.0046707,0.0057991,0.0051981,0.0042233,0.0043905,0.0067425,0.0063027,0.0070295,0.0062453,0.0056554,0.0048587,0.005035,0.0033615,0.0051992,3.8716e-13],"b":[-0.027998,-0.046133,0.45846,0.036259,0.20513,0.026502,-0.018901,-0.016133,-0.00076366,0.11371,0.20509,0.24765,-3.0169e-38,0.18349,0.089553,1.8171e-36]},
   {"n":[16,1],"q":"gRTMIOYsOe5czujjJO2wAA==","s":[0.0065213],"b":[]},
 ];
-const NET = LAYERS.map(L => {
-  const [nIn, nOut] = L.n, raw = atob(L.q), W = new Float32Array(nIn * nOut), b = new Float32Array(nOut);
-  for (let i = 0; i < raw.length; i++) { let v = raw.charCodeAt(i); if (v > 127) v -= 256; W[i] = v * L.s[i % nOut]; }
-  if (L.b.length) b.set(L.b);
-  return { nIn, nOut, W, b, y: new Float32Array(nOut) };
-});
-if (NET[0].nIn !== N) throw new Error("dandan-eval: the network reads a different number of features");
+/** A network's layers (the form of LAYERS above) made ready to score. */
+function build(layers) {
+  const net = layers.map(L => {
+    const [nIn, nOut] = L.n, raw = atob(L.q), W = new Float32Array(nIn * nOut), b = new Float32Array(nOut);
+    for (let i = 0; i < raw.length; i++) { let v = raw.charCodeAt(i); if (v > 127) v -= 256; W[i] = v * L.s[i % nOut]; }
+    if (L.b.length) b.set(L.b);
+    return { nIn, nOut, W, b, y: new Float32Array(nOut) };
+  });
+  if (net[0].nIn !== N) throw new Error("dandan-eval: the network reads a different number of features");
+  return net;
+}
 
 /** g: a position's score from one side's features (the hidden layers rectified, the last one not). */
-function score(x) {
+function score(net, x) {
   let h = x;
-  for (let l = 0; l < NET.length; l++) {
-    const { nIn, nOut, W, b, y } = NET[l];
+  for (let l = 0; l < net.length; l++) {
+    const { nIn, nOut, W, b, y } = net[l];
     y.set(b);
     for (let i = 0; i < nIn; i++) {
       const v = h[i];
@@ -115,22 +119,29 @@ function score(x) {
       const row = i * nOut;
       for (let o = 0; o < nOut; o++) y[o] += v * W[row + o];
     }
-    if (l < NET.length - 1) for (let o = 0; o < nOut; o++) if (y[o] < 0) y[o] = 0;
+    if (l < net.length - 1) for (let o = 0; o < nOut; o++) if (y[o] < 0) y[o] = 0;
     h = y;
   }
   return h[0];
 }
 
-const mine = new Float32Array(N), theirs = new Float32Array(N);
-/** The chance `me` wins from here: 1 or 0 for a game over (a half for both losing), else the network's. */
-export function winChance(s, me) {
-  if (s.over) return s.winner < 0 ? 0.5 : s.winner === me ? 1 : 0;
-  // the other side's view is the same numbers with the seats' halves swapped and the turn the other way round
-  features(s, me, mine);
-  const half = (N - 3 - SPELLS.length) / 2;
-  theirs.set(mine.subarray(half, 2 * half), 0);
-  theirs.set(mine.subarray(0, half), half);
-  theirs.set(mine.subarray(2 * half), 2 * half);
-  theirs[2 * half] = 1 - mine[2 * half];
-  return 1 / (1 + Math.exp(score(theirs) - score(mine)));
+/**
+ * A judge from a network's layers: (s, me) → the chance `me` wins from here, 1 or 0 for a game over (a half for both
+ * losing), else the network's. The game's judge is winChance below; the lab makes others (lab/judge-train.mjs) to try in
+ * its place, as think() takes any judge.
+ */
+export function makeJudge(layers) {
+  const net = build(layers), mine = new Float32Array(N), theirs = new Float32Array(N), half = (N - 3 - SPELLS.length) / 2;
+  return (s, me) => {
+    if (s.over) return s.winner < 0 ? 0.5 : s.winner === me ? 1 : 0;
+    // the other side's view is the same numbers with the seats' halves swapped and the turn the other way round
+    features(s, me, mine);
+    theirs.set(mine.subarray(half, 2 * half), 0);
+    theirs.set(mine.subarray(0, half), half);
+    theirs.set(mine.subarray(2 * half), 2 * half);
+    theirs[2 * half] = 1 - mine[2 * half];
+    return 1 / (1 + Math.exp(score(net, theirs) - score(net, mine)));
+  };
 }
+/** The game's judge: the chance `me` wins from here. */
+export const winChance = makeJudge(LAYERS);
