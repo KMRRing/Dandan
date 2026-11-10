@@ -400,9 +400,11 @@ function where(c, seat) {
  * 1,490 decisions at 64 deals and 487 at 256 (lab/halving.mjs, 11 November 2026), it chose as the full search did in all but
  * one of each, neither worth two points, for 17% and 12% fewer deals (a third fewer where eight or more moves are weighed).
  * Deeper searches keep their first look at LOOK_FROM, as measured for them.
+ * At 256 deals (Long) the search also stops once the same move has led clearly at two looks in a row (steady): on 489
+ * decisions it chose as the full search did every time, for 15% fewer deals (lab/variants.mjs, ae-var3).
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, merge = false, reuse = false, steady = 0 } = {}) {
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0 } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
