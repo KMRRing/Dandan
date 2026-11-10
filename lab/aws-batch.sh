@@ -6,6 +6,7 @@
 # "dandan-lab" (Node 22 container that clones the repo and runs lab/worker.mjs against the Google bucket, LAB_FILL on), and
 # submits N workers of 16 cores each. A worker reclaimed by spot is retried (up to 5 times); each stops after HOURS.
 #   stop all:  curl -fsSL https://raw.githubusercontent.com/KMRRing/Dandan/main/lab/aws-batch.sh | STOP=1 bash
+# A rerun without KEY reuses the key from the last job definition (e.g. N=16 HOURS=12 to resize).
 # Settings: N (workers, 4), HOURS (most a worker runs, 48), ENV (compute environment name, Dandan).
 set -euo pipefail
 N=${N:-4}; HOURS=${HOURS:-48}; ENV=${ENV:-Dandan}; Q=dandan-lab; CORES=16
@@ -19,7 +20,12 @@ if [ "${STOP:-}" = 1 ]; then
   aws batch update-compute-environment --compute-environment "$ENV" --compute-resources minvCpus=0,desiredvCpus=0 >/dev/null || true
   echo "all lab jobs stopped"; exit 0
 fi
-[ -n "${KEY:-}" ] || { echo "KEY (the service-account key, base64) is needed"; exit 1; }
+if [ -z "${KEY:-}" ]; then  # reuse the key from the last job definition, so a rerun needs no key
+  KEY=$(aws batch describe-job-definitions --job-definition-name "$Q" --status ACTIVE \
+    --query 'reverse(sort_by(jobDefinitions,&revision))[0].containerProperties.environment[?name==`KEY`].value | [0]' --output text 2>/dev/null || true)
+  [ -n "$KEY" ] && [ "$KEY" != None ] || { echo "KEY (the service-account key, base64) is needed the first time"; exit 1; }
+  echo "using the key from the last job definition"
+fi
 
 aws batch update-compute-environment --compute-environment "$ENV" --state ENABLED \
   --compute-resources minvCpus=0,maxvCpus=$((N * CORES)) >/dev/null
