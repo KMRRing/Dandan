@@ -95,6 +95,7 @@ const ANSWER = new Set(["Mind Bend", "Piracy Charm", "Metamorphose", "Repulse", 
 const COUNTER = new Set(["Memory Lapse", "Narset's Reversal"]);
 const DRAW = new Set(["Predict", "Brainstorm", "Chart a Course", "Lórien Revealed", "Take Inventory", "Quicken", "Mystic Retrieval"]);
 export const PLUS = 8;
+export const PLUS_NAMES = ["card lead", "land lead", "answers held", "counters held", "draw spells held", "Dandâns held", "hits it can take", "counter with mana open"];
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 function seatPlus(s, x, out, k) {
   const foe = other(x), mine = s.hand[x], theirs = s.hand[foe];
@@ -129,7 +130,7 @@ const LAYERS = [
   {"n":[16,1],"q":"gRTMIOYsOe5czujjJO2wAA==","s":[0.0065213],"b":[]},
 ];
 /** A network's layers (the form of LAYERS above) made ready to score. */
-function build(layers) {
+export function build(layers) {
   const net = layers.map(L => {
     const [nIn, nOut] = L.n, raw = atob(L.q), W = new Float32Array(nIn * nOut), b = new Float32Array(nOut);
     for (let i = 0; i < raw.length; i++) { let v = raw.charCodeAt(i); if (v > 127) v -= 256; W[i] = v * L.s[i % nOut]; }
@@ -141,7 +142,7 @@ function build(layers) {
 }
 
 /** g: a position's score from one side's features (the hidden layers rectified, the last one not). */
-function score(net, x) {
+export function score(net, x) {
   let h = x;
   for (let l = 0; l < net.length; l++) {
     const { nIn, nOut, W, b, y } = net[l];
