@@ -14,7 +14,7 @@
 //    controls an Island. Islands are double-edged: yours keep your Dandâns, and let theirs attack you.
 //  · The graveyard is shared too, and a Mystic Retrieval in it is anyone's with red: a spell cast leaves its card there
 //    for the other player to take back, and a Retrieval cast from the hand leaves itself (gift).
-import { CARDS, DECK, NAMES, BASICS, HALVES, TOKEN_AT, total } from "./dandan-cards.js";
+import { CARDS, DECK, NAMES, BASICS, HALVES, TOKEN_AT, total, parseCost } from "./dandan-cards.js";
 import { moves, halfOf, nextDrawer, costOf } from "./dandan-engine.js";
 import {
   other, nm, isLandId, perm, isLand, isCreature, isToken, pt, lands, islands, creatures, typesOf, needType, manaAlts, topKnown, itemOf,
@@ -51,6 +51,10 @@ export const TUNE = {
   land: { "Flood Plain": -1, "Izzet Boilerworks": -0.5 },   // added to a land drop, by the land
   urgency: Infinity,         // how many turns from death a Dandân's threat still counts in full (threatShare); Infinity: always
   answerCut: 0, handFade: 0, // threatShare: less by the defender's cheap answers held; back towards whole below that many cards a hand
+  // Korbi, 11 November 2026 (lab switches, 0 = off, until a match says): tiWeak, a Take Inventory with none in the graveyard is
+  // only a cantrip (0.35, then 0.65 more for each there); redraw, a card countered onto their library costs them a fresh draw,
+  // worth more the worse the card; reversal, Narset's Reversal on a spell of theirs aimed at ours, and on an expensive one
+  tiWeak: 0, redraw: 0, reversal: 0,
 };
 /**
  * 9 November 2026: additions to Medium's scores, set by matches against Medium without them (lab/tune-round.mjs on Actions: each
@@ -223,7 +227,7 @@ export function cardWorth(F, id, seat = F.me) {
     if ((CARDS[name].subs || []).includes("Island")) v += creatures(s, seat).length || (seat === F.me && s.hand[seat].some(i => DECK[i] === "Dandân")) ? 0.2 : 0.05;
     return v;
   }
-  if (name === "Take Inventory") { let n = 0; for (const i of s.yard) if (DECK[i] === name) n++; return 0.7 + 0.3 * n; }
+  if (name === "Take Inventory") { let n = 0; for (const i of s.yard) if (DECK[i] === name) n++; return TUNE.tiWeak ? 0.35 + 0.65 * n : 0.7 + 0.3 * n; }
   if (name === "Dandân") return countIslands(s, seat) || landCount(F, seat) >= 2 ? 1.4 : 1.0;
   if (name === "Mystic Retrieval") return 0.6 + (s.yard.some(i => DECK[i] === "Memory Lapse") ? 0.3 : 0);
   return WORTH[name] ?? 0.7;
@@ -1153,7 +1157,7 @@ export class Player {
     if (!x.copy) {
       // where the countered card goes: on top (Lapse) to whoever draws next; second from the top (Commit) to the one after
       const to = half === "Memory Lapse" ? F.next : other(F.next);
-      gain += to === me ? cardWorth(F, x.card, me) * 0.9 : 0.35;
+      gain += to === me ? cardWorth(F, x.card, me) * 0.9 : TUNE.redraw ? 0.35 + 0.5 * (1 - cardWorth(F, x.card, to)) : 0.35;
     }
     if (this.easy) return gain - 0.5;
     if (["Memory Lapse", "Commit", "Narset's Reversal"].includes(x.name)) gain *= TUNE.counterOnCounter;
@@ -1199,7 +1203,14 @@ export class Player {
     // the original goes back to their hand, not to the library as a counter would send it: they keep the card (a Lapse of theirs
     // reversed is still theirs to cast again), and only its effect is denied
     const back = !x.copy && x.card != null ? 0.9 * cardWorth(F, x.card, x.ctl) : 0;
-    return spellWorth(F, x) + copy - back - keep - pay * 0.5;
+    let more = 0;
+    if (TUNE.reversal) {
+      // aimed at ours (a permanent or a spell): Reversed, it misses, and the copy is ours to aim; and the mana they spent is lost
+      const atUs = (x.targets || []).some(t => (t.k === "c" && perm(this.s, t.id)?.ctl === me) || (t.k === "s" && this.s.stack.find(y => y.sid === t.sid)?.ctl === me));
+      const d = CARDS[x.name], mv = d?.cost ? total(parseCost(d.cost)) : 0;
+      more = (atUs ? 0.5 : 0) + 0.2 * Math.max(0, mv - 2);
+    }
+    return spellWorth(F, x) + copy - back - keep - pay * 0.5 + more;
   }
 
   /**
