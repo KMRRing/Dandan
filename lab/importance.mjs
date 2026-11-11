@@ -2,16 +2,17 @@
 // turn, labelled with the result), and for each input (mine and theirs together, the way the judge reads them) its values
 // shuffled across the positions: how much worse the judge predicts (Brier, ×1000) without it. An input the judge ignores
 // costs nothing. Also each input's first-layer weight (the sum of its weights' sizes).
-// usage: node lab/importance.mjs [judge file in judges/ or "today"] [games 300]
+// usage: node lab/importance.mjs [judge: a file in judges/, "today", or @<job> (a judge-variants run)] [games 300] [variant: which line of the job, by its variant number]
 import fs from "node:fs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix, shuffle } from "../seats.js";
 import { policyMove } from "../dandan-policy.js";
 import { FEATURES, PLUS, PLUS_NAMES, features, featuresPlus, build, score } from "../dandan-eval.js";
-import { J } from "./lib.mjs";
-const [file = "ag-v14.json", games = 300] = process.argv.slice(2).map((x, i) => (i ? Number(x) : x));
+import { J, readParts } from "./lib.mjs";
+const [file = "ag-v14.json", games = 300, variant] = process.argv.slice(2).map((x, i) => (i ? Number(x) : x));
 const src = fs.readFileSync(new URL("../dandan-eval.js", import.meta.url), "utf8");
-const layers = file === "today" ? JSON.parse(src.slice(src.indexOf("const LAYERS = ") + 15, src.indexOf("];", src.indexOf("const LAYERS = ")) + 1)) : JSON.parse(fs.readFileSync(new URL(`../judges/${file}`, import.meta.url), "utf8")).layers;
+const fromJob = async () => { const ls = (await readParts(file.slice(1))).flatMap(t => t.split("\n").filter(Boolean)).map(l => JSON.parse(l)); return (variant == null ? ls[0] : ls.find(l => l.variant === variant)).layers; };
+const layers = file.startsWith("@") ? await fromJob() : file === "today" ? JSON.parse(src.slice(src.indexOf("const LAYERS = ") + 15, src.indexOf("];", src.indexOf("const LAYERS = ")) + 1)) : JSON.parse(fs.readFileSync(new URL(`../judges/${file}`, import.meta.url), "utf8")).layers;
 const net = build(layers), M = net[0].nIn, N = FEATURES.length, plus = M > N, half = (N - 3 - 17) / 2;
 const swap = a => {
   const t = new Float32Array(M);

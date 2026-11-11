@@ -82,8 +82,11 @@ export const TUNE = {
   theirTop: 0,
   // gemTiming (Korbi, 11 November 2026): Mind Bend and Piracy Charm's kill are cast only at the end of their turn with mana
   // open, or while their Dandân attacks; never otherwise (no spending them on a turn with nothing to answer). 2: also on our
-  // own turn while they have no mana open
+  // own turn while they have no mana open. 3: only never in our own main phase while they have mana open
   gemTiming: 0,
+  // endFirst (Korbi, 11 November 2026): a kill (Mind Bend, Piracy Charm +2/−1) at the end of their turn uses mana about to untap;
+  // in our own upkeep it spends this turn's. Their end step +endFirst, our upkeep −endFirst
+  endFirst: 0,
   izzetLast: 1,              // izzetLast (below): a dominated-move fix, on
 };
 /**
@@ -1300,8 +1303,19 @@ export class Player {
    * an answer is worth now; and while they're tapped out on our turn, nothing can counter it, which their turn won't be.
    */
   removal(half, m, keep, pay) {
+    const v = this.removal0(half, m, keep, pay), s = this.s;
+    if (!TUNE.endFirst || this.easy || !(half === "Mind Bend" || (half === "Piracy Charm" && m.mode === 1)) || v <= -1) return v;
+    if (s.active === this.opp && s.step === "end") return v + TUNE.endFirst;   // endFirst (TUNE): the kill on mana about to untap
+    if (s.active === this.me && s.step === "upkeep") return v - TUNE.endFirst;
+    return v;
+  }
+  removal0(half, m, keep, pay) {
     const s = this.s, F = this.F, me = this.me, t0 = m.targets[0];
-    if (TUNE.gemTiming && !this.easy && (half === "Mind Bend" || (half === "Piracy Charm" && m.mode !== 2))) {
+    if (TUNE.gemTiming === 3 && !this.easy && (half === "Mind Bend" || (half === "Piracy Charm" && m.mode === 1))) {
+      // 3 (Korbi's second rule): never in our own main phase with nothing on the stack while they have mana open; their end
+      // step, our upkeep and answers to what they do stay as they were
+      if (s.active === me && (s.step === "main1" || s.step === "main2") && !s.stack.length && F.their.n > 0) return -3;
+    } else if (TUNE.gemTiming && !this.easy && (half === "Mind Bend" || (half === "Piracy Charm" && m.mode !== 2))) {
       const theirs = s.active === this.opp, window = (theirs && (s.step === "end" || ((s.step === "attackers" || s.step === "blockers") && !!s.combat?.att?.length)))
         // gemTiming 2: also our own turn while they have no mana open (nothing can counter it)
         || (TUNE.gemTiming === 2 && !theirs && this.F.their.n === 0);
