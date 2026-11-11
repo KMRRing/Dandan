@@ -58,6 +58,7 @@ function folderStore(root) {
       if (ifGeneration && (!fs.existsSync(f) || gen(f) !== ifGeneration)) return false;
       fs.writeFileSync(f, body); return true;
     },
+    async del(name) { fs.rmSync(file(name), { force: true }); },
   };
 }
 function bucketStore(bucket) {
@@ -93,6 +94,7 @@ function bucketStore(bucket) {
       if (r.status === 412) return false;
       if (!r.ok) throw new Error("put " + r.status + " " + await r.text()); return true;
     },
+    async del(name) { await call(`${api}/${encodeURIComponent(name)}`, { method: "DELETE" }); },
   };
 }
 const store = env.LAB_DIR ? folderStore(path.resolve(env.LAB_DIR)) : bucketStore(env.LAB_BUCKET || (() => { throw new Error("set LAB_BUCKET (or LAB_DIR to try it in a folder)"); })());
@@ -181,7 +183,9 @@ async function slotLoop(slot) {
     let work = null;
     try { work = await nextShard(); } catch (e) { log("queue:", e.message); }
     if (work) {
+      BUSY.set(slot, `${work.spec.id}/${work.shard}`); beatWorker();
       try { await runShard(slot, work.spec, work.shard); } catch (e) { log(`slot ${slot}: ${work.spec.id}/${work.shard} failed to run:`, e.message); await store.put(`results/${work.spec.id}/done-${work.shard}`, JSON.stringify({ code: "worker error", error: String(e.message), by: NAME })).catch(() => {}); }
+      BUSY.delete(slot);
       idleSince = Date.now();
       continue;
     }
@@ -190,6 +194,17 @@ async function slotLoop(slot) {
     await sleep(POLL_MS + Math.random() * 3000);
   }
 }
+// ---------- saying what this machine is doing ----------
+// workers/<name>.json, every BEAT (11 November 2026, Korbi: the Fleet page shows whether every core on Google and AWS is
+// working): which cloud, how many cores, and the shard each busy core has. Taken away when the worker stops; one a machine
+// left behind (taken back mid-run) goes stale, and the page reads only fresh ones.
+const CLOUD = env.LAB_CLOUD || (env.AWS_BATCH_JOB_ID ? "aws" : env.LAB_KEY ? "other" : "gcp"), BUSY = new Map();
+const beatWorker = () => store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, slots: SLOTS, busy: [...BUSY.values()], started: T0, t: Date.now() })).catch(() => {});
+const workerBeat = setInterval(beatWorker, BEAT_MS);
+beatWorker();
+for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { store.del(`workers/${NAME}.json`).catch(() => {}); });
 log(`worker ${NAME}: ${SLOTS} slots, ${env.LAB_DIR ? "folder " + env.LAB_DIR : "bucket " + env.LAB_BUCKET}`);
 await Promise.all(Array.from({ length: SLOTS }, (_, i) => slotLoop(i)));
+clearInterval(workerBeat);
+await store.del(`workers/${NAME}.json`).catch(() => {});
 log("no more work: stopping");
