@@ -27,12 +27,13 @@ async function judgeOf(t) {
 async function side(spec) {
   // "plus@<policy-train job>" or "medium": no search at all, the stage-1 model or Medium alone (to see where the model stands)
   if (spec === "medium") return (s, seat) => policyMove(s, seat, { rng: Math.random });
-  if (spec.startsWith("plus@")) { const mv = makePlus(JSON.parse((await readParts(spec.slice(5))).flatMap(x => x.split("\n").filter(Boolean))[0])).move; return (s, seat) => mv(s, seat, Math.random); }
+  if (/^plus(free)?@/.test(spec)) { const free = spec.startsWith("plusfree@"), mv = makePlus(JSON.parse((await readParts(spec.replace(/^plus(free)?@/, ""))).flatMap(x => x.split("\n").filter(Boolean))[0]), { free }).move; return (s, seat) => mv(s, seat, Math.random); }
   const [head, j, jt, js] = spec.split(":"), judge = await judgeOf(j), tj = await judgeOf(jt), sj = await judgeOf(js);
   const [search0, own] = head.split("*"), budget = { deals: own ? Number(own) : deals, ms: 1e9, ...(judge ? { judge } : {}) };
   // "hard+<policy-train job>": Hard whose look-aheads are played past the tree by the stage-1 model instead of Medium (gate G2)
   const [search, model] = search0.split("+");
-  if (model) budget.rollout = makePlus(JSON.parse((await readParts(model)).flatMap(x => x.split("\n").filter(Boolean))[0])).move;
+  // "hard+free~<job>": the model unguarded (it decides passing and lands too)
+  if (model) { const free = model.startsWith("free~"); budget.rollout = makePlus(JSON.parse((await readParts(model.replace(/^free~/, ""))).flatMap(x => x.split("\n").filter(Boolean))[0]), { free }).move; }
   if (search === "paths") {
     const judges = { ...(tj ? { "tempo-tempo": tj } : {}), ...(sj ? { "squeeze-squeeze": sj } : {}) };
     return (s, seat) => thinkPathsMove(s, seat, { ...budget, judges });

@@ -13,8 +13,9 @@ const [shard, shards, out, specA, specB] = [Number(process.argv[2]), Number(proc
 const pairs = Number(process.argv[7] ?? 20000), first = Number(process.argv[8] ?? 300000);
 async function side(spec) {
   if (spec === "medium") return (s, seat, rng) => policyMove(s, seat, { rng });
-  const job = spec.replace(/^plus@/, ""), line = (await readParts(job)).flatMap(x => x.split("\n").filter(Boolean))[0];
-  return makePlus(JSON.parse(line)).move;
+  // "plusfree@<job>": the model decides passing and lands too (no Medium guard), for a model trained with act=1
+  const free = spec.startsWith("plusfree@"), job = spec.replace(/^plus(free)?@/, ""), line = (await readParts(job)).flatMap(x => x.split("\n").filter(Boolean))[0];
+  return makePlus(JSON.parse(line), { free }).move;
 }
 const A = await side(specA), B = await side(specB), J = x => JSON.parse(JSON.stringify(x));
 function game(seed, aSeat) {

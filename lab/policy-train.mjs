@@ -17,6 +17,11 @@ import { MOVE_N } from "../dandan-netpolicy.js";
 const [shard, , out, ids] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5]];
 const EPOCHS = Number(process.argv[6]) || 6, LR = Number(process.argv[7]) || 1e-3, H1 = Number(process.argv[8]) || 64, H2 = Number(process.argv[9]) || 32;
 const T = Number(process.argv[10]) || 0.02, LIGHT = process.argv[11] != null ? Number(process.argv[11]) : 0.3;
+// [act 0|1] (11 November 2026, aa-a1-g1 lost 16% to Medium: the model learned that holding a move is worth as much as playing
+// it, because the search plays it a moment later): with 1, where a move to play is within noise of passing (its mean at least
+// passing's less twice their joint standard error), passing's target is put below that move's by the same margin (at least T),
+// so the model learns to act. The search's own means are kept for G0.
+const ACT = process.argv[12] === "1";
 const say = (...a) => console.log(`[${new Date().toISOString().slice(11, 19)}]`, ...a, `(memory ${Math.round(process.memoryUsage().rss / 1e6)} MB)`);
 
 // ---------- the decisions, packed ----------
@@ -28,12 +33,21 @@ for (const id of ids.split(",")) for (const name of (await store.list(`results/$
     if (!line) continue;
     const d = JSON.parse(line);
     XN = d.x.length;
-    const q = d.c.map(c => c.q), qmax = Math.max(...q);
+    const q = d.c.map(c => c.q), qt = q.slice();
+    if (ACT) {
+      const ip = d.c.findIndex(c => c.m.length === 1 && c.m[0] === 0);
+      let ib = -1; d.c.forEach((c, i) => { if (i !== ip && (ib < 0 || c.q > d.c[ib].q)) ib = i; });
+      if (ip >= 0 && ib >= 0) {
+        const noise = Math.max(T, 2 * Math.hypot(d.c[ip].se || 0, d.c[ib].se || 0));
+        if (d.c[ib].q >= d.c[ip].q - noise) qt[ip] = Math.min(qt[ip], d.c[ib].q - noise);
+      }
+    }
+    const qmax = Math.max(...qt);
     const D = {
       x: Float32Array.from(d.x), m: d.c.map(c => Int16Array.from(c.m)), s: Float32Array.from(d.c.map(c => c.s)), q: Float32Array.from(q),
       med: d.med, pick: d.pick, deep: d.deep, w: d.deep ? 1 : LIGHT,
       // the target: softmax of the search's means at temperature T
-      p: (() => { const e = q.map(v => Math.exp((v - qmax) / T)), z = e.reduce((a, b) => a + b, 0); return Float32Array.from(e, v => v / z); })(),
+      p: (() => { const e = qt.map(v => Math.exp((v - qmax) / T)), z = e.reduce((a, b) => a + b, 0); return Float32Array.from(e, v => v / z); })(),
     };
     (d.hold ? held : train).push(D);
   }

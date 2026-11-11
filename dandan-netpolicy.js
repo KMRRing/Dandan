@@ -129,7 +129,7 @@ export function mediumView(s, seat, rng = Math.random) {
  * Medium's score); the best is played. Questions (attack, block, a mulligan…) stay with Medium. move(s, seat, rng) fits
  * dandan-think.js think's `rollout`.
  */
-export function makePlus(model, { wide = 5 } = {}) {
+export function makePlus(model, { wide = 5, free = false } = {}) {
   const { alpha, beta } = model, n = model.net, H1 = n.H1, H2 = n.H2, XN = n.XN;
   const wx = Float32Array.from(n.wx), wm = Float32Array.from(n.wm), ws = Float32Array.from(n.ws), b1 = Float32Array.from(n.b1);
   const w2 = Float32Array.from(n.w2), b2 = Float32Array.from(n.b2), w3 = Float32Array.from(n.w3);
@@ -152,10 +152,10 @@ export function makePlus(model, { wide = 5 } = {}) {
     const { scored, bar, pick } = mediumView(s, seat, rng);
     // Lands stay Medium's (11 November 2026, G1 lost 16% to Medium): in the search a land played now or later is worth about the
     // same, so the model learned passing ≈ a land and, playing, kept putting its land off. When Medium plays a land, so does it.
-    if (pick.t === "land") return pick;
+    if (!free && pick.t === "land") return pick;
     // The same for passing: in the search a spell held to the next priority is worth about the same as casting it now, so the
     // model learned passing ≈ acting and kept holding. When Medium acts, the model picks which move, not whether to pass.
-    const cands = [...(pick.t === "pass" ? [{ m: PASS, v: bar }] : []), ...scored.slice(0, wide)];
+    const cands = [...(free || pick.t === "pass" ? [{ m: PASS, v: bar }] : []), ...scored.slice(0, wide)];
     if (!cands.some(c => key(c.m) === key(pick))) cands.push({ m: pick, v: scored.find(c => key(c.m) === key(pick))?.v ?? bar });
     const x = viewOf(s, seat);
     base.set(b1);
