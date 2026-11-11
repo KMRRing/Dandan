@@ -120,3 +120,9 @@ S2 sweep (aa-g3-s2-a..f, trained on aa-g2-0N-new, 686 games). Brier gap is net m
 
 S2 = run b (aa-g3-s2-b#19). Gaps are about a tenth of S1's (-0.009) and inside noise: the fresh line's games taught little beyond the old net so far.
 Queued: aa-g4-cp (S2 vs S1 at Deep, 100 pairs, a reading only), aa-g7-01..06-s2 (fresh-line round 2, seeds 970000+).
+
+### 11 Nov, 15:58Z: plan change (Korbi): three-way final replaces checkpoint 2 and the gate
+- When each line's round 2 finishes (720 games): its six-run sweep on both its rounds. S1′ uses aa-g2-0N-v14 + aa-g7-0N-s1; S2′ uses aa-g2-0N-new + aa-g7-0N-s2. Ids aa-g8-s1-a..f and aa-g8-s2-a..f, same settings as aa-g3-s1-a..f. Pick by the usual rule.
+- Then a round robin at Deep (1,024 deals), each against each, up to 400 pairs per match set, same deal seeds for all three, stopping rule as usual: S1′ vs v14, S2′ vs v14, S1′ vs S2′.
+- **Monte 1.1 crowning rule:** the challenger scores at least 53% against v14 (ag-v14.json), and its 99% range is wholly above 50%. If both qualify, their head-to-head decides. If neither does, v14 stays.
+- Checkpoint 1 (aa-g4-cp) stays a reading only.
