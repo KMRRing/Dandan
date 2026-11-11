@@ -4,7 +4,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/KMRRing/Dandan/main/lab/aws-batch.sh | KEY=<the key, base64> N=4 bash
 # It caps the compute environment at 16 cores a worker, for the N new and any already queued or running (the cost guard), makes the job queue "dandan-lab" and the job definition
 # "dandan-lab" (Node 22 container that clones the repo and runs lab/worker.mjs against the Google bucket, LAB_FILL on), and
-# submits N workers of 16 cores each. A worker reclaimed by spot is retried (up to 5 times); each stops after HOURS.
+# submits N workers of 16 cores each. A worker whose spot machine is taken back is retried (up to 10 attempts, AWS's most; 5 ran out on 11 Nov when Stockholm's spot capacity was tight); each stops after HOURS.
 #   stop all:  curl -fsSL https://raw.githubusercontent.com/KMRRing/Dandan/main/lab/aws-batch.sh | STOP=1 bash
 # A rerun without KEY reuses the key from the last job definition (e.g. N=16 HOURS=12 to resize).
 # Settings: N (workers, 4), HOURS (most a worker runs, 48), ENV (compute environment name, Dandan).
@@ -31,7 +31,9 @@ fi
 HAVE=0
 for st in SUBMITTED PENDING RUNNABLE STARTING RUNNING; do
   for id in $(aws batch list-jobs --job-queue "$Q" --job-status $st --query 'jobSummaryList[].jobId' --output text 2>/dev/null); do
-    n=$(aws batch describe-jobs --jobs "$id" --query 'jobs[0].arrayProperties.size' --output text); [ "$n" = None ] && n=1
+    # an array counts only its children still alive (failed or finished ones hold no machine)
+    n=$(aws batch describe-jobs --jobs "$id" --query 'jobs[0].arrayProperties.statusSummary' --output json \
+      | python3 -c 'import json,sys; d=json.load(sys.stdin) or {}; print(sum(d.get(k,0) for k in ("SUBMITTED","PENDING","RUNNABLE","STARTING","RUNNING")) if d else 1)')
     HAVE=$((HAVE + n))
   done
 done
@@ -58,7 +60,7 @@ print(json.dumps({
 PY
 )
 DEF=$(aws batch register-job-definition --job-definition-name "$Q" --type container --container-properties "$PROPS" \
-  --retry-strategy attempts=5 --timeout attemptDurationSeconds=$(( (HOURS + 1) * 3600 )) --query jobDefinitionArn --output text)
+  --retry-strategy '{"attempts":10,"evaluateOnExit":[{"onStatusReason":"Host EC2*","action":"RETRY"},{"onReason":"*","action":"EXIT"}]}' --timeout attemptDurationSeconds=$(( (HOURS + 1) * 3600 )) --query jobDefinitionArn --output text)
 echo "job definition $DEF"
 
 if [ "$N" -ge 2 ]; then ARR="--array-properties size=$N"; else ARR=""; fi
