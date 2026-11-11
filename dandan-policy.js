@@ -55,6 +55,10 @@ export const TUNE = {
   // only a cantrip (0.35, then 0.65 more for each there); redraw, a card countered onto their library costs them a fresh draw,
   // worth more the worse the card; reversal, Narset's Reversal on a spell of theirs aimed at ours, and on an expensive one
   tiWeak: 0, redraw: 0, reversal: 0,
+  // gems (Korbi, 11 November 2026): Mind Bend and Piracy Charm are worth more than a Dandân in hand (an extra life: cast at the end
+  // of their turn or before their attack, a counter only sends them back to be cast again), 1.7 each; and the Charm's discard is
+  // for a card that would go to the hand size anyway, never otherwise
+  gems: 0,
 };
 /**
  * 9 November 2026: additions to Medium's scores, set by matches against Medium without them (lab/tune-round.mjs on Actions: each
@@ -230,6 +234,7 @@ export function cardWorth(F, id, seat = F.me) {
   if (name === "Take Inventory") { let n = 0; for (const i of s.yard) if (DECK[i] === name) n++; return TUNE.tiWeak ? 0.35 + 0.65 * n : 0.7 + 0.3 * n; }
   if (name === "Dandân") return countIslands(s, seat) || landCount(F, seat) >= 2 ? 1.4 : 1.0;
   if (name === "Mystic Retrieval") return 0.6 + (s.yard.some(i => DECK[i] === "Memory Lapse") ? 0.3 : 0);
+  if (TUNE.gems && (name === "Mind Bend" || name === "Piracy Charm")) return 1.7;
   return WORTH[name] ?? 0.7;
 }
 
@@ -1225,6 +1230,7 @@ export class Player {
     if (half === "Piracy Charm" && m.mode === 2) {
       // a discard: worth it on a small hand, at the end of their turn
       const n = s.hand[this.opp].length;
+      if (TUNE.gems) return F.myTurn && s.hand[me].length > 7 && n ? 0.6 - pay : -1;   // only a card the hand size would take anyway
       return n && n <= 3 && (this.theirEnd || this.easy) ? 0.95 - 0.1 * n - keep - pay : -1;
     }
     const p = t0?.k === "c" ? perm(s, t0.id) : null;
