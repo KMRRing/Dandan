@@ -140,3 +140,30 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - **Queued on a9a14e4:** runs g (`aa-g8-s1-g`, `aa-g8-s2-g`, variant 19, turn starts only) and S3 a–d (`aa-g8-s3-a..d`, on the 146 filler batches spb236–390; d is variant 23, 128x64x32).
 - **Three S1′/S2′ runs killed** (aa-g8-s1-f, s2-e, s2-f: SIGTERM at 17:52, 360 MB, one machine, a spot reclaim). Their done/stdout/claim objects were removed so they run again.
 - **S2′ run c** (aa-g8-s2-c, 32 a game, no floor): 1,385 games, 42,452 positions. Brier 0.1493 vs old 0.1503 (gap −0.0010); flaws 2.75% (old 3.99%).
+
+### 11 Nov, 18:33Z: S1′ picked, its gate queued; spot losses
+- **S1′ sweep** (aa-g8-s1-*, 1,415 games). Brier gap to the old net on the same positions, then flaws (old net's in brackets):
+
+  | Run | Gap | Flaws |
+  |---|---|---|
+  | a | −0.0062 | 1.4% (4.2) |
+  | b | −0.0062 | 0.3% (4.4) |
+  | c | −0.0065 | 2.8% (4.1) |
+  | d | −0.0065 | 1.2% (4.3) |
+  | e | −0.0066 | 1.4% (4.3) |
+  | g, turn starts, not comparable | −0.0066 | 0.8% |
+
+  Run f was lost twice to spot reclaims; a third try is aa-g8-s1-i. c, d and e tie within 0.0002, so the fewest flaws decides: **S1′ = aa-g8-s1-d#19** (32 a game, floor rule).
+- **S2′ so far** (aa-g8-s2-*, 1,385 games):
+
+  | Run | Gap | Flaws |
+  |---|---|---|
+  | a | −0.0005 | 2.5% |
+  | b | −0.0007 | 0.8% |
+  | c | −0.0010 | 2.8% |
+  | d | −0.0009 | 0.9% |
+  | g, turn starts | −0.0019 | 1.1% |
+
+  Run e and run f (rerun as aa-g8-s2-h) are still training.
+- **Queued: aa-g9-s1v14**, S1′ against v14 at Deep. 600 pairs, one a shard, seeds 220000, ref a9a14e4. Scored by the gate (monte-plan.md 2.5).
+- **Spot losses:** aa-g8-s1-f, -h, aa-g8-s2-e (first try), -f and aa-g8-s3-b were each killed by SIGTERM when AWS took the machine back, then marked done, so no worker retried them. S3 run b is requeued as aa-g8-s3-e. Fix in 623044f: a worker that is itself being stopped leaves its shards unfinished, so the claim lapses and another worker takes them. It takes effect as workers restart.
