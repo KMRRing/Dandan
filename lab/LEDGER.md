@@ -184,7 +184,7 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - **Standing approval tonight** for every step of monte-plan.md stage 0 and stage 1: the S2′ gate, the Quick screen, the Deep gates for the best two lines, the export, the stage-1 trainings and tests G0–G3. Each step is queued as the one before finishes; the ledger records each one.
 - **Nothing goes live without Korbi.** A net or model that passes its Deep gate is prepared (judges/<name>.json, a ready LIVE_JUDGE change, the evidence), but the live game keeps v14 until he says so.
 
-### 11 Nov, 19:35Z: stage 1 built and started (monte-plan.md 3.2–3.5)
+### 11 Nov, 19:15Z: stage 1 built and started (monte-plan.md 3.2–3.5)
 - Code in cb02856:
   - `lab/export.mjs`: every recorded search decision, replayed under the full rules, with Medium's score of each candidate and the search's mean.
   - `lab/policy-train.mjs`: the learned correction. score = α·Medium + β·[Medium's pick] + f(view, move, Medium's score), cross-entropy to softmax(q/0.02). It prints G0.
