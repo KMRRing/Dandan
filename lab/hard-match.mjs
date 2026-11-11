@@ -1,5 +1,5 @@
 // One Hard against another (11 November 2026): every deal twice, seats swapped, the same deals per depth. A side is
-// "<search>:<judge>[:<tempo judge>:<squeeze judge>]": search hard (dandan-think.js think) or paths (thinkPaths, four plan
+// "<search>[*deals]:<judge>[:<tempo judge>:<squeeze judge>]" (deals: this side's own, else the match's): search hard (dandan-think.js think) or paths (thinkPaths, four plan
 // pairings, maximin); a judge is a file in judges/ (ag-v14.json), "@<job>" (the first line of a lab job's results, e.g. a
 // lab/judge-variants.mjs run) or "-" (the game's own). The two plan judges, for paths, score its tempo-tempo and squeeze-squeeze
 // lines (the mixed ones take the main judge). Rows { pair, a, games } as lab/judge-match.mjs (lab/medium-match-sum.mjs sums them).
@@ -18,8 +18,8 @@ async function judgeOf(t) {
   return makeJudge(JSON.parse(fs.readFileSync(new URL(`../judges/${t}`, import.meta.url), "utf8")).layers);
 }
 async function side(spec) {
-  const [search, j, jt, js] = spec.split(":"), judge = await judgeOf(j), tj = await judgeOf(jt), sj = await judgeOf(js);
-  const budget = { deals, ms: 1e9, ...(judge ? { judge } : {}) };
+  const [head, j, jt, js] = spec.split(":"), judge = await judgeOf(j), tj = await judgeOf(jt), sj = await judgeOf(js);
+  const [search, own] = head.split("*"), budget = { deals: own ? Number(own) : deals, ms: 1e9, ...(judge ? { judge } : {}) };
   if (search === "paths") {
     const judges = { ...(tj ? { "tempo-tempo": tj } : {}), ...(sj ? { "squeeze-squeeze": sj } : {}) };
     return (s, seat) => thinkPathsMove(s, seat, { ...budget, judges });
