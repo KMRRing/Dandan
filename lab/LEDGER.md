@@ -248,3 +248,17 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 
 - G3 not queued (needs G2). Per plan 3.5 the next try is retraining (holding a move excluded from the targets when a move to
   play is within noise of it) or the model as the shortlist's order; neither run without Korbi.
+
+## 11 November 2026, ~21:50Z: the retrained model (aa-a1-pt2, act=1, 8d69429)
+
+- Training: G0 1.47 → 0.905 points given up (38% less, passes); agrees with the search 69.1% (Medium 76.3%).
+
+| job | test | result | verdict |
+|---|---|---|---|
+| aa-a1-g1c | guarded (Medium decides lands, pass or act) vs Medium, 20,000 pairs | **49.7% ± 0.6** | fails; worse than pt1 guarded (53.0) |
+| aa-a1-g1d | unguarded vs Medium, 20,000 pairs | **41.8% ± 0.6** | fails |
+| aa-a1-g2c | Hard at Quick with it (guarded) vs Hard at Quick, v14, 1,000 pairs | **48.5% ± 2.6** | fails |
+| aa-a1-g2d | the same, unguarded | **48.9% ± 2.6** | fails |
+
+- No G3. Both trainings pass G0 and fail G1: lower value given up on single decisions does not make a better player.
+  Plan 3.5 for a failed G1: the inputs are the problem; add the last few actions first. Waits for Korbi.
