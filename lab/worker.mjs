@@ -14,7 +14,7 @@
 //   is moved to retired/<id>.json, out of the workers' sight but still in the ledger.
 //
 // LAB_FILL=1 (10 November 2026, Korbi: keep the machines on something useful at all times): when no shard is left the worker
-// queues the next batch of self-play (spb<n>, 120 games of Hard at 256 deals against itself, seeds after the batch before) and,
+// queues the next batch of self-play (spb<n>, 120 games of Hard against itself: since 11 November 2026 at 128 deals with judge v14, the live game's, for the next judge (before, 256 deals with the old judge), seeds after the batch before) and,
 // for each finished batch, a training of the judge on all batches up to it (jt<n>); a worker filling never stops for want of work.
 //
 // usage: node lab/worker.mjs            (on Google: LAB_BUCKET=<bucket>)      a worker stops when nothing has come for LAB_IDLE_MIN
@@ -112,7 +112,7 @@ async function refill() {
       purpose: `the judge trained on Hard self-play ${upTo[0]}..${upTo.at(-1)} (${upTo.length * 120} games); held-out scores by library size show what the batch adds` });
   }
   if (nums.length && (await doneCount(batch(last))) < 24 && !(await allClaimed(batch(last)))) return;
-  await put({ id: batch(last + 1), script: "selfplay.mjs", args: `{shard} {shards} {out} 256 120 ${7000 + 120 * last}`, shards: 24, timeoutMin: 120,
+  await put({ id: batch(last + 1), script: "selfplay.mjs", args: `{shard} {shards} {out} 128 120 ${7000 + 120 * last} hard ag-v14.json`, shards: 24, timeoutMin: 120,
     purpose: "Hard (256 deals) against itself, every decision with the search's value of each move: data to teach the judge and Medium" });
 }
 const allClaimed = async id => (await store.list(`claims/${id}/`)).length >= 24;
