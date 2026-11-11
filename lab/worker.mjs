@@ -100,6 +100,8 @@ const store = env.LAB_DIR ? folderStore(path.resolve(env.LAB_DIR)) : bucketStore
 // ---------- finding a shard to run ----------
 const claimBody = () => JSON.stringify({ by: NAME, t: Date.now() });
 const finished = new Set(), FILL = env.LAB_FILL === "1";
+let STOPPING = false;
+for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { STOPPING = true; log(`${sig}: stopping, shards in hand left unfinished`); setTimeout(() => process.exit(0), 5000); });
 const doneCount = async id => (await store.list(`results/${id}/`)).filter(r => /\/done-\d+$/.test(r.name)).length;
 const batch = n => `spm${String(n).padStart(3, "0")}`;
 /** The commit `main` is at now: a batch queued at it says which engine played it (one queued at "main" can't, as main moves on). */
@@ -163,6 +165,9 @@ async function runShard(slot, spec, shard) {
   const limit = setTimeout(() => child.kill("SIGKILL"), (spec.timeoutMin || 120) * 60000);
   const code = await new Promise(res => child.on("exit", (c, sig) => res(c ?? sig)));
   clearInterval(beat); clearTimeout(limit); fs.closeSync(fd);
+  // the machine itself is going (a spot reclaim, a stop): the shard didn't fail, so leave it unfinished; its claim lapses
+  // and another worker takes it up (11 Nov 2026: four trainings were marked done when their machines were taken back)
+  if (STOPPING) { log(`slot ${slot}: ${id}/${shard} cut short by the machine stopping: left for another worker`); return; }
   if (fs.existsSync(out)) await store.put(`results/${id}/part-${shard}.jsonl`, fs.readFileSync(out));
   await store.put(`results/${id}/stdout-${shard}.txt`, fs.readFileSync(printed));
   await store.put(`results/${id}/done-${shard}`, JSON.stringify({ code, seconds: Math.round((Date.now() - t0) / 1000), by: NAME }));
