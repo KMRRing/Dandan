@@ -59,6 +59,12 @@ export const TUNE = {
   // of their turn or before their attack, a counter only sends them back to be cast again), 1.7 each; and the Charm's discard is
   // for a card that would go to the hand size anyway, never otherwise
   gems: 0,
+  // metaLand (Korbi, 11 November 2026): their Metamorphose at a permanent of ours is not worth a Memory Lapse when we hold a land
+  // (or, for a Dandân, a Dandân) to put onto the battlefield in its place: it costs us little, and the Lapse is worth more later
+  metaLand: 0,
+  // repulse (Korbi, same day): Repulse is for defence, saving our Dandân from their removal (worth the whole Dandân, not half);
+  // on their Dandân only when nothing better is on offer (the bounce costs them little: they cast it again)
+  repulse: 0,
 };
 /**
  * 9 November 2026: additions to Medium's scores, set by matches against Medium without them (lab/tune-round.mjs on Actions: each
@@ -1156,6 +1162,10 @@ export class Player {
     if (!x) return -1;
     if (half === "Narset's Reversal") return this.reversal(x, keep, pay);
     if (x.ctl === me) return -3;
+    if (TUNE.metaLand && x.name === "Metamorphose" && !this.easy) {
+      const p = x.targets?.[0]?.k === "c" ? perm(s, x.targets[0].id) : null;
+      if (p && p.ctl === me && s.hand[me].some(id => (isLand(p) ? isLandId(id) : DECK[id] === "Dandân"))) return -1;
+    }
     const fate = stackFate(s);
     if (fate.gone.has(x.sid) || fate.fizzle.has(x.sid)) return -3;      // already countered, or fizzling: the card for nothing
     let gain = spellWorth(F, x) * (x.name === "Dandân" ? this.share(me) : 1);
@@ -1257,7 +1267,7 @@ export class Player {
     if (["Metamorphose", "Gone Missing"].includes(half) && !isToken(p.id)) v += F.next === me ? 0.8 * cardWorth(F, p.id) : F.next === owner ? 0.45 : 0;
     if (half === "Commit" && !isToken(p.id)) v += other(F.next) === me ? 0.7 * cardWorth(F, p.id) : 0.2;
     if (half === "Metamorphose") v -= 0.6 * holds(F, "Dandân") * (islands(s, this.opp).length ? 1 : 0.3);
-    if (half === "Repulse") v += 0.9;
+    if (half === "Repulse") v += TUNE.repulse ? 0.9 - 1.0 : 0.9;   // repulse: offensive bounces only when well worth it
     if (half === "Gone Missing") v += 0.5;
     if (hit <= 0.2 && v < 0.6) return -1;
     if (isCreature(p)) {
@@ -1298,7 +1308,7 @@ export class Player {
   /** Repulse on our own Dandân in answer to something aimed at it: it's saved to our hand, and we draw. */
   saveOwn(p, keep, pay) {
     const aimed = this.s.stack.some(x => x.ctl !== this.me && x.targets.some(t => t.k === "c" && t.id === p.id) && !["Narset's Reversal"].includes(x.name));
-    return aimed && isCreature(p) ? 0.55 * dandanWorth(this.s, p) + 0.9 - keep - pay : -1;
+    return aimed && isCreature(p) ? (TUNE.repulse ? 1.0 : 0.55) * dandanWorth(this.s, p) + 0.9 - keep - pay : -1;
   }
 }
 
