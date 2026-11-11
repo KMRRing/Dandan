@@ -4,7 +4,9 @@
 // the judge's mistake. At the start of every turn of the games given, each card in each hand is taken out (put at the
 // bottom of the library, so the deck's count stays) and the holder's chance compared. Prints, per card, how often and by
 // how much its going helps by more than a point, and the worst positions.
-// usage: node lab/judge-hand.mjs <self-play job ids> [judge job (a jt run's weights), else the game's judge]
+// usage: node lab/judge-hand.mjs <self-play job ids> [judge: a file in judges/ (ag-v14.json), a job whose first line holds a judge's
+//        layers (a jt or judge-variants run, also as @<job>), else the game's judge]
+import fs from "node:fs";
 import { readParts } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove } from "../seats.js";
@@ -12,7 +14,9 @@ import { winChance, makeJudge } from "../dandan-eval.js";
 import { DECK } from "../dandan-cards.js";
 
 const ids = process.argv[2], judgeJob = process.argv[3];
-const judge = judgeJob ? makeJudge(JSON.parse((await readParts(judgeJob))[0].split("\n")[0]).layers) : winChance;
+const judge = !judgeJob || judgeJob === "-" ? winChance
+  : judgeJob.endsWith(".json") ? makeJudge(JSON.parse(fs.readFileSync(new URL(`../judges/${judgeJob}`, import.meta.url), "utf8")).layers)
+  : makeJudge(JSON.parse((await readParts(judgeJob.replace(/^@/, "")))[0].split("\n")[0]).layers);
 const J = x => JSON.parse(JSON.stringify(x));
 const by = new Map(), worst = [];
 let positions = 0;
