@@ -9,12 +9,13 @@
 // Run by the Lab workflow, a share of the games in each job:
 // usage: node lab/selfplay.mjs <shard> <shards> <out> <deals 256> <games 800> [first seed 7000] [mode hard] [judge]
 //   mode: hard (the search above); paths (Hard over four paths, dandan-think.js thinkPaths); medium:<plan>:<plan> (Medium of those
-//   plans, seat 0's first, no search kept: data for a judge of those plans). judge: a file in judges/ (else the game's own).
+//   plans, seat 0's first, no search kept: data for a judge of those plans). judge: a file in judges/, or @<job>[#variant] (a judge-variants run), else the game's own.
 import fs from "node:fs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../seats.js";
 import { think, thinkPaths } from "../dandan-think.js";
 import { makeJudge } from "../dandan-eval.js";
+import { readParts } from "./lib.mjs";
 import { policyMove, PASS } from "../dandan-policy.js";
 import { moves as legal } from "../dandan-engine.js";
 import { moveName } from "../dandan-words.js";
@@ -23,7 +24,16 @@ import { J } from "./lib.mjs";
 
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5] || 256), Number(process.argv[6] || 800), Number(process.argv[7] || 7000)];
 const mode = process.argv[8] || "hard", judgeFile = process.argv[9];
-const judge = judgeFile ? makeJudge(JSON.parse(fs.readFileSync(new URL(`../judges/${judgeFile}`, import.meta.url), "utf8")).layers) : undefined;
+// a judge file in judges/, or @<job>[#variant]: a lab/judge-variants.mjs run's (its first line, or the line of that variant)
+async function judgeFrom(t) {
+  if (!t || t === "-") return undefined;
+  if (t.startsWith("@")) {
+    const [job, v] = t.slice(1).split("#"), ls = (await readParts(job)).flatMap(x => x.split("\n").filter(Boolean)).map(l => JSON.parse(l));
+    return makeJudge((v == null ? ls[0] : ls.find(l => l.variant === Number(v))).layers);
+  }
+  return makeJudge(JSON.parse(fs.readFileSync(new URL(`../judges/${t}`, import.meta.url), "utf8")).layers);
+}
+const judge = await judgeFrom(judgeFile);
 const plans = mode.startsWith("medium:") ? mode.split(":").slice(1) : null;
 const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);
 const nm = id => DECK[id] ?? "token";

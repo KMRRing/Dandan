@@ -1,7 +1,7 @@
 // One Hard against another (11 November 2026): every deal twice, seats swapped, the same deals per depth. A side is
 // "<search>[*deals]:<judge>[:<tempo judge>:<squeeze judge>]" (deals: this side's own, else the match's): search hard (dandan-think.js think) or paths (thinkPaths, four plan
 // pairings, maximin); a judge is a file in judges/ (ag-v14.json), "@<job>" (the first line of a lab job's results, e.g. a
-// lab/judge-variants.mjs run) or "-" (the game's own). The two plan judges, for paths, score its tempo-tempo and squeeze-squeeze
+// lab/judge-variants.mjs run) or "-" (the game's own); "@<job>#<variant>" picks a variant's line. The two plan judges, for paths, score its tempo-tempo and squeeze-squeeze
 // lines (the mixed ones take the main judge). Rows { pair, a, games } as lab/judge-match.mjs (lab/medium-match-sum.mjs sums them).
 // usage: node lab/hard-match.mjs <shard> <shards> <out> <side A> <side B> [deals 64] [pairs 200] [first seed 150000]
 import fs from "node:fs";
@@ -14,7 +14,10 @@ const [shard, shards, out, specA, specB] = [Number(process.argv[2]), Number(proc
 const deals = Number(process.argv[7] ?? 64), pairs = Number(process.argv[8] ?? 200), first = Number(process.argv[9] ?? 150000);
 async function judgeOf(t) {
   if (!t || t === "-") return undefined;
-  if (t.startsWith("@")) { const l = (await readParts(t.slice(1))).flatMap(x => x.split("\n").filter(Boolean))[0]; return makeJudge(JSON.parse(l).layers); }
+  if (t.startsWith("@")) {
+    const [job, v] = t.slice(1).split("#"), ls = (await readParts(job)).flatMap(x => x.split("\n").filter(Boolean)).map(l => JSON.parse(l));
+    return makeJudge((v == null ? ls[0] : ls.find(l => l.variant === Number(v))).layers);
+  }
   return makeJudge(JSON.parse(fs.readFileSync(new URL(`../judges/${t}`, import.meta.url), "utf8")).layers);
 }
 async function side(spec) {
