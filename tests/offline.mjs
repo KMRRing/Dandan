@@ -50,7 +50,7 @@ for (const f of kept.filter(f => /\.(?:html|css|js|webmanifest)$/.test(f))) {
 check(missing.length === 0, `every import, stylesheet url(), tag and icon names a file that is kept${missing.length ? ": " + missing.join(", ") : ""}`);
 
 // a load whose path is made as the code runs can't be followed by reading: each is accounted for here, so a new one is looked at
-const BUILT = { "sync.js": "the database's own address (another site, never kept)" };
+const BUILT = { "sync.js": "the database's own address (another site, never kept)", "dandan-engines.js": "a retrained judge's file, one of the fixed list JUDGES (judges/*.json, kept)" };
 const built = [];
 for (const f of kept.filter(f => f.endsWith(".js"))) {
   const code = fs.readFileSync(ROOT + f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"'`\\])\/\/.*$/gm, "$1");

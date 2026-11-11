@@ -10,7 +10,7 @@ export const ROOT = new URL("..", import.meta.url).pathname;
 /** Never kept: the tests, the tools, the lab and the workflows; and the service worker itself (the browser fetches that). */
 export const NEVER = f => /^(?:tests|tools|lab|\.github)\//.test(f) || f === "sw.js";
 /** The kinds of file the app is made of. */
-export const SHIP = /\.(?:html|js|css|webmanifest|woff2|png|svg)$/;
+export const SHIP = /\.(?:html|js|css|webmanifest|json|woff2|png|svg)$/;   // json: the lab's retrained judges (judges/, dandan-engines.js)
 
 /** Every file kept offline, sorted: the git index and what is new and not ignored (so a file not yet committed is tried too). */
 export function offlineFiles(root = ROOT) {
