@@ -4,7 +4,7 @@
 // seen go there; the rest it takes as odds (Medium) or deals at random many times over (Hard).
 import { BASICS, NAMES } from "./dandan-cards.js";
 import { moves, upkeepStop, MOST_MULLS } from "./dandan-engine.js";
-import { policyMove, PASS } from "./dandan-policy.js";
+import { TUNE, policyMove, PASS } from "./dandan-policy.js";
 import { thinkMove } from "./dandan-think.js";
 import { shuffle } from "./seats.js";
 
@@ -41,10 +41,14 @@ export function randomMove(s, seat, rng) {
 }
 
 /** The computer player's move at a level (Hard by default): an answer to the question put to it, or what it does with priority. */
-export function botMove(s, seat, { rng = Math.random, level = "hard", style } = {}) {
+export function botMove(s, seat, { rng = Math.random, level = "hard", style, tune } = {}) {
   // an upkeep stop only for a Flood Plain's window (engine fetchWindow) is for a person: the computer never fetched there
   if (s.step === "upkeep" && !s.stack.length && !s.pending && !upkeepStop(s, seat)) return PASS;
   if (level === "hard" || !level) return thinkMove(s, seat);
   // style: a Medium's plan (dandan-policy.js STYLES), asked for only by the game lab; left out, it is today's Medium
-  return policyMove(s, seat, { rng, level: level === "easy" ? "easy" : "medium", style });
+  // tune: a lab Medium's switches (dandan-engines.js), set for this move only
+  if (!tune) return policyMove(s, seat, { rng, level: level === "easy" ? "easy" : "medium", style });
+  const was = { ...TUNE };
+  Object.assign(TUNE, tune);
+  try { return policyMove(s, seat, { rng, level: level === "easy" ? "easy" : "medium", style }); } finally { Object.assign(TUNE, was); }
 }

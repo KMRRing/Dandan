@@ -3,13 +3,14 @@
 // (dandan-lab.js), the look-ahead's worker (dandan-worker.js) and the Node tests all read it.
 //
 // An engine is { id, name, short, kind, description, expect, available, ... }:
-//   kind "medium": dandan-policy.js's hand-written player, `style` choosing its plan (STYLES there); about a millisecond a move.
+//   kind "medium": dandan-policy.js's hand-written player, `style` choosing its plan (STYLES there), `tune` switches set in its TUNE
+//                  for its moves only; about a millisecond a move.
 //   kind "hard":   dandan-think.js's look-ahead, `judge` choosing the network that scores where a line ends (null: the game's own
 //                  judge, dandan-eval.js `winChance`; else a key of JUDGES below).
 //   available false: listed so it can be read about, but not seated (planned, not built).
 // To add a variant, push one more entry onto ENGINES (a Medium style needs its entry in STYLES, a judge its file in JUDGES): the lab
 // lists it, seats it and runs it with no other change.
-import { policyMove, PASS } from "./dandan-policy.js";
+import { policyMove, PASS, TUNE } from "./dandan-policy.js";
 import { think, thinkMove } from "./dandan-think.js";
 import { moves } from "./dandan-engine.js";
 import { makeJudge } from "./dandan-eval.js";
@@ -29,6 +30,16 @@ export const ENGINES = [
     id: "medium-squeeze", name: "Medium (squeeze)", short: "Squeeze", kind: "medium", style: "squeeze", available: true,
     description: "Medium with the squeeze plan, built 10 November 2026 to play the mid-game value squeeze: it keeps two mana up when it holds answers, holds back a Dandân into likely answers, and weighs how urgent a threat is before spending an answer on it.",
     expect: "Honest status: in tests it scored 49% against tempo Medium in the mid game, so no better yet. It differs from tempo in about 9% of decisions, mostly holding back a Dandân.",
+  },
+  {
+    id: "medium-tempo2", name: "Medium (tempo 2)", short: "Tempo2", kind: "medium", style: "tempo", tune: { tiWeak: 1, redraw: 1, reversal: 1 }, available: true,
+    description: "Tempo Medium with Korbi's card values of 11 November 2026: a Take Inventory with none in the graveyard is only a draw-one (worth 0.35, and 0.65 more for each in the graveyard); a card countered onto their library costs them a fresh draw, so countering a bad card onto it is worth more; Narset's Reversal is worth more on a spell of theirs aimed at ours, and on an expensive one. (Both tempo Mediums also have the stack fix of that day: no counter at a spell already countered.)",
+    expect: "Being matched against tempo Medium (lab jobs aa-ag-ti, -rd, -rv, -all): until those finish, not shown better.",
+  },
+  {
+    id: "medium-squeeze2", name: "Medium (squeeze 2)", short: "Squeeze2", kind: "medium", style: "squeeze", tune: { tiWeak: 1, redraw: 1, reversal: 1 }, available: true,
+    description: "Squeeze Medium with the same three card values as tempo 2 (Take Inventory, a bad card countered onto their library, Narset's Reversal), and the stack fix.",
+    expect: "Matched against tempo 2 from mid-game setups where one side is ahead on mana and Memory Lapses: see the lab ledger.",
   },
   {
     id: "medium-deckout", name: "Medium (deckout)", short: "Deckout", kind: "medium", style: null, available: false,
@@ -78,8 +89,14 @@ const MEDIUM_ONLY = ["mull", "bottom", "name"];
  * { move, mean }. `budget` is think()'s options for a Hard engine (deals, wide, ms…), `must` a move to keep in the weighing.
  * A Hard engine on the page's thread would freeze the table: the page asks the worker (dandan-worker.js, which calls this).
  */
+/** A Medium's move with its switches set (and put back after: Medium runs on one thread, so nothing else moves meanwhile). */
+export function mediumMove(engine, s, seat, opts = {}) {
+  const was = { ...TUNE };
+  Object.assign(TUNE, engine.tune || {});
+  try { return policyMove(s, seat, { style: engine.style || "tempo", ...opts }); } finally { Object.assign(TUNE, was); }
+}
 export async function decide(engine, s, seat, { budget = {}, must = null, load } = {}) {
-  if (engine.kind === "medium") return { move: policyMove(s, seat, { style: engine.style || "tempo" }), chance: null, list: [] };
+  if (engine.kind === "medium") return { move: mediumMove(engine, s, seat), chance: null, list: [] };
   const p = s.pending;
   if (p && MEDIUM_ONLY.includes(p.t)) return { move: policyMove(s, seat), chance: null, list: [] };
   if (!p && !moves(s, seat, true).length) return { move: PASS, chance: null, list: [] };
@@ -91,7 +108,7 @@ export async function decide(engine, s, seat, { budget = {}, must = null, load }
 
 /** Hard's move for an engine, as the live game plays it (thinkMove) but with the engine's judge: what the opponent's worker runs. */
 export async function engineMove(engine, s, seat, budget, load) {
-  if (engine.kind === "medium") return policyMove(s, seat, { style: engine.style || "tempo" });
+  if (engine.kind === "medium") return mediumMove(engine, s, seat);
   const judge = await judgeOf(engine, load);
   return thinkMove(s, seat, judge ? { ...budget, judge } : budget);
 }

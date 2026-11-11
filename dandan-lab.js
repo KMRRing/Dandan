@@ -75,7 +75,7 @@ export const activeCoaches = (st = settings) => ENGINES.filter(e => e.available 
 
 // ---------- the opponent ----------
 /** What the page's computer-player call is given: the Medium plan of the engine seated (Hard ignores it). */
-export const botCtx = ctx => ({ ...ctx, style: engineOf(settings.engine)?.style || undefined });
+export const botCtx = ctx => ({ ...ctx, style: engineOf(settings.engine)?.style || undefined, tune: engineOf(settings.engine)?.tune || undefined });
 
 function seatOpponent() {
   const e = engineOf(settings.engine);
