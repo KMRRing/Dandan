@@ -87,6 +87,15 @@ export const TUNE = {
   // endFirst (Korbi, 11 November 2026): a kill (Mind Bend, Piracy Charm +2/−1) at the end of their turn uses mana about to untap;
   // in our own upkeep it spends this turn's. Their end step +endFirst, our upkeep −endFirst
   endFirst: 0,
+  // Korbi, 11 November 2026: cards the engine turns into liabilities by casting them badly (the hand test: a held Commit,
+  // Retrieval, Gone Missing or Take Inventory was often worth less than nothing to the judge, because of how it gets cast).
+  // goneSel: Gone Missing only at their Izzet Boilerworks (better when they won't draw it again: our draw next) or at their
+  //   Dandân while they're tapped out (no Lapse or Reversal for the tempo swing)
+  // retrSafe: no Mystic Retrieval they could flash back on their turn (red and three mana), unless we cast both halves now
+  // commitWhen: Commit only with a land lead or fewer cards than them (who'd want Memory from the graveyard), or when we must
+  //   (two hits or fewer left)
+  // tiNeed: Take Inventory only when we need cards (under four in hand, or no land in hand) and at the end of their turn
+  goneSel: 0, retrSafe: 0, commitWhen: 0, tiNeed: 0,
   izzetLast: 1,              // izzetLast (below): a dominated-move fix, on
 };
 /**
@@ -1106,6 +1115,11 @@ export class Player {
     switch (half) {
       case "Dandân": return this.castDandan(keep, pay);
       case "Memory Lapse": case "Narset's Reversal": case "Commit": {
+        if (half === "Commit" && TUNE.commitWhen && !this.easy) {
+          const landLead = lands(s, me).length > lands(s, this.opp).length, fewer = s.hand[me].length - 1 < s.hand[this.opp].length;
+          const must = Math.ceil(Math.max(0, s.life[me]) / 4) <= 2;
+          if (!landLead && !fewer && !must) return -3;
+        }
         if (t0?.k === "s") return this.counter(half, itemOf(s, t0.sid), keep, pay);
         return half === "Commit" ? this.removal(half, m, keep, pay) : -1;
       }
@@ -1138,6 +1152,10 @@ export class Player {
         return v;
       }
       case "Chart a Course": case "Take Inventory": case "Lórien Revealed": {
+        if (half === "Take Inventory" && TUNE.tiNeed && !this.easy) {
+          const hand = s.hand[me].filter(id => id !== m.card), need = hand.length < 4 || !hand.some(isLandId);
+          if (!need || !this.theirEnd) return -3;
+        }
         const w = half === "Lórien Revealed" ? 2.5 : half === "Take Inventory" ? 1 + s.yard.filter(i => DECK[i] === half).length : (s.attacked && F.myTurn ? 1.8 : 1.05);
         let v = w - keep - pay;
         // after the attack it draws two with no discard: wait for it when there's an attack to make
@@ -1148,6 +1166,11 @@ export class Player {
       }
       case "Mystic Retrieval": {
         if (!t0) return -1;
+        if (TUNE.retrSafe && !this.easy && m.from === "hand" && hasRed(s, this.opp) && landMana(s, this.opp) >= 3) {
+          // both halves now: this cast and the flashback ({2}{R}) with our own red
+          const both = hasRed(s, me) && F.my.n - mana >= 3;
+          if (!both) return -3;
+        }
         // what it finds: the card, or what it does cast at once with the mana left (a Piracy Charm on their Dandân): an
         // instant any time, a sorcery in our own main phase
         const w = cardWorth(F, t0.id), flash = m.from === "yard" ? 0.15 : 0;
@@ -1311,6 +1334,11 @@ export class Player {
   }
   removal0(half, m, keep, pay) {
     const s = this.s, F = this.F, me = this.me, t0 = m.targets[0];
+    if (TUNE.goneSel && !this.easy && half === "Gone Missing") {
+      const p = t0?.k === "c" ? perm(s, t0.id) : null;
+      const boil = p && DECK[p.id] === "Izzet Boilerworks";
+      if (!p || p.ctl === me || !(boil || (isCreature(p) && F.their.n === 0))) return -3;
+    }
     if (TUNE.gemTiming === 3 && !this.easy && (half === "Mind Bend" || (half === "Piracy Charm" && m.mode === 1))) {
       // 3 (Korbi's second rule): never in our own main phase with nothing on the stack while they have mana open; their end
       // step, our upkeep and answers to what they do stay as they were
