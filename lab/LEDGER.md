@@ -270,3 +270,20 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   plays on itself, which its targets never described (G0 passes, G1/G2 fail, twice).
 - think() gained a `rank` option (2f39877; unused by the game, unchanged Hard bit-identical on a test pair).
 - Queued: aa-a1-g2e (hard^aa-a1-pt1*64 vs hard*64, v14, 1,000 pairs), aa-a1-g2f (the same with aa-a1-pt2).
+
+## 11 November 2026, ~22:30Z: the Quick screen (aa-a0-gs1, gate-sum --screen; 1,000 pairs each, Hard at Quick vs v14)
+
+| net | score (99%) | line |
+|---|---|---|
+| jt130 (reference) | 53.0% ± 2.6 (50.4–55.6) | old filler net |
+| s3c | 52.2% ± 2.7 | S3 |
+| s3a | 51.0% ± 2.7 | S3 |
+| s3b | 50.0% ± 2.6 | S3 |
+| s2a, s2b, s2f, s2c, s2e, s2d, s2g | 46.6, 46.5, 45.5, 45.3, 44.7, 44.5, 43.8 | S2′ |
+| s1c, s1b, s1g, s1d, s1a, s1e, s1f | 45.0, 44.9, 44.6, 44.4, 42.8, 42.8, 40.8 | S1′ |
+
+- Every S1′ and S2′ net (trained on the 2,880 Deep games) loses to v14 at Quick; the nets trained on the 46,800 filler games
+  (S3, and jt130) are at or above it. More games beat better games.
+- Picks: S3 → s3c (52.2; s3a 1.2 behind). S1′ (45.0) and S2′ (46.6) under 50%: no gates.
+- Queued: aa-g9-s3v14b, Deep gate for aa-g8-s3-c#19 vs v14, 600 pairs, seeds 220000, ref cb02856.
+- jt130 scored highest but is the plan's reference, not a candidate; its gate waits for Korbi. s3d (still training) joins the screen when done.
