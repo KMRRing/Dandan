@@ -524,6 +524,28 @@ export function spellWorth(F, it) {
 // ---------- the player ----------
 const REMOVAL = new Set(["Piracy Charm", "Mind Bend", "Repulse", "Commit", "Metamorphose", "Gone Missing", "Deem Inferior"]);
 /** What takes a permanent off the table the moment it resolves (Mind Bend only changes what a Dandân looks for, at its upkeep; Piracy Charm kills only as its +2/−1). */
+/** What takes a spell off the stack: a counter (Memory Lapse, Commit) or Narset's Reversal (back to its owner's hand). */
+const OFF_STACK = new Set(["Memory Lapse", "Commit", "Narset's Reversal"]);
+/**
+ * The stack played out as it stands, the top first, if nobody casts anything more: `gone`, the spells a counter (or Reversal)
+ * above them takes off (a counter that is itself taken off does nothing); `fizzle`, the spells whose targets are gone by the
+ * time they resolve (a counter whose spell has been taken off, a spell at a permanent that a spell above bounced, sent to the
+ * library or killed); `taken`, those permanents. Aiming at a spell already gone or fizzling only wastes the card: passing keeps
+ * it, and whoever answers what is there, we get priority again before it resolves (Korbi, 11 November 2026: Medium cast a second
+ * Memory Lapse on a spell its first was countering, and the first fizzled).
+ */
+export function stackFate(s) {
+  const gone = new Set(), fizzle = new Set(), taken = new Set(), on = new Set(s.stack.map(y => y.sid));
+  for (let i = s.stack.length - 1; i >= 0; i--) {
+    const y = s.stack[i];
+    if (gone.has(y.sid)) continue;
+    const ts = y.targets || [], st = ts.find(t => t.k === "s"), cs = ts.filter(t => t.k === "c");
+    if (ts.length && ts.every(t => (t.k === "s" && (!on.has(t.sid) || gone.has(t.sid))) || (t.k === "c" && taken.has(t.id)))) { fizzle.add(y.sid); continue; }
+    if (OFF_STACK.has(y.name) && st) gone.add(st.sid);
+    if (TAKES.has(y.name) || (y.name === "Piracy Charm" && y.mode === 1)) for (const t of cs) taken.add(t.id);
+  }
+  return { gone, fizzle, taken };
+}
 const TAKES = new Set(["Repulse", "Commit", "Metamorphose", "Gone Missing", "Deem Inferior"]);
 
 // ---------- the end of the library ----------
@@ -1125,6 +1147,8 @@ export class Player {
     if (!x) return -1;
     if (half === "Narset's Reversal") return this.reversal(x, keep, pay);
     if (x.ctl === me) return -3;
+    const fate = stackFate(s);
+    if (fate.gone.has(x.sid) || fate.fizzle.has(x.sid)) return -3;      // already countered, or fizzling: the card for nothing
     let gain = spellWorth(F, x) * (x.name === "Dandân" ? this.share(me) : 1);
     if (!x.copy) {
       // where the countered card goes: on top (Lapse) to whoever draws next; second from the top (Commit) to the one after
@@ -1146,6 +1170,12 @@ export class Player {
     return s.stack.slice(at + 1).some(y => y.ctl !== me && (TAKES.has(y.name) || (y.name === "Piracy Charm" && y.mode === 1))
       && y.targets.some(t => t.k === "c" && aims.some(a => a.id === t.id)));
   }
+  /** Whether a spell of ours on the stack that will resolve (stackFate) takes the permanent away. */
+  ourTake(id) {
+    const s = this.s, fate = stackFate(s);
+    return s.stack.some(y => y.ctl === this.me && !fate.gone.has(y.sid) && !fate.fizzle.has(y.sid)
+      && (TAKES.has(y.name) || (y.name === "Piracy Charm" && y.mode === 1)) && (y.targets || []).some(t => t.k === "c" && t.id === id));
+  }
   /** Narset's Reversal on a spell: theirs goes back to their hand and we get a copy; ours, a copy and the card back. */
   reversal(x, keep, pay) {
     const F = this.F, me = this.me;
@@ -1153,7 +1183,8 @@ export class Player {
       // a counter of theirs aimed at it: the original goes back to our hand, so the counter has no target and is spent for
       // nothing, and the copy resolves: the spell happens and we keep the card (better than Reversing their counter, which
       // they keep)
-      const countered = this.s.stack.some(y => y.ctl !== me && ["Memory Lapse", "Commit"].includes(y.name) && y.targets.some(t => t.k === "s" && t.sid === x.sid));
+      // (a counter of theirs that one of ours above already counters is no threat)
+      const countered = stackFate(this.s).gone.has(x.sid);
       // or what it is aimed at is about to be taken away by something above it (their Repulse on the Dandân our Deem Inferior is
       // aimed at): the copy goes on top, so it resolves first, and that spell finds nothing to take away (Korbi, 1 November 2026)
       if ((countered || this.takenAway(x)) && x.card != null) return spellWorth(F, x) + 0.9 * cardWorth(F, x.card) + 0.5 - keep - pay;
@@ -1187,6 +1218,8 @@ export class Player {
     }
     const p = t0?.k === "c" ? perm(s, t0.id) : null;
     if (!p) return -1;
+    // a permanent one of our own spells below is already taking away: this one resolves first and that one fizzles, a card for nothing
+    if (p.ctl !== me && this.ourTake(p.id)) return -3;
     if (half === "Piracy Charm" && m.mode === 0) {
       // islandwalk for our attacker when they have a blocker that could stop it
       const ours = p.ctl === me && s.combat?.att.includes(p.id) && s.step === "attackers";
