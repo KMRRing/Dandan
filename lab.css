@@ -38,3 +38,6 @@
 .lab-desc p { margin: .25rem 0; }
 .sheet .lab-sel { display: flex; margin: 0; color: var(--ink); flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; font-size: .85rem; }
 .lab-sel select { font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--brass); border-radius: 4px; padding: .3rem .4rem; min-height: 2.25rem; max-width: 100%; }
+
+.lab-auto { font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--brass); border-radius: 4px; padding: .15rem .55rem; min-height: 1.6rem; cursor: pointer; margin-left: auto; }
+.lab-auto.on { background: var(--brass); color: var(--sheet); }

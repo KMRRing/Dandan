@@ -6,6 +6,8 @@
 //      one's pick is ringed on the table (the page's ring set, the same rings a coach has always had), listed in a strip above your
 //      hand, and when the shown coaches pick different moves the strip says so, in a line, never in a popup;
 //   3. a sheet that describes each engine (how it was built, what to expect) beside the switches;
+//   5. autoplay: an engine (the pilot) plays your moves for you until the shown coaches disagree, or the game ends; then it
+//      stops and the decision is yours. Started and stopped from the strip; the pilot is chosen in the sheet;
 //   4. flags: the ⚑ on a coach's pick marks it as one the player disagrees with. The flags go with the game's record (`how`), so
 //      the game history lists them and opens the game at each.
 // The choices are kept in localStorage under dandan-lab:lab, a lab game under dandan-lab:game (never the player's own saved
@@ -22,7 +24,7 @@ const $ = id => document.getElementById(id);
 
 // ---------- what is kept ----------
 /** The coach settings as they start: the two Mediums (a millisecond each) shown, no Hard coach (it takes a look-ahead of its own a decision). */
-export const DEFAULTS = { engine: DEFAULT_ENGINE, coach: { "medium-tempo": true, "medium-squeeze": true }, hide: {}, coachDepth: "quick", oppDepth: "deepest" };
+export const DEFAULTS = { engine: DEFAULT_ENGINE, coach: { "medium-tempo": true, "medium-squeeze": true }, hide: {}, coachDepth: "quick", oppDepth: "deepest", pilot: "medium-tempo" };
 const DEPTH_WORDS = { quick: "Quick (64 deals)", long: "Long (256 deals)", deep: "Deep (1,024 deals)", deepest: "Deepest (2,048 deals, as the live game)" };
 export function loadSettings(read = () => { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }) {
   const got = read() || {}, s = { ...DEFAULTS, ...got, coach: { ...(got.coach || DEFAULTS.coach) }, hide: { ...(got.hide || {}) } };
@@ -30,6 +32,7 @@ export function loadSettings(read = () => { try { return JSON.parse(localStorage
   if (!DEPTH[s.oppDepth]) s.oppDepth = DEFAULTS.oppDepth;
   if (!DEPTH[s.coachDepth]) s.coachDepth = DEFAULTS.coachDepth;
   for (const id of Object.keys(s.coach)) if (!engineOf(id)?.available) delete s.coach[id];
+  if (!engineOf(s.pilot)?.available) s.pilot = DEFAULTS.pilot;
   return s;
 }
 let settings = loadSettings();
@@ -72,6 +75,9 @@ export function how(v = C?.view()) {
 
 /** The engines that are coaching now: ticked as a coach and shown. */
 export const activeCoaches = (st = settings) => ENGINES.filter(e => e.available && st.coach[e.id] && !st.hide[e.id]);
+/** The engines asked at a decision: the shown coaches, and the pilot while autoplay runs (asked even when not a coach). */
+const asked = () => { const a = activeCoaches(); return auto && !a.some(e => e.id === settings.pilot) ? [...a, engineOf(settings.pilot)] : a; };
+let auto = false;                                  // autoplay running (never kept: a reload stops it)
 
 // ---------- the opponent ----------
 /** What the page's computer-player call is given: the Medium plan of the engine seated (Hard ignores it). */
@@ -173,6 +179,7 @@ function stopCoaches() {
 /** Called by the page with every view, before it draws: a new decision of yours asks the shown coaches; any other clears the rings. */
 export function onView(v) {
   if (!C) return;
+  autoOver(v);
   const k = myNow(v) ? `${v.G.seq}:${v.G.n}` : "";
   if (k === key) return;
   key = k;
@@ -184,7 +191,7 @@ export function onView(v) {
 }
 function ask(v, k) {
   const state = v.state, seatNo = v.seat;
-  for (const e of activeCoaches()) {
+  for (const e of asked()) {
     picks.set(e.id, { status: "thinking" });
     const done = r => {
       if (key !== k) return;                                      // the decision has moved on
@@ -206,7 +213,43 @@ function refresh() {
   for (const e of activeCoaches()) { const p = picks.get(e.id); if (p?.status === "done") for (const r of ringsOf(p.move, p.state, p.seat)) C.rings.add(r); }
   paintStrip();
   C.redraw();
+  autoStep();
 }
+
+// ---------- autoplay ----------
+/**
+ * When every engine asked has answered: the shown coaches disagree, or one gave no answer, and autoplay stops at this decision;
+ * otherwise the pilot's move is played (after a moment, so the move can be seen). Pure decision: the tests read it.
+ */
+export function autoVerdict(answers, pilot) {
+  if (answers.some(a => a.status === "thinking")) return { wait: true };
+  if (answers.some(a => a.status !== "done")) return { stop: "an engine gave no answer" };
+  const p = answers.find(a => a.id === pilot);
+  if (!p) return { stop: "the pilot gave no answer" };
+  const coaches = answers.filter(a => a.coach);
+  if (disagreement(coaches.map(a => ({ short: a.short, text: a.text })))) return { stop: "the coaches disagree" };
+  if (coaches.length && coaches.some(a => a.text !== p.text)) return { stop: "a coach disagrees with the pilot" };
+  return { move: p.move };
+}
+let autoKey = "";
+function autoStep() {
+  if (!auto || !key || autoKey === key) return;
+  const coachIds = new Set(activeCoaches().map(e => e.id));
+  const answers = asked().map(e => ({ id: e.id, short: e.short, coach: coachIds.has(e.id), ...(picks.get(e.id) || { status: "thinking" }) }));
+  const v = autoVerdict(answers, settings.pilot);
+  if (v.wait) return;
+  autoKey = key;
+  if (v.stop) { setAuto(false, `Autoplay stopped: ${v.stop}`); return; }
+  const k = key;
+  setTimeout(() => { if (auto && key === k) C.page.move(v.move); }, 350);
+}
+function setAuto(on, why) {
+  auto = on; autoKey = "";
+  if (why) C.toast(why);
+  if (on) reask(); else paintStrip();
+}
+// the game over: autoplay has nothing left to do
+function autoOver(v) { if (auto && v?.over) setAuto(false, "Autoplay stopped: the game is over"); }
 /** A coach turned on, off, shown or hidden, or its depth changed: asked again for the decision now. */
 function reask() {
   const v = C.view();
@@ -221,8 +264,10 @@ function reask() {
 const pct = c => (c == null ? "" : ` <i>${Math.round(c * 100)}%</i>`);
 function paintStrip() {
   const box = $("labStrip"), coaches = activeCoaches();
-  box.hidden = !coaches.length;
-  if (!coaches.length) return;
+  box.hidden = false;
+  const pilot = engineOf(settings.pilot);
+  const autoBtn = `<button type="button" class="lab-auto${auto ? " on" : ""}" data-auto="1" title="${auto ? "Stop autoplay" : `${esc(pilot?.name)} plays for you until the coaches disagree`}">${auto ? "■ Stop" : `▶ Auto: ${esc(pilot?.short || "")}`}</button>`;
+  if (!coaches.length) { box.innerHTML = `<div class="lab-chips">${autoBtn}</div>`; return; }
   const mine = myNow(C.view());
   const chips = coaches.map(e => {
     const p = picks.get(e.id);
@@ -232,7 +277,7 @@ function paintStrip() {
   }).join("");
   const line = disagreement(coaches.map(e => ({ e, p: picks.get(e.id) })).filter(x => x.p?.status === "done").map(x => ({ short: x.e.short, text: x.p.text })));
   box.classList.toggle("split", !!line);
-  box.innerHTML = `${line ? `<p class="lab-split">${esc(line)}</p>` : ""}<div class="lab-chips">${chips}</div>`;
+  box.innerHTML = `${line ? `<p class="lab-split">${esc(line)}</p>` : ""}<div class="lab-chips">${chips}${autoBtn}</div>`;
 }
 
 // ---------- the sheet ----------
@@ -253,10 +298,11 @@ function paintSheet() {
       ${open ? `<div class="lab-desc"><p>${esc(e.description)}</p><p><b>What to expect.</b> ${esc(e.expect)}</p></div>` : ""}
     </article>`;
   };
-  body.innerHTML = `<p class="lab-lead">The same game as the live one. Choose who Monte is, and who coaches you: at each decision of yours every shown coach's pick is ringed on the table and listed above your hand, and you are told when they differ. A hidden coach is not run. Tap ⚑ on a pick you disagree with: lab games are recorded (marked lab), flags and all, so the game history lists them. Tap a name to read how it was built.</p>
+  body.innerHTML = `<p class="lab-lead">The same game as the live one. Choose who Monte is, and who coaches you: at each decision of yours every shown coach's pick is ringed on the table and listed above your hand, and you are told when they differ. A hidden coach is not run. ▶ Auto lets the chosen engine play your moves until the shown coaches disagree. Tap ⚑ on a pick you disagree with: lab games are recorded (marked lab), flags and all, so the game history lists them. Tap a name to read how it was built.</p>
     ${ENGINES.map(card).join("")}
     <h3 class="lab-h">Thinking</h3>
     <label class="lab-sel">Monte's look-ahead <select data-depth="oppDepth">${depth(settings.oppDepth, ["quick", "long", "deep", "deepest"])}</select></label>
+    <label class="lab-sel">Autoplay: who plays for you <select data-pilot="1">${ENGINES.filter(e => e.available).map(e => `<option value="${e.id}"${settings.pilot === e.id ? " selected" : ""}>${esc(e.name)}</option>`).join("")}</select></label>
     <label class="lab-sel">Hard coaches' look-ahead <select data-depth="coachDepth">${depth(settings.coachDepth, ["quick", "long", "deep"])}</select></label>
     <p class="lab-note">Deals are the guesses of the hidden cards a look-ahead plays each move out over; more take longer and judge better. A Hard coach thinks in its own worker, so the table never stops for it.</p>`;
   body.scrollTop = top;
@@ -272,6 +318,7 @@ function wireSheet() {
   $("labClose").addEventListener("click", () => $("labDlg").close());
   $("labDlg").addEventListener("click", e => { if (e.target === $("labDlg")) $("labDlg").close(); });   // a tap outside the sheet
   $("labStrip").addEventListener("click", e => {
+    if (e.target.closest("[data-auto]")) return setAuto(!auto, auto ? "Autoplay stopped" : null);
     const f = e.target.closest("[data-flag]");
     if (f) return toggleFlag(f.dataset.flag);
     const b = e.target.closest("[data-info]");
@@ -289,6 +336,7 @@ function wireSheet() {
     if (t.name === "opp") { settings.engine = t.value; seatOpponent(); save(); C.forgetBot(); C.toast(`Monte is now ${engineOf(t.value).name}`); }
     else if (t.dataset.coach) { settings.coach[t.dataset.coach] = t.checked; save(); reask(); }
     else if (t.dataset.show) { settings.hide[t.dataset.show] = !t.checked; save(); reask(); }
+    else if (t.dataset.pilot) { settings.pilot = t.value; save(); if (auto) reask(); else paintStrip(); }
     else if (t.dataset.depth) {
       settings[t.dataset.depth] = t.value; save();
       if (t.dataset.depth === "oppDepth") seatOpponent(); else reask();

@@ -3,7 +3,7 @@
 // its judges). Quick: a few deals only. The page itself is driven by hand in a browser (README).
 import fs from "fs";
 import { ENGINES, engineOf, seatable, decide, judgeOf, JUDGES, DEFAULT_ENGINE } from "../dandan-engines.js";
-import { ringsOf, disagreement, loadSettings, DEFAULTS, activeCoaches, flagOf, how } from "../dandan-lab.js";
+import { ringsOf, disagreement, loadSettings, DEFAULTS, activeCoaches, flagOf, how, autoVerdict } from "../dandan-lab.js";
 import { flagsOf } from "../games.js";
 import { rules, shownRules } from "../dandan-rules.js";
 import { newRecord, applyMove } from "../seats.js";
@@ -60,6 +60,15 @@ check(disagreement([{ short: "Hard", text: "cast Dandân" }, { short: "Tempo", t
   check(JSON.stringify(st) === t0 && !!m1.move, "a Medium leaves the state it is given as it was");
   const j1 = await judgeOf(engineOf("hard-jh2"), load), j0 = await judgeOf(engineOf("hard-today"), load);
   check(j0 === undefined && typeof j1 === "function" && j1(st, seatNo) > 0 && j1(st, seatNo) < 1, "today's Hard has no judge of its own (the game's); jh2's is a function giving a chance");
+}
+// ---------- autoplay ----------
+{
+  const a = (id, text, coach = true, status = "done") => ({ id, short: id, coach, status, text, move: { t: text } });
+  check(autoVerdict([a("t", "pass"), a("q", "pass")], "t").move?.t === "pass", "coaches agree: the pilot's move is played");
+  check(!!autoVerdict([a("t", "pass"), a("q", "cast Dandân")], "t").stop, "coaches disagree: autoplay stops");
+  check(autoVerdict([a("t", "pass"), a("h", "pass", true, "thinking")], "t").wait, "a coach still thinking: wait");
+  check(!!autoVerdict([a("q", "pass"), a("h", "cast", false)], "h").stop, "a pilot that is not a coach is stopped by a coach that differs");
+  check(autoVerdict([a("h", "pass", false)], "h").move?.t === "pass", "no coaches: the pilot plays on");
 }
 // ---------- flags and the record ----------
 {
