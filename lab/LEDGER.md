@@ -207,3 +207,18 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   - S3 a, c and b (the rerun, aa-g8-s3-e);
   - jt130.
   S3 run d (128x64x32) is still training and joins when it is done.
+
+### 11 Nov, 19:40Z: stage 1 model trained; G0 passed; G1 and G2 queued
+- **aa-a1-pt1** trained on the export: 332,991 training and 85,734 held-out decisions, 121 inputs, 6 epochs, 364 s, 1.5 GB. Best at epoch 6.
+- **G0 passed.** On the held-out Deep decisions, value given up against the search's best move fell from **1.47 points a decision (Medium) to 0.76 (the model): 48% less**. The bar was 25%.
+- The model picks the search's top move less often than Medium does (70.4% against 76.3%). Where it differs, it picks moves the search valued nearly as well, so it gives up less value on average.
+- α fell from 3.33 to 3.03 and β from 10 to 0.01: the model no longer leans on Medium's own pick, only on Medium's scores and the learned correction.
+- Caveats:
+  - the search's means at 1,024 deals are noisy;
+  - the held-out games come from the same two lines of self-play;
+  - at run time the model weighs only passing, Medium's pick and Medium's top five, while the export listed every legal move.
+  G1 and G2 test it in play.
+- **Queued on cb02856:**
+  - **aa-a1-g1**: the model against Medium, 20,000 pairs, 100 shards; passes at 55%.
+  - **aa-a1-g2**: Hard at Quick with the model in its look-aheads against Hard at Quick, both v14, 1,000 pairs, 200 shards; passes when the 99% range is wholly above 50%.
+- Speed is not yet logged per side. It will be measured separately before a Deep gate (plan: under 25% slower).
