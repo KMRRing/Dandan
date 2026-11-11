@@ -263,7 +263,7 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - No G3. Both trainings pass G0 and fail G1: lower value given up on single decisions does not make a better player.
   Plan 3.5 for a failed G1: the inputs are the problem; add the last few actions first. Waits for Korbi.
 
-## 12 November 2026, ~22:15Z: stage 1, the plan's fallback (Korbi: "your call")
+## 11 November 2026, ~22:05Z: stage 1, the plan's fallback (Korbi: "your call")
 
 - Chosen: the model orders Hard's shortlist (plan 3.5 after a failed G2), not more inputs. Why: the model learned the search's
   values of moves with the search playing on, which is exactly where a shortlist order is used; as a play-out player it
