@@ -152,7 +152,7 @@ function idle(s, m) {
  * by four points (Korbi, 11 November 2026). Every move is cheap to weigh at depth: a move that is clearly behind goes at the
  * first look.
  */
-export function candidates(s, seat, { wide = 7, all = false } = {}) {
+export function candidates(s, seat, { wide = 7, all = false, rank = null } = {}) {
   const P = new Player(s, seat), p = s.pending;
   // with priority, Medium's move is the first of its scored moves worth more than passing (priority()'s, scored once)
   const scored = p ? null : P.scored();
@@ -162,6 +162,9 @@ export function candidates(s, seat, { wide = 7, all = false } = {}) {
   const add = m0 => { const m = landFirst(s, seat, m0) || m0, k = key(m); if (!seen.has(k)) { seen.add(k); out.push(m); } };
   if (!p) {
     add(PASS);
+    // rank (lab, 12 November 2026: plan 3.5's fallback): a learned ranking of passing and Medium's scored moves decides which
+    // others are weighed and in what order; Medium's own move and passing are always among them
+    if (rank && !all) { for (const m of rank(s, seat, scored)) add(m); return out.slice(0, s.stack.length > 0 || endOfLibrary(s) > 0 ? STACK_WIDE : wide); }
     // with something on the stack, every move there is (at the root, up to STACK_WIDE): which spell to counter or copy, or whether to
     // draw in answer, turns on what the others do, which Medium's score doesn't see, and the search does (audited on 1,277
     // decisions with two or more spells on the stack, every legal move valued: the best was outside the shortlist in 6.5%, and
@@ -347,7 +350,7 @@ function tableFor(s, seat) {
  * the deals'. seen: where it was left, and the other player's first choice on the way (their answer, for the coach's
  * words).
  */
-export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null) {
+export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null) {
   const opp = other(seat), path = [];
   let node = root, growing = true;
   for (let i = 0; i < 4000 && !c.over; i++) {
@@ -356,7 +359,7 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
     if (who == null) break;
     let m = null;
     if (growing && c.turn < to) {
-      const ms = candidates(c, who, { wide: WIDTH });
+      const ms = candidates(c, who, { wide: WIDTH, rank });
       if (ms.length > 1) {
         // merged: the node is the position's, wherever it was reached from; one not met before ends the tree for this deal
         let fresh = false;
@@ -412,9 +415,9 @@ function where(c, seat) {
  * decisions it chose as the full search did every time, for 15% fewer deals (lab/variants.mjs, ae-var3).
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024 } = {}) {
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024 } = {}) {
   const t0 = Date.now();
-  const cands = candidates(s, seat, { wide, all });
+  const cands = candidates(s, seat, { wide, all, rank });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
   const n = cands.length;
   if (n === 1) return { best: cands[0], list: [{ move: cands[0], mean: NaN, se: 0, n: 0 }], deals: 0, only: true };
@@ -432,7 +435,7 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
       const res = act(c, seat, cands[i], { rng: r, quiet: true });
       const at = {};
       if (typeof res === "string") vals[i].push(-1);
-      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table));
+      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, rank));
       seen[i].push(at);
     }
     d++;

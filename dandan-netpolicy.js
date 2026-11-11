@@ -168,5 +168,14 @@ export function makePlus(model, { wide = 5, free = false } = {}) {
     }
     return best;
   };
-  return { move };
+  // the same scores as a ranking of passing and Medium's scored moves (best first), for think's `rank`: the model orders the
+  // moves Hard weighs instead of playing past the tree
+  const rank = (s, seat, scored = null) => {
+    const sc = scored || new Player(s, seat).scored(), bar = TUNE.pass + (s.stack.length ? 0 : ADJ.pass);
+    const x = viewOf(s, seat);
+    base.set(b1);
+    for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H1; for (let o = 0; o < H1; o++) base[o] += v * wx[r + o]; }
+    return [{ m: PASS, v: bar }, ...sc].map(c => ({ m: c.m, z: alpha * c.v + f(s, seat, x, c.m, c.v) })).sort((a, b) => b.z - a.z).map(c => c.m);
+  };
+  return { move, rank };
 }

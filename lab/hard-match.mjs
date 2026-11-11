@@ -31,7 +31,10 @@ async function side(spec) {
   const [head, j, jt, js] = spec.split(":"), judge = await judgeOf(j), tj = await judgeOf(jt), sj = await judgeOf(js);
   const [search0, own] = head.split("*"), budget = { deals: own ? Number(own) : deals, ms: 1e9, ...(judge ? { judge } : {}) };
   // "hard+<policy-train job>": Hard whose look-aheads are played past the tree by the stage-1 model instead of Medium (gate G2)
-  const [search, model] = search0.split("+");
+  // "hard^<policy-train job>": Hard whose shortlist the stage-1 model orders (plan 3.5's fallback after G2), Medium playing on
+  const [search1, ranker] = search0.split("^");
+  if (ranker) budget.rank = makePlus(JSON.parse((await readParts(ranker)).flatMap(x => x.split("\n").filter(Boolean))[0])).rank;
+  const [search, model] = search1.split("+");
   // "hard+free~<job>": the model unguarded (it decides passing and lands too)
   if (model) { const free = model.startsWith("free~"); budget.rollout = makePlus(JSON.parse((await readParts(model.replace(/^free~/, ""))).flatMap(x => x.split("\n").filter(Boolean))[0]), { free }).move; }
   if (search === "paths") {
