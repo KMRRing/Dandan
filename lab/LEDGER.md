@@ -236,3 +236,15 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - Queued: aa-a1-g1b (G1 again, 20,000 pairs), aa-a1-g2b, and for Korbi aa-a1-vd-plus (model alone vs Hard Deep v14, 100 pairs)
   with its yardstick aa-a1-vd-med (Medium alone vs the same, same deals).
 - hard-match.mjs gained "plus@<job>" and "medium" sides (6c6f6d4).
+
+## 11 November 2026, ~20:45Z: stage-1 model, second tries (fixed player, 09444c7)
+
+| job | test | result | verdict |
+|---|---|---|---|
+| aa-a1-g1b | model vs Medium, no search, 20,000 pairs | **53.0% ± 0.6** | beats Medium for certain, but fails G1 (bar 55%) |
+| aa-a1-g2b | Hard at Quick with the model in its look-aheads vs Hard at Quick, v14, 1,000 pairs | **49.1% ± 2.6** | fails G2: no gain inside the search |
+| aa-a1-vd-plus | model alone vs Hard at Deep v14 (current Monte), 98 pairs | 15.8% ± 6.1 | for Korbi |
+| aa-a1-vd-med | Medium alone vs the same, 99 pairs | 11.1% ± 5.4 | yardstick; paired, model − Medium +4.6 ± 7.1 points |
+
+- G3 not queued (needs G2). Per plan 3.5 the next try is retraining (holding a move excluded from the targets when a move to
+  play is within noise of it) or the model as the shortlist's order; neither run without Korbi.
