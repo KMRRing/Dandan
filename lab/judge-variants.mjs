@@ -118,7 +118,9 @@ let games = 0;
 const lean = { ...rules, act: (s, seat, m, ctx) => { const r = engineAct(s, seat, m, ctx); passPoints.length = 0; return r; } };
 // one result file at a time, so the raw text of every game is never held at once
 const store = await labStore();
-for (const id of ids.split(",")) for (const name of (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n))) for (const line of ((await store.get(name)) || "").split("\n")) {
+// "spb01-446" stands for spb01, spb02, … spb446 (digits padded to the first number's width; a batch with no results reads nothing)
+const expand = t => { const m = t.match(/^([a-z]+)(\d+)-(\d+)$/); if (!m) return [t]; const out = []; for (let n = Number(m[2]); n <= Number(m[3]); n++) out.push(m[1] + String(n).padStart(m[2].length, "0")); return out; };
+for (const id of ids.split(",").flatMap(expand)) for (const name of (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n))) for (const line of ((await store.get(name)) || "").split("\n")) {
   if (!line || games >= cap) continue;
   const rec = JSON.parse(line), at = new Map((rec.dec || []).map(d => [d.i, d]));
   const hold = games++ % 5 === 0;
