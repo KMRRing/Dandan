@@ -150,7 +150,12 @@ export function makePlus(model, { wide = 5 } = {}) {
     if (s.pending) return policyMove(s, seat, { rng });
     if (!moves(s, seat).length) return PASS;
     const { scored, bar, pick } = mediumView(s, seat, rng);
-    const cands = [{ m: PASS, v: bar }, ...scored.slice(0, wide)];
+    // Lands stay Medium's (11 November 2026, G1 lost 16% to Medium): in the search a land played now or later is worth about the
+    // same, so the model learned passing ≈ a land and, playing, kept putting its land off. When Medium plays a land, so does it.
+    if (pick.t === "land") return pick;
+    // The same for passing: in the search a spell held to the next priority is worth about the same as casting it now, so the
+    // model learned passing ≈ acting and kept holding. When Medium acts, the model picks which move, not whether to pass.
+    const cands = [...(pick.t === "pass" ? [{ m: PASS, v: bar }] : []), ...scored.slice(0, wide)];
     if (!cands.some(c => key(c.m) === key(pick))) cands.push({ m: pick, v: scored.find(c => key(c.m) === key(pick))?.v ?? bar });
     const x = viewOf(s, seat);
     base.set(b1);
