@@ -15,7 +15,7 @@
 //  · The graveyard is shared too, and a Mystic Retrieval in it is anyone's with red: a spell cast leaves its card there
 //    for the other player to take back, and a Retrieval cast from the hand leaves itself (gift).
 import { CARDS, DECK, NAMES, BASICS, HALVES, TOKEN_AT, total, parseCost } from "./dandan-cards.js";
-import { moves, halfOf, nextDrawer, costOf } from "./dandan-engine.js";
+import { moves, halfOf, nextDrawer, costOf, checkCast } from "./dandan-engine.js";
 import {
   other, nm, isLandId, perm, isLand, isCreature, isToken, pt, lands, islands, creatures, typesOf, needType, manaAlts, topKnown, itemOf,
   knownIn, poolOf, isSpellCard, isIsland,
@@ -69,6 +69,7 @@ export const TUNE = {
   // Island and a Dandân, or Island and a Lapse held): the matched land preferences (ADJ.land: Sanctuary +0.5, Island −0.5) are
   // not applied when the land that comes in tapped costs mana we want this turn (to cast or to hold open)
   landMana: 0,
+  izzetLast: 1,              // izzetLast (below): a dominated-move fix, on
 };
 /**
  * 9 November 2026: additions to Medium's scores, set by matches against Medium without them (lab/tune-round.mjs on Actions: each
@@ -543,6 +544,13 @@ export function spellWorth(F, it) {
 // ---------- the player ----------
 const REMOVAL = new Set(["Piracy Charm", "Mind Bend", "Repulse", "Commit", "Metamorphose", "Gone Missing", "Deem Inferior"]);
 /** What takes a permanent off the table the moment it resolves (Mind Bend only changes what a Dandân looks for, at its upkeep; Piracy Charm kills only as its +2/−1). */
+/**
+ * Our own upkeep, nothing on the stack: a Brainstorm now only sees three cards, where after the draw it sees four for the same
+ * result (Korbi, 11 November 2026). The draw step follows with nothing anyone could do between, so waiting is never worse.
+ */
+export function ownPredraw(s, seat) {
+  return s.active === seat && s.step === "upkeep" && !s.stack.length && !s.pending;
+}
 /**
  * Whether a land played now comes in tapped: as the rules have it (dandan-core.js enterBf). Mystic Sanctuary has no `tapped` in the
  * card list: it comes in tapped unless its controller has three other Islands, and Medium once read it as always untapped (Korbi,
@@ -1068,6 +1076,7 @@ export class Player {
       case "Piracy Charm": case "Mind Bend": case "Repulse": case "Metamorphose": case "Gone Missing": case "Deem Inferior":
         return this.removal(half, m, keep, pay);
       case "Brainstorm": {
+        if (ownPredraw(s, me)) return -3;
         // best at the end of their turn (two cards back for our draw), or in their upkeep (two of our choosing for theirs)
         let v = 0.8 - keep - pay + this.steal();
         if (this.theirEnd) v += 0.25;
@@ -1370,9 +1379,23 @@ export function landFirst(s, seat, m) {
   return island == null ? null : { t: "land", card: island };
 }
 
+/**
+ * The other way round for Izzet Boilerworks (Korbi, 11 November 2026: "use the mana before playing Izzet"): it comes in tapped and
+ * returns a land, so played before a spell it sends back an untapped land and its mana is lost for the turn; played after, it sends
+ * back a land already tapped for the spell. When Medium would play it with a land untapped and a spell it wants to cast this turn
+ * (scored over passing), the spell goes first.
+ */
+export function izzetLast(s, seat, m, opts = {}) {
+  if (m.t !== "land" || DECK[m.card] !== "Izzet Boilerworks" || s.pending || s.stack.length || s.active !== seat || (s.step !== "main1" && s.step !== "main2")) return null;
+  if (!s.bf.some(p => p.ctl === seat && isLand(p) && !p.tapped)) return null;     // nothing untapped to lose
+  // the spell Medium wants to cast this turn (its best cast worth playing over passing): it goes first
+  const best = new Player(s, seat, opts).scored().find(x => x.m.t === "cast" && x.m.from !== "yard" && x.v > TUNE.pass + ADJ.pass);
+  return best && typeof checkCast(s, seat, best.m) !== "string" ? best.m : null;
+}
 export function policyMove(s, seat, { rng = Math.random, level = "medium", style = "tempo" } = {}) {
   const p = new Player(s, seat, { level, rng, style });
   if (s.pending) return p.answer();
   const m = p.priority();
-  return (level !== "easy" && landFirst(s, seat, m)) || m;
+  if (level === "easy") return m;
+  return landFirst(s, seat, m) || (TUNE.izzetLast ? izzetLast(s, seat, m, { level, rng, style }) : null) || m;
 }

@@ -16,7 +16,7 @@ import { act, toMove, moves, MOST_MULLS } from "./dandan-engine.js";
 import { DECK, NAMES } from "./dandan-cards.js";
 import { other, knownIn, knOf, perm } from "./dandan-core.js";
 import { bendable } from "./dandan-spells.js";
-import { Player, policyMove, PASS, unseenOf, landFirst } from "./dandan-policy.js";
+import { Player, policyMove, PASS, unseenOf, landFirst, izzetLast, TUNE, ownPredraw } from "./dandan-policy.js";
 import { readsOf, likelihood } from "./dandan-reads.js";
 import { winChance } from "./dandan-eval.js";
 import { moveName } from "./dandan-words.js";
@@ -139,6 +139,7 @@ function orders(a) {
  * its Izzet Boilerworks trigger was on the stack).
  */
 function idle(s, m) {
+  if (m.t === "cast" && m.from !== "yard" && DECK[m.card] === "Brainstorm" && ownPredraw(s, toMove(s))) return true;   // see ownPredraw
   if (m.t !== "cast" || DECK[m.card] !== "Mind Bend") return false;
   const p = m.targets?.[0] && perm(s, m.targets[0].id);
   return !!p && !bendable(p).length;
@@ -155,7 +156,7 @@ export function candidates(s, seat, { wide = 7, all = false } = {}) {
   const P = new Player(s, seat), p = s.pending;
   // with priority, Medium's move is the first of its scored moves worth more than passing (priority()'s, scored once)
   const scored = p ? null : P.scored();
-  const top = p ? P.answer() : scored.length && scored[0].v > 0.05 ? scored[0].m : PASS, mine = (!p && landFirst(s, seat, top)) || top;
+  const top = p ? P.answer() : scored.length && scored[0].v > 0.05 ? scored[0].m : PASS, mine = (!p && (landFirst(s, seat, top) || (TUNE.izzetLast && izzetLast(s, seat, top)))) || top;
   const out = [mine], seen = new Set([key(mine)]);
   // a spell that should wait for the Island we'd play anyway is weighed as that Island (landFirst, dandan-policy.js)
   const add = m0 => { const m = landFirst(s, seat, m0) || m0, k = key(m); if (!seen.has(k)) { seen.add(k); out.push(m); } };
