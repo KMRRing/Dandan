@@ -13,6 +13,7 @@ import { newRecord, applyMove, seeded, mix } from "../seats.js";
 import { thinkMove, thinkPathsMove } from "../dandan-think.js";
 import { makeJudge } from "../dandan-eval.js";
 import { makePlus } from "../dandan-netpolicy.js";
+import { policyMove } from "../dandan-policy.js";
 const [shard, shards, out, specA, specB] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5], process.argv[6]];
 const deals = Number(process.argv[7] ?? 64), pairs = Number(process.argv[8] ?? 200), first = Number(process.argv[9] ?? 150000);
 async function judgeOf(t) {
@@ -24,6 +25,9 @@ async function judgeOf(t) {
   return makeJudge(JSON.parse(fs.readFileSync(new URL(`../judges/${t}`, import.meta.url), "utf8")).layers);
 }
 async function side(spec) {
+  // "plus@<policy-train job>" or "medium": no search at all, the stage-1 model or Medium alone (to see where the model stands)
+  if (spec === "medium") return (s, seat) => policyMove(s, seat, { rng: Math.random });
+  if (spec.startsWith("plus@")) { const mv = makePlus(JSON.parse((await readParts(spec.slice(5))).flatMap(x => x.split("\n").filter(Boolean))[0])).move; return (s, seat) => mv(s, seat, Math.random); }
   const [head, j, jt, js] = spec.split(":"), judge = await judgeOf(j), tj = await judgeOf(jt), sj = await judgeOf(js);
   const [search0, own] = head.split("*"), budget = { deals: own ? Number(own) : deals, ms: 1e9, ...(judge ? { judge } : {}) };
   // "hard+<policy-train job>": Hard whose look-aheads are played past the tree by the stage-1 model instead of Medium (gate G2)
