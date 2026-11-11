@@ -129,3 +129,7 @@ Queued: aa-g4-cp (S2 vs S1 at Deep, 100 pairs, a reading only), aa-g7-01..06-s2 
 
 ### 11 Nov, 16:22Z: checkpoint 1 result (aa-g4-cp, S2 vs S1 at Deep)
 97 of 100 pairs in (3 shards still running): S2 **51.5% ± 7.7** (99%: 43.9–59.2). S2 swept 18 pairs, S1 15, 64 split. Level: neither line stops. S1's ten-times-better Brier gap did not show up as strength. Round 2: about 350 of 720 games (v14 line), about 310 (fresh line).
+
+### 11 Nov, 17:47Z: S1′ and S2′ sweeps queued (aa-g8-s1-a..f, aa-g8-s2-a..f)
+Round 2 at 712/720 (v14 line) and 714/720 (fresh line); the remaining 14 long games were still playing and are left out (about 1%). Each line's six runs train on both of its rounds (about 1,430 Hard Deep games): 64x32 from scratch, blend 0.5, lr 3e-4; 16 / 16 / 32 / 32 / every / every positions a game; floor rule off/on alternately (variants 18/19). Ref f8d19a9. Same pick rule as S1/S2.
+Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ vs v14, S2′ vs S1′; Monte 1.1 at ≥53% against v14 with the 99% range above 50%). The planning chat's plan (`monte-plan.md`: Quick screen, Deep gates at 300/600/1,200 pairs, S3 and turn-start runs, mixed-depth filler) and its patch (`monte-stage0.patch`, six lab files, applies cleanly to main) wait until the final is decided.
