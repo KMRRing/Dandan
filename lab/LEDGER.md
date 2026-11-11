@@ -105,3 +105,18 @@ Stopping rule for matches (Korbi, 11 Nov 13:33 local): accept once the 99% range
 | aa-g3-s1-a..f result | S1 sweep on stream 1 (709 games read) | runs a-f: 16/16/32/32/every/every positions a game, floor off/on | Brier gap to the old net on the same positions: −0.0040 / −0.0041 / −0.0036 / −0.0041 / **−0.0093** / **−0.0092**; flaws 2.4 / 0.6 / 3.8 / 1.4 / 1.4 / **0.5%** (old 3.6-4.0%). **S1 = run f** (every decision, floor rule; best at epoch 2). The floor rule cuts flaws 3-8x at no Brier cost; 16 and 32 a game were still improving at epoch 10 (too little data from 720 games) |
 | aa-g3-s2-a..f | S2 sweep on stream 2, the same six | queued 14:56Z | same pick |
 | aa-g7-01-s1 .. -06-s1 | round 2, v14 line: Hard at Deep + S1 (@aa-g3-s1-f#19) against itself | 720 games, queued 14:57Z | Korbi: a second round for both lines before deciding (checkpoint 1 only a reading); round-2 nets on both rounds of their own line; match games not used for training (a checkpoint game is half the other line) |
+
+### 11 Nov, 15:10Z: S2 picked; checkpoint 1 and fresh-line round 2 queued
+S2 sweep (aa-g3-s2-a..f, trained on aa-g2-0N-new, 686 games). Brier gap is net minus the old net on the same held-out positions.
+
+| Run | Settings | Gap | Flaws (old) |
+|---|---|---|---|
+| a | 16/game, no floor | -0.0006 | 3.4% (3.7%) |
+| b | 16/game, floor | **-0.0012** | 0.9% (2.9%) |
+| c | 32/game, no floor | +0.0008 | 2.3% (3.1%) |
+| d | 32/game, floor | +0.0002 | 0.9% (3.4%) |
+| e | every decision, no floor | +0.0002 | 0.8% (3.9%) |
+| f | every decision, floor | -0.0004 | 0.5% (3.8%) |
+
+S2 = run b (aa-g3-s2-b#19). Gaps are about a tenth of S1's (-0.009) and inside noise: the fresh line's games taught little beyond the old net so far.
+Queued: aa-g4-cp (S2 vs S1 at Deep, 100 pairs, a reading only), aa-g7-01..06-s2 (fresh-line round 2, seeds 970000+).
