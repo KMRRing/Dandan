@@ -126,3 +126,6 @@ Queued: aa-g4-cp (S2 vs S1 at Deep, 100 pairs, a reading only), aa-g7-01..06-s2 
 - Then a round robin at Deep (1,024 deals), each against each, up to 400 pairs per match set, same deal seeds for all three, stopping rule as usual: S1′ vs v14, S2′ vs v14, S1′ vs S2′.
 - **Monte 1.1 crowning rule:** the challenger scores at least 53% against v14 (ag-v14.json), and its 99% range is wholly above 50%. If both qualify, their head-to-head decides. If neither does, v14 stays.
 - Checkpoint 1 (aa-g4-cp) stays a reading only.
+
+### 11 Nov, 16:22Z: checkpoint 1 result (aa-g4-cp, S2 vs S1 at Deep)
+97 of 100 pairs in (3 shards still running): S2 **51.5% ± 7.7** (99%: 43.9–59.2). S2 swept 18 pairs, S1 15, 64 split. Level: neither line stops. S1's ten-times-better Brier gap did not show up as strength. Round 2: about 350 of 720 games (v14 line), about 310 (fresh line).
