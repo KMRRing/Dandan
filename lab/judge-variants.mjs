@@ -6,7 +6,8 @@
 // and each variant is screened there against today's judge: Brier score against the result overall, in slow positions (no
 // Dandân able to attack, the library over 20: the squeeze) and late ones (library 20 or less), and the share of held cards
 // worth less than nothing to it. One JSON line: { variant, spec, epoch, metrics, today, layers } (layers as dandan-eval reads).
-// usage: node lab/judge-variants.mjs <shard> <shards> <out> <self-play job ids, comma-separated>
+// usage: node lab/judge-variants.mjs <shard> <shards> <out> <self-play job ids, comma-separated> [variants: e.g. 14,15 (shard n trains
+//        the n-th listed; else shard n trains variant n)] [warm start: a file in judges/ of the variant's width (else today's weights)]
 import fs from "node:fs";
 import { readParts } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
@@ -18,7 +19,8 @@ const [shard, , out, ids] = [Number(process.argv[2]), Number(process.argv[3]), p
 const VARIANTS = [];
 for (const plus of [false, true]) for (const shape of ["32x16 warm", "64x32", "128x64x32"]) for (const blend of [0, 0.5]) for (const floor of [0, 1])
   VARIANTS.push({ plus, shape, blend, floor });
-const V = VARIANTS[shard];
+const only = process.argv[6] && process.argv[6] !== "-" ? process.argv[6].split(",").map(Number) : null, fromFile = process.argv[7];
+const vNo = only ? only[shard] : shard, V = VARIANTS[vNo];
 if (!V) { console.log(`no variant ${shard} (there are ${VARIANTS.length})`); process.exit(0); }
 const N = FEATURES.length, HALF = (N - 3 - 17) / 2, M = V.plus ? N + 2 * PLUS : N;
 const featuresOf = (s, me) => Float64Array.from(V.plus ? featuresPlus(s, me) : features(s, me));
@@ -51,8 +53,13 @@ let NET;
 const warm = V.shape.endsWith("warm");
 if (warm) {
   // today's weights; the squeeze inputs (if read) start at nothing, so the start is today's judge exactly
-  NET = LAYERS0.map(dequant);
-  if (M > N) { const L = NET[0], W = new Float64Array(M * L.nOut); W.set(L.W); NET[0] = { ...L, nIn: M, W }; }
+  if (fromFile) {
+    NET = JSON.parse(fs.readFileSync(new URL(`../judges/${fromFile}`, import.meta.url), "utf8")).layers.map(dequant);
+    if (NET[0].nIn !== M) throw new Error(`${fromFile} reads ${NET[0].nIn} numbers, variant ${vNo} ${M}`);
+  } else {
+    NET = LAYERS0.map(dequant);
+    if (M > N) { const L = NET[0], W = new Float64Array(M * L.nOut); W.set(L.W); NET[0] = { ...L, nIn: M, W }; }
+  }
 } else {
   const sizes = [M, ...V.shape.split("x").map(Number), 1];
   NET = sizes.slice(1).map((nOut, l) => { const nIn = sizes[l], W = new Float64Array(nIn * nOut).map(() => gauss() * Math.sqrt(2 / nIn)); return { nIn, nOut, W, b: new Float64Array(nOut) }; });
@@ -95,9 +102,11 @@ for (const id of ids.split(",")) for (const text of await readParts(id)) for (co
   const hold = games++ % 5 === 0;
   let G = newRecord(rules, { seats: 2, seed: rec.seed, now: 0 });
   for (let i = 0; i < rec.moves.length; i++) {
-    const [seat, move] = rec.moves[i], d = at.get(i), s = G.state;
+    const [seat, move] = rec.moves[i], s = G.state;
+    // a game with no search kept (Medium against Medium, lab/selfplay.mjs medium:…): every third quiet decision, labelled by the result
+    const d = at.get(i) || (!at.size && i % 3 === 0 ? { seat, pick: 0, list: [[0, 0, -1]], medium: true } : null);
     if (d && d.pick >= 0 && !s.stack.length && !s.pending && Number.isFinite(d.list[d.pick][2])) {
-      const me = d.seat, search = d.list[d.pick][2], won = rec.winner === me ? 1 : rec.winner < 0 ? 0.5 : 0;
+      const me = d.seat, won = rec.winner === me ? 1 : rec.winner < 0 ? 0.5 : 0, search = d.medium ? won : d.list[d.pick][2];
       const st = rules.restore(JSON.parse(JSON.stringify(s)));
       const row = { a: featuresOf(st, me), y: V.blend * search + (1 - V.blend) * won, won, lib: s.lib.length, slow: slowOf(s), hold };
       if (V.floor || hold) {
@@ -175,6 +184,6 @@ function chance0(net, a) {
   const b = new Float64Array(N); b.set(a.subarray(HALF, 2 * HALF), 0); b.set(a.subarray(0, HALF), HALF); b.set(a.subarray(2 * HALF, N), 2 * HALF); b[2 * HALF] = 1 - a[2 * HALF];
   return 1 / (1 + Math.exp(forward(net, b).at(-1)[0] - forward(net, a).at(-1)[0]));
 }
-const line = { variant: shard, spec: V, games, positions: data.length, epoch: best.epoch, metrics, today: base, layers };
+const line = { variant: vNo, from: fromFile || "today", spec: V, games, positions: data.length, epoch: best.epoch, metrics, today: base, layers };
 console.log(JSON.stringify({ ...line, layers: undefined }));
 fs.writeFileSync(out, JSON.stringify(line) + "\n");

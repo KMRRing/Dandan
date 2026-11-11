@@ -581,3 +581,34 @@ export function thinkMove(s, seat, budget = BUDGET.move) {
   if (!p && !moves(s, seat, true).length) return PASS;
   return think(s, seat, budget).best;
 }
+
+// ---------- four paths (Korbi, 11 November 2026) ----------
+/** The four pairings of plans the look-ahead can play its lines out with: [our plan, theirs]. */
+export const PATHS = [["tempo", "tempo"], ["tempo", "squeeze"], ["squeeze", "tempo"], ["squeeze", "squeeze"]];
+/**
+ * Hard over four paths: the deals split four ways, each quarter played out with Medium of one plan for us and one for them
+ * (PATHS), each with its own judge if `judges` gives one (by "tempo-squeeze", ours first; else `judge`). A move is worth, for
+ * each of our plans, what it scores against their better answer to it (the lower of its two paths), and then the better of our
+ * two plans: what we can count on, whichever way they play (maximin). The four searches see the same deals (the seed is the
+ * position's), so the paths differ only by the plans.
+ */
+export function thinkPaths(s, seat, { deals = 64, judges = {}, judge = winChance, ...rest } = {}) {
+  const quarter = Math.max(4, Math.round(deals / 4)), runs = PATHS.map(([mine, theirs]) => {
+    const rollout = (c, who, rng) => policyMove(c, who, { rng, style: who === seat ? mine : theirs });
+    return think(s, seat, { ...rest, deals: quarter, judge: judges[`${mine}-${theirs}`] || judge, rollout });
+  });
+  if (runs.some(r => r.only)) return runs[0];
+  const at = new Map();                                    // a move's key → its means, path by path
+  runs.forEach((r, k) => { for (const c of r.list) { const kk = key(c.move); if (!at.has(kk)) at.set(kk, { move: c.move, v: [] }); at.get(kk).v[k] = c.mean; } });
+  const worth = v => Math.max(Math.min(v[0] ?? -1, v[1] ?? -1), Math.min(v[2] ?? -1, v[3] ?? -1));
+  const first = key(runs[0].list.find(c => c.i === 0)?.move ?? runs[0].best);
+  const list = [...at.values()].map(x => ({ move: x.move, mean: worth(x.v), se: 0, n: quarter, paths: x.v, i: key(x.move) === first ? 0 : 1 })).sort((a, b) => b.mean - a.mean);
+  return { best: list[0].move, list, deals: runs.reduce((a, r) => a + (r.deals || 0), 0), only: false };
+}
+/** thinkMove over four paths. */
+export function thinkPathsMove(s, seat, budget = BUDGET.move) {
+  const p = s.pending;
+  if (p && ["mull", "bottom", "name"].includes(p.t)) return policyMove(s, seat);
+  if (!p && !moves(s, seat, true).length) return PASS;
+  return thinkPaths(s, seat, budget).best;
+}
