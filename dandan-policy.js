@@ -65,6 +65,10 @@ export const TUNE = {
   // repulse (Korbi, same day): Repulse is for defence, saving our Dandân from their removal (worth the whole Dandân, not half);
   // on their Dandân only when nothing better is on offer (the bounce costs them little: they cast it again)
   repulse: 0,
+  // landMana (Korbi, 11 November 2026: Island and Mystic Sanctuary in hand on turn 2, Medium played the Sanctuary tapped instead of
+  // Island and a Dandân, or Island and a Lapse held): the matched land preferences (ADJ.land: Sanctuary +0.5, Island −0.5) are
+  // not applied when the land that comes in tapped costs mana we want this turn (to cast or to hold open)
+  landMana: 0,
 };
 /**
  * 9 November 2026: additions to Medium's scores, set by matches against Medium without them (lab/tune-round.mjs on Actions: each
@@ -539,6 +543,14 @@ export function spellWorth(F, it) {
 // ---------- the player ----------
 const REMOVAL = new Set(["Piracy Charm", "Mind Bend", "Repulse", "Commit", "Metamorphose", "Gone Missing", "Deem Inferior"]);
 /** What takes a permanent off the table the moment it resolves (Mind Bend only changes what a Dandân looks for, at its upkeep; Piracy Charm kills only as its +2/−1). */
+/**
+ * Whether a land played now comes in tapped: as the rules have it (dandan-core.js enterBf). Mystic Sanctuary has no `tapped` in the
+ * card list: it comes in tapped unless its controller has three other Islands, and Medium once read it as always untapped (Korbi,
+ * 11 November 2026: it played a tapped Sanctuary on turn 2 over an Island and a Dandân).
+ */
+export function entersTapped(s, seat, id) {
+  return DECK[id] === "Mystic Sanctuary" ? islands(s, seat).length < 3 : !!CARDS[DECK[id]]?.tapped;
+}
 /** What takes a spell off the stack: a counter (Memory Lapse, Commit) or Narset's Reversal (back to its owner's hand). */
 const OFF_STACK = new Set(["Memory Lapse", "Commit", "Narset's Reversal"]);
 /**
@@ -874,7 +886,12 @@ export class Player {
         const half = m.from === "yard" ? halfOf(m.card, "yard") : front(m.card);
         return (ADJ.cast[half] ?? 0) + (s.step === "main2" && !this.stack ? ADJ.hold[half] ?? 0 : 0);
       }
-      case "land": return ADJ.land[DECK[m.card]] ?? 0;
+      case "land": {
+        // landMana: not while a land that comes in tapped would cost mana wanted this turn (the preference would choose it)
+        if (TUNE.landMana && this.s.hand[this.me].some(id => isLandId(id) && entersTapped(this.s, this.me, id))
+          && this.landWant().want > this.F.my.n) return 0;
+        return ADJ.land[DECK[m.card]] ?? 0;
+      }
       case "cycle": return ADJ.cycle[DECK[m.card]] ?? 0;
       case "ability": return ADJ.ability[nm(perm(s, m.id)?.id)] ?? 0;
     }
@@ -937,22 +954,27 @@ export class Player {
     return 0.45 * this.style.keep * Math.min(res, res - left) * (this.F.myTurn ? 1 : 0.8);
   }
 
+  /** The mana wanted this turn, for a land drop: a spell one more land would pay for (needNow), or the reserve to keep open. */
+  landWant() {
+    const s = this.s, F = this.F, me = this.me;
+    const needNow = s.hand[me].some(id => {
+      if (isLandId(id)) return false;
+      const c = total(costOf(s, me, front(id), "hand"));
+      return c === F.my.n + 1;
+    });
+    return { needNow, want: Math.max(this.reserve(), needNow ? F.my.n + 1 : 0) };
+  }
   scoreLand(m) {
     const s = this.s, F = this.F, me = this.me, n = DECK[m.card], d = CARDS[n];
     const have = lands(s, me).length;
     let v = 2;
     if (n === "Izzet Boilerworks" && have < 1) return 0.2;          // it would return itself
     if (d.cycling && landCount(F, me) >= 6) v -= 1.6;                // flooded: cycle it instead
-    const tapped = d.tapped && !(n === "Mystic Sanctuary" && F.myIsl >= 3);
+    const tapped = entersTapped(s, me, m.card);
     // the mana this turn, and through their turn (lands untap only on ours): what we'd cast now (a spell one more would
     // pay for) or keep open (reserve). A land that comes in untapped adds one, a tapped one none (best played when we
     // don't need it), and Izzet Boilerworks returning an untapped land (none of ours tapped) takes one away
-    const needNow = s.hand[me].some(id => {
-      if (isLandId(id)) return false;
-      const c = total(costOf(s, me, front(id), "hand"));
-      return c === F.my.n + 1;
-    });
-    const want = Math.max(this.reserve(), needNow ? F.my.n + 1 : 0);
+    const { needNow, want } = this.landWant();
     const after = F.my.n + (tapped ? 0 : 1) - (n === "Izzet Boilerworks" && !lands(s, me).some(l => l.tapped) ? 1 : 0);
     v += 0.35 * (Math.min(want, after) - Math.min(want, F.my.n));
     if (tapped && want <= F.my.n) v += 0.15;
