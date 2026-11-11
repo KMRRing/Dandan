@@ -1,7 +1,7 @@
 /* games.html: the games played on this page, for the owner (a plain reading page: it scrolls). */
 body { background: var(--yard); color: var(--ink); margin: 0; }
 #gv { max-width: 46rem; margin: 0 auto; padding: 1rem 1rem 3rem; font-size: .9rem; line-height: 1.35; }
-#gv h1 { font-size: 1rem; font-stretch: var(--wide); text-transform: uppercase; letter-spacing: .12em; margin: 0 0 .75rem; font-weight: 600; }
+#gv h1 { padding-right: 3rem; font-size: 1rem; font-stretch: var(--wide); text-transform: uppercase; letter-spacing: .12em; margin: 0 0 .75rem; font-weight: 600; }
 .gv-sub { color: var(--ink-soft); margin: .25rem 0 .75rem; }
 .gv-bar { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: .75rem; }
 #gv button, #gv select, #gv input[type=text] { font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--brass); border-radius: 4px; padding: .35rem .6rem; min-height: 2.25rem; }
@@ -26,3 +26,4 @@ body { background: var(--yard); color: var(--ink); margin: 0; }
 .gv-found button { width: 100%; text-align: left; margin-top: .25rem; }
 #gv { height: 100vh; height: 100svh; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .gv-remove .gv-lost { color: #E8806F; }
+

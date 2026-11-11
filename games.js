@@ -10,6 +10,7 @@ import { shownRules } from "./dandan-rules.js";
 import { nm } from "./dandan-core.js";
 
 import { keyOk } from "./games-key.js";
+import { mountSettings } from "./lab-nav.js";
 
 const root = typeof document !== "undefined" ? document.getElementById("gv") : null;
 const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -26,6 +27,7 @@ let search = { q: "", hits: [], busy: false, done: 0, of: 0, failed: 0 };
 async function main() {
   document.documentElement.classList.add("ready");            // style.css shows the large mark until a page says it is ready
   if (!(await keyOk(new URLSearchParams(location.search).get("k")))) { location.replace("./"); return; }
+  mountSettings("history");                                  // the gear: to the game lab (lab.html), with the same key
   await load();
 }
 /** Reads the index and the unfinished games again (the page keeps no live feed: Refresh is how a game just finished shows). */
