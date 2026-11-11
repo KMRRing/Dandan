@@ -27,7 +27,13 @@ export async function labStore() {
       } while (pageToken);
       return names;
     },
-    async get(name) { const r = await call(`${api}/${encodeURIComponent(name)}?alt=media`); return r.ok ? r.text() : null; },
+    // the body read retried too (12 November 2026: three jt trainings died on a connection dropped mid-read)
+    async get(name) {
+      for (let tries = 0; ; tries++) {
+        try { const r = await call(`${api}/${encodeURIComponent(name)}?alt=media`); return r.ok ? await r.text() : null; }
+        catch (e) { if (tries >= 5) throw e; await new Promise(res => setTimeout(res, 2000 * 2 ** tries)); }
+      }
+    },
   };
 }
 
