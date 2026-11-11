@@ -19,8 +19,15 @@ import { sextant } from "./loading.js";
 import { createTable3d } from "./dandan-3d.js";
 import { curveOf, worthDrawing, hasActions, byTurn, momentsOf, linesBetween, MIN_FALL, captionOf, readoutOf, chartSvg, pointAt, BOX } from "./dandan-advantage.js";
 
+// Lab mode: lab.html (the owner's game lab, behind the key) sets globalThis.__dandanLab, { engine } the opponent's, before it loads this
+// file; index.html never does, and then every line below runs as it always has. In the lab the game is this same game, kept under
+// its own storage names (a lab game is never the player's saved game, nor in their records), with the computer's engine chosen
+// there and the coaches' picks ringed on the table (dandan-lab.js).
+const LAB = globalThis.__dandanLab || null;
+const lab = LAB ? await import("./dandan-lab.js") : null;
+
 const $ = id => document.getElementById(id);
-const OPTS = "dandan:opts";
+const OPTS = LAB ? "dandan-lab:opts" : "dandan:opts";
 const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -120,7 +127,7 @@ function botWorker() {
 function askMove(state, seat) {
   const wk = botWorker();
   if (!wk) return Promise.resolve({ error: "no worker" });
-  return new Promise(res => { const id = ++wk.n; wk.waiting.set(id, res); wk.w.postMessage({ id, kind: "move", state, seat, depth: opts.think }); });
+  return new Promise(res => { const id = ++wk.n; wk.waiting.set(id, res); wk.w.postMessage({ id, kind: "move", state, seat, depth: opts.think, ...(LAB ? { engine: LAB.engine } : {}) }); });
 }
 /** A position's key: the state as the runner hands it to the computer (FNV-1a of its JSON). */
 function keyOf(state) {
@@ -141,7 +148,9 @@ function holdForBot() {
   if (botMoves.has(key) || workers.bot === false) return false;
   if (botAsked !== key) {
     botAsked = key;
+    const engine = LAB?.engine;
     askMove(v.state, v.toMove).then(({ move, error }) => {
+      if (LAB && LAB.engine !== engine) { botAsked = ""; page.runner.kick(); return; }   // the lab changed the opponent meanwhile: its answer is for another engine
       if (move) { botMoves.set(key, move); if (botMoves.size > 40) botMoves.delete(botMoves.keys().next().value); }
       else if (error) { console.warn("dandan: the worker's move failed", error); workers.bot = false; }
       page.runner.kick();
@@ -152,7 +161,7 @@ function holdForBot() {
 // The computer's spells are shown (engine `showStop`): you sit in seat 0, the computer in the other, and only its moves ask for it.
 const pageRules = {
   ...shownRules,
-  bot: (s, seat, ctx) => (ctx.level === "hard" && botMoves.get(keyOf(s))) || shownRules.bot(s, seat, ctx),
+  bot: (s, seat, ctx) => (ctx.level === "hard" && botMoves.get(keyOf(s))) || shownRules.bot(s, seat, lab ? lab.botCtx(ctx) : ctx),
 };
 // ---------- the computer's pace ----------
 // What the computer does stays on the table a while before its next move (1.5 s, 3 s), or until you tap Continue
@@ -218,13 +227,13 @@ function goOn() {
 }
 
 page = seatPage({
-  rules: pageRules, id: "dandan", pace: paceNow, botName: () => "Monte", level: () => opts.level, name: savedName() || "You",
+  rules: pageRules, id: LAB ? "dandan-lab" : "dandan", pace: paceNow, botName: () => "Monte", level: () => opts.level, name: savedName() || "You",
   // Hard works its move out while a tap is awaited, so it comes the moment you tap
   hold: () => { const thinking = holdForBot(); return tapHold() || thinking; },
   onView: v => {
     noteFresh(V, v);
     V = v;
-    recordProgress(v, { level: opts.level, think: opts.think, pace: opts.pace, view: opts.view });
+    if (!LAB) recordProgress(v, { level: opts.level, think: opts.think, pace: opts.pace, view: opts.view });
     const key = v.G ? `${v.G.seq}:${v.G.n}` : "";
     if (key !== uiKey) {
       // a move was made: the picks it was for are over, and the card sheet opened for them; a card being read in the
@@ -237,6 +246,7 @@ page = seatPage({
       if (at && (!in3d() || at === look.at)) ui.look = look;
       closeCard();
     }
+    lab?.onView(v);
     draw();
   },
   onOver, toast,
@@ -959,7 +969,7 @@ $("viewDlg").addEventListener("close", () => { VIEW = ""; });
 /** A finished game's result goes to the database, once (a finished game opened again, a reload, is over again). */
 function onOver(v) {
   if (v.seat == null) return;
-  recordResult(v, { level: opts.level, think: opts.think, pace: opts.pace, view: opts.view });
+  if (!LAB) recordResult(v, { level: opts.level, think: opts.think, pace: opts.pace, view: opts.view });
   setTimeout(() => { if (V?.over) showEnd(V); }, 1100);
 }
 // the end of a game: who won and why, how the game went (the judge's chance of winning after each action that settled and
@@ -1132,6 +1142,11 @@ table3d = createTable3d({
 });
 showView();
 window.__dandan = { page, get view() { return V; }, get ui() { return ui; }, opts };
+// the lab's hooks into this page: the view, the options, the coach's rings, a redraw, the computer's moves worked out so far (to forget)
+lab?.attach({
+  LAB, opts, toast, redraw: draw, rings: RING, view: () => V, myDecision, page,
+  forgetBot: () => { botMoves.clear(); botAsked = ""; page.runner.kick(); },
+});
 
 // ---------- joining the table ----------
 // Whoever opens the page is asked their name once (kept on this device, and changed from the menu), and then sits down at
