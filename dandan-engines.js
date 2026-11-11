@@ -18,7 +18,10 @@ import { makeJudge } from "./dandan-eval.js";
 /** The retrained judges, by name: the file each is read from (next to this module), `{ layers }` for makeJudge. */
 export const JUDGES = {
   "ac-jh2": "./judges/ac-jh2.json",
+  "ag-v14": "./judges/ag-v14.json",
 };
+/** The judge the live game's Hard plays with (dandan-worker.js, a request with no engine): the one that won its match. */
+export const LIVE_JUDGE = "ag-v14";
 
 export const ENGINES = [
   {
@@ -47,9 +50,14 @@ export const ENGINES = [
     expect: "Nothing to expect yet: it is listed so the lab shows the whole family.",
   },
   {
-    id: "hard-today", name: "Hard (today's judge)", short: "Hard", kind: "hard", judge: null, available: true,
-    description: "Hard as the live game plays it (Monte): a look-ahead that plays each candidate move out over many dealt guesses of the hidden cards, Medium moving both sides about two turns ahead. Then today's judge scores the position: a small neural network trained on 1.3 million positions of 45,000 Medium-vs-Medium games. It drops clearly worse moves early and stops when the leader is clear.",
-    expect: "The strongest player in the game. It uses the thinking depth setting (as a coach it uses the lab's coach depth), so it takes from a fraction of a second to a few seconds a decision, and it shows its win chance for the move it picks.",
+    id: "hard-today", name: "Hard (old judge)", short: "Hard old", kind: "hard", judge: null, available: true,
+    description: "Hard as the live game played it until 11 November 2026: a look-ahead that plays each candidate move out over many dealt guesses of the hidden cards, Medium moving both sides about two turns ahead. Then today's judge scores the position: a small neural network trained on 1.3 million positions of 45,000 Medium-vs-Medium games. It drops clearly worse moves early and stops when the leader is clear.",
+    expect: "Beaten 53.7% by Hard with judge v14, which took its place in the live game. It uses the thinking depth setting (as a coach it uses the lab's coach depth), so it takes from a fraction of a second to a few seconds a decision, and it shows its win chance for the move it picks.",
+  },
+  {
+    id: "hard-v14", name: "Hard (judge v14)", short: "Hard v14", kind: "hard", judge: "ag-v14", available: true,
+    description: "Hard with judge v14 (judges/ag-v14.json), the live game's Hard since 11 November 2026: the same look-ahead, with a judge retrained on about 2,850 Hard-vs-Hard self-play games starting from today's judge's weights, and given eight more inputs a side for the mid-game squeeze (card and land lead, and the like). Picked from a screen of 24 judge variants (lab job ag-jv1) for predicting results best, slow positions above all.",
+    expect: "It beat Hard with the old judge 53.7% over 600 deals played both ways (1,200 games, at Quick), the first retrained judge to win its match. About a fifth slower per position judged.",
   },
   {
     id: "hard-jh2", name: "Hard (retrained judge jh2)", short: "Hard jh2", kind: "hard", judge: "ac-jh2", available: true,
@@ -63,7 +71,7 @@ export const engineOf = id => ENGINES.find(e => e.id === id);
 /** The engines that can be seated (planned ones are listed but not here). */
 export const seatable = () => ENGINES.filter(e => e.available);
 /** The engine Monte is at the start: what the live game plays. */
-export const DEFAULT_ENGINE = "hard-today";
+export const DEFAULT_ENGINE = "hard-v14";
 
 // ---------- the judges ----------
 const judges = new Map();

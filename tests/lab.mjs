@@ -2,7 +2,7 @@
 // tells the player their coaches disagree, and an engine asked at a real decision (a Medium, and a Hard of a few deals with each of
 // its judges). Quick: a few deals only. The page itself is driven by hand in a browser (README).
 import fs from "fs";
-import { ENGINES, engineOf, seatable, decide, judgeOf, JUDGES, DEFAULT_ENGINE } from "../dandan-engines.js";
+import { ENGINES, engineOf, seatable, decide, judgeOf, JUDGES, DEFAULT_ENGINE, LIVE_JUDGE } from "../dandan-engines.js";
 import { ringsOf, disagreement, loadSettings, DEFAULTS, activeCoaches, flagOf, how, autoVerdict } from "../dandan-lab.js";
 import { flagsOf } from "../games.js";
 import { rules, shownRules } from "../dandan-rules.js";
@@ -18,10 +18,10 @@ const load = url => Promise.resolve(JSON.parse(fs.readFileSync(new URL(url), "ut
 // ---------- the registry ----------
 check(ENGINES.every(e => e.id && e.name && e.short && ["medium", "hard"].includes(e.kind) && e.description.length > 40 && e.expect && typeof e.available === "boolean"), "every engine has an id, names, a kind, a description and what to expect");
 check(new Set(ENGINES.map(e => e.id)).size === ENGINES.length && new Set(ENGINES.map(e => e.short)).size === ENGINES.length, "ids and short names are unique (the strip names a coach by its short name)");
-check(["medium-tempo", "medium-squeeze", "medium-deckout", "hard-today", "hard-jh2"].every(id => engineOf(id)), "the five engines are listed");
+check(["medium-tempo", "medium-squeeze", "medium-deckout", "hard-today", "hard-jh2", "hard-v14"].every(id => engineOf(id)), "the engines are listed");
 check(!engineOf("medium-deckout").available && /not built yet/i.test(engineOf("medium-deckout").description) && !seatable().some(e => e.id === "medium-deckout"), "the deckout Medium is listed but cannot be seated");
 check(ENGINES.filter(e => e.judge).every(e => JUDGES[e.judge] && fs.existsSync(new URL(JUDGES[e.judge], new URL("../dandan-engines.js", import.meta.url)))), "every retrained judge named has its file");
-check(engineOf(DEFAULT_ENGINE).kind === "hard" && engineOf(DEFAULT_ENGINE).judge === null, "Monte starts as today's Hard, with the game's own judge");
+check(engineOf(DEFAULT_ENGINE).kind === "hard" && engineOf(DEFAULT_ENGINE).judge === LIVE_JUDGE, "Monte starts as the live game's Hard, with the live judge");
 
 // ---------- the settings ----------
 check(loadSettings(() => null).engine === DEFAULT_ENGINE && activeCoaches(loadSettings(() => null)).length === 2, "no saved choice: the live opponent, the two Mediums as coaches");
