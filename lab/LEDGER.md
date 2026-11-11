@@ -301,7 +301,7 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   than the model's at choosing what Hard weighs.
 - Next stage-1 step (Korbi's call): plan 3.5 says inputs with recent actions, or stage 3's tree-less search.
 
-## 12 November 2026, ~23:20Z: the planning chat's ten items (Korbi: "go on all ten"; 10 and 8 ahead of the jt130 gate)
+## 11 November 2026, ~23:20Z: the planning chat's ten items (Korbi: "go on all ten"; 10 and 8 ahead of the jt130 gate)
 
 - **Item 9, plan 3.5:** "if G1 fails, add inputs" is withdrawn. G0 passed, so the inputs carry the signal; the targets were the
   fault (the search's values treat holding a move a moment as equal to playing it).
