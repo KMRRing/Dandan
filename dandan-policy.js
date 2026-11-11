@@ -80,6 +80,10 @@ export const TUNE = {
   // theirTop (Korbi, 11 November 2026): a top card they know and we don't was put there by them (a Brainstorm's, a Commit's): worse
   // for us than a card at random, whoever draws it, so a shuffle (Flood Plain, an islandcycling search) is worth a little
   theirTop: 0,
+  // gemTiming (Korbi, 11 November 2026): Mind Bend and Piracy Charm's kill are cast only at the end of their turn with mana
+  // open, or while their Dandân attacks; never otherwise (no spending them on a turn with nothing to answer). 2: also on our
+  // own turn while they have no mana open
+  gemTiming: 0,
   izzetLast: 1,              // izzetLast (below): a dominated-move fix, on
 };
 /**
@@ -1297,6 +1301,12 @@ export class Player {
    */
   removal(half, m, keep, pay) {
     const s = this.s, F = this.F, me = this.me, t0 = m.targets[0];
+    if (TUNE.gemTiming && !this.easy && (half === "Mind Bend" || (half === "Piracy Charm" && m.mode !== 2))) {
+      const theirs = s.active === this.opp, window = (theirs && (s.step === "end" || ((s.step === "attackers" || s.step === "blockers") && !!s.combat?.att?.length)))
+        // gemTiming 2: also our own turn while they have no mana open (nothing can counter it)
+        || (TUNE.gemTiming === 2 && !theirs && this.F.their.n === 0);
+      if (!window || (half === "Piracy Charm" && m.mode !== 1)) return -3;
+    }
     if (half === "Piracy Charm" && m.mode === 2) {
       // a discard: worth it on a small hand, at the end of their turn
       const n = s.hand[this.opp].length;
