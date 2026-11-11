@@ -287,3 +287,15 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - Picks: S3 → s3c (52.2; s3a 1.2 behind). S1′ (45.0) and S2′ (46.6) under 50%: no gates.
 - Queued: aa-g9-s3v14b, Deep gate for aa-g8-s3-c#19 vs v14, 600 pairs, seeds 220000, ref cb02856.
 - jt130 scored highest but is the plan's reference, not a candidate; its gate waits for Korbi. s3d (still training) joins the screen when done.
+
+## 11 November 2026, ~22:50Z: stage 1 fallback fails too
+
+| job | test | result |
+|---|---|---|
+| aa-a1-g2e | Hard at Quick, shortlist ordered by aa-a1-pt1, vs Hard at Quick, v14, 1,000 pairs | **44.8% ± 2.7** (fails, worse) |
+| aa-a1-g2f | the same ordered by aa-a1-pt2 | **44.0% ± 2.6** (fails, worse) |
+
+- Stage 1 as planned is done: six tests, none above 50% except G1 for pt1 guarded (53.0, under the 55% bar). The learned
+  correction lowers value given up on paper (G0) and makes play worse everywhere it's used. Medium's shortlist is better
+  than the model's at choosing what Hard weighs.
+- Next stage-1 step (Korbi's call): plan 3.5 says inputs with recent actions, or stage 3's tree-less search.
