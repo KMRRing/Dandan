@@ -282,8 +282,9 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 | s2a, s2b, s2f, s2c, s2e, s2d, s2g | 46.6, 46.5, 45.5, 45.3, 44.7, 44.5, 43.8 | S2′ |
 | s1c, s1b, s1g, s1d, s1a, s1e, s1f | 45.0, 44.9, 44.6, 44.4, 42.8, 42.8, 40.8 | S1′ |
 
-- Every S1′ and S2′ net (trained on the 2,880 Deep games) loses to v14 at Quick; the nets trained on the 46,800 filler games
-  (S3, and jt130) are at or above it. More games beat better games.
+- Every S1′ and S2′ net (trained on the 2,880 Deep games) loses to v14 at Quick; the nets trained on filler games (S3, and
+  jt130) are at or above it. More games beat better games. (Corrected 12 Nov, from the training logs: S3 a, c and d read
+  17,297 games, S3 b 5,810, jt130 15,462; not 46,800.)
 - Picks: S3 → s3c (52.2; s3a 1.2 behind). S1′ (45.0) and S2′ (46.6) under 50%: no gates.
 - Queued: aa-g9-s3v14b, Deep gate for aa-g8-s3-c#19 vs v14, 600 pairs, seeds 220000, ref cb02856.
 - jt130 scored highest but is the plan's reference, not a candidate; its gate waits for Korbi. s3d (still training) joins the screen when done.
@@ -299,3 +300,21 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   correction lowers value given up on paper (G0) and makes play worse everywhere it's used. Medium's shortlist is better
   than the model's at choosing what Hard weighs.
 - Next stage-1 step (Korbi's call): plan 3.5 says inputs with recent actions, or stage 3's tree-less search.
+
+## 12 November 2026, ~23:20Z: the planning chat's ten items (Korbi: "go on all ten"; 10 and 8 ahead of the jt130 gate)
+
+- **Item 9, plan 3.5:** "if G1 fails, add inputs" is withdrawn. G0 passed, so the inputs carry the signal; the targets were the
+  fault (the search's values treat holding a move a moment as equal to playing it).
+- **Item 10** (815256d): policy-train `target pick` (one-hot on the move the search played). aa-a1-pt3 queued; bar offline is
+  modelAgrees above Medium's 76.3% (pt1 70.4, pt2 69.1); then G1 guarded and unguarded, 20,000 pairs; tree order only if it passes.
+- **Item 8** (815256d): hard-match `hard-t<n>` (the look-ahead's turns) and ms a decision per side in every row. Queued
+  aa-a1-h-t0, -t1, -t3 (vs Hard at Quick as it is, 2 turns) and aa-a1-h-free (hard+free~aa-a1-pt1, the 84-16 loser playing the
+  play-outs, finishing the 430-pair run), 1,000 pairs each at Quick, v14, seeds 230000.
+- **Item 1:** aa-g9-tjt130v14b, Deep gate for jt130 (sorts after aa-g9-s3v14b). **Item 2:** gate verdicts by gate-sum.mjs; the S3
+  gate's purpose text corrected (DROP at 600 is a score under 51.5%).
+- **Item 4** (3e46895): S4 = S3 a, c, d and variant 2 on every filler batch (spb01-446, spm001-030, ~55,000 games), 480 minutes;
+  lab reads now retry the body (three jt trainings died mid-read); judge-variants takes batch ranges.
+- **Item 6** (ae56664): the worker's filler is flat 128 deals with v14 again (spf<n>, seeds from 3,000,000); machines started
+  earlier keep queuing spm until they restart.
+- **Item 7:** aa-a0-jt1 (lab/noop-jt.mjs) puts empty specs at jt380-700 without a done-0, so old machines skip them.
+- **Item 5** (after S4): Quick screen of the four S4 nets, S3 d, and one judge averaging jt130 and S3 c.
