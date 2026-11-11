@@ -41,9 +41,10 @@ export function randomMove(s, seat, rng) {
 }
 
 /** The computer player's move at a level (Hard by default): an answer to the question put to it, or what it does with priority. */
-export function botMove(s, seat, { rng = Math.random, level = "hard" } = {}) {
+export function botMove(s, seat, { rng = Math.random, level = "hard", style } = {}) {
   // an upkeep stop only for a Flood Plain's window (engine fetchWindow) is for a person: the computer never fetched there
   if (s.step === "upkeep" && !s.stack.length && !s.pending && !upkeepStop(s, seat)) return PASS;
   if (level === "hard" || !level) return thinkMove(s, seat);
-  return policyMove(s, seat, { rng, level: level === "easy" ? "easy" : "medium" });
+  // style: a Medium's plan (dandan-policy.js STYLES), asked for only by the game lab; left out, it is today's Medium
+  return policyMove(s, seat, { rng, level: level === "easy" ? "easy" : "medium", style });
 }
