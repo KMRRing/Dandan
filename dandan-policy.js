@@ -97,6 +97,12 @@ export const TUNE = {
   //   (two hits or fewer left)
   // tiNeed: Take Inventory only when we need cards (under four in hand, or no land in hand) and at the end of their turn
   goneSel: 0, retrSafe: 0, tiNeed: 0,
+  // cScore (Korbi, 11 November 2026): the counters each side can be expected to have, min(whole pairs of open mana, cards in
+  // hand / 2) — 4 mana and 4 cards: 2; 4 and 3: 1.5; 2 and 5: 1; 3 and 7: 1 — their mana 2 less early in their own turn (they
+  // spend two on a spell first). A valuable spell (Dandân, Lórien Revealed, Gone Missing, a Take Inventory with one already in
+  // the graveyard) is free against a score of 0; against more, it costs cScore unless ours after paying for it (the pairs of
+  // mana left, up to the Lapses and Reversals we hold) reaches theirs rounded up
+  cScore: 1,                 // on: won 51.6 ± 1.0 over 6,000 games against Medium without it (11 November 2026)
   commitWhen: 1,             // on: won 51.9 ± 0.9 over 3,000 games against Medium without it (aa-f1-cw, 11 November 2026)
   izzetLast: 1,              // izzetLast (below): a dominated-move fix, on
 };
@@ -913,7 +919,22 @@ export class Player {
   }
   score(m) {
     const v = this.scoreMove(m), w = this.low ? v + this.libraryTerm(m) : v;
-    return w > -0.9 && !this.easy ? w + this.adjust(m) : w;
+    if (w <= -0.9 || this.easy) return w;
+    return w + this.adjust(m) - (TUNE.cScore && m.t === "cast" ? this.outCountered(m) : 0);
+  }
+  /** cScore's cost of casting a valuable spell into more counters than we can answer (0 when it isn't valuable or we can). */
+  outCountered(m) {
+    const s = this.s, F = this.F, me = this.me, opp = this.opp, half = m.from === "yard" ? halfOf(m.card, "yard") : front(m.card);
+    const valuable = half === "Dandân" || half === "Lórien Revealed" || half === "Gone Missing"
+      || (half === "Take Inventory" && s.yard.some(id => DECK[id] === "Take Inventory"));
+    if (!valuable) return 0;
+    const early = s.active === opp && (s.step === "upkeep" || s.step === "draw" || s.step === "main1") && !s.stack.length;
+    const score = (mana, cards) => Math.min(Math.floor(Math.max(0, mana) / 2), cards / 2);
+    const theirs = score(F.their.n - (early ? 2 : 0), s.hand[opp].length);
+    if (theirs <= 0) return 0;
+    const left = F.my.n - total(costOf(s, me, half, m.from));
+    const reactive = s.hand[me].filter(id => id !== m.card && (DECK[id] === "Memory Lapse" || DECK[id] === "Narset's Reversal")).length;
+    return score(left, 2 * reactive) >= Math.ceil(theirs) ? 0 : TUNE.cScore;
   }
   /** ADJ's addition to a move's score. */
   adjust(m) {
@@ -1168,7 +1189,9 @@ export class Player {
       }
       case "Mystic Retrieval": {
         if (!t0) return -1;
-        if (TUNE.retrSafe && !this.easy && m.from === "hand" && hasRed(s, this.opp) && landMana(s, this.opp) >= 3) {
+        // retrSafe 2 (Korbi): unless the kill pressure is high, their attackers taking our life within two turns
+        const pressed = TUNE.retrSafe === 2 && 2 * F.theirs.filter(d => F.myIsl > 0).length >= Math.ceil(Math.max(0, s.life[me]) / 4);
+        if (TUNE.retrSafe && !pressed && !this.easy && m.from === "hand" && hasRed(s, this.opp) && landMana(s, this.opp) >= 3) {
           // both halves now: this cast and the flashback ({2}{R}) with our own red
           const both = hasRed(s, me) && F.my.n - mana >= 3;
           if (!both) return -3;
