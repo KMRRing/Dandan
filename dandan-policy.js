@@ -18,7 +18,7 @@ import { CARDS, DECK, NAMES, BASICS, HALVES, TOKEN_AT, total, parseCost } from "
 import { moves, halfOf, nextDrawer, costOf, checkCast } from "./dandan-engine.js";
 import {
   other, nm, isLandId, perm, isLand, isCreature, isToken, pt, lands, islands, creatures, typesOf, needType, manaAlts, topKnown, itemOf,
-  knownIn, poolOf, isSpellCard, isIsland,
+  knownIn, poolOf, isSpellCard, isIsland, knOf,
 } from "./dandan-core.js";
 import { shuffle } from "./seats.js";
 import { readsOf } from "./dandan-reads.js";
@@ -73,6 +73,13 @@ export const TUNE = {
   // when an untapped one is in hand for the second (two mana on turn two either way); from then on Mystic Sanctuary is played
   // last, while another land is in hand and it would come in tapped (it may come in untapped later, with its trigger)
   landPlan: 1,                // on: won 53.1 ± 1.7 over 2,000 games against Medium without it (11 November 2026)
+  // count (squeeze only, Korbi, 11 November 2026): keep open what their threats need and spend the rest: a Memory Lapse's two for
+  // each spell they could cast, their hand and the card they draw next (and a Memory in the graveyard they could flash back, so
+  // they can't wiggle out of a lost game), as far as our counters go
+  count: 0,
+  // theirTop (Korbi, 11 November 2026): a top card they know and we don't was put there by them (a Brainstorm's, a Commit's): worse
+  // for us than a card at random, whoever draws it, so a shuffle (Flood Plain, an islandcycling search) is worth a little
+  theirTop: 0,
   izzetLast: 1,              // izzetLast (below): a dominated-move fix, on
 };
 /**
@@ -634,7 +641,7 @@ const raceWorth = left => (left <= 3 ? 5 : left <= 7 ? 3 : 1.5);
  */
 export const STYLES = {
   tempo: { keep: 1, urgency: null, answerCut: 0, holdBack: 0, close: 0, land: 0 },
-  squeeze: { keep: 2, urgency: 3, answerCut: 0.5, holdBack: 0.6, close: 0.8, land: 0.4 },
+  squeeze: { keep: 2, urgency: 3, answerCut: 0.5, holdBack: 0.6, close: 0.8, land: 0.4, count: 1 },
 };
 
 /** How much of the race is left to win once the other player may put it back with a draw of their own, by the cards they hold: none, one, two, three or more. */
@@ -957,6 +964,13 @@ export class Player {
       else if (name === "Piracy Charm" || name === "Mind Bend") answer = true;
     }
     let r = counter ? 2 : 0;
+    if (counter && TUNE.count && this.style.count) {
+      let lapses = 0;
+      for (const id of s.hand[this.me]) if (id !== exclude && (DECK[id] === "Memory Lapse" || DECK[id] === "Narset's Reversal")) lapses++;
+      const memory = s.yard.some(id => DECK[id] === "Commit // Memory") && lands(s, this.opp).length >= 6 ? 1 : 0;
+      r = 2 * Math.min(lapses, s.hand[this.opp].length + (F.myTurn ? 1 : 0) + memory);
+      r = Math.max(r, 2);
+    }
     if (answer && F.theirs.some(d => islandsOfType(s, this.me, needType(d)))) r += 1;
     return r;
   }
@@ -1047,8 +1061,11 @@ export class Player {
   }
   /** What shuffling the library away is worth now: a known top card that is good for the one who draws it next, from our side. */
   reshuffle() {
-    const F = this.F;
-    if (F.known == null) return 0;
+    const F = this.F, s = this.s;
+    if (F.known == null) {
+      const top = s.lib[0], mask = top == null ? 0 : knOf(s, top);
+      return TUNE.theirTop && (mask & (1 << this.opp)) && !(mask & (1 << this.me)) ? 0.3 : 0;
+    }
     return F.next === this.me ? 0.85 - cardWorth(F, F.known, this.me) : cardWorth(F, F.known, this.opp) - 0.85;
   }
   scoreAbility(m) {
