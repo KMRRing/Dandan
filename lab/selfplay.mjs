@@ -10,6 +10,9 @@
 // usage: node lab/selfplay.mjs <shard> <shards> <out> <deals 256> <games 800> [first seed 7000] [mode hard] [judge]
 //   mode: hard (the search above); paths (Hard over four paths, dandan-think.js thinkPaths); medium:<plan>:<plan> (Medium of those
 //   plans, seat 0's first, no search kept: data for a judge of those plans). judge: a file in judges/, or @<job>[#variant] (a judge-variants run), else the game's own.
+//   mix:<share>[:<deep deals 1024>] (11 November 2026): the search at mixed depth. That share of the decisions, drawn by the game's seed,
+//   is searched at the deep deals (1,024 and more weigh every legal move) and marked `deep: 1`: the lessons for a learned policy; the
+//   rest at <deals>, which keeps the games cheap and many: the lessons for a value net. Each decision says which it was.
 import fs from "node:fs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../seats.js";
@@ -35,6 +38,7 @@ async function judgeFrom(t) {
 }
 const judge = await judgeFrom(judgeFile);
 const plans = mode.startsWith("medium:") ? mode.split(":").slice(1) : null;
+const mixed = mode.startsWith("mix:") ? mode.split(":").slice(1).map(Number) : null;   // [share of deep decisions, deep deals]
 const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);
 const nm = id => DECK[id] ?? "token";
 const realRandom = Math.random;
@@ -49,7 +53,9 @@ for (let g = first; g < first + n; g++) {
     else if (p && ["mull", "bottom", "name"].includes(p.t)) move = policyMove(s, who);
     else if (!p && !legal(s, who, true).length) move = PASS;
     else {
-      const res = (mode === "paths" ? thinkPaths : think)(s, who, { deals, ms: 1e9, ...(judge ? { judge } : {}) });
+      // mix: this decision's depth, by the game's seed and the move's number (the same wherever the game is played)
+      const deep = mixed ? seeded(mix(seed0 + g, 1000003 + i))() < mixed[0] : false;
+      const res = (mode === "paths" ? thinkPaths : think)(s, who, { deals: deep ? mixed[1] || 1024 : deals, ms: 1e9, ...(judge ? { judge } : {}) });
       move = res.best;
       if (!res.only) {
         const key = m => JSON.stringify(m);
@@ -58,6 +64,7 @@ for (let g = first; g < first + n; g++) {
           i, seat: who, turn: s.turn, step: s.step, lib: s.lib.length, life: s.life.slice(), hands: s.hand.map(h => h.length), hand: s.hand[who].map(nm).sort(),
           bf: s.bf.map(q => [nm(q.id), q.ctl, q.tapped ? 1 : 0]), yard: s.yard.map(nm).sort(), stack: s.stack.map(x => x.name),
           list, med: res.list.findIndex(c => c.i === 0), pick: res.list.findIndex(c => key(c.move) === key(move)),
+          ...(mixed ? { deep: deep ? 1 : 0 } : {}),
         });
       }
     }

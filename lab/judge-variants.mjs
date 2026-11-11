@@ -8,7 +8,7 @@
 // worth less than nothing to it. One JSON line: { variant, spec, epoch, metrics, today, layers } (layers as dandan-eval reads).
 // usage: node lab/judge-variants.mjs <shard> <shards> <out> <self-play job ids, comma-separated> [variants: e.g. 14,15 (shard n trains
 //        the n-th listed; else shard n trains variant n)] [warm start: a file in judges/ of the variant's width (else today's weights), or -]
-//        [most games to read, else all] [positions a game, else all] [learning rate]
+//        [most games to read, else all] [positions a game, else all; or "turns": the first position of each turn] [learning rate]
 import fs from "node:fs";
 import { labStore } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
@@ -24,7 +24,11 @@ for (const plus of [false, true]) for (const shape of ["32x16 warm", "64x32", "1
 const cap = Number(process.argv[8]) || Infinity;
 // positions a game (11 Nov, Korbi: so long games and their decided endings don't outweigh the rest): this many, spread evenly from
 // the first move to the last, each the first usable decision at or after its mark; 0 or absent, every usable one as before
-const perGame = Number(process.argv[9]) || 0;
+// "turns" in its place: the first position of each turn (from the second on) and no other, whether a search was kept there or
+// not. That is where Hard's look-ahead asks a value net (it plays to the start of a turn, nothing on the stack), which the quiet
+// decisions of every step are not; a position with no search kept is labelled by the result alone.
+const turnsOnly = process.argv[9] === "turns";
+const perGame = turnsOnly ? 0 : Number(process.argv[9]) || 0;
 const lrArg = Number(process.argv[10]) || 0; // learning rate, else 1e-3 (3e-4 started from a judge) // at most this many games read (11 Nov: replaying 30,000 Medium games alone takes over an hour)
 const only = process.argv[6] && process.argv[6] !== "-" ? process.argv[6].split(",").map(Number) : null, fromFile = process.argv[7] && process.argv[7] !== "-" ? process.argv[7] : undefined;
 const vNo = only ? only[shard] : shard, V = VARIANTS[vNo];
@@ -120,16 +124,21 @@ for (const id of ids.split(",")) for (const name of (await store.list(`results/$
   const hold = games++ % 5 === 0;
   let G = newRecord(lean, { seats: 2, seed: rec.seed, now: 0 });
   const marks = perGame ? Array.from({ length: perGame }, (_, j) => Math.floor(((j + 0.5) * rec.moves.length) / perGame)) : null;
-  let next = 0;
+  let next = 0, lastTurn = -1;
   for (let i = 0; i < rec.moves.length; i++) {
     const [seat, move] = rec.moves[i], s = G.state;
     // a game with no search kept (Medium against Medium, lab/selfplay.mjs medium:…): quiet decisions, labelled by the result
     // (every third, unless taken a fixed number a game)
-    const d = at.get(i) || (!at.size && (marks || i % 3 === 0) ? { seat, pick: 0, list: [[0, 0, -1]], medium: true } : null);
+    const newTurn = s.turn !== lastTurn;
+    lastTurn = s.turn;
+    const d = turnsOnly ? (newTurn && s.turn >= 2 ? at.get(i) || { seat } : null)
+      : at.get(i) || (!at.size && (marks || i % 3 === 0) ? { seat, pick: 0, list: [[0, 0, -1]], medium: true } : null);
     const due = !marks || (next < marks.length && i >= marks[next]);
-    if (due && d && d.pick >= 0 && !s.stack.length && !s.pending && Number.isFinite(d.list[d.pick][2])) {
+    // valued: the search's value of the move it made is there to learn from (a turn's first position may have none)
+    const valued = !!d && d.pick >= 0 && Number.isFinite(d.list?.[d.pick]?.[2]);
+    if (due && d && (valued || turnsOnly) && !s.stack.length && !s.pending) {
       if (marks) while (next < marks.length && marks[next] <= i) next++;
-      const me = d.seat, won = rec.winner === me ? 1 : rec.winner < 0 ? 0.5 : 0, search = d.medium ? won : d.list[d.pick][2];
+      const me = d.seat, won = rec.winner === me ? 1 : rec.winner < 0 ? 0.5 : 0, search = d.medium || !valued ? won : d.list[d.pick][2];
       const st = rules.restore(JSON.parse(JSON.stringify(s)));
       const row = { a: featuresOf(st, me), y: V.blend * search + (1 - V.blend) * won, won, lib: s.lib.length, slow: slowOf(s), hold };
       if (V.floor || hold) {
@@ -215,6 +224,6 @@ function chance0(net, a) {
   const b = new Float32Array(N); b.set(a.subarray(HALF, 2 * HALF), 0); b.set(a.subarray(0, HALF), HALF); b.set(a.subarray(2 * HALF, N), 2 * HALF); b[2 * HALF] = 1 - a[2 * HALF];
   return 1 / (1 + Math.exp(forward(net, b).at(-1)[0] - forward(net, a).at(-1)[0]));
 }
-const line = { variant: vNo, from: fromFile || "today", spec: V, perGame, lr, games, positions: data.length, epoch: best.epoch, metrics, today: base, layers };
+const line = { variant: vNo, from: fromFile || "today", spec: V, perGame: turnsOnly ? "turns" : perGame, lr, games, positions: data.length, epoch: best.epoch, metrics, today: base, layers };
 console.log(JSON.stringify({ ...line, layers: undefined }));
 fs.writeFileSync(out, JSON.stringify(line) + "\n");

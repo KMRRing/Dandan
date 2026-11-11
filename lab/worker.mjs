@@ -14,8 +14,12 @@
 //   is moved to retired/<id>.json, out of the workers' sight but still in the ledger.
 //
 // LAB_FILL=1 (10 November 2026, Korbi: keep the machines on something useful at all times): when no shard is left the worker
-// queues the next batch of self-play (spb<n>, 120 games of Hard against itself: since 11 November 2026 at 128 deals with judge v14, the live game's, for the next judge (before, 256 deals with the old judge), seeds after the batch before) and,
-// for each finished batch, a training of the judge on all batches up to it (jt<n>); a worker filling never stops for want of work.
+// queues the next batch of self-play; a worker filling never stops for want of work. The batches are spm<n> (11 November 2026):
+// 120 games of Hard against itself at mixed depth with the live value net (lab/selfplay.mjs `mix`: a quarter of the decisions at
+// Deep with every legal move weighed, the lessons for a learned policy; the rest at 128 deals, which keeps the games many), seeds
+// from 2,000,000 on, each batch at the commit `main` was at when it was queued. Before them: spb01-390, Hard at 256 deals with the
+// old value net, then at 128 with v14, all at whatever `main` was that minute. The value-net training that used to follow every
+// batch (jt<n>, on all batches so far) is gone: from about 10,000 games on it no longer finished in its four hours or its memory.
 //
 // usage: node lab/worker.mjs            (on Google: LAB_BUCKET=<bucket>)      a worker stops when nothing has come for LAB_IDLE_MIN
 //        LAB_DIR=<folder> node lab/worker.mjs   (the same queue in a folder, for trying it out)
@@ -97,23 +101,22 @@ const store = env.LAB_DIR ? folderStore(path.resolve(env.LAB_DIR)) : bucketStore
 const claimBody = () => JSON.stringify({ by: NAME, t: Date.now() });
 const finished = new Set(), FILL = env.LAB_FILL === "1";
 const doneCount = async id => (await store.list(`results/${id}/`)).filter(r => /\/done-\d+$/.test(r.name)).length;
-const batch = n => `spb${String(n).padStart(2, "0")}`;
-/** The queue run dry, with LAB_FILL: a training of the judge for each finished self-play batch not yet trained on, and the next batch. */
+const batch = n => `spm${String(n).padStart(3, "0")}`;
+/** The commit `main` is at now: a batch queued at it says which engine played it (one queued at "main" can't, as main moves on). */
+function mainSha() {
+  try { return execFileSync("git", ["ls-remote", REPO, "refs/heads/main"], { encoding: "utf8", timeout: 20000 }).split(/\s+/)[0] || "main"; } catch { return "main"; }
+}
+/** The queue run dry, with LAB_FILL: the next batch of self-play, once the last one is finished or all taken. */
 async function refill() {
-  const ids = new Set((await store.list("jobs/")).map(o => path.basename(o.name, ".json")));
-  const nums = [...ids].filter(i => /^spb\d+$/.test(i)).map(i => Number(i.slice(3))).sort((a, b) => a - b);
-  const last = nums.at(-1) ?? 0, made = { by: NAME, at: new Date().toISOString() };
-  const put = spec => store.put(`jobs/${spec.id}.json`, JSON.stringify({ ref: "main", repo: REPO, ...spec, made }), { ifAbsent: true });
-  for (const n of nums) {
-    const id = `jt${String(n).padStart(2, "0")}`;
-    if (ids.has(id) || (await doneCount(batch(n))) < 24) continue;
-    const upTo = nums.filter(k => k <= n).map(batch);
-    await put({ id, script: "judge-train.mjs", args: `{shard} {shards} {out} ${upTo.join(",")}`, shards: 1, timeoutMin: 240,
-      purpose: `the judge trained on Hard self-play ${upTo[0]}..${upTo.at(-1)} (${upTo.length * 120} games); held-out scores by library size show what the batch adds` });
-  }
-  if (nums.length && (await doneCount(batch(last))) < 24 && !(await allClaimed(batch(last)))) return;
-  await put({ id: batch(last + 1), script: "selfplay.mjs", args: `{shard} {shards} {out} 128 120 ${7000 + 120 * last} hard ag-v14.json`, shards: 24, timeoutMin: 120,
-    purpose: "Hard (256 deals) against itself, every decision with the search's value of each move: data to teach the judge and Medium" });
+  const ids = (await store.list("jobs/")).map(o => path.basename(o.name, ".json"));
+  const last = Math.max(0, ...ids.filter(i => /^spm\d+$/.test(i)).map(i => Number(i.slice(3))));
+  if (last && (await doneCount(batch(last))) < 24 && !(await allClaimed(batch(last)))) return;
+  const spec = {
+    ref: mainSha(), repo: REPO, id: batch(last + 1), script: "selfplay.mjs", args: `{shard} {shards} {out} 128 120 ${2000000 + 120 * last} mix:0.25 ag-v14.json`, shards: 24, timeoutMin: 240,
+    purpose: "Hard with value net v14 against itself at mixed depth (a quarter of the decisions at Deep with every legal move weighed, the rest at 128 deals), every decision with the search's value of each move: lessons for a learned policy and for the value net",
+    made: { by: NAME, at: new Date().toISOString() },
+  };
+  await store.put(`jobs/${spec.id}.json`, JSON.stringify(spec), { ifAbsent: true });
 }
 const allClaimed = async id => (await store.list(`claims/${id}/`)).length >= 24;
 /** The next shard nobody has (or whose claim lapsed): claimed for this worker, or null. */

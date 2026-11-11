@@ -3,6 +3,7 @@
 // pairings, maximin); a judge is a file in judges/ (ag-v14.json), "@<job>" (the first line of a lab job's results, e.g. a
 // lab/judge-variants.mjs run) or "-" (the game's own); "@<job>#<variant>" picks a variant's line. The two plan judges, for paths, score its tempo-tempo and squeeze-squeeze
 // lines (the mixed ones take the main judge). Rows { pair, a, games } as lab/judge-match.mjs (lab/medium-match-sum.mjs sums them).
+// Each game is also printed as a line { pair, seed, aSeat, winner, moves }: nothing reads it yet, but a match game is then kept.
 // usage: node lab/hard-match.mjs <shard> <shards> <out> <side A> <side B> [deals 64] [pairs 200] [first seed 150000]
 import fs from "node:fs";
 import { readParts } from "./lib.mjs";
@@ -42,6 +43,9 @@ function game(seed, aSeat) {
     G = r.G;
   }
   const w = G.state.winner;
+  // the game itself goes to stdout (the worker keeps it as stdout-<shard>.txt), so a match game plays again from its seed
+  // and moves as a self-play game does; the rows in <out> stay as they were (the Fleet page reads those)
+  console.log(JSON.stringify({ pair: seed - first, seed, aSeat, winner: w, moves: G.moves }));
   return w === aSeat ? 1 : w == null || w < 0 ? 0.5 : 0;
 }
 for (let p = shard; p < pairs; p += shards) {
