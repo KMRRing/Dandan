@@ -7,9 +7,10 @@
 // Dandân able to attack, the library over 20: the squeeze) and late ones (library 20 or less), and the share of held cards
 // worth less than nothing to it. One JSON line: { variant, spec, epoch, metrics, today, layers } (layers as dandan-eval reads).
 // usage: node lab/judge-variants.mjs <shard> <shards> <out> <self-play job ids, comma-separated> [variants: e.g. 14,15 (shard n trains
-//        the n-th listed; else shard n trains variant n)] [warm start: a file in judges/ of the variant's width (else today's weights)]
+//        the n-th listed; else shard n trains variant n)] [warm start: a file in judges/ of the variant's width (else today's weights), or -]
+//        [most games to read, else all]
 import fs from "node:fs";
-import { readParts } from "./lib.mjs";
+import { labStore } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove } from "../seats.js";
 import { features, featuresPlus, FEATURES, PLUS } from "../dandan-eval.js";
@@ -19,13 +20,19 @@ const [shard, , out, ids] = [Number(process.argv[2]), Number(process.argv[3]), p
 const VARIANTS = [];
 for (const plus of [false, true]) for (const shape of ["32x16 warm", "64x32", "128x64x32"]) for (const blend of [0, 0.5]) for (const floor of [0, 1])
   VARIANTS.push({ plus, shape, blend, floor });
-const only = process.argv[6] && process.argv[6] !== "-" ? process.argv[6].split(",").map(Number) : null, fromFile = process.argv[7];
+const cap = Number(process.argv[8]) || Infinity; // at most this many games read (11 Nov: replaying 30,000 Medium games alone takes over an hour)
+const only = process.argv[6] && process.argv[6] !== "-" ? process.argv[6].split(",").map(Number) : null, fromFile = process.argv[7] && process.argv[7] !== "-" ? process.argv[7] : undefined;
 const vNo = only ? only[shard] : shard, V = VARIANTS[vNo];
 if (!V) { console.log(`no variant ${shard} (there are ${VARIANTS.length})`); process.exit(0); }
 const N = FEATURES.length, HALF = (N - 3 - 17) / 2, M = V.plus ? N + 2 * PLUS : N;
-const featuresOf = (s, me) => Float64Array.from(V.plus ? featuresPlus(s, me) : features(s, me));
+// inputs kept as 32-bit floats: half the memory of 64-bit, and far finer than the judge's 8-bit weights (11 Nov: two runs on
+// 30,000 Medium games were killed with no output on 16-slot workers sharing 16 GB)
+const featuresOf = (s, me) => Float32Array.from(V.plus ? featuresPlus(s, me) : features(s, me));
+const mb = () => Math.round(process.memoryUsage().rss / 1048576);
+const say = m => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m} (memory ${mb()} MB)`);
+for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { say(`stopped by ${sig}`); process.exit(143); });
 const swap = a => {
-  const t = new Float64Array(M);
+  const t = new Float32Array(M);
   t.set(a.subarray(HALF, 2 * HALF), 0); t.set(a.subarray(0, HALF), HALF); t.set(a.subarray(2 * HALF, N), 2 * HALF); t[2 * HALF] = 1 - a[2 * HALF];
   if (M > N) { t.set(a.subarray(N + PLUS, N + 2 * PLUS), N); t.set(a.subarray(N, N + PLUS), N + PLUS); }
   return t;
@@ -96,8 +103,10 @@ function pGrad(net, a, coef, G) {
 const slowOf = s => s.lib.length > 20 && [0, 1].every(x => !creatures(s, x).some(d => s.bf.some(l => l.ctl === other(x) && isLand(l) && typesOf(l).includes(needType(d)))));
 const data = [];
 let games = 0;
-for (const id of ids.split(",")) for (const text of await readParts(id)) for (const line of text.split("\n")) {
-  if (!line) continue;
+// one result file at a time, so the raw text of every game is never held at once
+const store = await labStore();
+for (const id of ids.split(",")) for (const name of (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n))) for (const line of ((await store.get(name)) || "").split("\n")) {
+  if (!line || games >= cap) continue;
   const rec = JSON.parse(line), at = new Map((rec.dec || []).map(d => [d.i, d]));
   const hold = games++ % 5 === 0;
   let G = newRecord(rules, { seats: 2, seed: rec.seed, now: 0 });
@@ -125,6 +134,7 @@ for (const id of ids.split(",")) for (const text of await readParts(id)) for (co
     G = r.G;
   }
 }
+say(`read ${games} games: ${data.length} positions`);
 const train = data.filter(r => !r.hold), test = data.filter(r => r.hold);
 
 // ---------- the screen ----------
@@ -174,6 +184,7 @@ for (let e = 1; e <= epochs; e++) {
     });
   }
   const held = heldLoss();
+  say(`epoch ${e}/${epochs}: held-out loss ${held.toFixed(4)}`);
   if (held < best.loss) best = { loss: held, epoch: e, net: NET.map(L => ({ ...L, W: Float64Array.from(L.W), b: Float64Array.from(L.b) })) };
 }
 const layers = best.net.map((L, l) => quant(L, l === best.net.length - 1)), rounded = layers.map(dequant);
@@ -181,7 +192,7 @@ const metrics = screen(r => chance(rounded, r.a));
 // today's judge on the same positions: it reads the first N numbers
 const NET_TODAY = LAYERS0.map(dequant), base = screen(r => chance0(NET_TODAY, r.a.subarray(0, N)));
 function chance0(net, a) {
-  const b = new Float64Array(N); b.set(a.subarray(HALF, 2 * HALF), 0); b.set(a.subarray(0, HALF), HALF); b.set(a.subarray(2 * HALF, N), 2 * HALF); b[2 * HALF] = 1 - a[2 * HALF];
+  const b = new Float32Array(N); b.set(a.subarray(HALF, 2 * HALF), 0); b.set(a.subarray(0, HALF), HALF); b.set(a.subarray(2 * HALF, N), 2 * HALF); b[2 * HALF] = 1 - a[2 * HALF];
   return 1 / (1 + Math.exp(forward(net, b).at(-1)[0] - forward(net, a).at(-1)[0]));
 }
 const line = { variant: vNo, from: fromFile || "today", spec: V, games, positions: data.length, epoch: best.epoch, metrics, today: base, layers };
