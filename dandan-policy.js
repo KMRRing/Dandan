@@ -89,8 +89,9 @@ export const TUNE = {
   endFirst: 0,
   // Korbi, 11 November 2026: cards the engine turns into liabilities by casting them badly (the hand test: a held Commit,
   // Retrieval, Gone Missing or Take Inventory was often worth less than nothing to the judge, because of how it gets cast).
-  // goneSel: Gone Missing only at their Izzet Boilerworks (better when they won't draw it again: our draw next) or at their
-  //   Dandân while they're tapped out (no Lapse or Reversal for the tempo swing)
+  // goneSel: Gone Missing only at their Izzet Boilerworks or at their Dandân while they're tapped out (no Lapse or Reversal
+  //   for the tempo swing); 2: only when they can't answer it (tapped out or no cards) or a counter of ours with the mana
+  //   for it protects it, and then at anything, lands too
   // retrSafe: no Mystic Retrieval they could flash back on their turn (red and three mana), unless we cast both halves now
   // commitWhen: Commit only with a land lead or fewer cards than them (who'd want Memory from the graveyard), or when we must
   //   (two hits or fewer left)
@@ -1336,8 +1337,17 @@ export class Player {
     const s = this.s, F = this.F, me = this.me, t0 = m.targets[0];
     if (TUNE.goneSel && !this.easy && half === "Gone Missing") {
       const p = t0?.k === "c" ? perm(s, t0.id) : null;
-      const boil = p && DECK[p.id] === "Izzet Boilerworks";
-      if (!p || p.ctl === me || !(boil || (isCreature(p) && F.their.n === 0))) return -3;
+      if (!p || p.ctl === me) return -3;
+      if (TUNE.goneSel === 2) {
+        // Korbi's second rule: safe when they can't answer it (tapped out, or no cards), or when we hold a counter with the
+        // mana for it after Gone Missing; then any target, lands too. Otherwise not at all
+        const left = F.my.n - total(costOf(s, me, half, m.from));
+        const guard = left >= 2 && s.hand[me].some(id => id !== m.card && (DECK[id] === "Memory Lapse" || DECK[id] === "Narset's Reversal"));
+        if (!(F.their.n === 0 || !s.hand[this.opp].length || guard)) return -3;
+      } else {
+        const boil = DECK[p.id] === "Izzet Boilerworks";
+        if (!(boil || (isCreature(p) && F.their.n === 0))) return -3;
+      }
     }
     if (TUNE.gemTiming === 3 && !this.easy && (half === "Mind Bend" || (half === "Piracy Charm" && m.mode === 1))) {
       // 3 (Korbi's second rule): never in our own main phase with nothing on the stack while they have mana open; their end
