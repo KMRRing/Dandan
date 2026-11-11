@@ -72,7 +72,7 @@ export const TUNE = {
   // landPlan (Korbi, 11 November 2026), in place of the matched Island −0.5 / Sanctuary +0.5: the first land drop is a tapped land
   // when an untapped one is in hand for the second (two mana on turn two either way); from then on Mystic Sanctuary is played
   // last, while another land is in hand and it would come in tapped (it may come in untapped later, with its trigger)
-  landPlan: 0,
+  landPlan: 1,                // on: won 53.1 ± 1.7 over 2,000 games against Medium without it (11 November 2026)
   izzetLast: 1,              // izzetLast (below): a dominated-move fix, on
 };
 /**
