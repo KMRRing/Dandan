@@ -76,3 +76,4 @@ Run locally (not a bucket job):
 | aa-b0-f2 (lab/hard-match.mjs) | final, the judge alone: Hard with J4 against Hard v14, Quick | 382 deals (764 games; some shards short) | rejected: 51.2 ± 3.1. v14 stays live |
 | aa-b0-f1 | final, Korbi's bot as specified: four-path Hard with J4 against Hard v14, Quick | 199 deals (398 games) | rejected: 39.7 ± 4.3 |
 | ab-c1-v01..v08 | Hard v14 (128 deals) self-play | 960 games | done: data for the next judge |
+| aa-d1-ld / aa-d2-dd (lab/hard-match.mjs) | depth ladder (Korbi): Hard v14 Deep 1,024 vs Long 256, and Deepest 2,048 vs Deep 1,024, same deals; known so far: Long 256 vs Quick 64 = 56.3 ± 4.5 (aa-b0-q2) | 200 deals each, one a shard | queued 11 Nov 08:26Z |
