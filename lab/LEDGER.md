@@ -173,3 +173,9 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - aa-g9-s1v14 (S1′ vs v14) and aa-g9-s2v14 (S2′ vs v14), scored by the gate rule; aa-g9-x-s2s1 (S2′ vs S1′, named to sort after both gates) decides between them if both are crowned. 600 pairs each, one a shard, seeds 220000 (the same deals), ref a9a14e4.
 - aa-g9-s1v14 was briefly retired (18:35Z) and put back; its 144 pairs already playing count. aa-g9-s2s1 was retired seconds after queuing, under its first name.
 - First reading: S1′ 38.2% ± 17.6 after the first 17 pairs to finish (short games, not a look).
+
+### 11 Nov, 19:07Z: S1′ gate and the head-to-head cancelled (Korbi)
+- aa-g9-s1v14 retired at 193 pairs: S1′ (aa-g8-s1-d#19) **43.5% ± 5.8** against v14 (99%: 37.7 to 49.3). 27 pairs swept by S1′, 52 by v14, 114 split. This was not a contiguous look, but the whole range already sits below 50%.
+- aa-g9-x-s2s1 retired before any pairs were played. Without S1′ it decides nothing.
+- aa-g9-s2v14 (S2′ against v14) carries on under the gate rule. Korbi is sceptical of S2′ too.
+- Reading: the v14 line's net predicts results far better than v14 (0.0065 better Brier than the old net, v14 about 0.004) and plays clearly worse. That is the third time better prediction has not meant better play (ac-jh1, S1 against S2, S1′ against v14).
