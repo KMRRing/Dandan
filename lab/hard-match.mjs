@@ -1,5 +1,6 @@
 // One Hard against another (11 November 2026): every deal twice, seats swapped, the same deals per depth. A side is
-// "<search>[*deals]:<judge>[:<tempo judge>:<squeeze judge>]" (deals: this side's own, else the match's): search hard (dandan-think.js think) or paths (thinkPaths, four plan
+// "<search>[*deals]:<judge>[:<tempo judge>:<squeeze judge>]" (deals: this side's own, else the match's): search hard (dandan-think.js think), hard+<job> (Hard with the stage-1 model
+// of a lab/policy-train.mjs job playing its look-aheads past the tree) or paths (thinkPaths, four plan
 // pairings, maximin); a judge is a file in judges/ (ag-v14.json), "@<job>" (the first line of a lab job's results, e.g. a
 // lab/judge-variants.mjs run) or "-" (the game's own); "@<job>#<variant>" picks a variant's line. The two plan judges, for paths, score its tempo-tempo and squeeze-squeeze
 // lines (the mixed ones take the main judge). Rows { pair, a, games } as lab/judge-match.mjs (lab/medium-match-sum.mjs sums them).
@@ -11,6 +12,7 @@ import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../seats.js";
 import { thinkMove, thinkPathsMove } from "../dandan-think.js";
 import { makeJudge } from "../dandan-eval.js";
+import { makePlus } from "../dandan-netpolicy.js";
 const [shard, shards, out, specA, specB] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5], process.argv[6]];
 const deals = Number(process.argv[7] ?? 64), pairs = Number(process.argv[8] ?? 200), first = Number(process.argv[9] ?? 150000);
 async function judgeOf(t) {
@@ -23,7 +25,10 @@ async function judgeOf(t) {
 }
 async function side(spec) {
   const [head, j, jt, js] = spec.split(":"), judge = await judgeOf(j), tj = await judgeOf(jt), sj = await judgeOf(js);
-  const [search, own] = head.split("*"), budget = { deals: own ? Number(own) : deals, ms: 1e9, ...(judge ? { judge } : {}) };
+  const [search0, own] = head.split("*"), budget = { deals: own ? Number(own) : deals, ms: 1e9, ...(judge ? { judge } : {}) };
+  // "hard+<policy-train job>": Hard whose look-aheads are played past the tree by the stage-1 model instead of Medium (gate G2)
+  const [search, model] = search0.split("+");
+  if (model) budget.rollout = makePlus(JSON.parse((await readParts(model)).flatMap(x => x.split("\n").filter(Boolean))[0])).move;
   if (search === "paths") {
     const judges = { ...(tj ? { "tempo-tempo": tj } : {}), ...(sj ? { "squeeze-squeeze": sj } : {}) };
     return (s, seat) => thinkPathsMove(s, seat, { ...budget, judges });

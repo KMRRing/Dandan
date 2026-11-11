@@ -11,8 +11,8 @@
 import { DECK, TOKEN_AT } from "./dandan-cards.js";
 import { perm } from "./dandan-core.js";
 import { moves, halfOf, STEPS } from "./dandan-engine.js";
-import { features, FEATURES } from "./dandan-eval.js";
-import { policyMove, PASS } from "./dandan-policy.js";
+import { features, featuresPlus, FEATURES, PLUS } from "./dandan-eval.js";
+import { policyMove, PASS, Player, TUNE, ADJ, landFirst, izzetLast } from "./dandan-policy.js";
 
 const SPELLS = ["Memory Lapse", "Dandân", "Piracy Charm", "Mind Bend", "Commit // Memory", "Narset's Reversal", "Repulse", "Metamorphose",
   "Lórien Revealed", "Brainstorm", "Predict", "Mystic Retrieval", "Deem Inferior", "Take Inventory", "Chart a Course", "Gone Missing", "Quicken"];
@@ -104,4 +104,64 @@ export function makePolicy(net) {
     return list[best];
   };
   return { move, scores };
+}
+
+// ---------- stage 1: Medium plus a learned correction (monte-plan.md 3.3-3.4, 11 November 2026) ----------
+const r3 = v => Math.round(v * 1000) / 1000, PLUS_BUF = new Float32Array(FEATURES.length + 2 * PLUS);
+/** The mover's view for the model: stateOf, the mover's own squeeze inputs (its hand and public counts only), library ≤ 12. */
+export function viewOf(s, seat) {
+  const x = Array.from(stateOf(s, seat), r3);
+  featuresPlus(s, seat, PLUS_BUF);
+  for (let k = 0; k < PLUS; k++) x.push(r3(PLUS_BUF[FEATURES.length + k]));
+  x.push(s.lib.length <= 12 ? 1 : 0);
+  return x;
+}
+/** Medium's bar for a move over passing, and its own pick (as policyMove makes it), from one Player. */
+export function mediumView(s, seat, rng = Math.random) {
+  const P = new Player(s, seat, { rng }), scored = P.scored(), bar = TUNE.pass + (s.stack.length ? 0 : ADJ.pass);
+  const top = scored.length && scored[0].v > bar ? scored[0].m : PASS;
+  const pick = landFirst(s, seat, top) || (TUNE.izzetLast ? izzetLast(s, seat, top, { rng }) : null) || top;
+  return { scored, bar, pick };
+}
+/**
+ * The trained model (lab/policy-train.mjs's line: { alpha, beta, net }) as a player for priority: passing, Medium's own pick
+ * and Medium's `wide` best-scored moves, each scored alpha·(Medium's score) + beta·(is Medium's pick) + f(position, move,
+ * Medium's score); the best is played. Questions (attack, block, a mulligan…) stay with Medium. move(s, seat, rng) fits
+ * dandan-think.js think's `rollout`.
+ */
+export function makePlus(model, { wide = 5 } = {}) {
+  const { alpha, beta } = model, n = model.net, H1 = n.H1, H2 = n.H2, XN = n.XN;
+  const wx = Float32Array.from(n.wx), wm = Float32Array.from(n.wm), ws = Float32Array.from(n.ws), b1 = Float32Array.from(n.b1);
+  const w2 = Float32Array.from(n.w2), b2 = Float32Array.from(n.b2), w3 = Float32Array.from(n.w3);
+  const base = new Float32Array(H1), h1 = new Float32Array(H1), key = m => JSON.stringify(m);
+  const f = (s, seat, x, m, sc) => {
+    h1.set(base);
+    for (const i of marksOf(s, seat, m)) { const r = i * H1; for (let o = 0; o < H1; o++) h1[o] += wm[r + o]; }
+    let out = 0;
+    for (let o = 0; o < H1; o++) h1[o] = Math.max(0, h1[o] + sc * ws[o]);
+    for (let o2 = 0; o2 < H2; o2++) {
+      let v = b2[o2];
+      for (let o = 0; o < H1; o++) { const h = h1[o]; if (h > 0) v += h * w2[o * H2 + o2]; }
+      if (v > 0) out += v * w3[o2];
+    }
+    return out;
+  };
+  const move = (s, seat, rng = Math.random) => {
+    if (s.pending) return policyMove(s, seat, { rng });
+    if (!moves(s, seat).length) return PASS;
+    const { scored, bar, pick } = mediumView(s, seat, rng);
+    const cands = [{ m: PASS, v: bar }, ...scored.slice(0, wide)];
+    if (!cands.some(c => key(c.m) === key(pick))) cands.push({ m: pick, v: scored.find(c => key(c.m) === key(pick))?.v ?? bar });
+    const x = viewOf(s, seat);
+    base.set(b1);
+    for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H1; for (let o = 0; o < H1; o++) base[o] += v * wx[r + o]; }
+    let best = null, top = -Infinity;
+    const pk = key(pick);
+    for (const c of cands) {
+      const v = alpha * c.v + (key(c.m) === pk ? beta : 0) + f(s, seat, x, c.m, c.v);
+      if (v > top) { top = v; best = c.m; }
+    }
+    return best;
+  };
+  return { move };
 }
