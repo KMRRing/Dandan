@@ -119,7 +119,7 @@ function list() {
     ${filter.name ? removeBar(shown, `${esc(filter.name)}: ${shown.length} games`) : ""}
     <form class="gv-bar" id="sAll"><input type="text" id="sQ" placeholder="Search every log: Monte casts Mind Bend + Halimar" value="${esc(search.q)}"><button type="submit">Search</button>${search.q ? '<button type="button" id="sClear">Clear</button>' : ""}</form>
     ${search.q ? found() : ""}
-    <ol class="gv-list">${shown.map(r => { const [v, c] = verdict(r); return `<li><button type="button" data-k="${r.key}"><span class="meta">${when(r.key)}</span><span><span class="who">${esc(r.name)}</span> <span class="meta">${esc(r.result.level || "")} · turn ${r.result.turns} · ${r.result.moves} moves</span></span><span class="res ${c}">${v}</span></button></li>`; }).join("")}</ol>`;
+    <ol class="gv-list">${shown.map(r => { const [v, c] = verdict(r); return `<li><button type="button" data-k="${r.key}"><span class="meta">${when(r.key)}</span><span><span class="who">${esc(r.name)}</span> <span class="meta">${esc(r.result.level || "")} · turn ${r.result.turns} · ${r.result.moves} moves${flagsOf(r).length ? ` · ⚑ ${flagsOf(r).length}` : ""}</span></span><span class="res ${c}">${v}</span></button></li>`; }).join("")}</ol>`;
   wireTabs(); wireRemove(() => shown, () => { filter.name = ""; });
   root.querySelector("#fName").onchange = e => { filter.name = e.target.value; list(); };
   root.querySelector("#fState").onchange = e => { filter.state = e.target.value; list(); };
@@ -192,8 +192,11 @@ async function show(r, line = null) {
   draw();
 }
 
+/** A lab game's flags (dandan-lab.js): the coach picks the player marked as ones they disagree with. */
+export const flagsOf = r => { try { return JSON.parse(r?.result?.flags || "[]"); } catch { return []; } };
+
 function draw() {
-  const { r, game, seats, run, total, at, find } = open, [v, c] = verdict(r);
+  const { r, game, seats, run, total, at, find } = open, [v, c] = verdict(r), flags = flagsOf(r);
   const G = replay(shownRules, game, at), s = G.error ? null : G.state;
   const hits = find ? run.G.state.log.map((e, i) => ({ e, i })).filter(x => x.e.t && matches(words(x.e.t, seats), find)).slice(0, 40) : [];
   const cards = ids => ids.map(id => nm(id)).join(", ") || "—";
@@ -204,6 +207,7 @@ function draw() {
     <p><b>${esc(r.name)}</b> vs ${esc(seats[1]?.name || "Monte")} · ${when(r.key)} · <span class="${c}">${v}</span></p>
     <p class="gv-sub">${esc(r.result.level || "")}${r.result.think ? " · thinks " + esc(r.result.think) : ""} · turn ${r.result.turns} · ${total} moves${r.live ? " · last move written " + when(r.result.ended) : ""} · player ${esc(String(r.uid || "").slice(0, 8))} · ${esc(r.result.page || "")}</p>
     ${run.partial ? `<p class="gv-lost">This game began before moves were recorded${run.partial > 0 ? ` (${run.partial} of its first moves are missing)` : ""}, so it cannot be played again from the deal; only its result and summary are kept.</p>` : run.error ? `<p class="gv-lost">The moves stop making sense at move ${run.at + 1}: ${esc(run.error)} (the rules may have changed since).</p>` : ""}
+    ${flags.length ? `<div class="gv-box"><h3>Flagged picks (coaches ${esc(r.result.coaches || "")})</h3><ol class="gv-found">${flags.map(f => `<li><button type="button" data-at="${f.at}">Turn ${f.turn} · move ${f.at}: <b>${esc(f.name)}</b> ${esc(f.pick)}${f.chance == null ? "" : ` (${Math.round(f.chance * 100)}%)`}${f.others?.length ? ` · others: ${esc(f.others.join(", "))}` : ""}</button></li>`).join("")}</ol></div>` : ""}
     <div class="gv-bar"><button type="button" data-d="-10">−10</button><button type="button" data-d="-1">◀</button><b>move ${at} of ${total}</b><button type="button" data-d="1">▶</button><button type="button" data-d="10">+10</button></div>
     <input class="gv-slider" id="sl" type="range" min="0" max="${total}" value="${at}">
     ${s ? `<div class="gv-state">
@@ -221,6 +225,7 @@ function draw() {
   root.querySelector("#sl").onchange = e => { open.at = Number(e.target.value); draw(); };
   root.querySelectorAll("[data-d]").forEach(b => { b.onclick = () => { open.at = Math.max(0, Math.min(total, open.at + Number(b.dataset.d))); draw(); }; });
   root.querySelector("#find").onchange = e => { open.find = e.target.value.trim(); draw(); };
+  root.querySelectorAll("[data-at]").forEach(b => { b.onclick = () => { open.at = Math.min(total, Number(b.dataset.at)); draw(); }; });
   root.querySelectorAll("[data-line]").forEach(b => {
     // the first move after which that line is in the log
     b.onclick = () => { const i = run.lens.findIndex(n => n > Number(b.dataset.line)); open.at = i < 0 ? total : i + 1; draw(); };

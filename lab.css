@@ -11,7 +11,11 @@
 .lab-strip { flex: none; display: grid; gap: .25rem; margin: .25rem 0 0; font-size: .78rem; line-height: 1.25; max-height: 7.5rem; overflow-y: auto; padding-bottom: .35rem; }
 .lab-strip[hidden] { display: none; }
 .lab-chips { display: flex; flex-wrap: wrap; gap: .25rem; }
-.lab-chip { font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; padding: .15rem .45rem; min-height: 1.6rem; cursor: pointer; text-align: left; opacity: .8; }
+.lab-chip { display: inline-flex; align-items: stretch; color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; min-height: 1.6rem; opacity: .8; }
+.lab-chip button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; text-align: left; padding: .15rem .45rem; }
+.lab-flag { border-left: 1px solid var(--rule) !important; color: var(--ink-soft) !important; padding: .15rem .5rem !important; }
+.lab-chip.done.flagged { border-color: #c0392b; }
+.lab-chip.flagged .lab-flag { color: #fff !important; background: #c0392b; }
 .lab-chip.done { opacity: 1; border-color: var(--brass); }
 .lab-chip b { color: var(--brass-lo); font-weight: 700; margin-right: .2rem; }
 .lab-chip i { font-style: normal; color: var(--ink-soft); }

@@ -3,7 +3,8 @@
 // its judges). Quick: a few deals only. The page itself is driven by hand in a browser (README).
 import fs from "fs";
 import { ENGINES, engineOf, seatable, decide, judgeOf, JUDGES, DEFAULT_ENGINE } from "../dandan-engines.js";
-import { ringsOf, disagreement, loadSettings, DEFAULTS, activeCoaches } from "../dandan-lab.js";
+import { ringsOf, disagreement, loadSettings, DEFAULTS, activeCoaches, flagOf, how } from "../dandan-lab.js";
+import { flagsOf } from "../games.js";
 import { rules, shownRules } from "../dandan-rules.js";
 import { newRecord, applyMove } from "../seats.js";
 import { moves } from "../dandan-engine.js";
@@ -60,4 +61,13 @@ check(disagreement([{ short: "Hard", text: "cast Dandân" }, { short: "Tempo", t
   const j1 = await judgeOf(engineOf("hard-jh2"), load), j0 = await judgeOf(engineOf("hard-today"), load);
   check(j0 === undefined && typeof j1 === "function" && j1(st, seatNo) > 0 && j1(st, seatNo) < 1, "today's Hard has no judge of its own (the game's); jh2's is a function giving a chance");
 }
-process.exit(bad ? 1 : (console.log("lab: the registry, the settings, the rings, the disagreement line, and each engine at a decision"), 0));
+// ---------- flags and the record ----------
+{
+  const v = { G: { started: 7, moves: [[0, { t: "keep" }], [1, { t: "keep" }]] }, state: { turn: 3 } };
+  const f = flagOf(v, engineOf("hard-jh2"), { text: "cast Piracy Charm", chance: 0.41234 }, ["Tempo: pass"]);
+  check(f.at === 2 && f.turn === 3 && f.coach === "hard-jh2" && f.pick === "cast Piracy Charm" && f.chance === 0.412 && f.others[0] === "Tempo: pass", "a flag names the decision (moves before it), the coach, its pick and the others'");
+  const h = how(null);
+  check(h.level.startsWith("lab · ") && h.engine && h.flags === undefined, "a lab game is recorded as lab, with its engine, and no flags field when there are none");
+  check(flagsOf({ result: { flags: JSON.stringify([f]) } })[0].at === 2 && flagsOf({ result: {} }).length === 0, "the history reads a game's flags back");
+}
+process.exit(bad ? 1 : (console.log("lab: the registry, the settings, the rings, the disagreement line, flags, and each engine at a decision"), 0));

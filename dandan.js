@@ -21,8 +21,9 @@ import { curveOf, worthDrawing, hasActions, byTurn, momentsOf, linesBetween, MIN
 
 // Lab mode: lab.html (the owner's game lab, behind the key) sets globalThis.__dandanLab, { engine } the opponent's, before it loads this
 // file; index.html never does, and then every line below runs as it always has. In the lab the game is this same game, kept under
-// its own storage names (a lab game is never the player's saved game, nor in their records), with the computer's engine chosen
-// there and the coaches' picks ringed on the table (dandan-lab.js).
+// its own storage names (a lab game is never the player's saved game), with the computer's engine chosen there and the coaches'
+// picks ringed on the table (dandan-lab.js). A lab game is recorded as any game is, marked "lab · <engine>", with the coaches
+// it had and the coach picks the player flagged (dandan-lab.js `how`).
 const LAB = globalThis.__dandanLab || null;
 const lab = LAB ? await import("./dandan-lab.js") : null;
 
@@ -47,6 +48,8 @@ const sees = () => false;
 let table3d = null;                                // the 3D view, once the page is wired (the foot of this file)
 const in3d = () => !!table3d;
 const saveOpts = () => write(OPTS, { hold: opts.hold, manual: opts.manual, pace: opts.pace });
+/** What goes with a game's record: the settings it was played at (in the lab, the engine, the coaches and the flags). */
+const how = () => (lab ? lab.how() : { level: opts.level, think: opts.think, pace: opts.pace, view: opts.view });
 
 let toastTimer = 0;
 function toast(msg, ms = 2600) {
@@ -233,7 +236,7 @@ page = seatPage({
   onView: v => {
     noteFresh(V, v);
     V = v;
-    if (!LAB) recordProgress(v, { level: opts.level, think: opts.think, pace: opts.pace, view: opts.view });
+    recordProgress(v, how());
     const key = v.G ? `${v.G.seq}:${v.G.n}` : "";
     if (key !== uiKey) {
       // a move was made: the picks it was for are over, and the card sheet opened for them; a card being read in the
@@ -969,7 +972,7 @@ $("viewDlg").addEventListener("close", () => { VIEW = ""; });
 /** A finished game's result goes to the database, once (a finished game opened again, a reload, is over again). */
 function onOver(v) {
   if (v.seat == null) return;
-  if (!LAB) recordResult(v, { level: opts.level, think: opts.think, pace: opts.pace, view: opts.view });
+  recordResult(v, how());
   setTimeout(() => { if (V?.over) showEnd(V); }, 1100);
 }
 // the end of a game: who won and why, how the game went (the judge's chance of winning after each action that settled and
@@ -1146,6 +1149,7 @@ window.__dandan = { page, get view() { return V; }, get ui() { return ui; }, opt
 lab?.attach({
   LAB, opts, toast, redraw: draw, rings: RING, view: () => V, myDecision, page,
   forgetBot: () => { botMoves.clear(); botAsked = ""; page.runner.kick(); },
+  record: () => { if (V) recordProgress(V, how()); },
 });
 
 // ---------- joining the table ----------

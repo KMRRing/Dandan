@@ -64,6 +64,12 @@ must find):
 - **Take Inventory:** count the copies in the graveyard (each adds a card to the next). Don't cast the first one into
   an opponent known to hold one: let them go first and draw the extra card off theirs.
 
+### Piracy Charm (Korbi, 11 November 2026)
+
+- Casting Piracy Charm only to make them discard a card is usually a poor play. In his flagged lab position Tempo, Squeeze
+  and Hard (today's judge) all passed and Hard with the retrained judge jh2 picked the discard: jh2 overvalues it. A test
+  position for any judge (the flag is in the game's record).
+
 ### Holding mana (Korbi, 10 November 2026)
 
 Hold mana open in their turn when either:

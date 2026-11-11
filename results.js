@@ -92,7 +92,7 @@ async function pushLive() {
   const v = liveView;
   if (!v) return;
   try {
-    const e = liveEntry(v, liveHow), sig = `${e.key}:${e.result.moves}`;
+    const e = liveEntry(v, liveHow), sig = `${e.key}:${e.result.moves}:${e.result.flags || ""}`;   // a flag set in the lab is news too
     if (sig === liveSent) return;
     const sync = await getSync();
     await sync.update(`crates/rooms/${INDEX_ROOM}/live/${e.key}`, JSON.parse(JSON.stringify({ name: e.name, uid: sync.uid, at: e.at, result: e.result, game: e.game })));

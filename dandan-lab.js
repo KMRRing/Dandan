@@ -5,8 +5,11 @@
 //   2. coaches: any number of engines, each shown or hidden, asked at each decision of yours (priority and the questions put to you); each
 //      one's pick is ringed on the table (the page's ring set, the same rings a coach has always had), listed in a strip above your
 //      hand, and when the shown coaches pick different moves the strip says so, in a line, never in a popup;
-//   3. a sheet that describes each engine (how it was built, what to expect) beside the switches.
-// The choices are kept in localStorage under dandan-lab:lab, and a lab game under dandan-lab:game: never the player's own.
+//   3. a sheet that describes each engine (how it was built, what to expect) beside the switches;
+//   4. flags: the ⚑ on a coach's pick marks it as one the player disagrees with. The flags go with the game's record (`how`), so
+//      the game history lists them and opens the game at each.
+// The choices are kept in localStorage under dandan-lab:lab, a lab game under dandan-lab:game (never the player's own saved
+// game), and its flags under dandan-lab:flags. Lab games are recorded like any game, marked "lab · <engine>".
 import { ENGINES, engineOf, DEFAULT_ENGINE, decide } from "./dandan-engines.js";
 import { moveName } from "./dandan-words.js";
 import { DECK } from "./dandan-cards.js";
@@ -32,6 +35,40 @@ export function loadSettings(read = () => { try { return JSON.parse(localStorage
 let settings = loadSettings();
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(settings)); } catch { /* private mode */ } };
 if (globalThis.__dandanLab) globalThis.__dandanLab.engine = settings.engine;   // dandan.js reads the opponent from here
+
+// ---------- flags: coach picks the player disagrees with ----------
+const FLAGS = "dandan-lab:flags";
+let flags = { game: null, list: [] };            // the flags of one game (by when it began)
+try { flags = JSON.parse(localStorage.getItem(FLAGS)) || flags; } catch { /* private mode */ }
+const flagsOf = v => (v?.G && flags.game === v.G.started ? flags.list : []);
+/**
+ * A flag: the decision (`at`, the moves made before it, as the history's slider counts them), the turn, the coach and its pick,
+ * and what the other coaches picked. Pure: the tests read it.
+ */
+export function flagOf(v, e, p, others) {
+  return { at: (v.G.moves || []).length, turn: v.state.turn, coach: e.id, name: e.name, pick: p.text,
+    ...(p.chance == null ? {} : { chance: Math.round(p.chance * 1000) / 1000 }), others };
+}
+const sameFlag = (a, b) => a.at === b.at && a.coach === b.coach;
+function toggleFlag(id) {
+  const v = C.view(), e = engineOf(id), p = picks.get(id);
+  if (!myNow(v) || !e || p?.status !== "done") return;
+  const others = activeCoaches().filter(o => o.id !== id && picks.get(o.id)?.status === "done").map(o => `${o.short}: ${picks.get(o.id).text}`);
+  const f = flagOf(v, e, p, others), list = flagsOf(v);
+  flags = { game: v.G.started, list: list.some(x => sameFlag(x, f)) ? list.filter(x => !sameFlag(x, f)) : [...list, f] };
+  try { localStorage.setItem(FLAGS, JSON.stringify(flags)); } catch { /* private mode */ }
+  C.toast(flagsOf(v).some(x => sameFlag(x, f)) ? `Flagged: ${e.short} ${p.text}` : "Flag taken off");
+  paintStrip();
+  C.record?.();
+}
+const flagged = id => { const v = C?.view(); return !!v?.G && flagsOf(v).some(x => x.at === (v.G.moves || []).length && x.coach === id); };
+
+/** What a lab game's record carries: the opponent, its depth, the coaches, and the flags (as one string: the database drops empty lists). */
+export function how(v = C?.view()) {
+  const e = engineOf(settings.engine), list = flagsOf(v);
+  return { level: `lab · ${e?.name || settings.engine}`, think: settings.oppDepth, engine: settings.engine,
+    coaches: activeCoaches().map(c => c.id).join(" "), ...(list.length ? { flags: JSON.stringify(list) } : {}) };
+}
 
 /** The engines that are coaching now: ticked as a coach and shown. */
 export const activeCoaches = (st = settings) => ENGINES.filter(e => e.available && st.coach[e.id] && !st.hide[e.id]);
@@ -190,7 +227,8 @@ function paintStrip() {
   const chips = coaches.map(e => {
     const p = picks.get(e.id);
     const say = !mine ? "…" : !p || p.status === "thinking" ? "thinking…" : p.status === "error" ? "no answer" : `${esc(p.text)}${pct(p.chance)}`;
-    return `<button type="button" class="lab-chip${p?.status === "done" ? " done" : ""}" data-info="${e.id}" title="${esc(e.name)}: how it was built"><b>${esc(e.short)}</b> ${say}</button>`;
+    const done = mine && p?.status === "done", on = done && flagged(e.id);
+    return `<span class="lab-chip${done ? " done" : ""}${on ? " flagged" : ""}"><button type="button" class="lab-say" data-info="${e.id}" title="${esc(e.name)}: how it was built"><b>${esc(e.short)}</b> ${say}</button>${done ? `<button type="button" class="lab-flag" data-flag="${e.id}" aria-pressed="${on}" title="Flag this pick as one you disagree with">⚑</button>` : ""}</span>`;
   }).join("");
   const line = disagreement(coaches.map(e => ({ e, p: picks.get(e.id) })).filter(x => x.p?.status === "done").map(x => ({ short: x.e.short, text: x.p.text })));
   box.classList.toggle("split", !!line);
@@ -215,7 +253,7 @@ function paintSheet() {
       ${open ? `<div class="lab-desc"><p>${esc(e.description)}</p><p><b>What to expect.</b> ${esc(e.expect)}</p></div>` : ""}
     </article>`;
   };
-  body.innerHTML = `<p class="lab-lead">The same game as the live one. Choose who Monte is, and who coaches you: at each decision of yours every shown coach's pick is ringed on the table and listed above your hand, and you are told when they differ. A hidden coach is not run. Lab games are not recorded. Tap a name to read how it was built.</p>
+  body.innerHTML = `<p class="lab-lead">The same game as the live one. Choose who Monte is, and who coaches you: at each decision of yours every shown coach's pick is ringed on the table and listed above your hand, and you are told when they differ. A hidden coach is not run. Tap ⚑ on a pick you disagree with: lab games are recorded (marked lab), flags and all, so the game history lists them. Tap a name to read how it was built.</p>
     ${ENGINES.map(card).join("")}
     <h3 class="lab-h">Thinking</h3>
     <label class="lab-sel">Monte's look-ahead <select data-depth="oppDepth">${depth(settings.oppDepth, ["quick", "long", "deep", "deepest"])}</select></label>
@@ -233,7 +271,12 @@ function wireSheet() {
   $("labBtn").addEventListener("click", () => openSheet());
   $("labClose").addEventListener("click", () => $("labDlg").close());
   $("labDlg").addEventListener("click", e => { if (e.target === $("labDlg")) $("labDlg").close(); });   // a tap outside the sheet
-  $("labStrip").addEventListener("click", e => { const b = e.target.closest("[data-info]"); if (b) openSheet(b.dataset.info); });
+  $("labStrip").addEventListener("click", e => {
+    const f = e.target.closest("[data-flag]");
+    if (f) return toggleFlag(f.dataset.flag);
+    const b = e.target.closest("[data-info]");
+    if (b) openSheet(b.dataset.info);
+  });
   $("labBody").addEventListener("click", e => {
     const b = e.target.closest("button[data-info]");
     if (!b) return;
@@ -255,7 +298,7 @@ function wireSheet() {
 }
 
 // ---------- joining the page ----------
-/** Called once by dandan.js when its table is up: ctx is { LAB, opts, toast, redraw, rings, view, myDecision, page, forgetBot }. */
+/** Called once by dandan.js when its table is up: ctx is { LAB, opts, toast, redraw, rings, view, myDecision, page, forgetBot, record }. */
 export function attach(ctx) {
   C = ctx;
   seatOpponent();
