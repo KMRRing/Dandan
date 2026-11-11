@@ -96,7 +96,8 @@ export const TUNE = {
   // commitWhen: Commit only with a land lead or fewer cards than them (who'd want Memory from the graveyard), or when we must
   //   (two hits or fewer left)
   // tiNeed: Take Inventory only when we need cards (under four in hand, or no land in hand) and at the end of their turn
-  goneSel: 0, retrSafe: 0, commitWhen: 0, tiNeed: 0,
+  goneSel: 0, retrSafe: 0, tiNeed: 0,
+  commitWhen: 1,             // on: won 51.9 ± 0.9 over 3,000 games against Medium without it (aa-f1-cw, 11 November 2026)
   izzetLast: 1,              // izzetLast (below): a dominated-move fix, on
 };
 /**
