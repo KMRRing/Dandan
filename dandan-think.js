@@ -144,7 +144,14 @@ function idle(s, m) {
   return !!p && !bendable(p).length;
 }
 
-export function candidates(s, seat, { wide = 7 } = {}) {
+/**
+ * `all` (Deep and Deepest, as the live game thinks): with priority, every legal move is weighed, not only those Medium scores
+ * near its best. Medium's score is blind to some moves: Piracy Charm's discard with eight cards in hand at the end of our turn
+ * (the card is lost to the hand size either way), which Medium scores at −1 and so Hard never weighed, though weighed it wins
+ * by four points (Korbi, 11 November 2026). Every move is cheap to weigh at depth: a move that is clearly behind goes at the
+ * first look.
+ */
+export function candidates(s, seat, { wide = 7, all = false } = {}) {
   const P = new Player(s, seat), p = s.pending;
   // with priority, Medium's move is the first of its scored moves worth more than passing (priority()'s, scored once)
   const scored = p ? null : P.scored();
@@ -159,8 +166,8 @@ export function candidates(s, seat, { wide = 7 } = {}) {
     // decisions with two or more spells on the stack, every legal move valued: the best was outside the shortlist in 6.5%, and
     // by two points or more in 2.7%, worth ten or more where it happened: README, The stack and the end of the library)
     const stacked = (s.stack.length > 0 || endOfLibrary(s) > 0) && wide >= 7;
-    for (const { m, v } of scored) if ((v > -0.8 || stacked) && !idle(s, m)) add(m);
-    return out.slice(0, stacked ? STACK_WIDE : wide);
+    for (const { m, v } of scored) if ((v > -0.8 || stacked || all) && !idle(s, m)) add(m);
+    return all ? out : out.slice(0, stacked ? STACK_WIDE : wide);
   }
   switch (p.t) {
     case "attack": {
@@ -404,9 +411,9 @@ function where(c, seat) {
  * decisions it chose as the full search did every time, for 15% fewer deals (lab/variants.mjs, ae-var3).
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0 } = {}) {
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024 } = {}) {
   const t0 = Date.now();
-  const cands = candidates(s, seat, { wide });
+  const cands = candidates(s, seat, { wide, all });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
   const n = cands.length;
   if (n === 1) return { best: cands[0], list: [{ move: cands[0], mean: NaN, se: 0, n: 0 }], deals: 0, only: true };
