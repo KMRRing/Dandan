@@ -222,3 +222,17 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   - **aa-a1-g1**: the model against Medium, 20,000 pairs, 100 shards; passes at 55%.
   - **aa-a1-g2**: Hard at Quick with the model in its look-aheads against Hard at Quick, both v14, 1,000 pairs, 200 shards; passes when the 99% range is wholly above 50%.
 - Speed is not yet logged per side. It will be measured separately before a Deep gate (plan: under 25% slower).
+
+## 11 November 2026, ~19:55Z: G1 failed badly; the model player fixed and retested
+
+- **G1 (aa-a1-g1), model vs Medium, no search: 16.4% ± 0.5 (99%), 20,000 pairs.** Failed (bar 55%).
+- Cause, found locally on 20 games: the model played *pass* where Medium played a land 433 times and where Medium cast 161 times.
+  In the Deep data a move held to the next priority is worth about the same as playing it now (the search plays it later),
+  so the model learned holding ≈ acting; as a player that compounds into never acting. G0 could not see this: it scores one
+  decision with the search's own continuation.
+- Fix (09444c7, dandan-netpolicy.js makePlus): lands stay Medium's; when Medium acts the model picks which move, not whether
+  to pass. Local check: 40/80 games against Medium (even; noisy).
+- G2 (aa-a1-g2) ran on the unfixed player: about 49% over 430 pairs (hand-tallied, rough). Retired; requeued as aa-a1-g2b on 09444c7.
+- Queued: aa-a1-g1b (G1 again, 20,000 pairs), aa-a1-g2b, and for Korbi aa-a1-vd-plus (model alone vs Hard Deep v14, 100 pairs)
+  with its yardstick aa-a1-vd-med (Medium alone vs the same, same deals).
+- hard-match.mjs gained "plus@<job>" and "medium" sides (6c6f6d4).
