@@ -8,11 +8,12 @@
 // worth less than nothing to it. One JSON line: { variant, spec, epoch, metrics, today, layers } (layers as dandan-eval reads).
 // usage: node lab/judge-variants.mjs <shard> <shards> <out> <self-play job ids, comma-separated> [variants: e.g. 14,15 (shard n trains
 //        the n-th listed; else shard n trains variant n)] [warm start: a file in judges/ of the variant's width (else today's weights), or -]
-//        [most games to read, else all]
+//        [most games to read, else all] [positions a game, else all] [learning rate]
 import fs from "node:fs";
 import { labStore } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove } from "../seats.js";
+import { act as engineAct, passPoints } from "../dandan-engine.js";
 import { features, featuresPlus, FEATURES, PLUS } from "../dandan-eval.js";
 import { creatures, needType, isLand, typesOf, other } from "../dandan-core.js";
 
@@ -20,7 +21,11 @@ const [shard, , out, ids] = [Number(process.argv[2]), Number(process.argv[3]), p
 const VARIANTS = [];
 for (const plus of [false, true]) for (const shape of ["32x16 warm", "64x32", "128x64x32"]) for (const blend of [0, 0.5]) for (const floor of [0, 1])
   VARIANTS.push({ plus, shape, blend, floor });
-const cap = Number(process.argv[8]) || Infinity; // at most this many games read (11 Nov: replaying 30,000 Medium games alone takes over an hour)
+const cap = Number(process.argv[8]) || Infinity;
+// positions a game (11 Nov, Korbi: so long games and their decided endings don't outweigh the rest): this many, spread evenly from
+// the first move to the last, each the first usable decision at or after its mark; 0 or absent, every usable one as before
+const perGame = Number(process.argv[9]) || 0;
+const lrArg = Number(process.argv[10]) || 0; // learning rate, else 1e-3 (3e-4 started from a judge) // at most this many games read (11 Nov: replaying 30,000 Medium games alone takes over an hour)
 const only = process.argv[6] && process.argv[6] !== "-" ? process.argv[6].split(",").map(Number) : null, fromFile = process.argv[7] && process.argv[7] !== "-" ? process.argv[7] : undefined;
 const vNo = only ? only[shard] : shard, V = VARIANTS[vNo];
 if (!V) { console.log(`no variant ${shard} (there are ${VARIANTS.length})`); process.exit(0); }
@@ -103,18 +108,27 @@ function pGrad(net, a, coef, G) {
 const slowOf = s => s.lib.length > 20 && [0, 1].every(x => !creatures(s, x).some(d => s.bf.some(l => l.ctl === other(x) && isLand(l) && typesOf(l).includes(needType(d)))));
 const data = [];
 let games = 0;
+// The games are replayed without the reading of each pass for what it shows of the passer's hand, and without the turn-start
+// review (dandan-rules.js act → notePasses, noteTurn): both only record notes for live play, and 80% of a replay went to them.
+// Checked 11 Nov on 63 games: every position's inputs and every result identical, 4× faster on Medium games, 7× on Hard.
+const lean = { ...rules, act: (s, seat, m, ctx) => { const r = engineAct(s, seat, m, ctx); passPoints.length = 0; return r; } };
 // one result file at a time, so the raw text of every game is never held at once
 const store = await labStore();
 for (const id of ids.split(",")) for (const name of (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n))) for (const line of ((await store.get(name)) || "").split("\n")) {
   if (!line || games >= cap) continue;
   const rec = JSON.parse(line), at = new Map((rec.dec || []).map(d => [d.i, d]));
   const hold = games++ % 5 === 0;
-  let G = newRecord(rules, { seats: 2, seed: rec.seed, now: 0 });
+  let G = newRecord(lean, { seats: 2, seed: rec.seed, now: 0 });
+  const marks = perGame ? Array.from({ length: perGame }, (_, j) => Math.floor(((j + 0.5) * rec.moves.length) / perGame)) : null;
+  let next = 0;
   for (let i = 0; i < rec.moves.length; i++) {
     const [seat, move] = rec.moves[i], s = G.state;
-    // a game with no search kept (Medium against Medium, lab/selfplay.mjs medium:…): every third quiet decision, labelled by the result
-    const d = at.get(i) || (!at.size && i % 3 === 0 ? { seat, pick: 0, list: [[0, 0, -1]], medium: true } : null);
-    if (d && d.pick >= 0 && !s.stack.length && !s.pending && Number.isFinite(d.list[d.pick][2])) {
+    // a game with no search kept (Medium against Medium, lab/selfplay.mjs medium:…): quiet decisions, labelled by the result
+    // (every third, unless taken a fixed number a game)
+    const d = at.get(i) || (!at.size && (marks || i % 3 === 0) ? { seat, pick: 0, list: [[0, 0, -1]], medium: true } : null);
+    const due = !marks || (next < marks.length && i >= marks[next]);
+    if (due && d && d.pick >= 0 && !s.stack.length && !s.pending && Number.isFinite(d.list[d.pick][2])) {
+      if (marks) while (next < marks.length && marks[next] <= i) next++;
       const me = d.seat, won = rec.winner === me ? 1 : rec.winner < 0 ? 0.5 : 0, search = d.medium ? won : d.list[d.pick][2];
       const st = rules.restore(JSON.parse(JSON.stringify(s)));
       const row = { a: featuresOf(st, me), y: V.blend * search + (1 - V.blend) * won, won, lib: s.lib.length, slow: slowOf(s), hold };
@@ -129,7 +143,7 @@ for (const id of ids.split(",")) for (const name of (await store.list(`results/$
       }
       data.push(row);
     }
-    const r = applyMove(rules, G, seat, move, 0);
+    const r = applyMove(lean, G, seat, move, 0);
     if (r.error) break;
     G = r.G;
   }
@@ -152,12 +166,14 @@ function screen(p) {
 
 // ---------- training ----------
 const zero = () => NET.map(L => ({ W: new Float64Array(L.W.length), b: new Float64Array(L.b.length) }));
-const m1 = zero(), m2 = zero(), lr = warm ? 3e-4 : 1e-3, pull = warm ? 1e-4 : 0, epochs = warm ? 4 : 10;
+const m1 = zero(), m2 = zero(), lr = lrArg || (warm ? 3e-4 : 1e-3), pull = warm ? 1e-4 : 0, epochs = warm ? 4 : 10;
 let t = 0, best = { loss: Infinity, net: null, epoch: 0 };
 const heldLoss = () => test.reduce((s, r) => { const p = Math.min(1 - 1e-6, Math.max(1e-6, chance(NET, r.a))); return s - (r.won * Math.log(p) + (1 - r.won) * Math.log(1 - p)); }, 0) / test.length;
 for (let e = 1; e <= epochs; e++) {
   const order = train.map((_, i) => i).sort(() => rand() - 0.5);
+  const quarter = Math.max(64, Math.ceil(order.length / 4 / 64) * 64);
   for (let k = 0; k < order.length; k += 64) {
+    if (k && k % quarter === 0) check(e - 1 + k / order.length);
     const G = zero(), batch = order.slice(k, k + 64);
     for (const i of batch) {
       // cross-entropy on the label: d/dg(mine) is p − y; pGrad takes it per unit of p(1 − p)
@@ -183,9 +199,13 @@ for (let e = 1; e <= epochs; e++) {
       }
     });
   }
+  check(e);
+}
+// the held-out loss, four times an epoch: the best point so far is the one kept (training from scratch overfits within an epoch or two)
+function check(at) {
   const held = heldLoss();
-  say(`epoch ${e}/${epochs}: held-out loss ${held.toFixed(4)}`);
-  if (held < best.loss) best = { loss: held, epoch: e, net: NET.map(L => ({ ...L, W: Float64Array.from(L.W), b: Float64Array.from(L.b) })) };
+  say(`epoch ${at.toFixed(2)}/${epochs}: held-out loss ${held.toFixed(4)}`);
+  if (held < best.loss) best = { loss: held, epoch: +at.toFixed(2), net: NET.map(L => ({ ...L, W: Float64Array.from(L.W), b: Float64Array.from(L.b) })) };
 }
 const layers = best.net.map((L, l) => quant(L, l === best.net.length - 1)), rounded = layers.map(dequant);
 const metrics = screen(r => chance(rounded, r.a));
@@ -195,6 +215,6 @@ function chance0(net, a) {
   const b = new Float32Array(N); b.set(a.subarray(HALF, 2 * HALF), 0); b.set(a.subarray(0, HALF), HALF); b.set(a.subarray(2 * HALF, N), 2 * HALF); b[2 * HALF] = 1 - a[2 * HALF];
   return 1 / (1 + Math.exp(forward(net, b).at(-1)[0] - forward(net, a).at(-1)[0]));
 }
-const line = { variant: vNo, from: fromFile || "today", spec: V, games, positions: data.length, epoch: best.epoch, metrics, today: base, layers };
+const line = { variant: vNo, from: fromFile || "today", spec: V, perGame, lr, games, positions: data.length, epoch: best.epoch, metrics, today: base, layers };
 console.log(JSON.stringify({ ...line, layers: undefined }));
 fs.writeFileSync(out, JSON.stringify(line) + "\n");
