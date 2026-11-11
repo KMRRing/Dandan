@@ -73,3 +73,6 @@ Run locally (not a bucket job):
 | aa-b0-pj | four-path Hard with the plan judges (tempo-tempo / squeeze-squeeze lines by aa-b0-jt / aa-b0-js) against Hard v14, Quick | 300 deals (600 games) | rejected: 40.8 ± 3.8, no better than four-path with v14 (41.0): the plan judges add nothing |
 | aa-b0-q1 / aa-b0-q2 | four paths at equal deals a path: four-path at 256 (64 a path) vs Hard v14 at 64, against plain Hard v14 at 256 vs Hard v14 at 64 | 200 deals each (400 games) | four-path 52.8 ± 4.6, plain 56.3 ± 4.5: even with its own budget the four-path search does worse than plain Hard with the same compute. The four-path idea is dropped |
 | aa-b0-j4 | J4: from v14 (variant 14) on 960 four-path self-play games and spb25-59 | 5,131 games, 449k positions | Brier 0.1652 (old judge 0.1733), slow 0.2007 (0.2059); finals queued: aa-b0-f2 (Hard + J4 vs Hard v14, 400 deals) and aa-b0-f1 (four-path + J4 vs Hard v14, 200) |
+| aa-b0-f2 (lab/hard-match.mjs) | final, the judge alone: Hard with J4 against Hard v14, Quick | 382 deals (764 games; some shards short) | rejected: 51.2 ± 3.1. v14 stays live |
+| aa-b0-f1 | final, Korbi's bot as specified: four-path Hard with J4 against Hard v14, Quick | 199 deals (398 games) | rejected: 39.7 ± 4.3 |
+| ab-c1-v01..v08 | Hard v14 (128 deals) self-play | 960 games | done: data for the next judge |
