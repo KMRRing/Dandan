@@ -167,3 +167,9 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   Run e and run f (rerun as aa-g8-s2-h) are still training.
 - **Queued: aa-g9-s1v14**, S1′ against v14 at Deep. 600 pairs, one a shard, seeds 220000, ref a9a14e4. Scored by the gate (monte-plan.md 2.5).
 - **Spot losses:** aa-g8-s1-f, -h, aa-g8-s2-e (first try), -f and aa-g8-s3-b were each killed by SIGTERM when AWS took the machine back, then marked done, so no worker retried them. S3 run b is requeued as aa-g8-s3-e. Fix in 623044f: a worker that is itself being stopped leaves its shards unfinished, so the claim lapses and another worker takes them. It takes effect as workers restart.
+
+### 11 Nov, 18:55Z: the final queued (Korbi: run d for both lines)
+- S1′ = aa-g8-s1-d#19, S2′ = aa-g8-s2-d#19 (32 a game, floor rule). Korbi chose run d for both rather than wait for the f reruns: within noise of each line's best gap, with low flaws.
+- aa-g9-s1v14 (S1′ vs v14) and aa-g9-s2v14 (S2′ vs v14), scored by the gate rule; aa-g9-x-s2s1 (S2′ vs S1′, named to sort after both gates) decides between them if both are crowned. 600 pairs each, one a shard, seeds 220000 (the same deals), ref a9a14e4.
+- aa-g9-s1v14 was briefly retired (18:35Z) and put back; its 144 pairs already playing count. aa-g9-s2s1 was retired seconds after queuing, under its first name.
+- First reading: S1′ 38.2% ± 17.6 after the first 17 pairs to finish (short games, not a look).
