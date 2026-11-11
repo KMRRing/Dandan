@@ -198,3 +198,12 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   - G1 aa-a1-g1 (model against Medium, 20,000 pairs);
   - G2 aa-a1-g2 (Hard with the model at Quick against Hard, 1,000 pairs).
 - The Quick screen of the value nets is named aa-h2-q-*, so it waits behind the S2′ gate.
+
+### 11 Nov, 19:33Z: S2′ gate cancelled (Korbi); Quick screen and model training queued
+- aa-g9-s2v14 retired at about 87 pairs: S2′ at roughly 47% against v14, read on the pairs that finished first (short games, not a look). Korbi: "bearish, cancel". No Deep gate is left running; v14 stays.
+- aa-a1-ex1 export: all 48 shards exit code 0, about 80 s each. Training **aa-a1-pt1** queued (policy-train, 6 epochs, lr 1e-3).
+- **Quick screen queued**, 18 sets aa-h2-q-*: Hard at Quick with each net against Hard at Quick with v14, 1,000 pairs, seeds 230000, 200 shards, ref cb02856. Nets:
+  - S1′ a–g (aa-g8-s1-*) and S2′ a–g (aa-g8-s2-*); the f runs from their first tries, which finished after all;
+  - S3 a, c and b (the rerun, aa-g8-s3-e);
+  - jt130.
+  S3 run d (128x64x32) is still training and joins when it is done.
