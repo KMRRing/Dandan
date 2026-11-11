@@ -34,7 +34,10 @@ async function side(spec) {
   // "hard^<policy-train job>": Hard whose shortlist the stage-1 model orders (plan 3.5's fallback after G2), Medium playing on
   const [search1, ranker] = search0.split("^");
   if (ranker) budget.rank = makePlus(JSON.parse((await readParts(ranker)).flatMap(x => x.split("\n").filter(Boolean))[0])).rank;
-  const [search, model] = search1.split("+");
+  const [search2, model] = search1.split("+");
+  // "hard-t<n>" (12 November 2026, plan item 8): the look-ahead plays n turns ahead instead of 2
+  const [, search, tn] = search2.match(/^([a-z]+)(?:-t(\d+))?$/) || [, search2];
+  if (tn != null) budget.turns = Number(tn);
   // "hard+free~<job>": the model unguarded (it decides passing and lands too)
   if (model) { const free = model.startsWith("free~"); budget.rollout = makePlus(JSON.parse((await readParts(model.replace(/^free~/, ""))).flatMap(x => x.split("\n").filter(Boolean))[0]), { free }).move; }
   if (search === "paths") {
@@ -44,12 +47,15 @@ async function side(spec) {
   return (s, seat) => thinkMove(s, seat, budget);
 }
 const A = await side(specA), B = await side(specB), J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random;
+// milliseconds each side spends a decision (plan item 8: what a shorter look-ahead saves), summed over the pair's two games
+let clock = [[0, 0], [0, 0]];
 function game(seed, aSeat) {
   let G = newRecord(rules, { seats: 2, seed, now: 0 });
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state));
     Math.random = seeded(mix(seed, i + 1));
-    const m = (who === aSeat ? A : B)(s, who);
+    const t0 = performance.now(), m = (who === aSeat ? A : B)(s, who), side = who === aSeat ? 0 : 1;
+    clock[side][0] += performance.now() - t0; clock[side][1]++;
     Math.random = realRandom;
     const r = applyMove(rules, G, who, m, 0);
     if (r.error) throw new Error(`deal ${seed} move ${i}: ${r.error}`);
@@ -62,6 +68,8 @@ function game(seed, aSeat) {
   return w === aSeat ? 1 : w == null || w < 0 ? 0.5 : 0;
 }
 for (let p = shard; p < pairs; p += shards) {
+  clock = [[0, 0], [0, 0]];
   const seed = first + p, g = [game(seed, 0), game(seed, 1)];
-  fs.appendFileSync(out, JSON.stringify({ pair: p, a: (g[0] + g[1]) / 2, games: g }) + "\n");
+  const ms = clock.map(([t, n]) => (n ? Math.round(t / n) : 0)), n = clock.map(([, k]) => k);
+  fs.appendFileSync(out, JSON.stringify({ pair: p, a: (g[0] + g[1]) / 2, games: g, ms, n }) + "\n");
 }

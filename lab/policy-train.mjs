@@ -22,6 +22,9 @@ const T = Number(process.argv[10]) || 0.02, LIGHT = process.argv[11] != null ? N
 // passing's less twice their joint standard error), passing's target is put below that move's by the same margin (at least T),
 // so the model learns to act. The search's own means are kept for G0.
 const ACT = process.argv[12] === "1";
+// [target q|pick] (12 November 2026, plan item 10): "pick" teaches the move the search played (one-hot), not the softmax of its
+// values: the search breaks a near-tie by acting (Medium's move stands unless clearly beaten), the values don't
+const PICK = process.argv[13] === "pick";
 const say = (...a) => console.log(`[${new Date().toISOString().slice(11, 19)}]`, ...a, `(memory ${Math.round(process.memoryUsage().rss / 1e6)} MB)`);
 
 // ---------- the decisions, packed ----------
@@ -47,7 +50,7 @@ for (const id of ids.split(",")) for (const name of (await store.list(`results/$
       x: Float32Array.from(d.x), m: d.c.map(c => Int16Array.from(c.m)), s: Float32Array.from(d.c.map(c => c.s)), q: Float32Array.from(q),
       med: d.med, pick: d.pick, deep: d.deep, w: d.deep ? 1 : LIGHT,
       // the target: softmax of the search's means at temperature T
-      p: (() => { const e = qt.map(v => Math.exp((v - qmax) / T)), z = e.reduce((a, b) => a + b, 0); return Float32Array.from(e, v => v / z); })(),
+      p: PICK && d.pick != null && d.pick >= 0 && d.pick < d.c.length ? Float32Array.from(d.c, (_, k) => (k === d.pick ? 1 : 0)) : (() => { const e = qt.map(v => Math.exp((v - qmax) / T)), z = e.reduce((a, b) => a + b, 0); return Float32Array.from(e, v => v / z); })(),
     };
     (d.hold ? held : train).push(D);
   }
