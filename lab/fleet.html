@@ -208,6 +208,15 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 .fleetbar .fb{display:flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;font-size:12.5px;background:var(--panel,transparent)}
 .fleetbar .fb b{font-weight:600}.fleetbar .fb span{font:12px var(--mono);color:var(--mute);font-variant-numeric:tabular-nums}
 .fleetbar .lamp{width:9px;height:9px;border-radius:50%;flex:none}.lamp.ok{background:#3fb950}.lamp.part{background:#d29922}.lamp.off{background:#f85149}.lamp.unk{background:var(--mute)}
+.tick{position:absolute;left:0;height:0;border-top:1px dashed color-mix(in srgb,var(--line) 70%,transparent);pointer-events:none}
+.tick span{position:absolute;left:8px;top:6px;max-width:84px;line-height:1.3;font:600 11.5px var(--mono);color:var(--mute)}
+.tick.day span{color:var(--ink);font-size:12.5px}
+.tick.now{border-top:2px solid var(--accent)}.tick.now span{color:var(--accent)}
+.vtick{position:absolute;top:0;width:0;border-left:1px dashed color-mix(in srgb,var(--line) 70%,transparent);pointer-events:none}
+.vtick span{position:absolute;left:6px;top:8px;font:600 11.5px var(--mono);color:var(--mute);white-space:nowrap}
+.vtick.day span{color:var(--ink)}.vtick.now{border-left:2px solid var(--accent)}.vtick.now span{color:var(--accent)}
+.lanehead{position:absolute;font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mute);pointer-events:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}.seg button{border:0;border-radius:0}.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
 .band{position:absolute;border:1.5px dashed var(--line);border-radius:16px;background:color-mix(in srgb,var(--line) 12%,transparent);pointer-events:none}
 .band span{position:absolute;left:16px;top:12px;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
 .band-start{border-style:solid}
@@ -1444,86 +1453,108 @@ function nodeStatus(n, d, G) {
 
 // ---------- the canvas ----------
 const store = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); localStorage.setItem(k, JSON.stringify(v)); } catch { return null; } };
-const START = ["match:aa-g9-s1v14", "match:aa-g9-s2v14", "match:aa-g9-x-s2s1"]; // the map opens on the final step only (Korbi, 11 Nov)
-let ORIENT = store("fleet:orient") === "down" ? "down" : "lr"; // "lr": inputs left, uses right; "down": inputs above, uses below
+// "down" (the default, 12 Nov, Korbi): time runs top to bottom, earlier above; "lr": time runs left to right
+let ORIENT = store("fleet:orient2") === "lr" ? "lr" : "down";
 // the Pipeline and the Fable plan are two maps over the same canvas, each with its boxes and places kept apart
-const FABLE_START = ["check:screen", "engine:model1", "match:g1", "match:g2", "match:g3", "check:crown"];
 let MAP = location.hash.slice(1) === "pipeline" ? "pipeline" : "fable";
-const mk = k => (MAP === "fable" ? "fable:" : "fleet:") + k, startOf = () => (MAP === "fable" ? FABLE_START : START);
-let POS = store(mk("pos2:" + ORIENT)) || {}, SHOWN = new Set(store(mk("shown")) || startOf()), ZOOM = store("fleet:zoom") || (innerWidth < 700 ? 0.5 : 0.8), FOCUS = null, GRAPH = null;
-SHOWN.delete("match:aa-g9-s1s2"); if (!SHOWN.has("match:aa-g9-x-s2s1") && SHOWN.has("match:aa-g9-s1v14")) SHOWN.add("match:aa-g9-x-s2s1");
-if (SHOWN.has("match:aa-g5-gate")) { SHOWN.delete("match:aa-g5-gate"); START.forEach(k => SHOWN.add(k)); } // the gate became the three-way final
+const mk = k => (MAP === "fable" ? "fable:" : "fleet:") + k;
+// the map opens on what matters now (Korbi, 12 Nov: running, waiting, planned, the live net, and anything from the last 36
+// hours); "Everything" puts every box on it; either way each box sits at the height of when it happened, and a box dragged by
+// hand stays where it was put until Tidy
+let SCOPE = store(mk("scope")) === "all" ? "all" : "relevant", MANUAL = store(mk("manual:" + ORIENT)) || {};
+let POS = {}, SHOWN = new Set(store(mk("shown3")) || []), ZOOM = store("fleet:zoom") || (innerWidth < 700 ? 0.5 : 0.8), FOCUS = null, GRAPH = null;
 const W_NODE = 240, W_MATCH = 290;
-// the Fable plan's fixed journey: columns left to right in order of the plan, lanes for value nets (top), the fast player
-// (middle) and the games they learn from (bottom)
-const STAGES = { start: "Where the lab stood (11 Nov)", s0: "Stage 0 · value nets: screen and Deep gates", s1: "Stage 1 · learn the fast player", crown: "", s2: "Stage 2 · the loop at mixed depth", s3: "Stage 3 · self-play learning" };
-function journeyLayout(G) {
-  const pos = {};
-  for (const n of G.nodes) if (n.grid) { const [c, r] = n.grid; pos[n.key] = ORIENT === "lr" ? { x: 40 + c * 380, y: 70 + r * 420 } : { x: 40 + r * 380, y: 70 + c * 470 }; }
-  return pos;
+const HEIGHT = {}, hOf = n => HEIGHT[n?.key] || (n?.t === "match" ? 380 : 330), wOf = n => (n?.t === "match" ? W_MATCH : W_NODE);
+// ---------- the time axis ----------
+// when each box happened: a job's first finished shard (a job queued or running with none finished: now); a box with no job
+// of its own (an engine, a net built earlier) when its newest input happened; a planned box after now, in plan order
+const HOUR = 3600000, LANES = ["set", "judge", "medium", "engine", "match", "check"], AXIS = 96;
+function timesOf(G, d) {
+  const t = {}, ins = k => G.edges.filter(e => e[1] === k).map(e => e[0]), byKey = new Map(G.nodes.map(n => [n.key, n]));
+  const own = n => {
+    const js = n.jobs || [];
+    if (js.length && js.every(j => j.planned)) return { plan: true };
+    const real = js.filter(j => d.jobs.some(x => x.id === j.id));
+    if (!real.length) return null;
+    const ts = real.flatMap(j => d.done[j.id] || []);
+    return { at: ts.length ? Math.min(...ts) : Date.now() };
+  };
+  const go = (k, seen = new Set()) => {
+    if (t[k]) return t[k];
+    if (seen.has(k)) return { at: -Infinity };
+    seen.add(k);
+    const n = byKey.get(k), o = n && own(n), ps = ins(k).map(x => go(x, seen));
+    if (o?.plan || (!o && ps.some(p => p.plan))) return (t[k] = { plan: true, rank: 1 + Math.max(0, ...ps.filter(p => p.plan).map(p => p.rank)) });
+    if (o) return (t[k] = o);
+    return (t[k] = { at: Math.max(-Infinity, ...ps.map(p => p.at)) });
+  };
+  G.nodes.forEach(n => go(n.key));
+  return t;
 }
-function stageBands(G) {
-  const by = {};
-  for (const n of G.nodes) if (n.stage && STAGES[n.stage] && SHOWN.has(n.key) && POS[n.key]) {
-    const p = POS[n.key], b = (by[n.stage] ??= { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 });
-    b.x0 = Math.min(b.x0, p.x); b.y0 = Math.min(b.y0, p.y); b.x1 = Math.max(b.x1, p.x + wOf(n)); b.y1 = Math.max(b.y1, p.y + hOf(n));
-  }
-  return Object.entries(by).map(([st, b]) => `<div class="band band-${st}" style="left:${b.x0 - 18}px;top:${b.y0 - 50}px;width:${b.x1 - b.x0 + 36}px;height:${b.y1 - b.y0 + 68}px"><span>${esc(STAGES[st])}</span></div>`).join("");
+// what matters now: work running, waiting or queued; the next two planned steps; the live net; what finished in the last 12 hours
+const RECENT = 12 * HOUR;
+function relevantKeys(G, d) {
+  const t = timesOf(G, d), active = /Running|Training|Waiting|Queued|Live/;
+  return new Set(G.nodes.filter(n => {
+    const st = nodeStatus(n, d, G), x = t[n.key];
+    return active.test(st.label) || (x?.plan && x.rank <= 2) || (x && !x.plan && Date.now() - x.at < RECENT);
+  }).map(n => n.key));
 }
-const hOf = n => (n?.t === "match" ? 380 : 330), wOf = n => (n?.t === "match" ? W_MATCH : W_NODE);
-function autoLayout(G, only) {
-  if (only) G = { nodes: G.nodes.filter(n => only.has(n.key)), edges: G.edges.filter(([a, b]) => only.has(a) && only.has(b)) };
-  const depth = {}, ins = k => G.edges.filter(e => e[1] === k).map(e => e[0]);
-  const dep = (k, seen = new Set()) => { if (depth[k] != null) return depth[k]; if (seen.has(k)) return 0; seen.add(k); const p = ins(k); return (depth[k] = p.length ? 1 + Math.max(...p.map(x => dep(x, seen))) : 0); };
-  G.nodes.forEach(n => dep(n.key));
-  const cols = {};
-  for (const n of G.nodes) (cols[depth[n.key]] ??= []).push(n);
-  const pos = {}, top = Math.max(0, ...Object.keys(cols).map(Number));
-  const rowH = c => Math.max(...cols[c].map(hOf)) + 90;
-  let yRow = 40;
-  for (let c = 0; c <= top; c++) {
-    const ns = (cols[c] || []).sort((a, b) => (/aa-g/.test(b.key) - /aa-g/.test(a.key)) || a.key.localeCompare(b.key));
-    let along = 40;
-    for (const n of ns) {
-      if (ORIENT === "lr") { pos[n.key] = { x: 40 + c * (W_MATCH + 70), y: along }; along += hOf(n) + 20; }
-      else { pos[n.key] = { x: along, y: yRow }; along += wOf(n) + 40; }
+// rows of time (an hour each, only the hours something happened in), then "now", then the planned steps; one column a kind of
+// box; boxes of one kind in one hour stack inside their row
+function timeLayout(G, d, only) {
+  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), down = ORIENT === "down";
+  const along = n => (down ? hOf(n) : wOf(n)) + 24, across = n => (down ? wOf(n) : hOf(n));
+  const bucket = n => { const x = t[n.key] || { at: -Infinity }; return x.plan ? "p" + String(x.rank).padStart(3, "0") : x.at === -Infinity ? "a" : "h" + String(Math.floor(x.at / HOUR)).padStart(9, "0"); };
+  const rows = new Map();
+  for (const n of nodes) { const b = bucket(n); if (!rows.has(b)) rows.set(b, {}); (rows.get(b)[n.t] ??= []).push(n); }
+  const keys = [...rows.keys()].sort();
+  const lanes = LANES.filter(l => nodes.some(n => n.t === l)), laneSize = {}, laneAt = {};
+  for (const l of lanes) laneSize[l] = Math.max(...nodes.filter(n => n.t === l).map(across));
+  let c = AXIS + 24; for (const l of lanes) { laneAt[l] = c; c += laneSize[l] + 34; }
+  const pos = {}, ticks = []; let y = 70, nowAt = null, lastDay = null;
+  for (const b of keys) {
+    if (b[0] === "p" && nowAt == null) { nowAt = y; ticks.push({ y, label: "Now · planned below", cls: "now" }); y += 50; }
+    const row = rows.get(b); let size = 0;
+    for (const [l, ns] of Object.entries(row)) {
+      let s = 0; ns.sort((a, z) => (t[a.key]?.at || 0) - (t[z.key]?.at || 0) || a.title.localeCompare(z.title));
+      for (const n of ns) { pos[n.key] = down ? { x: laneAt[l], y: y + s } : { x: y + s, y: laneAt[l] }; s += along(n); }
+      size = Math.max(size, s);
     }
-    if (cols[c]) yRow += rowH(c);
+    if (b[0] === "h") {
+      const dt = new Date(Number(b.slice(1)) * HOUR), day = dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+      ticks.push({ y, label: (day !== lastDay ? day + " · " : "") + dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), cls: day !== lastDay ? "day" : "" }); lastDay = day;
+    } else if (b === "a") ticks.push({ y, label: "Earlier", cls: "day" });
+    else if (b !== keys.find(k => k[0] === "p")) ticks.push({ y, label: "Then", cls: "" });
+    y += size + 40;
   }
-  return pos;
+  if (nowAt == null) ticks.push({ y, label: "Now", cls: "now" });
+  return { pos, ticks, lanes: lanes.map(l => ({ l, at: laneAt[l], size: laneSize[l] })), end: y + 60, across: c };
 }
+let AXISMARKS = { ticks: [], lanes: [] };
 // lay out what is on the map from scratch, in the current direction
-function tidy() { const p = autoLayout(GRAPH, SHOWN); for (const k of SHOWN) if (p[k]) POS[k] = p[k]; }
+function tidy() { MANUAL = {}; }
 function renderCanvas(d) {
   const G = MAP === "fable" ? buildGraph(d, true) : buildGraph(d); GRAPH = G;
-  const auto = autoLayout(G);
   for (const k of [...SHOWN]) if (!G.nodes.some(n => n.key === k)) SHOWN.delete(k);
-  if (!SHOWN.size) startOf().forEach(k => SHOWN.add(k));
-  // the Fable plan opens with every step on it, past and planned (Korbi, 11 Nov): laid out afresh the first time
-  // (the history behind v14: older Mediums, the October value net and its games, stays off the map, a click away)
-  if (MAP === "fable" && !store("fable:journey4")) { SHOWN = new Set(G.nodes.map(n => n.key)); POS = journeyLayout(G); store("fable:journey4", 1); store("fable:seen", G.nodes.map(n => n.key)); }
-  // a step added to the plan's map later is shown (at its place on the grid) the first time the map meets it; one hidden
-  // after that stays hidden
-  if (MAP === "fable") {
-    const seen = new Set(store("fable:seen") || []), add = G.nodes.filter(n => n.grid && !seen.has(n.key));
-    if (add.length) { for (const n of add) { SHOWN.add(n.key); seen.add(n.key); } store("fable:seen", [...seen]); }
-  }
-  // a fresh map (nothing placed yet) lines its boxes up side by side at the top, rather than spread by the full layout
-  const fresh = [...SHOWN].every(k => !POS[k]), laid = fresh && SHOWN.size > 3 ? autoLayout(G, SHOWN) : null;
-  if (laid) for (const k of SHOWN) if (laid[k]) POS[k] = laid[k];
-  let slot = 0;
-  if (MAP === "fable") { const jl = journeyLayout(G); for (const n of G.nodes) if (SHOWN.has(n.key) && !POS[n.key] && jl[n.key]) POS[n.key] = jl[n.key]; }
-  for (const n of G.nodes) if (SHOWN.has(n.key) && !POS[n.key]) { POS[n.key] = fresh ? (ORIENT === "lr" ? { x: 400, y: 60 + slot * (hOf(n) + 30) } : { x: 60 + slot * (wOf(n) + 40), y: 60 }) : auto[n.key]; slot++; }
-  normalise();
+  // what matters now is put on the map, and kept up to date: a box newly relevant joins (once: one removed by hand stays off)
+  const rel = relevantKeys(G, d), seen = new Set(store(mk("relseen")) || []);
+  if (SCOPE === "all") { for (const n of G.nodes) if (!seen.has(n.key)) { SHOWN.add(n.key); seen.add(n.key); } }
+  else for (const k of rel) if (!seen.has(k)) { SHOWN.add(k); seen.add(k); }
+  if (!SHOWN.size) (SCOPE === "all" ? G.nodes.map(n => n.key) : [...rel]).forEach(k => SHOWN.add(k));
+  store(mk("relseen"), [...seen]); store(mk("shown3"), [...SHOWN]);
+  const lay = timeLayout(G, d, SHOWN);
+  POS = { ...lay.pos, ...Object.fromEntries(Object.entries(MANUAL).filter(([k]) => SHOWN.has(k))) };
+  AXISMARKS = lay;
   const shown = G.nodes.filter(n => SHOWN.has(n.key));
   const need = shown.filter(n => n.t === "match").flatMap(n => (n.jobs || []).filter(j => !j.planned && !d.jobs.some(x => x.id === j.id) && !showRows[j.id]).map(j => j.id));
   if (need.length && !FETCHING) { FETCHING = true; loadRows(need).finally(() => { FETCHING = false; rerender(); }); }
   const parents = k => G.edges.filter(e => e[1] === k).map(e => e[0]), children = k => G.edges.filter(e => e[0] === k).map(e => e[1]);
   const lit = FOCUS ? lineage(G, FOCUS.key, FOCUS.dir) : null;
-  let maxX = 800, maxY = 600;
+  let maxX = ORIENT === "down" ? lay.across : lay.end, maxY = ORIENT === "down" ? lay.end : lay.across;
   const html = shown.map(n => {
     const st = nodeStatus(n, d, G), [type, gloss] = TYPES[n.t], p = POS[n.key], w = n.t === "match" ? W_MATCH : W_NODE;
-    maxX = Math.max(maxX, p.x + w + 300); maxY = Math.max(maxY, p.y + 500);
+    maxX = Math.max(maxX, p.x + w + 60); maxY = Math.max(maxY, p.y + 420);
     const vs = n.a ? `<dl class="vs"><dt>A</dt><dd>${esc(n.a)}</dd><dt>B</dt><dd>${esc(n.b)}</dd></dl>` : "";
     const chart = n.t === "match" ? roughChart(st.rows || [], (n.jobs || []).reduce((s, j) => s + (plannedPairs(j) || 0), 0), st, n.a ? [shortSide(n.a), shortSide(n.b)] : null) : "";
     const dim = lit && !lit.has(n.key) ? " dim" : "", hl = lit && lit.has(n.key) ? " lit" : "";
@@ -1538,12 +1569,12 @@ function renderCanvas(d) {
     </article>`;
   }).join("");
   const banner = FOCUS ? `<div class="focus"><span>${FOCUS.dir === "in" ? "Everything that feeds" : "Everything fed by"} <b>${esc(G.nodes.find(n => n.key === FOCUS.key)?.title || "")}</b></span><button id="clearFocus">Show all</button></div>` : "";
-  const items = `<details class="items"><summary>All items (${shown.length} of ${G.nodes.length} on the map)</summary><div class="itemlist">${Object.keys(TYPES).map(t => `<div><b>${TYPES[t][0]}s</b>${G.nodes.filter(n => n.t === t).map(n => `<label><input type="checkbox" data-item="${esc(n.key)}" ${SHOWN.has(n.key) ? "checked" : ""}> ${esc(n.title)}</label>`).join("")}</div>`).join("")}</div></details>`;
+  const items = `<details class="items"><summary>Choose boxes (${shown.length} of ${G.nodes.length} on the map)</summary><div class="itemlist">${Object.keys(TYPES).map(t => `<div><b>${TYPES[t][0]}s</b>${G.nodes.filter(n => n.t === t).map(n => `<label><input type="checkbox" data-item="${esc(n.key)}" ${SHOWN.has(n.key) ? "checked" : ""}> ${esc(n.title)}</label>`).join("")}</div>`).join("")}</div></details>`;
   $("canvasView").innerHTML = `
     <div class="ctools"><div class="legend">${Object.entries(TYPES).map(([k, [t, g]]) => `<span class="t-${k}"><i style="background:var(--t)"></i><b>${t}</b></span>`).join("")}</div>
-      <div class="zoom"><button data-zoom="-1" aria-label="Zoom out">−</button><button data-zoom="0">Fit</button><button data-zoom="1" aria-label="Zoom in">+</button><button id="orient" title="Switch direction">${ORIENT === "lr" ? "Inputs left → uses right" : "Inputs on top → uses below"}</button><button id="startOver">Start over</button></div></div>
+      <div class="zoom"><button data-zoom="-1" aria-label="Zoom out">−</button><button data-zoom="0">Fit</button><button data-zoom="1" aria-label="Zoom in">+</button><span class="seg" role="group" aria-label="What is on the map"><button data-scope="relevant" aria-pressed="${SCOPE === "relevant"}" title="Running, waiting and planned work, the live net, and anything from the last 36 hours">What matters now</button><button data-scope="all" aria-pressed="${SCOPE === "all"}" title="Every box, back to the start of the lab">Everything (${G.nodes.length})</button></span><button id="tidy" title="Put boxes moved by hand back in their place">Tidy</button><button id="orient" title="Switch direction">${ORIENT === "lr" ? "Time → left to right" : "Time ↓ top to bottom"}</button></div></div>
     ${banner}${items}
-    <div class="cframe"><div id="tracker"></div><div class="cwrap ${ORIENT === "down" ? "vert" : ""}" id="cwrap"><div class="csizer" id="csizer" style="width:${maxX * ZOOM}px;height:${maxY * ZOOM}px"><div class="canvas" id="canvas" style="width:${maxX}px;height:${maxY}px;transform:scale(${ZOOM})">${MAP === "fable" ? stageBands(G) : ""}<svg class="edges" id="edges" width="${maxX}" height="${maxY}"></svg>${html}</div></div></div></div>`;
+    <div class="cframe"><div id="tracker"></div><div class="cwrap ${ORIENT === "down" ? "vert" : ""}" id="cwrap"><div class="csizer" id="csizer" style="width:${maxX * ZOOM}px;height:${maxY * ZOOM}px"><div class="canvas" id="canvas" style="width:${maxX}px;height:${maxY}px;transform:scale(${ZOOM})">${axisHtml(maxX, maxY)}<svg class="edges" id="edges" width="${maxX}" height="${maxY}"></svg>${html}</div></div></div></div>`;
   const wrap = $("cwrap");
   if (wrap) { wrap.scrollLeft = SCROLL.l + (scrollBy ? scrollBy.dx * ZOOM : 0); wrap.scrollTop = SCROLL.t + (scrollBy ? scrollBy.dy * ZOOM : 0); scrollBy = null;
     // bring newly opened boxes (and the one they came from) into view
@@ -1556,8 +1587,21 @@ function renderCanvas(d) {
     }
     SCROLL = { l: wrap.scrollLeft, t: wrap.scrollTop };
     wrap.addEventListener("scroll", () => { SCROLL = { l: wrap.scrollLeft, t: wrap.scrollTop }; }, { passive: true }); }
+  // the layout guessed each box's height: measured now, and laid out again once if a guess was far off
+  let off = false;
+  for (const el of document.querySelectorAll(".cnode")) { const k = el.dataset.key, h = el.offsetHeight; if (h && Math.abs((HEIGHT[k] || 0) - h) > 8) { off = true; HEIGHT[k] = h; } }
+  if (off && !renderCanvas.again) { renderCanvas.again = true; try { renderCanvas(d); } finally { renderCanvas.again = false; } return; }
+  // until a zoom is chosen, the map fits the width of the screen
+  const cw = $("cwrap"), cv = $("canvas");
+  if (!store("fleet:zoom") && cw && cv && Math.abs(ZOOM - Math.min(1, cw.clientWidth / cv.offsetWidth)) > 0.02) { applyZoom(Math.max(0.3, Math.min(1, cw.clientWidth / cv.offsetWidth))); }
   drawEdges(); drawMenu(); drawDetail();
   try { if (d.pfx === "aa-g" || d.pfx === "fable") drawTracker(d); } catch {}
+}
+function axisHtml(W, H) {
+  const down = ORIENT === "down";
+  const ticks = AXISMARKS.ticks.map(k => down ? `<div class="tick ${k.cls}" style="top:${k.y - 14}px;width:${W}px"><span>${esc(k.label)}</span></div>` : `<div class="vtick ${k.cls}" style="left:${k.y - 14}px;height:${H}px"><span>${esc(k.label)}</span></div>`).join("");
+  const heads = AXISMARKS.lanes.map(l => down ? `<div class="lanehead" style="left:${l.at}px;top:14px">${esc(TYPES[l.l][0])}s</div>` : `<div class="lanehead" style="left:${14}px;top:${l.at - 18}px">${esc(TYPES[l.l][0])}s</div>`).join("");
+  return ticks + heads;
 }
 let SCROLL = { l: 0, t: 0 };
 function lineage(G, key, dir) {
@@ -1596,33 +1640,19 @@ document.addEventListener("pointermove", ev => {
   const dx = (ev.clientX - drag.sx) / ZOOM, dy = (ev.clientY - drag.sy) / ZOOM;
   if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
   const x = Math.max(0, Math.round(drag.x + dx)), y = Math.max(0, Math.round(drag.y + dy));
-  drag.el.style.left = x + "px"; drag.el.style.top = y + "px"; POS[drag.key] = { x, y };
+  drag.el.style.left = x + "px"; drag.el.style.top = y + "px"; POS[drag.key] = { x, y }; MANUAL[drag.key] = { x, y };
   drawEdges();
 });
 let justDragged = 0;
 document.addEventListener("pointerup", () => { if (drag && !drag.pan && drag.moved) { saveMap(); justDragged = Date.now(); } drag = null; });
-const saveMap = () => { store(mk("pos2:" + ORIENT), POS); store(mk("shown"), [...SHOWN]); };
+const saveMap = () => { store(mk("manual:" + ORIENT), MANUAL); store(mk("shown3"), [...SHOWN]); store(mk("scope"), SCOPE); };
 function setMap(m) {
   if (MAP === m) return;
-  saveMap(); MAP = m; POS = store(mk("pos2:" + ORIENT)) || {}; SHOWN = new Set(store(mk("shown")) || startOf()); FOCUS = null; MENU = null; DETAIL = null;
+  saveMap(); MAP = m; SCOPE = store(mk("scope")) === "all" ? "all" : "relevant"; MANUAL = store(mk("manual:" + ORIENT)) || {}; SHOWN = new Set(store(mk("shown3")) || []); FOCUS = null; MENU = null; DETAIL = null;
 }
 // new boxes go beside the one they were opened from: inputs to its left, outputs to its right, centred on it
-function reveal(key, keys, dir) {
-  const p = POS[key] || { x: 40, y: 40 }, el = document.querySelector(`.cnode[data-key="${CSS.escape(key)}"]`), w = el ? el.offsetWidth : W_NODE;
-  const nodeOf = k => GRAPH.nodes.find(n => n.key === k), h = el ? el.offsetHeight : 190;
-  const placed = neighbours(key, dir).filter(k => SHOWN.has(k) && POS[k] && !keys.includes(k));
-  if (ORIENT === "lr") {
-    const total = keys.reduce((s, k) => s + hOf(nodeOf(k)), 0);
-    let y = placed.length ? Math.max(...placed.map(k => POS[k].y + hOf(nodeOf(k)))) : p.y + h / 2 - total / 2;
-    for (const k of keys) { SHOWN.add(k); POS[k] = { x: dir === "in" ? p.x - wOf(nodeOf(k)) - 90 : p.x + w + 90, y: Math.round(y) }; y += hOf(nodeOf(k)); }
-  } else {
-    // inputs go above, uses below
-    const total = keys.reduce((s, k) => s + wOf(nodeOf(k)) + 40, 0);
-    let x = placed.length ? Math.max(...placed.map(k => POS[k].x + wOf(nodeOf(k)) + 40)) : p.x + w / 2 - total / 2;
-    for (const k of keys) { SHOWN.add(k); POS[k] = { x: Math.round(x), y: dir === "in" ? p.y - hOf(nodeOf(k)) - 90 : p.y + h + 90 }; x += wOf(nodeOf(k)) + 40; }
-  }
-  normalise(); ENSURE = [key, ...keys];
-}
+// boxes opened from a side of a box join the map at the height of when they happened
+function reveal(key, keys) { for (const k of keys) SHOWN.add(k); ENSURE = [key, ...keys]; }
 let ENSURE = null, MENU = null;
 const neighbours = (key, dir) => GRAPH.edges.filter(e => (dir === "in" ? e[1] : e[0]) === key).map(e => (dir === "in" ? e[0] : e[1]));
 // the list a side of a box opens: everything connected on that side, each with a tick to put it on the map
@@ -1651,14 +1681,6 @@ function drawMenu() {
     const top = MENU.dir === "in" ? r.top - el.offsetHeight - 6 : r.bottom + 6;
     el.style.top = Math.max(8, Math.min(innerHeight - el.offsetHeight - 8, top)) + "px";
   }
-}
-// keep every box on the canvas: shift the map right/down if anything went past the top or left edge
-function normalise() {
-  const ps = [...SHOWN].map(k => POS[k]).filter(Boolean);
-  if (!ps.length) return;
-  // pull the whole arrangement to the top-left corner, so a map whose boxes all sit far right or down isn't empty on screen
-  const dx = 40 - Math.min(...ps.map(p => p.x)), dy = 40 - Math.min(...ps.map(p => p.y));
-  if (dx || dy) { for (const k of SHOWN) if (POS[k]) POS[k] = { x: POS[k].x + dx, y: POS[k].y + dy }; scrollBy = { dx, dy }; }
 }
 let scrollBy = null;
 // the running-now panel can be dragged anywhere inside the field; its spot is remembered
@@ -1726,7 +1748,7 @@ document.addEventListener("click", ev => {
   const mi = ev.target.closest?.("[data-mi]");
   if (mi && MENU) {
     const act = mi.dataset.mi, near = neighbours(MENU.key, MENU.dir);
-    if (act === "all") reveal(MENU.key, near.filter(k => !SHOWN.has(k)), MENU.dir);
+    if (act === "all") reveal(MENU.key, near.filter(k => !SHOWN.has(k)));
     else if (act === "none") near.forEach(k => SHOWN.delete(k));
     else if (act === "trace") { FOCUS = FOCUS && FOCUS.key === MENU.key && FOCUS.dir === MENU.dir ? null : { key: MENU.key, dir: MENU.dir }; MENU = null; }
     saveMap(); rerender(); return;
@@ -1737,11 +1759,14 @@ document.addEventListener("click", ev => {
   if (box && !ev.target.closest("button,input,a") && Date.now() - justDragged > 300) { DETAIL = box.dataset.key; MENU = null; drawMenu(); drawDetail(); pollLive(); return; }
   const hide = ev.target.dataset?.hide;
   if (hide) { SHOWN.delete(hide); if (FOCUS?.key === hide) FOCUS = null; saveMap(); rerender(); return; }
-  if (ev.target.id === "orient") { saveMap(); ORIENT = ORIENT === "lr" ? "down" : "lr"; store("fleet:orient", ORIENT); POS = store(mk("pos2:" + ORIENT)) || {}; MENU = null; tidy(); saveMap(); rerender(); return; }
-  if (ev.target.id === "startOver") {
-    if (MAP === "fable" && GRAPH) { SHOWN = new Set(GRAPH.nodes.map(n => n.key)); POS = journeyLayout(GRAPH); }
-    else { SHOWN = new Set(startOf()); POS = {}; }
-    FOCUS = null; saveMap(); rerender(); return;
+  if (ev.target.id === "orient") { saveMap(); ORIENT = ORIENT === "lr" ? "down" : "lr"; store("fleet:orient2", ORIENT); MANUAL = store(mk("manual:" + ORIENT)) || {}; MENU = null; SCROLL = { l: 0, t: 0 }; rerender(); return; }
+  if (ev.target.id === "tidy") { tidy(); saveMap(); rerender(); return; }
+  const scope = ev.target.closest?.("[data-scope]")?.dataset.scope;
+  if (scope && GRAPH && last) {
+    SCOPE = scope; FOCUS = null; MENU = null;
+    SHOWN = scope === "all" ? new Set(GRAPH.nodes.map(n => n.key)) : relevantKeys(GRAPH, last);
+    store(mk("relseen"), GRAPH.nodes.map(n => n.key).filter(k => scope === "all" || SHOWN.has(k)));
+    saveMap(); SCROLL = { l: 0, t: 0 }; rerender(); return;
   }
   if (ev.target.id === "clearFocus") { FOCUS = null; rerender(); return; }
   const z = ev.target.dataset?.zoom;
@@ -1753,7 +1778,7 @@ document.addEventListener("click", ev => {
 });
 document.addEventListener("change", ev => {
   const mk = ev.target.dataset?.mk;
-  if (mk && MENU) { if (ev.target.checked) reveal(MENU.key, [mk], MENU.dir); else SHOWN.delete(mk); saveMap(); rerender(); return; }
+  if (mk && MENU) { if (ev.target.checked) reveal(MENU.key, [mk]); else SHOWN.delete(mk); saveMap(); rerender(); return; }
   const k = ev.target.dataset?.item; if (!k) return;
   if (ev.target.checked) SHOWN.add(k); else SHOWN.delete(k);
   saveMap(); const open = document.querySelector(".items")?.open; rerender(); if (open) document.querySelector(".items").open = true;
