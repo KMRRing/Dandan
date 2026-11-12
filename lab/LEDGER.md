@@ -374,3 +374,7 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - 04:20Z: **S3 c gate final: 300 look 51.7% ± 4.8 (play on); 600 pairs 51.2% ± 3.5 → DROP.**
 - Queued aa-g9-s3dv14b: Deep gate for S3 run d (Quick 53.9%, finished after the screen; now the S3 line's best), 600 pairs,
   the same seeds as the other gates, so it can be set against the crowned jt130 on shared pairs.
+- 05:30Z: **S4 c** (turn starts, 56,308 games): Brier all 0.165 vs v14 0.1766, flaws 0.0049. **S4 d** (128x64x32, 56,283 games):
+  0.1428 vs 0.1546, flaws 0.003. Screens queued: aa-h2-q-s4c, aa-h2-q-s4d (ref cb02856) and aa-h2-q-avg2 (mean of jt130 and
+  S3 c; hard-match's avg() form, a57f059; aa-h2-q-avg retired at once, queued with a bad ref). S4 a and v2 twins still to run.
+- S3 d Deep gate: 458 of 600 pairs, 53.6% so far.
