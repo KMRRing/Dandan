@@ -666,6 +666,19 @@ function paint0(v) {
 // busy core is on. Workers started before that don't write one: their busy cores are counted from the shards' claims.
 // Google's machines are also listed straight from Compute Engine, so its total is known either way.
 let FLEET = null, FLEET_AT = 0;
+// the worker files arrive run together ({..}{..}); split them by brace depth, since newer reports hold a nested "hw" block
+// (12 Nov: the old pattern skipped those, so every new machine looked absent and Hong Kong showed Down)
+function jsonObjects(txt) {
+  const out = []; let depth = 0, start = -1, str = false, esc = false;
+  for (let i = 0; i < txt.length; i++) {
+    const ch = txt[i];
+    if (str) { if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') str = false; continue; }
+    if (ch === '"') str = true;
+    else if (ch === "{") { if (!depth++) start = i; }
+    else if (ch === "}" && depth && !--depth) { try { out.push(JSON.parse(txt.slice(start, i + 1))); } catch {} }
+  }
+  return out;
+}
 const CLOUD_NAMES = { rackspace: "Rackspace", other: "Other clouds" };
 async function loadFleet() {
   if (Date.now() - FLEET_AT < 110000) return;
@@ -680,7 +693,7 @@ async function loadFleet() {
     fresh.length ? gcloud(`gcloud storage cat ${fresh.map(u => `"${u}"`).join(" ")}`).then(r => r.out, () => "") : "",
     gcloud(`gcloud compute instances list --filter="name~^lab-" --format="value(name,machineType.basename(),status)"`).then(r => r.out, () => null),
   ]);
-  const workers = (catTxt.match(/\{"by":[^{}]*\}/g) || []).map(t => { try { return JSON.parse(t); } catch { return null; } }).filter(Boolean);
+  const workers = jsonObjects(catTxt).filter(o => o && typeof o.by === "string");
   let gce = null;
   if (gceTxt != null) {
     gce = { machines: 0, cores: 0 };
