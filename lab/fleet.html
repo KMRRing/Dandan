@@ -60,6 +60,7 @@ h1 small{display:block;font:500 12px/1.4 var(--mono);letter-spacing:.12em;text-t
 #tracker{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-content:start;min-width:0}
 @media (max-width:1100px){#tracker{grid-template-columns:minmax(0,1fr)}}
 #tracker .tcard{display:grid;gap:4px;align-content:start;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0;cursor:pointer}
+#tracker .tcard{height:var(--cardh,auto);overflow:auto}#tracker .tcard.open{height:auto;max-height:none}
 #tracker .tcard:hover{border-color:var(--mute)}#tracker .tcard.open{border-color:var(--accent)}
 #tracker .tcard:not(.open) em,#tracker .tcard:not(.open) .why{display:none}
 #tracker .big3{font:600 22px/1.1 var(--mono);font-variant-numeric:tabular-nums}#tracker .big3 small{font-size:12px;color:var(--mute);font-weight:500}
@@ -811,7 +812,18 @@ function drawFleet() {
     `<div class="src"><div class="sh"><b>All cards hidden</b></div><div class="act">Use ⋯ to show them again</div></div>`;
   if (!$("srcMenu").hidden) drawSrcMenu();
   drawSrcDetail();
+  syncCardHeight();
 }
+// the two tracker cards take the height of the machine cards' first row (12 Nov, Korbi), scrolling inside if they hold more;
+// one opened to read its notes grows to fit
+function syncCardHeight() {
+  const cards = [...document.querySelectorAll("#fleetbar .src")], w = $("workers");
+  if (!w) return;
+  if (!cards.length) { w.style.removeProperty("--cardh"); return; }
+  const top = cards[0].offsetTop, h = Math.max(...cards.filter(c => c.offsetTop === top).map(c => c.offsetHeight));
+  w.style.setProperty("--cardh", h + "px");
+}
+addEventListener("resize", () => syncCardHeight());
 // a tap on a card lists its machines (12 Nov, Korbi: "show what machines are idle"): silent first (paid for, not reporting),
 // then those with idle cores, then the full ones; each with its cores, how many are busy and what on. Tap again to close.
 let MACH = {}, OPEN_SRC = null, ACTS = {}, CARDS = {}, POP_AT = null;
