@@ -537,13 +537,18 @@ const TRACK_WHAT = (g, j) => ({
   "aa-a1-g2f": "Does the retrained model help Hard choose which moves to consider?",
   "aa-g8-s3-d": "Training a value net on the filler games (S3, run d)",
 }[g] || (/^aa-g9-/.test(g) ? "Deep gate: does this value net beat v14 with Hard at Deep?" : /^aa-a1-g1/.test(g) ? "Is the model a better player than Medium on its own?" : /^aa-a1-g2/.test(g) ? "Does the model make Hard stronger?" : j.purpose ? j.purpose.split(/[.;]/)[0].slice(0, 140) : ""));
+// the shards each machine says it is on (workers/<name>.json): exact, and small to read, where a job of a thousand shards' claims
+// are too many for one connector reply (12 Nov: generation 2 showed as 1 core busy of 80)
+let REPORTED = {};
 function drawTracker(d) {
+  REPORTED = {};
+  for (const w of FLEET?.workers || []) for (const b of w.busy || []) { const id = b.split("/")[0]; REPORTED[id] = (REPORTED[id] || 0) + 1; }
   const groups = new Map();
   for (const j of d.jobs) { const g = trackGroup(j.id); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(j); }
   const rows = [];
   for (const [g, js] of groups) {
     let shards = 0, done = 0, running = 0;
-    for (const j of js) { const dn = (d.done[j.id] || []).length; shards += j.shards; done += dn; running += d.busyNow ? (d.busyNow[j.id] || 0) : Math.max(0, (d.claims[j.id] || 0) - dn); }
+    for (const j of js) { const dn = (d.done[j.id] || []).length; shards += j.shards; done += dn; running += Math.max(REPORTED[j.id] || 0, d.busyNow ? (d.busyNow[j.id] || 0) : Math.max(0, (d.claims[j.id] || 0) - dn)); }
     if (!running || done >= shards) continue;
     const per = gamesPerShard(js[0]), name = NAMES[g] || (/^aa-g1-sweep/.test(g) ? "Base value net run " + g.slice(-1) : /^aa-g1-base/.test(g) ? "Base value net" : js[0].purpose?.split(/[:(,]/)[0] || g);
     rows.push({ name, done, shards, per, running, what: TRACK_WHAT(g, js[0]), ids: js.map(j => j.id) });
