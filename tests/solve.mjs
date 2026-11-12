@@ -31,7 +31,9 @@ const after = (s, seat, m) => {
   const c = fork(s), r0 = seeded(7), rng = () => { rng.n++; return r0(); };
   rng.n = 0;
   if (typeof act(c, seat, m, { rng, quiet: true }) === "string") return null;
-  return rng.n ? keyOf({ ...c, lib: c.lib.slice().sort((a, b) => DECK[a] < DECK[b] ? -1 : DECK[a] > DECK[b] ? 1 : 0) }) : keyOf(c);
+  // (a Memory draws seven each from the shuffled pile: then the hands are the dice's too, and only their sizes are the move's)
+  const byName = (a, b) => (DECK[a] < DECK[b] ? -1 : DECK[a] > DECK[b] ? 1 : 0);
+  return rng.n ? keyOf({ ...c, lib: [...c.lib, ...c.hand.flat()].sort(byName), hand: c.hand.map(h => h.map(() => 0)) }) : keyOf(c);
 };
 
 /** Every move or answer the rules allow here, found without the calculator: [move, whether it is one of the two kinds left out]. */
@@ -91,7 +93,7 @@ function brute(s, seat) {
 const was = fullStops(true);
 const seenKinds = {};
 let decisions = 0, legal = 0, missing = 0, leftOut = 0, kinds = new Set(), example = null, maxChoices = 0;
-for (let g = 0; g < 400 && decisions < 140 && Date.now() - t0 < 2500; g++) {
+for (let g = 0; g < 400 && decisions < 140; g++) {
   let s = deal({ rng: seeded(500 + g) });
   for (let i = 0; i < 3000 && !s.over; i++) {
     const seat = toMove(s);

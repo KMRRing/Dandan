@@ -42,12 +42,16 @@ let solving = 0, memoryHit = false;
 const MEMORY = RES.Memory;
 RES.Memory = function (s, it) { if (solving && it.step === 0) memoryHit = true; return MEMORY.call(this, s, it); };
 
-/** A position's name: cards by name (two Islands are the same), every part of the state the rules read. */
+/**
+ * A position's name: cards by name (two Islands are the same), every part of the state the rules read. A land's trigger held for
+ * its player (`stop`, the page's) is left out, as is whether a land came this turn (only a creature's matters), and a card
+ * aimed at in the graveyard is named by its name: with every stop on, a seat with a move is asked anyway, and one with none passes.
+ */
 export function keyOf(s) {
-  const bf = s.bf.map(p => `${nm(p.id)}${p.ctl}${p.tapped ? "t" : ""}${p.ent === s.turn ? "n" : ""}${p.trig ? "x" : ""}${p.tc ? JSON.stringify(p.tc) : ""}${p.pump ? JSON.stringify(p.pump) : ""}${p.walk ? "w" : ""}${p.dmg ? "d" + p.dmg : ""}`).sort().join(",");
+  const bf = s.bf.map(p => `${nm(p.id)}${p.ctl}${p.tapped ? "t" : ""}${p.ent === s.turn && !isLand(p) ? "n" : ""}${p.trig ? "x" : ""}${p.tc ? JSON.stringify(p.tc) : ""}${p.pump ? JSON.stringify(p.pump) : ""}${p.walk ? "w" : ""}${p.dmg ? "d" + p.dmg : ""}`).sort().join(",");
   return [s.turn % 2, s.active, s.step, s.prio, s.passes, s.life, s.drawn, s.played, s.attacked ? 1 : 0, s.quick, s.lost, s.res,
     s.hand.map(h => h.map(nm).sort().join(",")).join("|"), bf, s.yard.map(nm).sort().join(","), s.lib.map(nm).join(","), s.exile.length,
-    JSON.stringify(s.stack.map(it => [it.sid, nm(it.card ?? -1), it.name, it.ctl, it.targets, it.d, it.mode, it.step, it.stop ? 1 : 0, it.aim ? 1 : 0])),
+    JSON.stringify(s.stack.map(it => [it.sid, nm(it.card ?? -1), it.name, it.ctl, (it.targets || []).map(t => (t.k === "g" ? "g:" + nm(t.id) : t)), it.d, it.mode, it.step, it.aim ? 1 : 0])),
     JSON.stringify(s.pending), JSON.stringify(s.pool), JSON.stringify(s.combat)].join("#");
 }
 
@@ -181,7 +185,11 @@ export function choices(s, seat, scope = "all") {
   const out = [PASS];
   // each spell or ability holding priority: the seat may then stack another of its own, or pass, which is the same position
   // as not holding (the other seat to answer, one pass made), so not holding is among what holding leads to
-  for (const m of moves(s, seat)) for (const taps of m.t === "land" ? [null] : payments(s, seat, m)) out.push({ ...m, ...(taps && taps.length ? { taps } : {}), ...(m.t === "land" ? {} : { hold: true }) });
+  // a land is played holding priority or not: held, its trigger waits for its player to pass (the same play, but a stop of its own)
+  for (const m of moves(s, seat)) {
+    if (m.t === "land") { out.push(m, { ...m, hold: true }); continue; }
+    for (const taps of payments(s, seat, m)) out.push({ ...m, ...(taps && taps.length ? { taps } : {}), hold: true });
+  }
   // a land tapped for mana on its own: the mana floats until the step ends, and the seat is given priority again before
   // that (after every resolution, and both must pass to end a step), so it is worth more than tapping the land when the
   // mana is spent only if the land may not be there to tap by then: something on the stack aims at it (Mind Bend,
