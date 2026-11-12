@@ -172,6 +172,7 @@ function holdForBot() {
   if (!v.G || v.over || v.mode !== "solo" || v.toMove == null || !v.seats[v.toMove]?.bot) return false;
   const key = keyOf(v.state);
   if (botMoves.has(key) || workers.bot === false) return false;
+  if (lab && !lab.coverOn() && coverOnly(v.state)) return false;   // switched off in the lab mid-game: its pass comes at once (pageRules.bot)
   if (botAsked !== key) {
     botAsked = key;
     const engine = LAB?.engine, at = performance.now();
@@ -1076,7 +1077,8 @@ function showEnd(v) {
 function newGame() {
   $("endDlg").open && $("endDlg").close();
   // against the computer, its passes keep its hand to itself (engine coverStop); not at a table of two players
-  page.deal(page.view?.mode === "table" ? {} : { cover: 1 }, 2);
+  // (the lab can switch it off: dandan-lab.js coverOn)
+  page.deal(page.view?.mode === "table" || (lab && !lab.coverOn()) ? {} : { cover: 1 }, 2);
 }
 /** Whether you may concede: a game of yours still on. */
 const mayConcede = () => !!V?.G && !V.over && V.seat != null;

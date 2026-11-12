@@ -24,7 +24,7 @@ const $ = id => document.getElementById(id);
 
 // ---------- what is kept ----------
 /** The coach settings as they start: the two Mediums (a millisecond each) shown, no Hard coach (it takes a look-ahead of its own a decision). */
-export const DEFAULTS = { engine: DEFAULT_ENGINE, coach: { "medium-tempo": true, "medium-squeeze": true }, hide: {}, coachDepth: "quick", oppDepth: "deepest", pilot: "medium-tempo" };
+export const DEFAULTS = { engine: DEFAULT_ENGINE, coach: { "medium-tempo": true, "medium-squeeze": true }, hide: {}, coachDepth: "quick", oppDepth: "deepest", pilot: "medium-tempo", cover: true };
 const DEPTH_WORDS = { quick: "Quick (64 deals)", long: "Long (256 deals)", deep: "Deep (1,024 deals)", deepest: "Deepest (2,048 deals, as the live game)" };
 export function loadSettings(read = () => { try { return JSON.parse(localStorage.getItem(KEY)); } catch { return null; } }) {
   const got = read() || {}, s = { ...DEFAULTS, ...got, coach: { ...(got.coach || DEFAULTS.coach) }, hide: { ...(got.hide || {}) } };
@@ -72,6 +72,9 @@ export function how(v = C?.view()) {
   return { level: `lab · ${e?.name || settings.engine}`, think: settings.oppDepth, engine: settings.engine,
     coaches: activeCoaches().map(c => c.id).join(" "), ...(list.length ? { flags: JSON.stringify(list) } : {}) };
 }
+
+/** Whether Monte hides its timing tell (dandan.js, engine coverStop): on unless switched off here; a new game takes it up. */
+export const coverOn = () => settings.cover !== false;
 
 /** The engines that are coaching now: ticked as a coach and shown. */
 export const activeCoaches = (st = settings) => ENGINES.filter(e => e.available && st.coach[e.id] && !st.hide[e.id]);
@@ -304,6 +307,8 @@ function paintSheet() {
     <label class="lab-sel">Monte's look-ahead <select data-depth="oppDepth">${depth(settings.oppDepth, ["quick", "long", "deep", "deepest"])}</select></label>
     <label class="lab-sel">Autoplay: who plays for you <select data-pilot="1">${ENGINES.filter(e => e.available).map(e => `<option value="${e.id}"${settings.pilot === e.id ? " selected" : ""}>${esc(e.name)}</option>`).join("")}</select></label>
     <label class="lab-sel">Hard coaches' look-ahead <select data-depth="coachDepth">${depth(settings.coachDepth, ["quick", "long", "deep"])}</select></label>
+    <label class="lab-sel"><input type="checkbox" data-cover="1"${settings.cover !== false ? " checked" : ""}> Hide Monte's timing tell</label>
+    <p class="lab-note">On, Monte stops and takes its time wherever a card you can't see could have had it act, so how fast it passes shows nothing. Off, it passes at once where it has nothing to do: quicker games, but its speed gives its hand away. A new game takes the setting up; switched off mid-game, its passes there come at once.</p>
     <p class="lab-note">Deals are the guesses of the hidden cards a look-ahead plays each move out over; more take longer and judge better. A Hard coach thinks in its own worker, so the table never stops for it.</p>`;
   body.scrollTop = top;
 }
@@ -336,6 +341,7 @@ function wireSheet() {
     if (t.name === "opp") { settings.engine = t.value; seatOpponent(); save(); C.forgetBot(); C.toast(`Monte is now ${engineOf(t.value).name}`); }
     else if (t.dataset.coach) { settings.coach[t.dataset.coach] = t.checked; save(); reask(); }
     else if (t.dataset.show) { settings.hide[t.dataset.show] = !t.checked; save(); reask(); }
+    else if (t.dataset.cover) { settings.cover = t.checked; save(); C.toast(t.checked ? "Monte hides its timing tell from the next game" : "Monte's timing tell is no longer hidden"); }
     else if (t.dataset.pilot) { settings.pilot = t.value; save(); if (auto) reask(); else paintStrip(); }
     else if (t.dataset.depth) {
       settings[t.dataset.depth] = t.value; save();

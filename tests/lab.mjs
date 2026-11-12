@@ -24,6 +24,7 @@ check(ENGINES.filter(e => e.judge).every(e => JUDGES[e.judge] && [JUDGES[e.judge
 check(engineOf(DEFAULT_ENGINE).kind === "hard" && engineOf(DEFAULT_ENGINE).judge === LIVE_JUDGE, "Monte starts as the live game's Hard, with the live judge");
 
 // ---------- the settings ----------
+check(loadSettings(() => null).cover === true && loadSettings(() => ({ cover: false })).cover === false, "Monte hides its timing tell unless switched off, and the switch is kept");
 check(loadSettings(() => null).engine === DEFAULT_ENGINE && activeCoaches(loadSettings(() => null)).length === 2, "no saved choice: the live opponent, the two Mediums as coaches");
 {
   const s = loadSettings(() => ({ engine: "medium-deckout", coach: { "hard-jh2": true, gone: true, "medium-deckout": true }, hide: { "hard-jh2": true }, oppDepth: "nope" }));
