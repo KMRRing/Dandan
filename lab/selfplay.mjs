@@ -13,6 +13,8 @@
 //   mix:<share>[:<deep deals 1024>] (11 November 2026): the search at mixed depth. That share of the decisions, drawn by the game's seed,
 //   is searched at the deep deals (1,024 and more weigh every legal move) and marked `deep: 1`: the lessons for a learned policy; the
 //   rest at <deals>, which keeps the games cheap and many: the lessons for a value net. Each decision says which it was.
+//   hardall (12 November 2026, the planning chat: ab-g2-s4d-2all): Hard weighing every legal move, as the live game does at Deep,
+//   at <deals>; each decision marks with `off: 1` a move played that Medium's shortlist would not have weighed.
 import fs from "node:fs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../seats.js";
@@ -38,6 +40,7 @@ async function judgeFrom(t) {
 }
 const judge = await judgeFrom(judgeFile);
 const plans = mode.startsWith("medium:") ? mode.split(":").slice(1) : null;
+const every = mode === "hardall";
 const mixed = mode.startsWith("mix:") ? mode.split(":").slice(1).map(Number) : null;   // [share of deep decisions, deep deals]
 const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);
 const nm = id => DECK[id] ?? "token";
@@ -55,7 +58,7 @@ for (let g = first; g < first + n; g++) {
     else {
       // mix: this decision's depth, by the game's seed and the move's number (the same wherever the game is played)
       const deep = mixed ? seeded(mix(seed0 + g, 1000003 + i))() < mixed[0] : false;
-      const res = (mode === "paths" ? thinkPaths : think)(s, who, { deals: deep ? mixed[1] || 1024 : deals, ms: 1e9, ...(judge ? { judge } : {}) });
+      const res = (mode === "paths" ? thinkPaths : think)(s, who, { deals: deep ? mixed[1] || 1024 : deals, ms: 1e9, ...(every ? { all: true, offCheck: true } : {}), ...(judge ? { judge } : {}) });
       move = res.best;
       if (!res.only) {
         const key = m => JSON.stringify(m);
@@ -64,7 +67,7 @@ for (let g = first; g < first + n; g++) {
           i, seat: who, turn: s.turn, step: s.step, lib: s.lib.length, life: s.life.slice(), hands: s.hand.map(h => h.length), hand: s.hand[who].map(nm).sort(),
           bf: s.bf.map(q => [nm(q.id), q.ctl, q.tapped ? 1 : 0]), yard: s.yard.map(nm).sort(), stack: s.stack.map(x => x.name),
           list, med: res.list.findIndex(c => c.i === 0), pick: res.list.findIndex(c => key(c.move) === key(move)),
-          ...(mixed ? { deep: deep ? 1 : 0 } : {}),
+          ...(mixed ? { deep: deep ? 1 : 0 } : {}), ...(every ? { off: res.off ? 1 : 0 } : {}),
         });
       }
     }
