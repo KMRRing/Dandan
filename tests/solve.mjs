@@ -142,6 +142,31 @@ check(missing === 0, `every legal move or answer leads where one of the calculat
 fullStops(was);
 check(fullStops(false) === false, "the full stops are off again after (the game's own stops, outside the calculator)");
 
+// the race scope (every possibility where the library changes, Medium's choice elsewhere): its choices are legal, Medium's own
+// is among them, and every library-changing move of the complete list is in it
+{
+  const was2 = fullStops(true);
+  let n = 0, ok = true, medium = true, lib = true;
+  const LIB = /Brainstorm|Predict|Quicken|Repulse|Memory|Commit|Gone Missing|Deem Inferior|Metamorphose|Chart a Course|Lórien|Take Inventory|Narset/;
+  for (let g = 0; g < 12 && n < 150; g++) {
+    let s = deal({ rng: seeded(700 + g) });
+    for (let i = 0; i < 2000 && !s.over; i++) {
+      const seat = toMove(s);
+      if (seat == null) break;
+      if (s.lib.length <= 30 && i % 2 === 0) {
+        n++;
+        const race = choices(s, seat, "race"), keys = new Set(race.map(m => JSON.stringify({ ...m, hold: undefined })));
+        if (race.some(m => !after(s, seat, m))) ok = false;
+        if (!keys.has(JSON.stringify({ ...policyMove(s, seat, { rng: seeded(1) }), hold: undefined }))) medium = false;
+        if (!s.pending) for (const m of choices(s, seat)) if (m.t === "cast" && LIB.test(DECK[m.card]) && !m.taps && !keys.has(JSON.stringify({ ...m, hold: undefined }))) lib = false;
+      }
+      act(s, seat, policyMove(s, seat, { rng: seeded(i) }), { rng: seeded(i), quiet: true });
+    }
+  }
+  fullStops(was2);
+  check(n > 30 && ok && medium && lib, `race scope on ${n} decisions: every choice legal (${ok}), Medium's move among them (${medium}), every library-changing cast in (${lib})`);
+}
+
 // a small endgame solved: the same value whoever is called seat 0 (the game's rules are the same for both seats)
 {
   let s = deal({ rng: seeded(4242) }), found = null;

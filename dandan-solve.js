@@ -32,6 +32,7 @@ import { payFrom, manaAlts, isLand, defOf } from "./dandan-core.js";
 import { RES } from "./dandan-spells.js";
 import { fork, determinize } from "./dandan-think.js";
 import { seeded } from "./seats.js";
+import { policyMove } from "./dandan-policy.js";
 
 const PASS = { t: "pass" };
 const nm = id => DECK[id] ?? "Clue";
@@ -145,8 +146,37 @@ function payments(s, seat, m) {
   return out.length ? out : [null];
 }
 
-/** Every choice the seat to move has. */
-export function choices(s, seat) {
+/**
+ * The race scope (Fable and Korbi, 12 November 2026: option 2): every possibility where the fight over who draws last is
+ * fought, and Medium's own choice elsewhere. Every land; every cast, cycling and ability that takes from or adds to the
+ * library (below), with every target; with a spell on the stack, every response of any kind; every answer that orders, puts
+ * back, mills, finds, names or discards; and Medium's move at each decision as well, so what it would do besides is played.
+ * Paid as the game pays by itself (the auto plan), holding priority; attacks and blocks are Medium's.
+ */
+const LIBRARY = new Set(["Brainstorm", "Predict", "Quicken", "Repulse", "Memory Lapse", "Commit", "Memory", "Gone Missing", "Deem Inferior", "Metamorphose",
+  "Chart a Course", "Lórien Revealed", "Take Inventory", "Narset's Reversal"]);
+const MEDIUM_ANSWERS = new Set(["attack", "block"]);
+const half = m => { const full = DECK[m.card]; return m.from === "yard" && full === "Commit // Memory" ? "Memory" : HALVES[full] ? HALVES[full][0] : full; };
+const sameMove = (a, b) => JSON.stringify({ ...a, hold: undefined, taps: undefined }) === JSON.stringify({ ...b, hold: undefined, taps: undefined });
+function raceChoices(s, seat) {
+  const medium = policyMove(s, seat, { rng: seeded(1) });
+  if (s.pending) {
+    const out = MEDIUM_ANSWERS.has(s.pending.t) ? [] : answers(s, seat);
+    if (!out.some(m => sameMove(m, medium))) out.unshift(medium);
+    return out;
+  }
+  const out = [PASS];
+  for (const m of moves(s, seat)) {
+    const keep = m.t === "land" || m.t === "cycle" || m.t === "ability" || s.stack.length > 0 || (m.t === "cast" && LIBRARY.has(half(m)));
+    if (keep) out.push(m.t === "land" ? m : { ...m, hold: true });
+  }
+  if (!out.some(m => sameMove(m, medium))) out.push(medium);
+  return out;
+}
+
+/** Every choice the seat to move has (scope "all"), or the race scope's. */
+export function choices(s, seat, scope = "all") {
+  if (scope === "race") return raceChoices(s, seat);
   if (s.pending) return answers(s, seat);
   const out = [PASS];
   // each spell or ability holding priority: the seat may then stack another of its own, or pass, which is the same position
@@ -172,7 +202,7 @@ const value = s => (s.winner === 0 ? 1 : s.winner === 1 ? 0 : 0.5);
  * opts: judge (s, me) → chance, for the cut at Memory; nodes, ms: the budget (over it: capped, value null);
  * shuffles: orders a shuffle is averaged over; rootAll: value every root choice exactly (else alpha-beta at the root too).
  */
-export function solve(root, { judge = null, nodes = 2e6, ms = 3e4, shuffles = 3, rootAll = true, turns = Infinity } = {}) {
+export function solve(root, { judge = null, nodes = 2e6, ms = 3e4, shuffles = 3, rootAll = true, turns = Infinity, scope = "all" } = {}) {
   // turns: a horizon (the search stops as the turn `turns` after the root's begins, and takes the value net's chance there);
   // Infinity searches to the end of the game
   const lastTurn = root.turn + turns;
@@ -217,7 +247,7 @@ export function solve(root, { judge = null, nodes = 2e6, ms = 3e4, shuffles = 3,
     const a0 = alpha, b0 = beta, seen = new Set();
     let best = seat === 0 ? -1 : 2;
     path.add(k);
-    for (const m of choices(s, seat)) {
+    for (const m of choices(s, seat, scope)) {
       const v = child(s, seat, m, alpha, beta, ply, seen);
       if (v == null) continue;
       if (seat === 0) { if (v > best) best = v; if (v > alpha) alpha = v; } else { if (v < best) best = v; if (v < beta) beta = v; }
@@ -236,7 +266,7 @@ export function solve(root, { judge = null, nodes = 2e6, ms = 3e4, shuffles = 3,
     else {
       const seat = toMove(root), list = [], seen = new Set();
       let alpha = -1, beta = 2;
-      for (const m of choices(root, seat)) {
+      for (const m of choices(root, seat, scope)) {
         const v = rootAll ? child(root, seat, m, -1, 2, 0, seen) : child(root, seat, m, alpha, beta, 0, seen);
         if (v == null) continue;
         list.push({ move: m, value: v });
