@@ -80,7 +80,7 @@ export const ENGINES = [
   {
     id: "hard-s4d", name: "Hard (judge S4 d)", short: "Hard S4d", kind: "hard", judge: "s4d", available: true,
     description: "Hard with judge S4 d (judges/s4d.json): a larger network (128·64·32, about six times v14's weights) trained on all ~56,000 of the lab's quick self-play games, with the squeeze inputs and the rule that a card in hand may not lower its holder's chance.",
-    expect: "At Quick against Hard with v14: 54.6% ± 2.6 over 1,000 deals played both ways, the best single net so far. Not yet gated at Deep. Predicts results best of all (Brier 0.143 against v14's 0.155 on held-out games). Somewhat slower per position judged than v14.",
+    expect: "Against Hard with v14, both at Deep (1,024 deals): 57.6% ± 3.6 after 575 of 600 deals played both ways, and above 50% even if it lost every deal still to come: CROWNED (12 November). At Quick: 54.6% ± 2.6 over 1,000. Predicts results best of all (Brier 0.143 against v14's 0.155 on held-out games). About 1.3× v14's thinking time a decision. The candidate to replace v14: being played by hand before it goes live.",
   },
   {
     id: "hard-s3d", name: "Hard (judge S3 d)", short: "Hard S3d", kind: "hard", judge: "s3d", available: true,
