@@ -45,7 +45,8 @@ body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);-webkit-fon
 #split::after{content:"";position:absolute;left:50%;top:2px;width:40px;height:3px;margin-left:-20px;border-radius:2px;background:var(--mute);opacity:.5}
 #split:hover,#split:focus-visible{background:var(--accent);outline:0}
 #view{min-height:0;overflow:auto;padding:10px 12px;display:grid;align-content:start;gap:14px}
-#view.map{overflow:hidden;grid-template-rows:auto minmax(0,1fr);align-content:stretch}
+#view.map{overflow:hidden;grid-template-rows:auto minmax(0,1fr);align-content:stretch;padding:0;gap:0}
+#view.map .cwrap{border:0;border-radius:0}
 #view.map #canvasView{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;height:100%}
 #view.map .cframe{min-height:0;height:100%}
 .secs,.cframe,#canvasView{min-width:0}
@@ -1908,6 +1909,22 @@ function drawMenu() {
   }
 }
 let scrollBy = null;
+// the mouse wheel over the map zooms around the cursor instead of scrolling (12 Nov, Korbi); a trackpad pinch arrives as a
+// wheel with ctrlKey and zooms the same way. Panning is by dragging the empty field. The level is kept as with the buttons.
+let wheelSave = 0;
+document.addEventListener("wheel", e => {
+  const w = e.target.closest?.("#cwrap");
+  if (!w || !$("canvas")) return;
+  e.preventDefault();
+  const r = w.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top;
+  const cx = (w.scrollLeft + mx) / ZOOM, cy = (w.scrollTop + my) / ZOOM;
+  const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+  const z = Math.max(0.2, Math.min(2, ZOOM * Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0015))));
+  applyZoom(z);
+  w.scrollLeft = cx * z - mx; w.scrollTop = cy * z - my;
+  SCROLL = { l: w.scrollLeft, t: w.scrollTop };
+  clearTimeout(wheelSave); wheelSave = setTimeout(() => store("fleet:zoom", +ZOOM.toFixed(3)), 300);
+}, { passive: false });
 let pan1 = null;
 let pinch = null;
 const gap2 = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
