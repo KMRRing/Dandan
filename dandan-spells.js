@@ -127,7 +127,8 @@ export const RES = {
     if (it.step === 0) {
       const x = itemOf(s, it.targets[0].sid);
       const c = pushItem(s, { kind: "spell", name: x.name, card: x.card, ctl: it.ctl, targets: x.targets.map(t => ({ ...t })), mode: x.mode || 0, copy: true });
-      say(s, `${x.name} is copied, and the original returns to {s${x.ctl}}'s hand`);
+      // a spell cast with flashback is exiled instead, wherever it would go (leaveStack sees to it; Korbi, 12 Nov 2026)
+      say(s, `${x.name} is copied, and the original ${x.eol ? "is exiled (it was cast with flashback)" : `returns to {s${x.ctl}}'s hand`}`);
       leaveStack(s, x, "hand");
       if (c.targets.length) {
         // new targets for the copy, when there's a choice: another target, or the one legal target in place of a lost one.
