@@ -280,6 +280,10 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 .idea .itemlist2{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 14px;padding:6px 0 4px 26px}
 .idea .itemlist2 label{font-size:13px;display:flex;gap:6px;align-items:baseline;min-width:0}.idea .itemlist2 label input{flex:none}.idea .itemlist2 label em{color:var(--mute);font-style:normal;font-size:12px}
 .band{position:absolute;border:1.5px dashed var(--line);border-radius:16px;background:color-mix(in srgb,var(--line) 12%,transparent);pointer-events:none}
+.band.lane{border-style:solid;border-color:color-mix(in srgb,var(--line) 70%,transparent);background:color-mix(in srgb,var(--line) 8%,transparent)}
+.band.lane span{writing-mode:vertical-rl;transform:rotate(180deg);left:10px;top:12px}
+.cnode.i-live{--bh:140}.cnode.i-games{--bh:35}.cnode.i-nets{--bh:265}.cnode.i-gates{--bh:20}.cnode.i-search{--bh:190}.cnode.i-checks{--bh:300}.cnode.i-model{--bh:95}.cnode.i-medium{--bh:55}.cnode.i-later{--bh:220}
+.cnode[class*=" i-"]:not(.i-old){background:linear-gradient(hsl(var(--bh) 55% 50% / .09),hsl(var(--bh) 55% 50% / .09)),var(--panel);box-shadow:inset 4px 0 0 hsl(var(--bh) 55% 50% / .7),0 1px 2px rgba(0,0,0,.06),0 6px 18px rgba(0,0,0,.06)}
 .band.i-live{--bh:140}.band.i-games{--bh:35}.band.i-nets{--bh:265}.band.i-gates{--bh:20}.band.i-search{--bh:190}.band.i-checks{--bh:300}
 .band.i-model{--bh:95}.band.i-medium{--bh:55}.band.i-later{--bh:220}.band.i-old{--bh:0}
 .band[class*="i-"]{border-color:hsl(var(--bh) 45% 50% / .45);background:hsl(var(--bh) 45% 50% / .08)}.band.i-old{background:color-mix(in srgb,var(--line) 10%,transparent);border-color:var(--line)}
@@ -1883,54 +1887,32 @@ function timeLayout(G, d, only) {
   if (nowAt == null) ticks.push({ y, label: "Now", cls: "now" });
   return { pos, ticks, lanes: lanes.map(l => ({ l, at: laneAt[l], size: laneSize[l], keys: nodes.filter(n => ideaOf(n) === l).map(n => n.key) })), end: y + 60, across: c };
 }
-// ---------- lanes (12 Nov, Korbi) ----------
-// Each idea is a block with its own tint, and inside it the boxes sit in rows in the order work flows: Medium engines;
-// training sets, then the value nets trained on them; engines (Hard: a net and a Medium); matches and measurements. A row
-// holds up to four boxes and carries on below; blocks are packed left to right, oldest idea first, onto as many shelves as it
-// takes to keep the map about as wide as two or three blocks, so it is compact rather than one long strip (21:31: "you put it
-// all on one row"). Inside a row, boxes are drawn towards the boxes they connect to, so fewer lines cross.
-const LANE_OF = { medium: 0, set: 1, judge: 1, engine: 2, match: 3, check: 3 };
-const BLOCK_ORDER = ["old", "live", "medium", "games", "nets", "search", "gates", "checks", "model", "later"];
+// ---------- lanes (12 Nov, Korbi, 21:35) ----------
+// One row a kind of box, top to bottom in the order work flows: Medium engines, training sets, value networks, engines,
+// matches, measurements; a box only ever in its own kind's row. Along each row boxes run old to new, left to right, and a box
+// never starts left of the boxes that feed it, so lines run down and to the right. Rows are packed: a box goes at the first
+// free place in its row at or after its feeders. What a box belongs to shows as its idea's colour on the box itself.
+const LANE_ROWS = [["medium", "Medium engines"], ["set", "Training sets"], ["judge", "Value networks"], ["engine", "Engines"], ["match", "Matches"], ["check", "Measurements"]];
+const LANE_OF = Object.fromEntries(LANE_ROWS.map(([t], i) => [t, i]));
 function laneLayout(G, d, only) {
-  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), GAP = 26, ROW_GAP = 46, PAD = 26, HEAD = 34, BLOCK_GAP = 60, PER = 4;
+  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), GAP = 30, ROW_GAP = 70, LEFT = 150;
   const when = n => { const x = t[n.key]; return !x ? 0 : x.plan ? 1e15 + x.rank : x.at === -Infinity ? -1 : x.at; };
-  const lane = n => LANE_OF[n.t] ?? 3;
-  const nb = new Map(nodes.map(n => [n.key, []]));
-  for (const [a, b] of G.edges) if (nb.has(a) && nb.has(b)) { nb.get(a).push(b); nb.get(b).push(a); }
-  const blocks = BLOCK_ORDER.filter(b => nodes.some(n => ideaOf(n) === b)).map(b => {
-    const rows = [0, 1, 2, 3].map(l => nodes.filter(n => ideaOf(n) === b && lane(n) === l).sort((a, z) => (a.t === "set") - (z.t === "set") ? (a.t === "set" ? -1 : 1) : when(a) - when(z) || a.title.localeCompare(z.title)));
-    // each row's boxes, in lines of up to four, at offsets inside the block
-    const rel = {}, mid = {}, lay = () => {
-      let y = HEAD, w = 0;
-      for (const r of rows) for (let k = 0; k < r.length; k += PER) {
-        const line = r.slice(k, k + PER); let x = PAD;
-        for (const n of line) { rel[n.key] = { x, y }; mid[n.key] = x + wOf(n) / 2; x += wOf(n) + GAP; }
-        w = Math.max(w, x - GAP + PAD); y += Math.max(...line.map(hOf)) + ROW_GAP;
-      }
-      return { w, h: y - ROW_GAP + PAD };
-    };
-    lay();
-    for (let sweep = 0; sweep < 3; sweep++) {
-      for (const r of rows) {
-        const ks = new Map(r.map(n => { const ms = nb.get(n.key).filter(k => mid[k] != null).map(k => mid[k]); return [n.key, ms.length ? ms.reduce((s, v) => s + v, 0) / ms.length : mid[n.key]]; }));
-        r.sort((a, z) => (a.t === "set" && z.t === "judge" ? -1 : a.t === "judge" && z.t === "set" ? 1 : 0) || ks.get(a.key) - ks.get(z.key) || when(a) - when(z));
-      }
-      lay();
-    }
-    return { b, rel, ...lay() };
-  });
-  // shelves: about the shape of the map's window (the blocks' total area spread at its width-to-height ratio), never narrower
-  // than the widest block, so the map fills the screen instead of running off in one direction
-  const view = $("cwrap") || { clientWidth: innerWidth, clientHeight: innerHeight * 0.75 }, ratio = Math.max(0.8, view.clientWidth / Math.max(200, view.clientHeight));
-  const area = blocks.reduce((s, k) => s + (k.w + BLOCK_GAP) * (k.h + BLOCK_GAP), 0);
-  const limit = Math.max(...blocks.map(k => k.w), Math.sqrt(area * ratio) * 1.1);
-  const pos = {}; let x = 40, y = 40, shelf = 0, across = 0;
-  for (const k of blocks) {
-    if (x > 40 && x + k.w > 40 + limit) { x = 40; y += shelf + BLOCK_GAP; shelf = 0; }
-    for (const [key, p] of Object.entries(k.rel)) pos[key] = { x: x + p.x, y: y + p.y };
-    k.at = { x, y }; x += k.w + BLOCK_GAP; shelf = Math.max(shelf, k.h); across = Math.max(across, x);
+  const row = n => LANE_OF[n.t] ?? LANE_ROWS.length - 1;
+  const parents = new Map(nodes.map(n => [n.key, []]));
+  for (const [a, b] of G.edges) if (parents.has(a) && parents.has(b)) parents.get(b).push(a);
+  // feeders before what they feed, otherwise oldest first
+  const order = [], done = new Set(), byKey = new Map(nodes.map(n => [n.key, n]));
+  const visit = (n, path = new Set()) => { if (done.has(n.key) || path.has(n.key)) return; path.add(n.key); for (const k of parents.get(n.key).map(k => byKey.get(k)).sort((a, z) => when(a) - when(z))) visit(k, path); done.add(n.key); order.push(n); };
+  [...nodes].sort((a, z) => when(a) - when(z) || a.title.localeCompare(z.title)).forEach(n => visit(n));
+  const rowH = LANE_ROWS.map((_, r) => Math.max(0, ...nodes.filter(n => row(n) === r).map(hOf)));
+  const rowY = []; let y = 50; LANE_ROWS.forEach((_, r) => { rowY[r] = y; if (rowH[r]) y += rowH[r] + ROW_GAP; });
+  const cursor = LANE_ROWS.map(() => LEFT), pos = {};
+  for (const n of order) {
+    const r = row(n), from = Math.max(cursor[r], ...parents.get(n.key).filter(k => pos[k]).map(k => pos[k].x));
+    pos[n.key] = { x: from, y: rowY[r] }; cursor[r] = from + wOf(n) + GAP;
   }
-  return { pos, ticks: [], lanes: blocks.map(k => ({ l: k.b, keys: Object.keys(k.rel), box: { x: k.at.x, y: k.at.y, w: k.w, h: k.h } })), end: across, across: y + shelf + 60 };
+  const end = Math.max(...cursor) + 40;
+  return { pos, ticks: [], rows: LANE_ROWS.map(([, name], r) => rowH[r] ? { name, y: rowY[r], h: rowH[r] } : null).filter(Boolean), lanes: [], end, across: y };
 }
 // which way lines and the "feeds" menus run: lanes always flow down their rows; the time map follows the direction button
 const FLOW = () => (LAYOUT === "lanes" ? "down" : ORIENT);
@@ -1964,7 +1946,7 @@ function renderCanvas(d) {
     const dim = lit && !lit.has(n.key) ? " dim" : "", hl = lit && lit.has(n.key) ? " lit" : "";
     const pin = parents(n.key), pout = children(n.key), hin = pin.filter(k => !SHOWN.has(k)).length, hout = pout.filter(k => !SHOWN.has(k)).length;
     const port = (dir, all, hid) => all.length ? `<button class="port ${dir}${hid ? " more" : ""}" data-port="${dir}" aria-haspopup="true" aria-label="${dir === "in" ? "What feeds" : "What is fed by"} ${esc(n.title)}: ${all.length}, ${hid} off the map" title="${dir === "in" ? "What feeds this" : "What this feeds"}">${hid ? `<span>+${hid}</span>` : ""}</button>` : "";
-    return `<article class="cnode node t-${n.t}${dim}${hl}" data-key="${esc(n.key)}" style="left:${p.x}px;top:${p.y}px;width:${w}px">
+    return `<article class="cnode node t-${n.t} i-${ideaOf(n)}${dim}${hl}" data-key="${esc(n.key)}" style="left:${p.x}px;top:${p.y}px;width:${w}px">
       ${port("in", pin, hin)}${port("out", pout, hout)}
       <div class="row grip"><span class="type" title="${esc(gloss)}">${type}</span><span class="row" style="gap:4px"><span class="pill ${st.cls}">${esc(st.label)}</span>${SHOWN.size > 1 ? `<button class="x" data-hide="${esc(n.key)}" aria-label="Remove ${esc(n.title)} from the map" title="Remove from the map">×</button>` : ""}</span></div>
       <h4>${esc(n.title)}</h4>${vs}${n.what ? `<p>${esc(n.what)}</p>` : ""}${chart}
@@ -1980,7 +1962,7 @@ function renderCanvas(d) {
   }).join("")}</div>`;
   $("mapTools").innerHTML = `<span class="seg" role="group" aria-label="What is on the map"><button data-scope="relevant" aria-pressed="${SCOPE === "relevant"}" title="Running, waiting and planned work, the live net, and anything from the last 12 hours">What matters now</button><button data-scope="all" aria-pressed="${SCOPE === "all"}" title="Every box, back to the start of the lab">Everything (${G.nodes.length})</button></span>
     <button id="chooseBtn" aria-expanded="${!$("chooser").hidden}" title="Choose the boxes on the map, by idea">Choose boxes · ${shown.length}/${G.nodes.length}</button><span class="rb-sep"></span>
-    <button id="tidy" title="Lanes by kind of box (Medium engines, sets and nets, engines, matches), each idea a coloured block; every box measured again">Rearrange</button><button id="layoutTime" aria-pressed="${LAYOUT === "time"}" title="Each box at the hour it happened">By time</button>${LAYOUT === "lanes" ? "" : `<button id="orient" title="Switch direction">${ORIENT === "lr" ? "Time →" : "Time ↓"}</button>`}<span class="rb-sep"></span>
+    <button id="tidy" title="A row for each kind of box, old to new left to right, feeders above and to the left; each box tinted by its idea">Rearrange</button><button id="layoutTime" aria-pressed="${LAYOUT === "time"}" title="Each box at the hour it happened">By time</button>${LAYOUT === "lanes" ? "" : `<button id="orient" title="Switch direction">${ORIENT === "lr" ? "Time →" : "Time ↓"}</button>`}<span class="rb-sep"></span>
     <button data-zoom="-1" aria-label="Zoom out">−</button><button data-zoom="0">Fit</button><button data-zoom="1" aria-label="Zoom in">+</button>`;
   $("chooser").innerHTML = `<div class="chead"><span>Choose boxes · ${shown.length} of ${G.nodes.length} on the map</span><button class="x" id="chooseClose" aria-label="Close">×</button></div>
     <div class="legend mini">${Object.entries(TYPES).map(([k, [t]]) => `<span class="t-${k}"><i style="background:var(--t)"></i>${t}</span>`).join("")}</div>${items}`;
@@ -2024,6 +2006,7 @@ function goToBox(key) {
 }
 function axisHtml(W, H) {
   const down = ORIENT === "down";
+  if (LAYOUT === "lanes") return (AXISMARKS.rows || []).map(r => `<div class="band lane" style="left:16px;top:${r.y - 28}px;width:${W - 32}px;height:${r.h + 44}px"><span>${esc(r.name)}</span></div>`).join("");
   const ticks = AXISMARKS.ticks.map(k => down ? `<div class="tick ${k.cls}" style="top:${k.y - 14}px;width:${W}px"><span>${esc(k.label)}</span></div>` : `<div class="vtick ${k.cls}" style="left:${k.y - 14}px;height:${H}px"><span>${esc(k.label)}</span></div>`).join("");
   const regions = AXISMARKS.lanes.map(l => {
     const ps = l.keys.map(k => POS[k] && { ...POS[k], n: GRAPH.nodes.find(n => n.key === k) }).filter(Boolean);
