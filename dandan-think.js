@@ -415,7 +415,7 @@ function where(c, seat) {
  * decisions it chose as the full search did every time, for 15% fewer deals (lab/variants.mjs, ae-var3).
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024 } = {}) {
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide, all, rank });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
@@ -487,6 +487,21 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
   // then, by a point or two in its favour at any depth), and nothing is gained by it, as the reads take it of the other
   // player (dandan-observe.js). A land kept back at the first main phase may still go down after combat.
   if (s.step === "main2" && !s.stack.length && best.move.t === "pass" && list[0].move.t === "land") best = list[0];
+  // weighing every legal move (`all`), asked by the lab (`offCheck`): whether the pick is off Medium's shortlist (what the shortlist alone would have weighed),
+  // and with `margin` ({ se, pts }: the lab's margin arm, 12 November 2026, the planning chat) such a pick stands only if it
+  // leads the best shortlist move by se standard errors of the gap, deal by deal, plus pts
+  let off = false;
+  if (all && (offCheck || margin)) {
+    const short = new Set(candidates(s, seat, { wide, all: false, rank }).map(key));
+    off = !short.has(key(best.move));
+    const sb = off && margin ? ranked.find(c => short.has(key(c.move))) : null;
+    if (sb) {
+      const k = Math.min(vals[sb.i].length, vals[best.i].length);
+      const diffs = vals[best.i].slice(0, k).map((x, j) => x - vals[sb.i][j]), m = diffs.reduce((a, b) => a + b, 0) / Math.max(1, k);
+      const sd = Math.sqrt(diffs.reduce((a, x) => a + (x - m) ** 2, 0) / Math.max(1, k - 1));
+      if (!k || m < margin.se * sd / Math.sqrt(k) + margin.pts) { best = sb; off = false; }
+    }
+  }
   // each other move against the chosen one, deal by deal over the deals they share: how often the chosen one came out
   // ahead (better), and behind (worse); what's left were even
   for (const c of list) {
@@ -496,7 +511,7 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
     for (let j = 0; j < k; j++) { const g = vals[best.i][j] - vals[c.i][j]; if (g > 1e-6) better++; else if (g < -1e-6) worse++; }
     Object.assign(c, { vs: k, better, worse });
   }
-  return { best: best.move, list: [best, ...ranked.filter(c => c !== best)], deals: d, only: false };
+  return { best: best.move, list: [best, ...ranked.filter(c => c !== best)], deals: d, only: false, off };
 }
 /**
  * The moves still in the race: one goes when, over the deals they share, it trails the leader by more than three times
@@ -578,11 +593,14 @@ export function coachBudget(kind, depth) {
 }
 
 /** Hard's move: Medium's answer to a question it doesn't weigh (the mulligan, a name), else the look-ahead's best. */
-export function thinkMove(s, seat, budget = BUDGET.move) {
+export const thinkMove = (s, seat, budget = BUDGET.move) => thinkMoveOff(s, seat, budget).move;
+/** thinkMove's move, and whether it was off Medium's shortlist (`off`, weighing every legal move only; the lab counts them). */
+export function thinkMoveOff(s, seat, budget = BUDGET.move) {
   const p = s.pending;
-  if (p && ["mull", "bottom", "name"].includes(p.t)) return policyMove(s, seat);
-  if (!p && !moves(s, seat, true).length) return PASS;
-  return think(s, seat, budget).best;
+  if (p && ["mull", "bottom", "name"].includes(p.t)) return { move: policyMove(s, seat), off: false };
+  if (!p && !moves(s, seat, true).length) return { move: PASS, off: false };
+  const r = think(s, seat, budget);
+  return { move: r.best, off: !!r.off };
 }
 
 // ---------- four paths (Korbi, 11 November 2026) ----------
