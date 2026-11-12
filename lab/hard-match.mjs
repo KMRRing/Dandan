@@ -18,6 +18,9 @@ const [shard, shards, out, specA, specB] = [Number(process.argv[2]), Number(proc
 const deals = Number(process.argv[7] ?? 64), pairs = Number(process.argv[8] ?? 200), first = Number(process.argv[9] ?? 150000);
 async function judgeOf(t) {
   if (!t || t === "-") return undefined;
+  // "avg(<judge>,<judge>…)" (12 November 2026, plan item 5): the mean of several nets' chances, e.g. avg(@jt130,@aa-g8-s3-c#19)
+  const avg = t.match(/^avg\((.+)\)$/);
+  if (avg) { const js = await Promise.all(avg[1].split(",").map(judgeOf)); return (s, me) => js.reduce((a, j) => a + j(s, me), 0) / js.length; }
   if (t.startsWith("@")) {
     const [job, v] = t.slice(1).split("#"), ls = (await readParts(job)).flatMap(x => x.split("\n").filter(Boolean)).map(l => JSON.parse(l));
     return makeJudge((v == null ? ls[0] : ls.find(l => l.variant === Number(v))).layers);
