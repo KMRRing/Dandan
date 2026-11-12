@@ -1,0 +1,2 @@
+{"i":189,"turn":31,"step":"main1","pending":null,"stack":[],"lib":11,"who":0,"hands":[7,3],"played":"play Island","capped":true,"ms":300026,"nodes":3405824,"nChoices":2,"best":null,"madeV":null,"all":[]}
+{"i":209,"turn":34,"step":"main1","pending":null,"stack":[],"lib":4,"who":1,"hands":[4,4],"played":"cast Take Inventory","capped":true,"ms":300045,"nodes":3621888,"nChoices":25,"best":null,"madeV":null,"all":[]}

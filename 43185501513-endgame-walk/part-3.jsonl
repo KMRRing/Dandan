@@ -1,0 +1,2 @@
+{"i":192,"turn":32,"step":"main1","pending":null,"stack":[],"lib":10,"who":1,"hands":[5,4],"played":"pass","capped":true,"ms":300028,"nodes":3695616,"nChoices":3,"best":null,"madeV":null,"all":[]}
+{"i":212,"turn":34,"step":"main1","pending":null,"stack":["Gone Missing"],"lib":0,"who":0,"hands":[4,6],"played":"pass","capped":false,"ms":857,"nodes":10316,"nChoices":1,"best":{"name":"pass","v":0},"madeV":0,"all":[["pass",0]]}

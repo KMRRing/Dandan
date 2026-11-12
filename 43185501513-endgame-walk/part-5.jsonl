@@ -1,0 +1,2 @@
+{"i":194,"turn":32,"step":"main2","pending":null,"stack":[],"lib":10,"who":1,"hands":[5,4],"played":"play Island","capped":true,"ms":300042,"nodes":5383168,"nChoices":3,"best":null,"madeV":null,"all":[]}
+{"i":214,"turn":35,"step":"upkeep","pending":null,"stack":[],"lib":0,"who":0,"hands":[4,7],"played":"pass","capped":false,"ms":5,"nodes":48,"nChoices":2,"best":{"name":"pass","v":0},"madeV":0,"all":[["pass",0],["cast Predict (holding priority)",0]]}

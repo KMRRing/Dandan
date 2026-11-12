@@ -1,0 +1,2 @@
+{"i":193,"turn":32,"step":"attackers","pending":"attack","stack":[],"lib":10,"who":1,"hands":[5,4],"played":"attack with 1","capped":true,"ms":300062,"nodes":4075520,"nChoices":1,"best":null,"madeV":null,"all":[]}
+{"i":213,"turn":34,"step":"main1","pending":null,"stack":[],"lib":1,"who":1,"hands":[4,6],"played":"use Clue","capped":false,"ms":1151,"nodes":17214,"nChoices":3,"best":{"name":"pass","v":1},"madeV":1,"all":[["pass",1],["use Clue (holding priority)",1],["cast Dandân",1]]}

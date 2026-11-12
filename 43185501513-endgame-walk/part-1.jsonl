@@ -1,0 +1,2 @@
+{"i":190,"turn":31,"step":"main1","pending":null,"stack":[],"lib":11,"who":0,"hands":[6,3],"played":"cast Mind Bend at Dandân","capped":true,"ms":300059,"nodes":2461696,"nChoices":3,"best":null,"madeV":null,"all":[]}
+{"i":210,"turn":34,"step":"main1","pending":null,"stack":["Take Inventory"],"lib":4,"who":0,"hands":[4,3],"played":"pass","capped":false,"ms":5671,"nodes":40889,"nChoices":1,"best":{"name":"pass","v":0},"madeV":0,"all":[["pass",0]]}
