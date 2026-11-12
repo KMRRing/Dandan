@@ -1,7 +1,9 @@
 // The value nets' report card on Korbi's own games (12 November 2026, the planning chat's item 2): for each judge named, over
 // the kept games (games/*.json of the game-records branch), played again under the shown rules:
 //   1. residuals: at the start of each turn (nothing on the stack, library 15+), the judge's chance for the player to move
-//      against whether that player won: Brier, and won − judge by land lead and by card lead (as lab/residuals.mjs);
+//      against whether that player won: Brier, and won − judge by land lead and by card lead (as lab/residuals.mjs), each
+//      also split by whose lead it is (12 Nov, the planning chat: Monte wins most of these games, so "more lands won 71%" may
+//      mostly mean that player was Monte), and Monte's seat by the library's size (over 40, 21 to 40, 20 or fewer);
 //   2. hand flaws by card: at each first main phase, each card in each hand taken out (to the bottom of the library) and the
 //      holder's chance compared; how often a card's going helps by more than a point (as lab/judge-hand.mjs). Mind Bend named;
 //   3. Monte's casts the base judge (the first named, v14) disliked: Monte (seat 1) casting a card whose going the base judge
@@ -9,6 +11,7 @@
 //      with each judge.
 // A judge is a file in judges/ (ag-v14.json), "@<job>[#variant]" (a lab job's line), or several joined by "+" (their mean).
 // usage (a lab job, one shard): node lab/report-card.mjs <shard> <shards> <out> <name=judge,name=judge,…> [Hard's deals 256]
+//        env PARTS=residuals (or flaws, casts, comma-separated) for some parts only
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -22,6 +25,7 @@ import { isLand } from "../dandan-core.js";
 import { DECK } from "../dandan-cards.js";
 
 const out = process.argv[4], deals = Number(process.argv[6]) || 256, R = shownRules, J = x => JSON.parse(JSON.stringify(x));
+const PARTS = new Set((process.env.PARTS || "residuals,flaws,casts").split(","));
 async function judgeOf(spec) {
   const parts = spec.split("+");
   if (parts.length > 1) { const js = await Promise.all(parts.map(judgeOf)); return (s, me) => js.reduce((a, j) => a + j(s, me), 0) / js.length; }
@@ -54,7 +58,7 @@ for (const game of games) {
       const me = s.active, foe = 1 - me, lands = x => s.bf.filter(p => p.ctl === x && p.id < 80 && isLand(p)).length;
       named.forEach((n, k) => here[k].push({ me, p: n.judge(R.restore(J(s)), me), land: lands(me) - lands(foe), hand: s.hand[me].length - s.hand[foe].length, lib: s.lib.length }));
     }
-    if (s.turn !== lastMain && s.step === "main1" && !s.stack.length && !s.pending) {
+    if (PARTS.has("flaws") && s.turn !== lastMain && s.step === "main1" && !s.stack.length && !s.pending) {
       lastMain = s.turn;
       named.forEach((n, k) => {
         for (const who of [0, 1]) {
@@ -68,7 +72,7 @@ for (const game of games) {
       });
     }
     // Monte (seat 1) casting a card the base judge would rather not hold
-    if (seat === 1 && move?.t === "cast" && !s.pending) {
+    if (PARTS.has("casts") && seat === 1 && move?.t === "cast" && !s.pending) {
       const k = s.hand[1].indexOf(move.card);
       if (k >= 0) {
         const b = base.judge(R.restore(J(s)), 1), t = R.restore(J(s)); t.hand[1].splice(k, 1); t.lib.push(move.card);
@@ -89,16 +93,21 @@ const lines = [];
 const say = o => { lines.push(JSON.stringify(o)); console.log(JSON.stringify(o)); };
 say({ games: games.length, judges: named.map(n => `${n.name}=${n.spec}`), deals });
 const bucket = (rows, f, lo, hi) => { const b = rows.filter(r => f(r) >= lo && f(r) <= hi); return b.length ? { n: b.length, judge: +(b.reduce((a, r) => a + r.p, 0) / b.length).toFixed(3), won: +(b.reduce((a, r) => a + r.won, 0) / b.length).toFixed(3) } : null; };
+const LAND_ROWS = [["3+ fewer", -99, -3], ["2 fewer", -2, -2], ["1 fewer", -1, -1], ["even", 0, 0], ["1 more", 1, 1], ["2 more", 2, 2], ["3+ more", 3, 99]];
+const CARD_ROWS = [["3+ fewer", -99, -3], ["1-2 fewer", -2, -1], ["even", 0, 0], ["1-2 more", 1, 2], ["3+ more", 3, 99]];
+const leads = rows => ({ landLead: Object.fromEntries(LAND_ROWS.map(([l, a, b]) => [l, bucket(rows, r => r.land, a, b)])), cardLead: Object.fromEntries(CARD_ROWS.map(([l, a, b]) => [l, bucket(rows, r => r.hand, a, b)])) });
+const brierOf = rows => +(rows.reduce((a, r) => a + (r.p - r.won) ** 2, 0) / Math.max(1, rows.length)).toFixed(4);
 named.forEach((n, k) => {
-  const mid = turns[k].filter(r => r.lib >= 15), brier = mid.reduce((a, r) => a + (r.p - r.won) ** 2, 0) / Math.max(1, mid.length);
-  say({ part: "residuals", judge: n.name, positions: mid.length, brier: +brier.toFixed(4),
-    landLead: Object.fromEntries([["3+ fewer", -99, -3], ["2 fewer", -2, -2], ["1 fewer", -1, -1], ["even", 0, 0], ["1 more", 1, 1], ["2 more", 2, 2], ["3+ more", 3, 99]].map(([l, a, b]) => [l, bucket(mid, r => r.land, a, b)])),
-    cardLead: Object.fromEntries([["3+ fewer", -99, -3], ["1-2 fewer", -2, -1], ["even", 0, 0], ["1-2 more", 1, 2], ["3+ more", 3, 99]].map(([l, a, b]) => [l, bucket(mid, r => r.hand, a, b)])) });
+  const mid = turns[k].filter(r => r.lib >= 15);
+  // whose lead: the rows from Monte's side (seat 1 to move: its lead, its chance, whether it won) and from the human's
+  const monte = mid.filter(r => r.me === 1), human = mid.filter(r => r.me === 0);
+  const lib = Object.fromEntries([["over 40", 41, 99], ["21 to 40", 21, 40], ["20 or fewer", 0, 20]].map(([l, a, b]) => { const rs = turns[k].filter(r => r.me === 1 && r.lib >= a && r.lib <= b); return [l, rs.length ? { ...bucket(rs, () => 0, 0, 0), brier: brierOf(rs) } : null]; }));
+  if (PARTS.has("residuals")) say({ part: "residuals", judge: n.name, positions: mid.length, brier: brierOf(mid), ...leads(mid), monte: leads(monte), human: leads(human), monteByLibrary: lib });
   const all = [...flaws[k].values()].reduce((a, e) => ({ n: a.n + e.n, bad: a.bad + e.bad }), { n: 0, bad: 0 });
   const cards = [...flaws[k]].filter(([, e]) => e.bad).sort((a, b) => b[1].bad / b[1].n - a[1].bad / a[1].n).map(([c, e]) => ({ card: c, held: e.n, betterWithout: +(e.bad / e.n).toFixed(3), mean: +(e.sum / e.bad).toFixed(3) }));
-  say({ part: "flaws", judge: n.name, cardsTried: all.n, betterWithout: +(all.bad / Math.max(1, all.n)).toFixed(4), mindBend: cards.find(c => c.card === "Mind Bend") || null, cards });
+  if (PARTS.has("flaws")) say({ part: "flaws", judge: n.name, cardsTried: all.n, betterWithout: +(all.bad / Math.max(1, all.n)).toFixed(4), mindBend: cards.find(c => c.card === "Mind Bend") || null, cards });
 });
-say({ part: "casts", judge: base.name, count: casts.length });
+if (PARTS.has("casts")) say({ part: "casts", judge: base.name, count: casts.length });
 for (const c of casts) {
   const plays = {};
   for (const n of named) {

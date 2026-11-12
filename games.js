@@ -29,6 +29,10 @@ async function main() {
   if (!(await keyOk(new URLSearchParams(location.search).get("k")))) { location.replace("./"); return; }
   mountSettings("history");                                  // the gear: to the game lab (lab.html), with the same key
   await load();
+  // a link to one position (12 November 2026: positions sent to the planning chat to mark): &g=<game key>&m=<move>, the game
+  // opened after that many moves
+  const q = new URLSearchParams(location.search), g = q.get("g"), r = g && rows.find(x => x.key === g);
+  if (r) { await show(r); if (open && q.get("m") != null) { open.at = Math.max(0, Math.min(open.total, Number(q.get("m")) || 0)); draw(); } }
 }
 /** Reads the index and the unfinished games again (the page keeps no live feed: Refresh is how a game just finished shows). */
 async function load() {
