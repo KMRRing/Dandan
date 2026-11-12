@@ -43,6 +43,30 @@ try {
     if (moves?.length === g.n) games.push({ kept: true, src: `kept:${files[k]}`, R: shownRules, opts: { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
   }
 } catch { /* no game-records: self-play only */ }
+
+// ---------- the kind of a move: card, mode, whose target ----------
+function kindOf(s, seat, m) {
+  const t = m.targets?.[0], p = t?.id != null ? perm(s, t.id) : null;
+  return { t: m.t, card: m.card != null ? DECK[m.card] ?? "token" : null, mode: m.mode ?? null, target: !t ? null : t.k === "p" ? (t.seat === seat ? "own player" : "their player") : t.sid != null ? "spell" : p ? (p.ctl === seat ? "own" : "theirs") : t.k };
+}
+// (restored 12 Nov 19:10Z: cf4d293 dropped these two, and every shard of aa-i2c stopped at its first case)
+/** The real game played on from record `G` (before its next move) after `m` by `seat`, the engines salted by `salt`: 1 if `seat` won, 0 lost, ½ both. */
+function playOn(R, G, seat, m, salt) {
+  let r = applyMove(R, G, seat, m, 0);
+  if (r.error) return null;
+  G = r.G;
+  for (let i = 0; i < 4000 && !R.over(G.state); i++) {
+    const who = R.toMove(G.state), x = R.restore(J(G.state));
+    Math.random = seeded(mix(salt, i + 1));
+    const mv = thinkMove(x, who, { deals, ms: 1e9, judge, all: false, salt });
+    Math.random = realRandom;
+    r = applyMove(R, G, who, mv, 0);
+    if (r.error) return null;
+    G = r.G;
+  }
+  const w = G.state.winner;
+  return w === seat ? 1 : w == null || w < 0 ? 0.5 : 0;
+}
 const store = await labStore();
 const parts = (await store.list(`results/${job}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)).sort();
 for (let k = shard; k < parts.length; k += shards) {
