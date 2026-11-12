@@ -421,3 +421,7 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - Flat across every generation and depth: about a third of games reach a library of 20, a sixth reach 12, one in ten reaches 6,
   and only 3–4% end by decking. Stronger engines have not made games longer. Only Deep round-2 self-play with S1/S2 ran longer.
 - So the value nets learn the last part of the game from few games: ~4% decking finishes, ~18% of games reaching library 12.
+
+## 12 Nov — stage-1 tree-order test and three turns at equal time
+- aa-a1-g2g (`hard^aa-a1-pt3` vs Hard, Quick, 1,000 pairs): **45.6% ± 2.6**, time 1.41×. Under 48% → **stage 1 stops** (rule set in advance).
+- aa-a1-h-t3eq (`hard-t3` 64 deals vs Hard 105 deals, equal time 1.00×): **48.6% ± 2.7**. Three turns don't pay at equal time; Hard keeps 2 turns.
