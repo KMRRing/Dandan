@@ -266,7 +266,7 @@ const PROJECT = "project-b753c78c-ef88-46f1-b37", B = "gs://dandan-lab-807207481
 const CHECKPOINT = 400, Z99 = 2.576, THRESHOLD = 0.5, REJECT = 0.48; // Korbi 11 Nov: stop and reject once the top of the 99% range is under 48%
 const NAMES = {
   "aa-a1-g2e": "Stage 1: model orders Hard's moves (model 1)", "aa-a1-g2f": "Stage 1: model orders Hard's moves (model 2)", "aa-a0-gs1": "Screen summary",
-  "aa-h2-q": "Quick screen: new value nets vs v14", "spm": "Filler: mixed-depth self-play", "aa-a1-pt1": "Model training (stage 1)", "aa-a1-ex1": "Export of search decisions",
+  "aa-h2-q": "Quick screen: new value nets vs v14", "spm": "Filler: mixed-depth self-play", "spf": "Filler: v14 self-play", "sps": "Filler: S4 d self-play", "ab-g2-s4d": "Generation 2: S4 d self-play", "aa-a1-pt1": "Model training (stage 1)", "aa-a1-ex1": "Export of search decisions",
   "aa-a1-g1b": "G1: model vs Medium", "aa-a1-g2b": "G2: Hard + model vs Hard (Quick)", "aa-a1-pt2": "Model retraining (stage 1)", "aa-a1-g1c": "G1: retrained model vs Medium (guarded)", "aa-a1-g1d": "G1: retrained model vs Medium (unguarded)", "aa-a1-g2c": "G2: Hard + retrained model (guarded)", "aa-a1-g2d": "G2: Hard + retrained model (unguarded)", "aa-a1-g3": "G3: Hard + model vs current Monte (Deep)",
   "aa-a1-vd-plus": "Model alone vs current Monte", "aa-a1-vd-med": "Medium alone vs current Monte", "aa-g8-s3-d": "Value net S3, run d",
   "aa-g0-m": "Medium vs Medium, 30,000 games",
@@ -405,7 +405,7 @@ const noMatch = e => /matched no objects|No URLs matched|One or more URLs matche
 
 // ---------- job facts ----------
 // the tracker shows the screen's 18 sets as one line, and the filler batches as one
-const trackGroup = id => /^aa-h2-q-/.test(id) ? "aa-h2-q" : /^spm\d+$/.test(id) ? "spm" : groupOf(id);
+const trackGroup = id => /^aa-h2-q-/.test(id) ? "aa-h2-q" : /^(spm|spf|sps)\d+$/.test(id) ? id.slice(0, 3) : /^ab-g2-s4d-/.test(id) ? "ab-g2-s4d" : groupOf(id);
 const groupOf = id => { const m = id.match(/^(.*?)-\d+-(.+)$/); return m ? m[1] + "-" + m[2] : id; };
 const tokens = j => String(j.args).split(/\s+/);
 function kindOf(j) {
@@ -519,7 +519,7 @@ function repaint(v, now = false) {
   if (now || Date.now() - repaintAt > 1000) go(); else repaintTimer = setTimeout(go, 1000);
 }
 // the Fable plan's jobs: the new value nets (aa-g8), the Quick screen (aa-h2), stage 1 (aa-a1), read as one
-const FABLE_PFX = ["aa-g8", "aa-g9", "aa-h2", "aa-a0", "aa-a1", "spm"];
+const FABLE_PFX = ["aa-g8", "aa-g9", "aa-h2", "aa-a0", "aa-a1", "ab-g2", "spm", "sps"];
 async function loadFable() {
   // all at once, and without the screen's match results (18 sets of files): those load when the screen's box is opened
   const parts = await Promise.all(FABLE_PFX.map(p => loadMain(p, { rows: false })));
@@ -1125,7 +1125,11 @@ function buildGraph(d, fable = false) {
     const G2 = (key, ids, title, what, a, b) => node(key, "match", { jobs: jobsOf(...ids).length ? jobsOf(...ids) : [pl(ids[0], { script: "hard-match.mjs" })], title, what, a, b, planned: !jobsOf(...ids).length });
     G2("match:gate:jt130", ["aa-g9-tjt130v14b", "aa-g9-tjt130v14b-r"], "Deep gate: jt130 vs v14", "Hard at Deep with jt130 against Hard at Deep with v14, gate rule. Crowned: 54.0% ± 3.5 (50.5–57.5) at 1,200 pairs. In the game lab; not live until you say.", "Hard at Deep + jt130", "Hard at Deep + v14");
     G2("match:gate:s3d", ["aa-g9-s3dv14b"], "Deep gate: S3 d vs v14", "53.2% at 595 pairs; not extended (S4 d is the same recipe on three times the games).", "Hard at Deep + S3 d", "Hard at Deep + v14");
-    G2("match:gate:s4d", ["aa-g9-s4dv14b"], "Deep gate: S4 d vs v14", "Hard at Deep with S4 d (Quick 54.6%) against Hard at Deep with v14, 600 pairs, gate rule; thinking time logged per side.", "Hard at Deep + S4 d", "Hard at Deep + v14");
+    G2("match:gate:s4d", ["aa-g9-s4dv14b"], "Deep gate: S4 d vs v14", "Crowned (12 Nov): 57.6% ± 3.6 at 575 pairs, above 50% even if it lost every pair still to come. About 1.3× v14's thinking time. Korbi plays it by hand before it replaces v14.", "Hard at Deep + S4 d", "Hard at Deep + v14");
+    // generation 2 (Fable, 12 Nov): S4 d's own games, a net at 25,000 and at 50,000 to show whether more games still pay
+    node("set:gen2", "set", { jobs: jobsOf("ab-g2-s4d-1", "ab-g2-s4d-2").length ? jobsOf("ab-g2-s4d-1", "ab-g2-s4d-2") : [pl("ab-g2-s4d-1")], title: "Generation 2: 50,000 games of S4 d", what: "Hard at 128 deals with S4 d in both seats, like for like with the ~56,000 games S4 d learned from. Two halves of 25,000." });
+    P("judge:gen2-25", "judge", "Value net on 25,000 generation-2 games", "S4 d's recipe on the first half: does half the games already give most of the gain?", ["set:gen2"]);
+    P("judge:gen2-50", "judge", "Value net on 50,000 generation-2 games", "S4 d's recipe on all of generation 2; screened and gated against S4 d.", ["set:gen2"]);
     node("match:gate:s5", "match", { jobs: [pl("aa-g9-s5v14b", { script: "hard-match.mjs" })], planned: true, title: "Next: race net screen, then Deep gate", what: "S5 at Quick against v14 (1,000 pairs); a Deep gate if it does better than S4 d." });
     node("check:rc1", "check", { jobs: jobsOf("aa-a0-rc1"), title: "Report card: every net on your kept games", what: "58 games, 1,375 positions. Every net underrates a land lead alike (+2 lands: about 52% said, 71% won) and over-punishes a card deficit (3+ behind: 20% said, 38% won). A held card lowering its holder's chance: S4 d 0.3%, v14 2.4%, jt130 3.0%. Best Brier: mean of jt130 and S3 c, 0.192." });
     node("check:gshape", "check", { jobs: jobsOf("aa-a0-gshape1"), title: "Game shape: how often games reach the late game", what: "Flat across every generation: about 54% of games reach a library of 30, 32% of 20, 18% of 12, 10% of 6; 3–4% end by decking. Stronger engines have not made games longer." });
@@ -1179,7 +1183,7 @@ function buildGraph(d, fable = false) {
     J("set:round", "engine:model-r", "judge:value-r"); J("engine:model-r", "check:screen-r"); J("judge:value-r", "check:screen-r"); J("check:screen-r", "match:gate-r");
     J("match:gate-r", "set:round", "check:crown2", "engine:rl"); J("engine:rl", "judge:belief", "engine:search3"); J("judge:belief", "engine:search3");
     J("check:alt", "engine:search3"); J("engine:search3", "match:gate3"); J("match:gate3", "check:crown2");
-    J("set:spb", "judge:job:aa-g8-s4#best"); J("set:spm", "judge:job:aa-g8-s4#best"); J("judge:job:aa-g8-s4#best", "check:screen", "match:gate:s4d", "judge:job:aa-g8-s5#best");
+    J("set:spb", "judge:job:aa-g8-s4#best"); J("set:spm", "judge:job:aa-g8-s4#best"); J("judge:job:aa-g8-s4#best", "check:screen", "match:gate:s4d", "judge:job:aa-g8-s5#best", "set:gen2"); J("match:gate:s4d", "set:gen2");
     J("judge:job:jt130#0", "match:gate:jt130"); J("judge:job:aa-g8-s3#best", "match:gate:s3d"); J(V14, "check:rc1"); J("check:screen", "check:rc1");
     J("check:gshape", "check:endgame"); J("check:endgame", "judge:job:aa-g8-s5#best"); J("judge:job:aa-g8-s5#best", "match:gate:s5");
     for (const g of ["match:gate:jt130", "match:gate:s3d", "match:gate:s4d", "match:gate:s5"]) J(g, "check:crown");
