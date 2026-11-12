@@ -1885,41 +1885,26 @@ function timeLayout(G, d, only) {
 }
 // ---------- lanes (12 Nov, Korbi) ----------
 // One lane a kind of box, in the order work flows: Medium engines; training sets and value nets; engines (Hard: a net and a
-// Medium); matches and measurements. Each idea is a block across all four lanes, its boxes packed side by side with no time
-// gaps; blocks run oldest idea first. Inside a block each lane is ordered by when its boxes happened, then pulled under the
-// boxes they connect to (the mean place of their neighbours, a few sweeps), so lines cross less.
+// Medium); matches and measurements. Each idea is a block across all four lanes, oldest idea first; inside a block the boxes
+// of one lane are stacked on each other (Korbi, 21:23: "stacked above each other, not next to each other"), oldest first, so
+// a block is one column wide and the map stays compact. A lane is as deep as its deepest stack.
 const LANE_OF = { medium: 0, set: 1, judge: 1, engine: 2, match: 3, check: 3 };
 const BLOCK_ORDER = ["old", "live", "medium", "games", "nets", "search", "gates", "checks", "model", "later"];
 function laneLayout(G, d, only) {
-  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), down = ORIENT === "down", GAP = 28, BLOCK_GAP = 90;
+  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), down = ORIENT === "down", GAP = 24, LANE_GAP = 70, BLOCK_GAP = 70;
   const along = n => (down ? hOf(n) : wOf(n)), across = n => (down ? wOf(n) : hOf(n));
   const when = n => { const x = t[n.key]; return !x ? 0 : x.plan ? 1e15 + x.rank : x.at === -Infinity ? -1 : x.at; };
-  const nb = new Map(nodes.map(n => [n.key, []]));
-  for (const [a, b] of G.edges) if (nb.has(a) && nb.has(b)) { nb.get(a).push(b); nb.get(b).push(a); }
-  const laneSize = [0, 0, 0, 0];
-  for (const n of nodes) laneSize[LANE_OF[n.t] ?? 3] = Math.max(laneSize[LANE_OF[n.t] ?? 3], across(n));
-  const laneAt = []; let c = 60; for (let i = 0; i < 4; i++) { laneAt[i] = c; c += (laneSize[i] || 0) + (laneSize[i] ? 70 : 0); }
-  const pos = {}, mid = {}, blocks = BLOCK_ORDER.filter(b => nodes.some(n => ideaOf(n) === b));
-  let x = 40;
-  for (const b of blocks) {
-    const rows = [[], [], [], []];
-    for (const n of nodes.filter(n => ideaOf(n) === b)) rows[LANE_OF[n.t] ?? 3].push(n);
-    rows.forEach(r => r.sort((a, z) => when(a) - when(z) || a.title.localeCompare(z.title)));
-    const place = () => { let w = 0; for (const r of rows) { let o = x; for (const n of r) { pos[n.key] = o; mid[n.key] = o + along(n) / 2; o += along(n) + GAP; } w = Math.max(w, o - x - GAP); } return w; };
-    place();
-    for (let sweep = 0; sweep < 4; sweep++) {
-      for (const r of sweep % 2 ? [...rows].reverse() : rows) {
-        const key = n => { const ms = nb.get(n.key).filter(k => mid[k] != null).map(k => mid[k]); return ms.length ? ms.reduce((s, v) => s + v, 0) / ms.length : mid[n.key]; };
-        const ks = new Map(r.map(n => [n.key, key(n)]));
-        r.sort((a, z) => ks.get(a.key) - ks.get(z.key) || when(a) - when(z));
-      }
-      place();
-    }
-    x += place() + BLOCK_GAP;
-  }
-  const out = {};
-  for (const n of nodes) { const a = pos[n.key], l = laneAt[LANE_OF[n.t] ?? 3]; out[n.key] = down ? { x: l, y: a } : { x: a, y: l }; }
-  return { pos: out, ticks: [], lanes: blocks.map(l => ({ l, keys: nodes.filter(n => ideaOf(n) === l).map(n => n.key) })), end: x, across: c };
+  const lane = n => LANE_OF[n.t] ?? 3, blocks = BLOCK_ORDER.filter(b => nodes.some(n => ideaOf(n) === b));
+  const stacks = blocks.map(b => [0, 1, 2, 3].map(l => nodes.filter(n => ideaOf(n) === b && lane(n) === l).sort((a, z) => when(a) - when(z) || a.title.localeCompare(z.title))));
+  const depth = [0, 1, 2, 3].map(l => Math.max(0, ...stacks.map(st => st[l].reduce((s, n) => s + across(n) + GAP, 0) - (st[l].length ? GAP : 0))));
+  const laneAt = []; let c = 60; for (let l = 0; l < 4; l++) { laneAt[l] = c; if (depth[l]) c += depth[l] + LANE_GAP; }
+  const pos = {}; let x = 40;
+  blocks.forEach((b, bi) => {
+    const width = Math.max(...stacks[bi].flat().map(along));
+    stacks[bi].forEach((st, l) => { let o = laneAt[l]; for (const n of st) { pos[n.key] = down ? { x: o, y: x } : { x, y: o }; o += across(n) + GAP; } });
+    x += width + BLOCK_GAP;
+  });
+  return { pos, ticks: [], lanes: blocks.map(l => ({ l, keys: nodes.filter(n => ideaOf(n) === l).map(n => n.key) })), end: x, across: c };
 }
 let AXISMARKS = { ticks: [], lanes: [] };
 // lay out what is on the map from scratch, in the current direction
