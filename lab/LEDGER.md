@@ -367,3 +367,7 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - Crowned means prepared for Korbi's decision: nothing goes live without him (LIVE_JUDGE unchanged).
 - 02:40Z: S4 run a was killed at 23:34 by a machine stopping (code 143) and S4 v2's claim lapsed at 23:33 without being
   taken over; both, and the S3 c gate's last stragglers, go to twins via aa-a0-rq3. S4 c and d are running.
+- 03:30Z: aa-a0-rq3's twin of the S3 c twin (aa-g9-s3v14b-r-r) wrongly treated the twin's pre-marked "kept" shards as lost and
+  queued ~590 Deep pairs; retired within minutes (shards already in hand finish). requeue.mjs fixed (5efc2eb). S4 a and v2
+  twins (aa-g8-s4-a-r, aa-g8-s4-v2-r) are correct.
+- **aa-h2-q-s3d (S3 run d, 128x64x32, at Quick vs v14): 53.9% ± 2.7, 1,000 pairs** — the best Quick score so far (jt130 53.0).
