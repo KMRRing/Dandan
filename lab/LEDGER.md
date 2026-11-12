@@ -405,3 +405,19 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   - item 5: aa-h2-q-avg3 (jt130+S4 d), aa-h2-q-avg4 (jt130+S3 d+S4 d) at Quick; the better gets a Deep gate at 54.6%+.
   - item 6: aa-a1-g2g, hard^aa-a1-pt3 at Quick (wholly >50%: Deep gate; ≥48%: retrain on filler moves; <48%: stage 1 stops).
   - item 7: aa-a1-h-t3eq, three turns at 64 deals vs two turns at 105 deals.
+
+## 12 November 2026, ~07:55Z: how far games get (aa-a0-gshape1, lab/game-shape.mjs; Korbi: is decking a weakness, does late game grow?)
+
+| source | games | library ≤30 | ≤20 | ≤12 | ≤6 | ended by decking | turns |
+|---|---|---|---|---|---|---|---|
+| spb001–050 (old judge) | 5,936 | 53% | 31% | 17% | 9% | 4% | 29.4 |
+| spb201–250 | 5,844 | 54% | 32% | 18% | 9% | 3% | 28.8 |
+| spb401–446 (v14) | 5,493 | 54% | 33% | 18% | 10% | 4% | 28.8 |
+| spf (flat v14) | 11,880 | 54% | 33% | 18% | 10% | 4% | 28.8 |
+| Deep self-play, v14 | 709 | 50% | 30% | 17% | 7% | 4% | 27.7 |
+| Deep round 2, S1 | 707 | 58% | 41% | 27% | 17% | 9% | 31.9 |
+| Deep gate jt130 vs v14 | 1,200 | 55% | 32% | 18% | 9% | 3% | 29.0 |
+
+- Flat across every generation and depth: about a third of games reach a library of 20, a sixth reach 12, one in ten reaches 6,
+  and only 3–4% end by decking. Stronger engines have not made games longer. Only Deep round-2 self-play with S1/S2 ran longer.
+- So the value nets learn the last part of the game from few games: ~4% decking finishes, ~18% of games reaching library 12.
