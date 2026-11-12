@@ -3,3 +3,4 @@ Changing this file makes .github/workflows/k8s-apply.yml load the lab setup into
 2026-11-12T21:37:14Z: status and logs
 2026-11-12T21:38:43Z: image from Google's mirror
 2026-11-12T22:01:24Z: why are 16 machines not ready
+2026-11-12T22:03:07Z: apply without restarting workers
