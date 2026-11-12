@@ -611,6 +611,14 @@ function dialogQuestion(q, send, say) {
       return { say: say("Name a card"), buttons: [reopen()], dlg: { title: "Name a card", rows, cols: true } };
     }
     case "retarget": {
+      // a copy aimed at a card in the graveyard (a Mystic Retrieval): the graveyard opens with every card in it, the ones the copy
+      // can take marked (12 November 2026, Dave: copied with Narset's Reversal, there was no way to choose a new card; graveyard
+      // cards were offered as lit targets on the table, where they are not)
+      if (q.options.length && q.options.every(o => o[0]?.k === "g")) {
+        const keep = () => { closeView(); send({ t: "retarget" }); };
+        const yard = new Map(q.options.map(o => [o[0].id, () => { closeView(); send({ t: "retarget", targets: o }); }]));
+        return { say: say("Choose a new target for the copy", "Choose a card in the graveyard, or keep the target it has."), buttons: [{ label: "Keep the target", fn: keep }, reopen()], yard, yardNone: keep, yardNoneLabel: "Keep the target" };
+      }
       // the Reversal resolving is a target too: a copied counter aimed at it does nothing
       const keys = q.options.map(o => targetKey(o[0]));
       if (new Set(keys).size === keys.length) {      // each choice is a different thing on the table or the stack: tapped there
@@ -985,7 +993,7 @@ function fillView() {
     const by = aimed.get(id);
     rows.push(`<li class="${[dim, by ? "aimed" : ""].filter(Boolean).join(" ")}"><button type="button" class="dd-chip dd-name" data-look="${id}">${esc(name)}</button>${btn}${by ? `<small class="dd-aim" title="Aimed at by ${esc(by.join(", "))}">${esc(by.join(", "))}</small>` : ""}</li>`);
   }
-  const none = asked && question().yardNone ? (VROWS.push(question().yardNone), `<p><button type="button" class="btn dd-sm" data-v="${VROWS.length - 1}">Choose none</button></p>`) : "";
+  const none = asked && question().yardNone ? (VROWS.push(question().yardNone), `<p><button type="button" class="btn dd-sm" data-v="${VROWS.length - 1}">${esc(question().yardNoneLabel || "Choose none")}</button></p>`) : "";
   body.innerHTML = `${rows.length ? `<ol class="dd-yard">${rows.join("")}</ol>` : `<p class="dd-sub">Empty.</p>`}${none}
     ${s.exile.length && !choose ? `<h4>Exiled</h4><p class="dd-sub">${s.exile.map(id => esc(nm(id))).join(", ")}</p>` : ""}`;
 }
