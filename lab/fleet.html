@@ -238,9 +238,9 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
 @keyframes glow{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 3px var(--band)}}
 @media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s ease}}
-.sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));grid-auto-rows:var(--tileh,196px);gap:8px;align-content:start}
+.sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));grid-auto-rows:minmax(var(--tileh,150px),auto);gap:8px;align-content:start}
 /* every tile the same size (12 Nov, Korbi); one opened to read its notes grows; tiles are dragged to new places along the row */
-.sources>[data-tile]{height:auto;min-height:0;overflow:auto;cursor:grab}.sources>[data-tile="trk:now"]{grid-column:span 2}.sources>[data-tile].open{grid-row:span 2}
+.sources>[data-tile]{height:auto;min-height:0;overflow:hidden;cursor:grab}.sources>[data-tile="trk:now"]{grid-column:span 2}.sources>[data-tile].open{grid-row:span 2}
 .sources>[data-tile].dragging{opacity:.35}.sources>[data-tile].dropL{box-shadow:-3px 0 0 var(--accent)}.sources>[data-tile].dropR{box-shadow:3px 0 0 var(--accent)}
 .src{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:grid;gap:3px;align-content:start}
 .src .sh{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
