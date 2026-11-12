@@ -1884,38 +1884,53 @@ function timeLayout(G, d, only) {
   return { pos, ticks, lanes: lanes.map(l => ({ l, at: laneAt[l], size: laneSize[l], keys: nodes.filter(n => ideaOf(n) === l).map(n => n.key) })), end: y + 60, across: c };
 }
 // ---------- lanes (12 Nov, Korbi) ----------
-// Four rows, top to bottom, in the order work flows: Medium engines; training sets, then the value nets trained on them;
-// engines (Hard: a net and a Medium); matches and measurements. Each idea is a block across the four rows, its boxes side by
-// side in their row with no gaps for empty hours, blocks oldest idea first, each block tinted in its own colour. Inside a
-// block, a row is first put in time order (training sets before nets), then each box is drawn towards the boxes it connects
-// to (the mean place of its neighbours, a few sweeps up and down), so fewer lines cross. Always rows, whatever the direction.
+// Each idea is a block with its own tint, and inside it the boxes sit in rows in the order work flows: Medium engines;
+// training sets, then the value nets trained on them; engines (Hard: a net and a Medium); matches and measurements. A row
+// holds up to four boxes and carries on below; blocks are packed left to right, oldest idea first, onto as many shelves as it
+// takes to keep the map about as wide as two or three blocks, so it is compact rather than one long strip (21:31: "you put it
+// all on one row"). Inside a row, boxes are drawn towards the boxes they connect to, so fewer lines cross.
 const LANE_OF = { medium: 0, set: 1, judge: 1, engine: 2, match: 3, check: 3 };
 const BLOCK_ORDER = ["old", "live", "medium", "games", "nets", "search", "gates", "checks", "model", "later"];
 function laneLayout(G, d, only) {
-  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), GAP = 28, LANE_GAP = 80, BLOCK_GAP = 90;
+  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), GAP = 26, ROW_GAP = 46, PAD = 26, HEAD = 34, BLOCK_GAP = 60, PER = 4;
   const when = n => { const x = t[n.key]; return !x ? 0 : x.plan ? 1e15 + x.rank : x.at === -Infinity ? -1 : x.at; };
-  const lane = n => LANE_OF[n.t] ?? 3, flow = n => (n.t === "set" ? 0 : 1);
+  const lane = n => LANE_OF[n.t] ?? 3;
   const nb = new Map(nodes.map(n => [n.key, []]));
   for (const [a, b] of G.edges) if (nb.has(a) && nb.has(b)) { nb.get(a).push(b); nb.get(b).push(a); }
-  const rowH = [0, 1, 2, 3].map(l => Math.max(0, ...nodes.filter(n => lane(n) === l).map(hOf)));
-  const laneAt = []; let y = 60; for (let l = 0; l < 4; l++) { laneAt[l] = y; if (rowH[l]) y += rowH[l] + LANE_GAP; }
-  const pos = {}, mid = {}, blocks = BLOCK_ORDER.filter(b => nodes.some(n => ideaOf(n) === b));
-  let x = 40;
-  for (const b of blocks) {
-    const rows = [0, 1, 2, 3].map(l => nodes.filter(n => ideaOf(n) === b && lane(n) === l).sort((a, z) => flow(a) - flow(z) || when(a) - when(z) || a.title.localeCompare(z.title)));
-    const place = () => { let w = 0; for (const r of rows) { let o = x; for (const n of r) { pos[n.key] = o; mid[n.key] = o + wOf(n) / 2; o += wOf(n) + GAP; } if (r.length) w = Math.max(w, o - x - GAP); } return w; };
-    place();
-    for (let sweep = 0; sweep < 4; sweep++) {
-      for (const r of sweep % 2 ? [...rows].reverse() : rows) {
+  const blocks = BLOCK_ORDER.filter(b => nodes.some(n => ideaOf(n) === b)).map(b => {
+    const rows = [0, 1, 2, 3].map(l => nodes.filter(n => ideaOf(n) === b && lane(n) === l).sort((a, z) => (a.t === "set") - (z.t === "set") ? (a.t === "set" ? -1 : 1) : when(a) - when(z) || a.title.localeCompare(z.title)));
+    // each row's boxes, in lines of up to four, at offsets inside the block
+    const rel = {}, mid = {}, lay = () => {
+      let y = HEAD, w = 0;
+      for (const r of rows) for (let k = 0; k < r.length; k += PER) {
+        const line = r.slice(k, k + PER); let x = PAD;
+        for (const n of line) { rel[n.key] = { x, y }; mid[n.key] = x + wOf(n) / 2; x += wOf(n) + GAP; }
+        w = Math.max(w, x - GAP + PAD); y += Math.max(...line.map(hOf)) + ROW_GAP;
+      }
+      return { w, h: y - ROW_GAP + PAD };
+    };
+    lay();
+    for (let sweep = 0; sweep < 3; sweep++) {
+      for (const r of rows) {
         const ks = new Map(r.map(n => { const ms = nb.get(n.key).filter(k => mid[k] != null).map(k => mid[k]); return [n.key, ms.length ? ms.reduce((s, v) => s + v, 0) / ms.length : mid[n.key]]; }));
         r.sort((a, z) => (a.t === "set" && z.t === "judge" ? -1 : a.t === "judge" && z.t === "set" ? 1 : 0) || ks.get(a.key) - ks.get(z.key) || when(a) - when(z));
       }
-      place();
+      lay();
     }
-    x += place() + BLOCK_GAP;
+    return { b, rel, ...lay() };
+  });
+  // shelves: about the shape of the map's window (the blocks' total area spread at its width-to-height ratio), never narrower
+  // than the widest block, so the map fills the screen instead of running off in one direction
+  const view = $("cwrap") || { clientWidth: innerWidth, clientHeight: innerHeight * 0.75 }, ratio = Math.max(0.8, view.clientWidth / Math.max(200, view.clientHeight));
+  const area = blocks.reduce((s, k) => s + (k.w + BLOCK_GAP) * (k.h + BLOCK_GAP), 0);
+  const limit = Math.max(...blocks.map(k => k.w), Math.sqrt(area * ratio) * 1.1);
+  const pos = {}; let x = 40, y = 40, shelf = 0, across = 0;
+  for (const k of blocks) {
+    if (x > 40 && x + k.w > 40 + limit) { x = 40; y += shelf + BLOCK_GAP; shelf = 0; }
+    for (const [key, p] of Object.entries(k.rel)) pos[key] = { x: x + p.x, y: y + p.y };
+    k.at = { x, y }; x += k.w + BLOCK_GAP; shelf = Math.max(shelf, k.h); across = Math.max(across, x);
   }
-  const out = Object.fromEntries(nodes.map(n => [n.key, { x: pos[n.key], y: laneAt[lane(n)] }]));
-  return { pos: out, ticks: [], lanes: blocks.map(l => ({ l, keys: nodes.filter(n => ideaOf(n) === l).map(n => n.key) })), end: x, across: y };
+  return { pos, ticks: [], lanes: blocks.map(k => ({ l: k.b, keys: Object.keys(k.rel), box: { x: k.at.x, y: k.at.y, w: k.w, h: k.h } })), end: across, across: y + shelf + 60 };
 }
 // which way lines and the "feeds" menus run: lanes always flow down their rows; the time map follows the direction button
 const FLOW = () => (LAYOUT === "lanes" ? "down" : ORIENT);
@@ -2013,6 +2028,7 @@ function axisHtml(W, H) {
   const regions = AXISMARKS.lanes.map(l => {
     const ps = l.keys.map(k => POS[k] && { ...POS[k], n: GRAPH.nodes.find(n => n.key === k) }).filter(Boolean);
     if (!ps.length) return "";
+    if (l.box && !l.keys.some(k => MANUAL[k])) return `<div class="band i-${l.l}" style="left:${l.box.x}px;top:${l.box.y}px;width:${l.box.w}px;height:${l.box.h}px" title="${esc(IDEAS.find(i => i[0] === l.l)[2])}"><span>${esc(IDEA_NAME[l.l])}</span></div>`;
     const x0 = Math.min(...ps.map(p => p.x)) - 14, y0 = Math.min(...ps.map(p => p.y)) - 40, x1 = Math.max(...ps.map(p => p.x + wOf(p.n))) + 14, y1 = Math.max(...ps.map(p => p.y + hOf(p.n))) + 14;
     return `<div class="band i-${l.l}" style="left:${x0}px;top:${y0}px;width:${x1 - x0}px;height:${y1 - y0}px" title="${esc(IDEAS.find(i => i[0] === l.l)[2])}"><span>${esc(IDEA_NAME[l.l])}</span></div>`;
   }).join("");
