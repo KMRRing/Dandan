@@ -37,7 +37,7 @@ body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);-webkit-fon
 .rb-right{margin-left:auto;display:flex;align-items:center;gap:6px}
 .rb-right .fresh{font:11.5px var(--mono);color:var(--mute);white-space:nowrap}
 .rb-right .tiny{padding:2px 7px;font:600 11px var(--mono);color:var(--mute)}
-#workers{overflow:auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,1.15fr);gap:10px;padding:10px 12px;background:var(--bg)}
+#workers{overflow:auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:10px 12px;background:var(--bg)}
 #app.nopanel #workers{display:none}
 @media (max-width:760px){#workers{grid-template-columns:minmax(0,1fr)}}
 #split{cursor:row-resize;background:var(--line);position:relative;touch-action:none}
@@ -56,26 +56,23 @@ h1{font:800 26px/1.1 var(--display);font-stretch:85%;letter-spacing:.01em;margin
 h1 small{display:block;font:500 12px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
 .fresh{font:12.5px var(--mono);color:var(--mute)}
 .cframe{position:relative}
-#tracker{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-content:start;min-width:0}
-@media (max-width:1100px){#tracker{grid-template-columns:minmax(0,1fr)}}
-#tracker .tcard{display:grid;gap:4px;align-content:start;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0;cursor:pointer}
-#tracker .tcard{height:var(--cardh,auto);overflow:auto}#tracker .tcard.open{height:auto;max-height:none}
-#tracker .tcard:hover{border-color:var(--mute)}#tracker .tcard.open{border-color:var(--accent)}
-#tracker .tcard:not(.open) em,#tracker .tcard:not(.open) .why{display:none}
-#tracker .big3{font:600 22px/1.1 var(--mono);font-variant-numeric:tabular-nums}#tracker .big3 small{font-size:12px;color:var(--mute);font-weight:500}
-#tracker .bigbar{height:14px;border-radius:7px;margin:3px 0 1px}#tracker .bigbar i{border-radius:7px}
-#tracker .nums{display:flex;justify-content:space-between;gap:8px;font:11.5px var(--mono);color:var(--mute);font-variant-numeric:tabular-nums}
-#tracker .why{font-size:11.5px;color:var(--mute);line-height:1.35}
-#tracker .health{display:grid;gap:5px}
-#tracker .hrow{display:grid;grid-template-columns:auto auto 1fr;gap:2px 8px;align-items:baseline;font-size:12px}
-#tracker .hrow b{font:700 10.5px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
-#tracker .hrow>span:last-child{grid-column:1 / -1;color:var(--mute);font-size:11.5px;line-height:1.35}
-#tracker .tgrip{font:700 11px var(--display);letter-spacing:.09em;text-transform:uppercase;color:var(--mute);display:flex;justify-content:space-between}
-#tracker .tk{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:12px}
-#tracker .tk b{font-weight:600;grid-column:2;line-height:1.3}
-#tracker .tk em{grid-column:1 / -1;font-style:normal;font-size:11.5px;color:var(--mute);line-height:1.35;margin-bottom:4px}
-#tracker .tk span{font:11.5px var(--mono);color:var(--mute);font-variant-numeric:tabular-nums}
-#tracker .tk .bar{grid-column:1 / -1;height:4px}
+.tcard{display:grid;gap:4px;align-content:start;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0;cursor:pointer}
+.tcard:hover{border-color:var(--mute)}.tcard.open{border-color:var(--accent)}
+.tcard:not(.open) em,.tcard:not(.open) .why{display:none}
+.tcard .big3{font:600 22px/1.1 var(--mono);font-variant-numeric:tabular-nums}.tcard .big3 small{font-size:12px;color:var(--mute);font-weight:500}
+.tcard .bigbar{height:14px;border-radius:7px;margin:3px 0 1px}.tcard .bigbar i{border-radius:7px}
+.tcard .nums{display:flex;justify-content:space-between;gap:8px;font:11.5px var(--mono);color:var(--mute);font-variant-numeric:tabular-nums}
+.tcard .why{font-size:11.5px;color:var(--mute);line-height:1.35}
+.tcard .health{display:grid;gap:5px}
+.tcard .hrow{display:grid;grid-template-columns:auto auto 1fr;gap:2px 8px;align-items:baseline;font-size:12px}
+.tcard .hrow b{font:700 10.5px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.tcard .hrow>span:last-child{grid-column:1 / -1;color:var(--mute);font-size:11.5px;line-height:1.35}
+.tcard .tgrip{font:700 11px var(--display);letter-spacing:.09em;text-transform:uppercase;color:var(--mute);display:flex;justify-content:space-between}
+.tcard .tk{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:12px}
+.tcard .tk b{font-weight:600;grid-column:2;line-height:1.3}
+.tcard .tk em{grid-column:1 / -1;font-style:normal;font-size:11.5px;color:var(--mute);line-height:1.35;margin-bottom:4px}
+.tcard .tk span{font:11.5px var(--mono);color:var(--mute);font-variant-numeric:tabular-nums}
+.tcard .tk .bar{grid-column:1 / -1;height:4px}
 
 .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .controls label{font-size:13px;color:var(--mute)}
@@ -241,7 +238,10 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
 @keyframes glow{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 3px var(--band)}}
 @media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s ease}}
-.sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;align-content:start}
+.sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));grid-auto-rows:var(--tileh,196px);gap:8px;align-content:start}
+/* every tile the same size (12 Nov, Korbi); one opened to read its notes grows; tiles are dragged to new places along the row */
+.sources>[data-tile]{height:auto;min-height:0;overflow:auto;cursor:grab}.sources>[data-tile].open{grid-row:span 2}
+.sources>[data-tile].dragging{opacity:.35}.sources>[data-tile].dropL{box-shadow:-3px 0 0 var(--accent)}.sources>[data-tile].dropR{box-shadow:3px 0 0 var(--accent)}
 .src{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:grid;gap:3px;align-content:start}
 .src .sh{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
 .src .sh b{font:700 12px var(--display);letter-spacing:.09em;text-transform:uppercase}
@@ -304,7 +304,6 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
     <div class="srcwrap"><div class="sources" id="fleetbar" aria-live="polite"></div>
       <button class="srcmore" id="srcMore" title="Choose which cards to show" aria-label="Choose which cards to show" aria-expanded="false">⋯</button>
       <div class="srcmenu" id="srcMenu" hidden></div><div class="srcdetail" id="srcDetail" hidden></div></div>
-    <div id="tracker"></div>
   </section>
   <div id="split" role="separator" aria-orientation="horizontal" aria-label="Move to resize the workers' panel" tabindex="0"></div>
   <section id="view">
@@ -623,7 +622,7 @@ const TRACK_WHAT = (g, j) => ({
 let REPORTED = {};
 // a tap on a tracker card (not on a job, which goes to its box) opens or closes its plain-words lines; remembered in this browser
 document.addEventListener("click", e => {
-  const c = e.target.closest?.("#tracker .tcard"); if (!c || e.target.closest("[data-goto]")) return;
+  const c = e.target.closest?.(".tcard"); if (!c || e.target.closest("[data-goto]")) return;
   const open = new Set(store("fleet:openCards") || []), k = c.dataset.card;
   open.has(k) ? open.delete(k) : open.add(k); store("fleet:openCards", [...open]); c.classList.toggle("open", open.has(k));
 });
@@ -651,14 +650,14 @@ function drawTracker(d) {
   rows.sort((a, b) => (a.name.startsWith("Filler") ? 1 : 0) - (b.name.startsWith("Filler") ? 1 : 0) || b.running - a.running);
   const busy = rows.reduce((a, r) => a + r.running, 0);
   const total = FLEET ? FLEET.workers.reduce((a, w) => a + w.slots, 0) + (FLEET.gce && !FLEET.workers.some(w => w.cloud === "gcp") ? FLEET.gce.cores : 0) : 0;
-  if (!$("tracker")) return;
   // two cards (12 Nov, Korbi): pace and the next possible improvement, with a big bar; and what each job is, with its cores,
   // games and bar. The plain-words lines show only once a card is tapped open; a tap on a job still finds its box on the map.
   const open = new Set(store("fleet:openCards") || []), oc = k => (open.has(k) ? " open" : "");
-  $("tracker").innerHTML = `<div class="tcard${oc("next")}" data-card="next">${healthHtml(d, busy || total)}</div>` +
-    `<div class="tcard${oc("now")}" data-card="now"><div class="tgrip"><span>What the cores are on</span><span>${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span></div>` +
+  TRK_TILES = [["trk:next", "Pace and next improvement", `<div class="tcard${oc("next")}" data-card="next">${healthHtml(d, busy || total) || `<div class="tgrip"><span>Pace</span><span>Reading…</span></div>`}</div>`],
+    ["trk:now", "What the cores are on", `<div class="tcard${oc("now")}" data-card="now"><div class="tgrip"><span>What the cores are on</span><span>${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span></div>` +
     (rows.length ? "" : `<div class="tk"><b>Nothing running</b></div>`) + rows.slice(0, 8).map(r => `<div class="tk" role="button" tabindex="0" data-goto="${esc(r.ids.join(" "))}" title="Show ${esc(r.name)} on the map"><span class="dot live"></span><b>${esc(r.name)}</b><span>${r.running} cores${!r.shards ? "" : ` · ${r.per ? `${fmtN(r.done * r.per)}/${fmtN(r.shards * r.per)} games` : r.shards === 1 ? "training" : `${r.done}/${r.shards}`}`}</span>${r.shards > 1 ? `<div class="bar"><i style="width:${((100 * r.done) / r.shards).toFixed(1)}%"></i></div>` : ""}${r.what ? `<em>${esc(r.what)}</em>` : ""}</div>`).join("")
-    + (rows.length > 8 ? `<div class="fresh">and ${rows.length - 8} more</div>` : "") + `</div>`;
+    + (rows.length > 8 ? `<div class="fresh">and ${rows.length - 8} more</div>` : "") + `</div>`]];
+  composeTiles();
 }
 // ---------- pace and the next possible improvement (Korbi, 12 Nov) ----------
 // A shard's work, relative (core-hours by today's run times; only the ratios matter): the last hour's finished work against the
@@ -760,7 +759,7 @@ function srcCard(name, st, big, rows, act, title = "", key = name) {
 }
 function drawFleet() {
   const bar = $("fleetbar"); if (!bar) return;
-  if (!FLEET) { bar.innerHTML = `<div class="src"><div class="sh"><b>Workers</b><span class="st yellow">Reading…</span></div></div>`; return; }
+  if (!FLEET) { SRC_TILES = [["src:reading", "Workers", `<div class="src"><div class="sh"><b>Workers</b><span class="st yellow">Reading…</span></div></div>`]]; composeTiles(); return; }
   const by = c => FLEET.workers.filter(w => w.cloud === c), sum = (ws, f) => ws.reduce((a, w) => a + f(w), 0), S = SOURCES || {};
   const ago = t => t ? `${Math.max(0, Math.round((Date.now() - t) / 60000))} min ago` : null;
   const out = [];
@@ -820,24 +819,43 @@ function drawFleet() {
     MACH[CLOUD_NAMES[c] || c] = machRows(ws);
     out.push(srcCard(CLOUD_NAMES[c] || c, statusOf(b, n, ws.length), `${b}<small>/${n} cores</small>`, [["Machines", String(ws.length)]], activityOf(ws)));
   }
-  const hidden = new Set(store("fleet:hiddenCards") || []);
-  SRC_KEYS = out.map(h => [h.match(/data-key="([^"]*)"/)?.[1], h.match(/<b>([^<]*)<\/b>/)?.[1]]);
-  bar.innerHTML = out.filter(h => !hidden.has(h.match(/data-key="([^"]*)"/)?.[1])).join("") ||
+  SRC_TILES = out.map(h => [h.match(/data-key="([^"]*)"/)?.[1], h.match(/<b>([^<]*)<\/b>/)?.[1], h]);
+  composeTiles();
+  drawSrcDetail();
+}
+// ---------- the tile row (12 Nov, Korbi): machine cards and the two tracker cards as one row of equal tiles, in the order the
+// person dragged them to (kept in this browser), the hidden ones left out; a tile not yet placed goes at the end ----------
+let SRC_TILES = [], TRK_TILES = [], DRAG_TILE = null;
+function composeTiles() {
+  const bar = $("fleetbar"); if (!bar) return;
+  const hidden = new Set(store("fleet:hiddenCards") || []), order = store("fleet:tileOrder") || [];
+  const all = [...SRC_TILES, ...TRK_TILES], at = k => { const i = order.indexOf(k); return i < 0 ? 1e6 + all.findIndex(t => t[0] === k) : i; };
+  SRC_KEYS = all.map(([k, n]) => [k, n]);
+  const shown = all.filter(([k]) => !hidden.has(k)).sort((a, b) => at(a[0]) - at(b[0]));
+  bar.innerHTML = shown.map(([k, , h]) => h.replace(/^\s*<div /, `<div draggable="true" data-tile="${esc(k)}" `)).join("") ||
     `<div class="src"><div class="sh"><b>All cards hidden</b></div><div class="act">Use ⋯ to show them again</div></div>`;
   if (!$("srcMenu").hidden) drawSrcMenu();
-  drawSrcDetail();
-  syncCardHeight();
 }
-// the two tracker cards take the height of the machine cards' first row (12 Nov, Korbi), scrolling inside if they hold more;
-// one opened to read its notes grows to fit
-function syncCardHeight() {
-  const cards = [...document.querySelectorAll("#fleetbar .src")], w = $("workers");
-  if (!w) return;
-  if (!cards.length) { w.style.removeProperty("--cardh"); return; }
-  const top = cards[0].offsetTop, h = Math.max(...cards.filter(c => c.offsetTop === top).map(c => c.offsetHeight));
-  w.style.setProperty("--cardh", h + "px");
-}
-addEventListener("resize", () => syncCardHeight());
+$("fleetbar").addEventListener("dragstart", e => {
+  const t = e.target.closest?.("[data-tile]"); if (!t) return;
+  DRAG_TILE = t.dataset.tile; t.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", DRAG_TILE);
+});
+const clearDrop = () => document.querySelectorAll("#fleetbar .dropL, #fleetbar .dropR").forEach(x => x.classList.remove("dropL", "dropR"));
+$("fleetbar").addEventListener("dragover", e => {
+  const t = e.target.closest?.("[data-tile]"); if (!DRAG_TILE || !t || t.dataset.tile === DRAG_TILE) return;
+  e.preventDefault(); clearDrop();
+  const r = t.getBoundingClientRect(); t.classList.add(e.clientX < r.left + r.width / 2 ? "dropL" : "dropR");
+});
+$("fleetbar").addEventListener("drop", e => {
+  const t = e.target.closest?.("[data-tile]"); if (!DRAG_TILE || !t || t.dataset.tile === DRAG_TILE) return;
+  e.preventDefault();
+  const keys = [...$("fleetbar").querySelectorAll("[data-tile]")].map(x => x.dataset.tile).filter(k => k !== DRAG_TILE);
+  const r = t.getBoundingClientRect(), i = keys.indexOf(t.dataset.tile) + (e.clientX < r.left + r.width / 2 ? 0 : 1);
+  keys.splice(i, 0, DRAG_TILE);
+  const rest = (store("fleet:tileOrder") || []).filter(k => !keys.includes(k));
+  store("fleet:tileOrder", [...keys, ...rest]); DRAG_TILE = null; composeTiles();
+});
+$("fleetbar").addEventListener("dragend", () => { DRAG_TILE = null; clearDrop(); document.querySelectorAll("#fleetbar .dragging").forEach(x => x.classList.remove("dragging")); });
 // a tap on a card lists its machines (12 Nov, Korbi: "show what machines are idle"): silent first (paid for, not reporting),
 // then those with idle cores, then the full ones; each with its cores, how many are busy and what on. Tap again to close.
 let MACH = {}, OPEN_SRC = null, ACTS = {}, CARDS = {}, POP_AT = null;
@@ -2064,7 +2082,7 @@ document.addEventListener("touchstart", e => {
   if (!w) return;
   if (e.touches.length === 1) {
     // boxes, ports and buttons keep their own taps and drags; empty field pans
-    if (e.target.closest(".grip,button,input,a,summary,.menu,#tracker")) return;
+    if (e.target.closest(".grip,button,input,a,summary,.menu,.tcard")) return;
     const t = e.touches[0]; pan1 = { w, x: t.clientX, y: t.clientY, l: w.scrollLeft, t: w.scrollTop };
     return;
   }
