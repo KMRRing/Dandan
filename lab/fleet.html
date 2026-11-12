@@ -8,7 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* Layout: an instrument panel. Summary strip, then one section per kind of job; match cards put the chart beside the numbers on wide screens. */
+/* Layout (12 Nov 2026, Korbi): the whole screen and no more. A ribbon at the top (views and the map's tools, collapsible), the
+   workers' panel (a fifth of the height by default), a divider to move, and the view below it, which scrolls inside itself. */
 :root{
   --bg:#f3f5f7; --panel:#ffffff; --ink:#15202b; --mute:#5e6b78; --line:#dde3e9; --accent:#1f6fa8;
   --good:#1d8a5b; --on-accent:#ffffff; --bad:#c2412d; --wait:#b7791f; --band:rgba(31,111,168,.16); --grid:#e8edf2;
@@ -22,9 +23,31 @@
   --bg:#0e141b; --panel:#151d26; --ink:#e6edf3; --mute:#8b9aa8; --line:#243140; --accent:#5aa9e0;
   --good:#3fbf86; --bad:#ef6a55; --wait:#e0a84a; --band:rgba(90,169,224,.18); --grid:#1d2834; --on-accent:#0e141b; color-scheme:dark;}
 *{box-sizing:border-box}
-html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);-webkit-font-smoothing:antialiased}
-main{max-width:1040px;margin:0 auto;padding:22px 18px 56px;display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);-webkit-font-smoothing:antialiased}
+#app{height:100vh;height:100dvh;display:grid;grid-template-rows:auto var(--wh,20vh) 7px minmax(0,1fr);grid-template-columns:minmax(0,1fr)}
+#app.nopanel{grid-template-rows:auto 0 7px minmax(0,1fr)}
+#ribbon{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;padding:7px 12px;border-bottom:1px solid var(--line);background:var(--panel);min-width:0}
+#ribbon .tabs{border:0;gap:2px}
+#ribbon .tabs a{padding:5px 10px;border-radius:7px;border-bottom:0;margin:0;font:600 12.5px var(--body)}
+#ribbon .tabs a[aria-current="page"]{background:var(--ink);color:var(--bg)}
+.rb-tools{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.rb-tools button,.rb-tools .seg button,.rb-right button{font:500 12px var(--body);padding:4px 9px;border-radius:7px}
+.rb-tools .seg{border-radius:8px}.rb-sep{width:1px;height:18px;background:var(--line);margin:0 3px}
+.rb-right{margin-left:auto;display:flex;align-items:center;gap:6px}
+.rb-right .fresh{font:11.5px var(--mono);color:var(--mute);white-space:nowrap}
+.rb-right .tiny{padding:2px 7px;font:600 11px var(--mono);color:var(--mute)}
+#app.slim .rb-tools,#app.slim .tabs{display:none}
+#workers{overflow:auto;min-height:0;display:grid;grid-template-columns:minmax(0,3fr) minmax(260px,2fr);gap:10px;padding:10px 12px;background:var(--bg)}
+#app.nopanel #workers{display:none}
+@media (max-width:760px){#workers{grid-template-columns:minmax(0,1fr)}}
+#split{cursor:row-resize;background:var(--line);position:relative;touch-action:none}
+#split::after{content:"";position:absolute;left:50%;top:2px;width:40px;height:3px;margin-left:-20px;border-radius:2px;background:var(--mute);opacity:.5}
+#split:hover,#split:focus-visible{background:var(--accent);outline:0}
+#view{min-height:0;overflow:auto;padding:10px 12px;display:grid;align-content:start;gap:14px}
+#view.map{overflow:hidden;grid-template-rows:auto minmax(0,1fr);align-content:stretch}
+#view.map #canvasView{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;height:100%}
+#view.map .cframe{min-height:0;height:100%}
 .secs,.cframe,#canvasView{min-width:0}
 .secs{grid-template-columns:minmax(0,1fr)}
 header{display:grid;gap:14px}
@@ -33,10 +56,8 @@ h1{font:800 26px/1.1 var(--display);font-stretch:85%;letter-spacing:.01em;margin
 h1 small{display:block;font:500 12px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
 .fresh{font:12.5px var(--mono);color:var(--mute)}
 .cframe{position:relative}
-#tracker{position:absolute;top:8px;right:8px;z-index:5;display:grid;gap:5px;width:min(calc(100% - 16px),360px);padding:8px 10px;border:1px solid var(--line);border-radius:10px;
-  background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(4px);box-shadow:0 4px 14px rgba(0,0,0,.12)}
-#tracker:empty{display:none}
-#tracker{cursor:move;touch-action:none;user-select:none}#tracker .tgrip{font:600 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);display:flex;justify-content:space-between}
+#tracker{display:grid;gap:4px;align-content:start;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0}
+#tracker .tgrip{font:700 11px var(--display);letter-spacing:.09em;text-transform:uppercase;color:var(--mute);display:flex;justify-content:space-between}
 #tracker .tk{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:12px}
 #tracker .tk b{font-weight:600;grid-column:2;line-height:1.3}
 #tracker .tk em{grid-column:1 / -1;font-style:normal;font-size:11.5px;color:var(--mute);line-height:1.35;margin-bottom:4px}
@@ -141,7 +162,7 @@ details summary{cursor:pointer;font-size:12.5px;color:var(--mute)}
 .ctools{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
 .zoom{display:flex;gap:6px}
 .zoom button{min-width:38px}
-.cwrap{position:relative;height:max(440px,calc(100vh - 250px));overflow:auto;border:1px solid var(--line);border-radius:12px;
+.cwrap{position:relative;height:100%;overflow:auto;border:1px solid var(--line);border-radius:12px;
   background-color:var(--bg);background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:22px 22px;touch-action:none;cursor:grab}
 .csizer{position:relative}
 .canvas{position:absolute;left:0;top:0;transform-origin:0 0}
@@ -196,6 +217,9 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 .cnode{cursor:pointer}
 .x{border:0;background:transparent;color:var(--mute);font:600 16px/1 var(--body);padding:0 2px;cursor:pointer}
 .x:hover{color:var(--bad)}
+#chooser{position:fixed;z-index:40;top:44px;left:12px;width:min(760px,calc(100vw - 24px));max-height:70vh;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 34px rgba(0,0,0,.2);padding:10px 12px}
+#chooser .chead{display:flex;justify-content:space-between;align-items:center;font:700 11px var(--display);letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
+.legend.mini{gap:4px 10px;font-size:11.5px}
 .focus{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--accent);border-radius:10px;font-size:13.5px}
 .items summary{font-size:13px;color:var(--ink);cursor:pointer}
 .itemlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:8px;font-size:12.5px}
@@ -204,10 +228,18 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
 @keyframes glow{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 3px var(--band)}}
 @media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s ease}}
-.fleetbar{display:flex;flex-wrap:wrap;gap:6px 10px;margin:2px 0 8px}.fleetbar:empty{display:none}
-.fleetbar .fb{display:flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;font-size:12.5px;background:var(--panel,transparent)}
-.fleetbar .fb b{font-weight:600}.fleetbar .fb span{font:12px var(--mono);color:var(--mute);font-variant-numeric:tabular-nums}
-.fleetbar .lamp{width:9px;height:9px;border-radius:50%;flex:none}.lamp.ok{background:#3fb950}.lamp.part{background:#d29922}.lamp.off{background:#f85149}.lamp.unk{background:var(--mute)}
+.sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;align-content:start}
+.src{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:grid;gap:3px;align-content:start}
+.src .sh{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.src .sh b{font:700 12px var(--display);letter-spacing:.09em;text-transform:uppercase}
+.src .st{font:600 11.5px var(--mono);letter-spacing:.02em}
+.st.green{color:#2da44e}.st.yellow{color:#c69500}.st.orange{color:#e8710a}.st.red{color:#e5534b}
+.src .big2{font:600 20px/1.1 var(--mono);font-variant-numeric:tabular-nums}.src .big2 small{font-size:12px;color:var(--mute);font-weight:500}
+.src dl{display:grid;grid-template-columns:auto 1fr;gap:1px 10px;margin:2px 0 0;font-size:12px}
+.src dt{color:var(--mute)}.src dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.src .act{font-size:11.5px;color:var(--mute);line-height:1.35;overflow-wrap:anywhere}
+.src{min-width:0;overflow:hidden}
+.lamp{width:9px;height:9px;border-radius:50%;flex:none}
 .tk[data-goto]{cursor:pointer;border-radius:8px}.tk[data-goto]:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .cnode.flash{outline:3px solid var(--accent);outline-offset:3px;transition:outline-color 1.5s}
 .ideas{display:grid;gap:4px;padding:8px 0}.idea{border:1px solid var(--line);border-radius:10px;padding:6px 10px}
@@ -229,14 +261,20 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <div class="top">
-      <h1><small>Dandan lab</small>Fleet</h1>
-      <div class="fresh" id="fresh">Connecting to the lab bucket…</div>
-    </div>
-    <div class="fleetbar" id="fleetbar" aria-live="polite"></div>
+<div id="app">
+  <header id="ribbon">
     <nav class="tabs" aria-label="Views"><a href="#fable" id="tab-fable">Fable plan</a><a href="#pipeline" id="tab-pipeline">Pipeline</a><a href="#now" id="tab-now">Now</a><a href="#matches" id="tab-matches">Matches</a><a href="#jobs" id="tab-jobs">All jobs</a></nav>
+    <div id="mapTools" class="rb-tools"></div>
+    <div class="rb-right"><span class="fresh" id="fresh">Connecting to the lab bucket…</span>
+      <button class="tiny" id="panelToggle" title="Show or hide the workers' panel" aria-pressed="true">Workers</button>
+      <button class="tiny" id="ribbonToggle" title="Collapse or expand the ribbon" aria-label="Collapse the ribbon">▴</button></div>
+  </header>
+  <section id="workers" aria-label="The workers">
+    <div class="sources" id="fleetbar" aria-live="polite"></div>
+    <div id="tracker"></div>
+  </section>
+  <div id="split" role="separator" aria-orientation="horizontal" aria-label="Move to resize the workers' panel" tabindex="0"></div>
+  <section id="view">
     <div id="jobsTop" class="secs" style="gap:14px">
     <div class="controls">
       <label for="pfx">Job names starting with</label>
@@ -252,21 +290,21 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
       <div><b>Next milestone</b><span>—</span><em>&nbsp;</em></div>
     </div>
     </div>
-  </header>
-  <div id="msg"></div>
-  <div id="sections"></div>
-  <div id="canvasView" class="secs" style="gap:12px"></div>
-  <div id="nowView" class="secs" hidden></div>
-  <div id="matchesView" class="secs" hidden></div>
-  <p class="note">Reads the lab bucket as you, through your Google Cloud connector. The page only lists and reads files: it never queues, changes or deletes anything. When a match reaches a verdict, Claude retires its remaining shards at the next check-in. Refreshes every 2 minutes while open.</p>
-</main>
+    <div id="msg"></div>
+    <div id="sections"></div>
+    <div id="canvasView"></div>
+    <div id="nowView" class="secs" hidden></div>
+    <div id="matchesView" class="secs" hidden></div>
+  </section>
+  <div id="chooser" hidden></div>
+</div>
 <script>
 const SERVER = "Google Cloud CLI", TOOL = "run_gcloud_command";
 const PROJECT = "project-b753c78c-ef88-46f1-b37", B = "gs://dandan-lab-807207481983";
 const CHECKPOINT = 400, Z99 = 2.576, THRESHOLD = 0.5, REJECT = 0.48; // Korbi 11 Nov: stop and reject once the top of the 99% range is under 48%
 const NAMES = {
   "aa-a1-g2e": "Stage 1: model orders Hard's moves (model 1)", "aa-a1-g2f": "Stage 1: model orders Hard's moves (model 2)", "aa-a0-gs1": "Screen summary",
-  "aa-h2-q": "Quick screen: new value nets vs v14", "spm": "Filler: mixed-depth self-play", "spf": "Filler: v14 self-play", "sps": "Filler: S4 d self-play", "ab-g2-s4d": "Generation 2: S4 d self-play", "aa-a1-pt1": "Model training (stage 1)", "aa-a1-ex1": "Export of search decisions",
+  "aa-h2-q": "Quick screen: new value nets vs v14", "spm": "Filler: mixed-depth self-play", "spf": "Filler: v14 self-play", "sps": "Filler: S4 d self-play", "ab-g2-s4d": "Generation 2: S4 d self-play", "aa-i1": "Move-list test (every move vs shortlist)", "aa-i2": "Off-shortlist moves: which are blunders", "aa-i3": "Margin arm", "ac-q-s5": "S5 vs S4 d at Quick", "aa-a0-cc1": "Chart report card", "aa-a1-pt1": "Model training (stage 1)", "aa-a1-ex1": "Export of search decisions",
   "aa-a1-g1b": "G1: model vs Medium", "aa-a1-g2b": "G2: Hard + model vs Hard (Quick)", "aa-a1-pt2": "Model retraining (stage 1)", "aa-a1-g1c": "G1: retrained model vs Medium (guarded)", "aa-a1-g1d": "G1: retrained model vs Medium (unguarded)", "aa-a1-g2c": "G2: Hard + retrained model (guarded)", "aa-a1-g2d": "G2: Hard + retrained model (unguarded)", "aa-a1-g3": "G3: Hard + model vs current Monte (Deep)",
   "aa-a1-vd-plus": "Model alone vs current Monte", "aa-a1-vd-med": "Medium alone vs current Monte", "aa-g8-s3-d": "Value net S3, run d",
   "aa-g0-m": "Medium vs Medium, 30,000 games",
@@ -540,7 +578,11 @@ const TRACK_WHAT = (g, j) => ({
 // the shards each machine says it is on (workers/<name>.json): exact, and small to read, where a job of a thousand shards' claims
 // are too many for one connector reply (12 Nov: generation 2 showed as 1 core busy of 80)
 let REPORTED = {};
+// the plan's data last read (the cores box shows it whatever the view; the other views read other prefixes)
+let TRACK_D = null;
 function drawTracker(d) {
+  if (d && (d.pfx === "fable" || d.pfx === "aa-g")) TRACK_D = d;
+  d = TRACK_D || { jobs: [], done: {}, claims: {}, busyNow: {} };
   REPORTED = {};
   for (const w of FLEET?.workers || []) for (const b of w.busy || []) { const id = b.split("/")[0]; REPORTED[id] = (REPORTED[id] || 0) + 1; }
   const groups = new Map();
@@ -553,12 +595,15 @@ function drawTracker(d) {
     const per = gamesPerShard(js[0]), name = NAMES[g] || (/^aa-g1-sweep/.test(g) ? "Base value net run " + g.slice(-1) : /^aa-g1-base/.test(g) ? "Base value net" : js[0].purpose?.split(/[:(,]/)[0] || g);
     rows.push({ name, done, shards, per, running, what: TRACK_WHAT(g, js[0]), ids: js.map(j => j.id) });
   }
+  // what the machines report that the plan's data doesn't hold (another prefix, or not read yet): their cores, no progress
+  const known = new Set(d.jobs.map(j => j.id)), extra = {};
+  for (const [id, n] of Object.entries(REPORTED)) if (!known.has(id)) { const g = trackGroup(id); (extra[g] ||= { n: 0, ids: [] }).n += n; extra[g].ids.push(id); }
+  for (const [g, x] of Object.entries(extra)) rows.push({ name: NAMES[g] || g, done: 0, shards: 0, per: null, running: x.n, what: "", ids: x.ids });
   rows.sort((a, b) => (a.name.startsWith("Filler") ? 1 : 0) - (b.name.startsWith("Filler") ? 1 : 0) || b.running - a.running);
   const busy = rows.reduce((a, r) => a + r.running, 0);
   const total = FLEET ? FLEET.workers.reduce((a, w) => a + w.slots, 0) + (FLEET.gce && !FLEET.workers.some(w => w.cloud === "gcp") ? FLEET.gce.cores : 0) : 0;
   if (!$("tracker")) return;
-  placeTracker();
-  $("tracker").innerHTML = `<div class="tgrip"><span>What the cores are on · ${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span><span aria-hidden="true">⠿</span></div>` + (rows.length ? "" : `<div class="tk"><b>Nothing running</b></div>`) + rows.slice(0, 8).map(r => `<div class="tk" role="button" tabindex="0" data-goto="${esc(r.ids.join(" "))}" title="Show ${esc(r.name)} on the map"><span class="dot live"></span><b>${esc(r.name)}</b><span>${r.running} cores · ${r.per ? `${fmtN(r.done * r.per)}/${fmtN(r.shards * r.per)} games` : r.shards === 1 ? "training" : `${r.done}/${r.shards}`}</span>${r.shards > 1 ? `<div class="bar"><i style="width:${((100 * r.done) / r.shards).toFixed(1)}%"></i></div>` : ""}${r.what ? `<em>${esc(r.what)}</em>` : ""}</div>`).join("")
+  $("tracker").innerHTML = `<div class="tgrip"><span>What the cores are on</span><span>${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span></div>` + (rows.length ? "" : `<div class="tk"><b>Nothing running</b></div>`) + rows.slice(0, 8).map(r => `<div class="tk" role="button" tabindex="0" data-goto="${esc(r.ids.join(" "))}" title="Show ${esc(r.name)} on the map"><span class="dot live"></span><b>${esc(r.name)}</b><span>${r.running} cores${!r.shards ? "" : ` · ${r.per ? `${fmtN(r.done * r.per)}/${fmtN(r.shards * r.per)} games` : r.shards === 1 ? "training" : `${r.done}/${r.shards}`}`}</span>${r.shards > 1 ? `<div class="bar"><i style="width:${((100 * r.done) / r.shards).toFixed(1)}%"></i></div>` : ""}${r.what ? `<em>${esc(r.what)}</em>` : ""}</div>`).join("")
     + (rows.length > 8 ? `<div class="fresh">and ${rows.length - 8} more</div>` : "");
 }
 function paint(v) {
@@ -597,40 +642,56 @@ async function loadFleet() {
     for (const line of gceTxt.split("\n")) { const [, type, status] = line.trim().split(/\s+/); if (status !== "RUNNING") continue; gce.machines++; gce.cores += Number((type || "").match(/-(\d+)$/)?.[1] || 0); }
   }
   FLEET = { workers, gce, at: Date.now() };
+  SOURCES = await gcloud(`gcloud storage cat "${B}/fleet/sources.json"`).then(r => parsed(r.out)[0] || null, () => SOURCES);
+  if (typeof SNAP_MODE !== "undefined" && SNAP_MODE) GH = await fetch(SNAP_BASE + "github.json?v=" + Date.now()).then(r => (r.ok ? r.json() : null), () => null);
+}
+// the sources, a card each (12 Nov, Korbi): machines and cores, how busy, what they are on, the price, and a status word in
+// green (working), yellow (mostly), orange (underused) or red (idle or down). Prices and pools come from fleet/sources.json,
+// which Claude writes at each check (the page can't ask Rackspace or AWS itself); GitHub's runs from the snapshot's github.json.
+let SOURCES = null, GH = null;
+const statusOf = (busy, cores, machines) => !machines ? ["red", "Down"] : !busy ? ["red", "Idle"] : busy >= 0.9 * cores ? ["green", "Working"] : busy >= 0.5 * cores ? ["yellow", "Mostly busy"] : ["orange", "Underused"];
+function activityOf(ws) {
+  const by = {};
+  for (const w of ws) for (const b of w.busy || []) { const g = trackGroup(b.split("/")[0]); by[g] = (by[g] || 0) + 1; }
+  return Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([g, n]) => `${NAMES[g] || g} (${n})`).join(", ");
+}
+function srcCard(name, st, big, rows, act, title = "") {
+  return `<div class="src" title="${esc(title)}"><div class="sh"><b>${esc(name)}</b><span class="st ${st[0]}">${esc(st[1])}</span></div>
+    <div class="big2">${big}</div><dl>${rows.filter(r => r[1] != null && r[1] !== "").map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>${act ? `<div class="act">${esc(act)}</div>` : ""}</div>`;
 }
 function drawFleet() {
   const bar = $("fleetbar"); if (!bar) return;
-  if (!FLEET || !last) { bar.innerHTML = ""; return; }
-  const busyAll = Object.values(last.busyNow || {}).reduce((a, b) => a + b, 0);
-  const by = c => FLEET.workers.filter(w => w.cloud === c);
-  const sum = (ws, f) => ws.reduce((a, w) => a + f(w), 0);
-  const gw = by("gcp"), aw = by("aws");
-  const reported = sum(FLEET.workers, w => w.busy.length);
-  const pill = (lamp, name, txt, title = "") => `<div class="fb" title="${esc(title)}"><span class="lamp ${lamp}"></span><b>${name}</b><span>${txt}</span></div>`;
+  if (!FLEET) { bar.innerHTML = `<div class="src"><div class="sh"><b>Workers</b><span class="st yellow">Reading…</span></div></div>`; return; }
+  const by = c => FLEET.workers.filter(w => w.cloud === c), sum = (ws, f) => ws.reduce((a, w) => a + f(w), 0), S = SOURCES || {};
+  const ago = t => t ? `${Math.max(0, Math.round((Date.now() - t) / 60000))} min ago` : null;
   const out = [];
-  // Google: machines from Compute Engine, busy cores from the workers' own reports (or, before they report, unknown)
-  const g = FLEET.gce;
-  if (g) {
-    const gb = sum(gw, w => w.busy.length), known = gw.length > 0;
-    const lamp = !g.machines ? "off" : known ? (gb >= g.cores ? "ok" : "part") : "unk";
-    out.push(pill(lamp, "Google", !g.machines ? "no machines running" : `${g.machines} machine${g.machines > 1 ? "s" : ""} · ${known ? `${gb}/${g.cores} cores busy` : `${g.cores} cores`}`,
-      known ? "" : "Busy cores show once these machines restart on the new worker"));
-  } else out.push(pill("unk", "Google", "couldn't list the machines"));
-  // AWS: what its workers report; those not reporting yet are the claims nobody reported
-  const ab = sum(aw, w => w.busy.length), ac = sum(aw, w => w.slots);
-  if (aw.length) out.push(pill(ab >= ac ? "ok" : "part", "AWS", `${aw.length} machine${aw.length > 1 ? "s" : ""} · ${ab}/${ac} cores busy · limit 256`));
-  for (const c of [...new Set(FLEET.workers.map(w => w.cloud))].filter(c => c !== "gcp" && c !== "aws")) {
+  // Rackspace Spot
+  const rw = by("rackspace"), rb = sum(rw, w => w.busy.length), rc = sum(rw, w => w.slots), rs = S.rackspace || {};
+  out.push(srcCard("Rackspace", statusOf(rb, rc, rw.length), `${rb}<small>/${rc} cores</small>`,
+    [["Machines", `${rw.length}${rs.pool ? ` of ${rs.pool}` : ""}`], ["Price", rs.price != null ? `$${rs.price}/h each · bid $${rs.bid}` : null], ["Per hour", rs.price != null ? `$${(rs.price * rw.length).toFixed(2)}` : null], ["Where", rs.where]],
+    activityOf(rw), "Rackspace Spot: each machine reports itself about 4 minutes after it boots"));
+  // Google Cloud
+  const gw = by("gcp"), g = FLEET.gce, gs = S.gcp || {};
+  const gb = sum(gw, w => w.busy.length), gc = g ? g.cores : sum(gw, w => w.slots);
+  const reported = sum(FLEET.workers, w => w.busy.length), busyAll = Object.values(last?.busyNow || {}).reduce((a, b) => a + b, 0);
+  const gUnrep = !gw.length && g ? Math.min(g.cores, Math.max(0, busyAll - reported)) : 0;
+  out.push(srcCard("Google Cloud", g ? statusOf(gb + gUnrep, gc, g.machines) : ["orange", "Can't list"], g ? `${gb + gUnrep}<small>/${gc} cores</small>` : "—",
+    [["Machines", g ? String(g.machines) : "not listed"], ["Price", gs.price || null], ["Note", !gw.length && g?.machines ? "older workers: busy cores estimated" : null]], activityOf(gw)));
+  // AWS
+  const aw = by("aws"), ab = sum(aw, w => w.busy.length), ac = sum(aw, w => w.slots), as = S.aws || {};
+  out.push(srcCard("AWS", aw.length ? statusOf(ab, ac, aw.length) : ["red", as.state || "Off"], aw.length ? `${ab}<small>/${ac} cores</small>` : "0<small> cores</small>",
+    [["Machines", String(aw.length)], ["Price", as.price || null], ["Note", as.note || null]], activityOf(aw)));
+  // GitHub Actions
+  const gh = GH;
+  out.push(srcCard("GitHub", gh ? (gh.running ? ["green", "Working"] : ["yellow", "Idle"]) : ["orange", "Hidden"], gh ? `${gh.running}<small> runs</small>` : "—",
+    [["Running", gh ? gh.names.slice(0, 3).join(", ") || "none" : null], ["Price", "free (public repo)"], ["Seen", gh ? ago(gh.at) : null]], gh ? null : "Its runs show on the public page"));
+  for (const c of [...new Set(FLEET.workers.map(w => w.cloud))].filter(c => !["gcp", "aws", "rackspace"].includes(c))) {
     const ws = by(c), b = sum(ws, w => w.busy.length), n = sum(ws, w => w.slots);
-    out.push(pill(b >= n ? "ok" : "part", CLOUD_NAMES[c] || c[0].toUpperCase() + c.slice(1), `${ws.length} machine${ws.length > 1 ? "s" : ""} · ${b}/${n} cores busy`,
-      c === "rackspace" ? "Rackspace Spot machines: each reports itself about 4 minutes after it boots, so a pool still starting shows fewer machines than were bought" : ""));
+    out.push(srcCard(CLOUD_NAMES[c] || c, statusOf(b, n, ws.length), `${b}<small>/${n} cores</small>`, [["Machines", String(ws.length)]], activityOf(ws)));
   }
-  const gUnrep = g && !gw.length ? g.cores : 0;   // Google's cores before its workers report: assume they're among the busy
-  const rest = Math.max(0, busyAll - reported - gUnrep);
-  if (rest) out.push(pill(rest ? "unk" : "off", aw.length ? "AWS, older workers" : "Workers not reporting", rest ? `~${rest} cores busy (about ${Math.round(rest / 16)} machines)` : "nothing running",
-    "Counted from the shards' claims: these workers started before machines reported themselves; they will as they restart"));
-  out.push(pill(busyAll ? "ok" : "off", "All", `${busyAll} cores busy now`));
   bar.innerHTML = out.join("");
 }
+
 async function refresh() {
   if (!mcp || busy) return;
   const v = view(), pfx = v === "jobs" ? $("pfx").value.trim() : v === "fable" ? "fable" : "aa-g";
@@ -656,7 +717,7 @@ async function refresh() {
     store("fleet:last:" + pfx, last);
     repaint(v, true);
     $("fresh").textContent = `${stamp(last.at)} · next in 2 min`;
-    loadFleet().then(() => { drawFleet(); try { if (last && (last.pfx === "fable" || last.pfx === "aa-g") && view() === (last.pfx === "fable" ? "fable" : "pipeline")) drawTracker(last); } catch {} }, () => {}); drawFleet();
+    loadFleet().then(() => { drawFleet(); try { drawTracker(last); } catch {} }, () => {}); drawFleet();
     $("msg").innerHTML = "";
   } catch (e) { showErr(e); }
   finally { busy = false; $("go").disabled = false; $("go").textContent = "Refresh"; }
@@ -1624,16 +1685,19 @@ function renderCanvas(d) {
     </article>`;
   }).join("");
   const banner = FOCUS ? `<div class="focus"><span>${FOCUS.dir === "in" ? "Everything that feeds" : "Everything fed by"} <b>${esc(G.nodes.find(n => n.key === FOCUS.key)?.title || "")}</b></span><button id="clearFocus">Show all</button></div>` : "";
-  const items = `<details class="items"><summary>Choose boxes (${shown.length} of ${G.nodes.length} on the map)</summary><div class="ideas">${IDEAS.map(([k, name, gloss]) => {
+  const items = `<div class="ideas">${IDEAS.map(([k, name, gloss]) => {
     const ns = G.nodes.filter(n => ideaOf(n) === k); if (!ns.length) return "";
     const on = ns.filter(n => SHOWN.has(n.key)).length;
     return `<details class="idea"><summary><input type="checkbox" data-idea="${k}" ${on === ns.length ? "checked" : ""} ${on && on < ns.length ? 'data-mixed="1"' : ""} aria-label="${esc(name)}: all on the map"><b>${esc(name)}</b><span class="note">${esc(gloss)}</span><em>${on} of ${ns.length}</em></summary><div class="itemlist2">${ns.map(n => `<label><input type="checkbox" data-item="${esc(n.key)}" ${SHOWN.has(n.key) ? "checked" : ""}> ${esc(n.title)} <em>${esc(nodeStatus(n, d, G).label)}</em></label>`).join("")}</div></details>`;
-  }).join("")}</div></details>`;
-  $("canvasView").innerHTML = `
-    <div class="ctools"><div class="legend">${Object.entries(TYPES).map(([k, [t, g]]) => `<span class="t-${k}"><i style="background:var(--t)"></i><b>${t}</b></span>`).join("")}</div>
-      <div class="zoom"><button data-zoom="-1" aria-label="Zoom out">−</button><button data-zoom="0">Fit</button><button data-zoom="1" aria-label="Zoom in">+</button><span class="seg" role="group" aria-label="What is on the map"><button data-scope="relevant" aria-pressed="${SCOPE === "relevant"}" title="Running, waiting and planned work, the live net, and anything from the last 36 hours">What matters now</button><button data-scope="all" aria-pressed="${SCOPE === "all"}" title="Every box, back to the start of the lab">Everything (${G.nodes.length})</button></span><button id="tidy" title="Every box back in its region at its time, measured again so none overlap">Rearrange</button><button id="orient" title="Switch direction">${ORIENT === "lr" ? "Time → left to right" : "Time ↓ top to bottom"}</button></div></div>
-    ${banner}${items}
-    <div class="cframe"><div id="tracker"></div><div class="cwrap ${ORIENT === "down" ? "vert" : ""}" id="cwrap"><div class="csizer" id="csizer" style="width:${maxX * ZOOM}px;height:${maxY * ZOOM}px"><div class="canvas" id="canvas" style="width:${maxX}px;height:${maxY}px;transform:scale(${ZOOM})">${axisHtml(maxX, maxY)}<svg class="edges" id="edges" width="${maxX}" height="${maxY}"></svg>${html}</div></div></div></div>`;
+  }).join("")}</div>`;
+  $("mapTools").innerHTML = `<span class="seg" role="group" aria-label="What is on the map"><button data-scope="relevant" aria-pressed="${SCOPE === "relevant"}" title="Running, waiting and planned work, the live net, and anything from the last 12 hours">What matters now</button><button data-scope="all" aria-pressed="${SCOPE === "all"}" title="Every box, back to the start of the lab">Everything (${G.nodes.length})</button></span>
+    <button id="chooseBtn" aria-expanded="${!$("chooser").hidden}" title="Choose the boxes on the map, by idea">Choose boxes · ${shown.length}/${G.nodes.length}</button><span class="rb-sep"></span>
+    <button id="tidy" title="Every box back in its region at its time, measured again so none overlap">Rearrange</button><button id="orient" title="Switch direction">${ORIENT === "lr" ? "Time →" : "Time ↓"}</button><span class="rb-sep"></span>
+    <button data-zoom="-1" aria-label="Zoom out">−</button><button data-zoom="0">Fit</button><button data-zoom="1" aria-label="Zoom in">+</button>`;
+  $("chooser").innerHTML = `<div class="chead"><span>Choose boxes · ${shown.length} of ${G.nodes.length} on the map</span><button class="x" id="chooseClose" aria-label="Close">×</button></div>
+    <div class="legend mini">${Object.entries(TYPES).map(([k, [t]]) => `<span class="t-${k}"><i style="background:var(--t)"></i>${t}</span>`).join("")}</div>${items}`;
+  $("canvasView").innerHTML = `${banner || "<div></div>"}
+    <div class="cframe"><div class="cwrap ${ORIENT === "down" ? "vert" : ""}" id="cwrap"><div class="csizer" id="csizer" style="width:${maxX * ZOOM}px;height:${maxY * ZOOM}px"><div class="canvas" id="canvas" style="width:${maxX}px;height:${maxY}px;transform:scale(${ZOOM})">${axisHtml(maxX, maxY)}<svg class="edges" id="edges" width="${maxX}" height="${maxY}"></svg>${html}</div></div></div></div>`;
   const wrap = $("cwrap");
   if (wrap) { wrap.scrollLeft = SCROLL.l + (scrollBy ? scrollBy.dx * ZOOM : 0); wrap.scrollTop = SCROLL.t + (scrollBy ? scrollBy.dy * ZOOM : 0); scrollBy = null;
     // bring newly opened boxes (and the one they came from) into view
@@ -1654,9 +1718,7 @@ function renderCanvas(d) {
   const cw = $("cwrap"), cv = $("canvas");
   if (!store("fleet:zoom") && cw && cv && Math.abs(ZOOM - Math.min(1, cw.clientWidth / cv.offsetWidth)) > 0.02) { applyZoom(Math.max(0.3, Math.min(1, cw.clientWidth / cv.offsetWidth))); }
   document.querySelectorAll("[data-mixed]").forEach(x => { x.indeterminate = true; });
-  if (OPEN_IDEAS.items) { const it = document.querySelector(".items"); if (it) it.open = true; }
   document.querySelectorAll(".idea").forEach(el => { const k = el.querySelector("[data-idea]")?.dataset.idea; if (OPEN_IDEAS[k]) el.open = true; el.addEventListener("toggle", () => { OPEN_IDEAS[k] = el.open; }); });
-  document.querySelector(".items")?.addEventListener("toggle", e => { OPEN_IDEAS.items = e.target.open; });
   drawEdges(); drawMenu(); drawDetail();
   try { if (d.pfx === "aa-g" || d.pfx === "fable") drawTracker(d); } catch {}
 }
@@ -1763,31 +1825,6 @@ function drawMenu() {
   }
 }
 let scrollBy = null;
-// the running-now panel can be dragged anywhere inside the field; its spot is remembered
-let TPOS = null; try { TPOS = JSON.parse(localStorage.getItem("fleet:trackerPos") || "null"); } catch {}
-function placeTracker() {
-  const t = $("tracker"), f = t?.parentElement;
-  if (!t || !f || !TPOS) return;
-  const x = Math.max(0, Math.min(f.clientWidth - t.offsetWidth, TPOS.x)), y = Math.max(0, Math.min(f.clientHeight - t.offsetHeight, TPOS.y));
-  Object.assign(t.style, { left: x + "px", top: y + "px", right: "auto" });
-}
-let tdrag = null;
-document.addEventListener("pointerdown", e => {
-  const t = e.target.closest?.("#tracker");
-  if (!t) return;
-  const r = t.getBoundingClientRect(), f = t.parentElement.getBoundingClientRect();
-  tdrag = { id: e.pointerId, ox: e.clientX - r.left, oy: e.clientY - r.top, f };
-  t.setPointerCapture(e.pointerId); e.preventDefault();
-});
-document.addEventListener("pointermove", e => {
-  if (!tdrag || e.pointerId !== tdrag.id) return;
-  TPOS = { x: e.clientX - tdrag.f.left - tdrag.ox, y: e.clientY - tdrag.f.top - tdrag.oy }; placeTracker();
-});
-const tdrop = e => {
-  if (!tdrag || e.pointerId !== tdrag.id) return;
-  tdrag = null; try { localStorage.setItem("fleet:trackerPos", JSON.stringify(TPOS)); } catch {}
-};
-document.addEventListener("pointerup", tdrop); document.addEventListener("pointercancel", tdrop);
 let pan1 = null;
 let pinch = null;
 const gap2 = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
@@ -1846,6 +1883,8 @@ document.addEventListener("click", ev => {
   const hide = ev.target.dataset?.hide;
   if (hide) { SHOWN.delete(hide); if (FOCUS?.key === hide) FOCUS = null; saveMap(); rerender(); return; }
   if (ev.target.id === "orient") { saveMap(); ORIENT = ORIENT === "lr" ? "down" : "lr"; store("fleet:orient2", ORIENT); MANUAL = store(mk("manual:" + ORIENT)) || {}; MENU = null; SCROLL = { l: 0, t: 0 }; rerender(); return; }
+  if (ev.target.id === "chooseBtn") { $("chooser").hidden = !$("chooser").hidden; ev.target.setAttribute("aria-expanded", String(!$("chooser").hidden)); return; }
+  if (ev.target.id === "chooseClose") { $("chooser").hidden = true; $("chooseBtn")?.setAttribute("aria-expanded", "false"); return; }
   if (ev.target.id === "tidy") { tidy(); saveMap(); rerender(); return; }
   const scope = ev.target.closest?.("[data-scope]")?.dataset.scope;
   if (scope && GRAPH && last) {
@@ -1950,8 +1989,24 @@ function showView() {
   for (const x of VIEWS) $("tab-" + x).setAttribute("aria-current", v === x ? "page" : "false");
   $("canvasView").hidden = v !== "pipeline" && v !== "fable"; $("nowView").hidden = v !== "now"; $("matchesView").hidden = v !== "matches";
   $("sections").hidden = v !== "jobs"; $("jobsTop").hidden = v !== "jobs";
+  const map = v === "pipeline" || v === "fable";
+  $("view").classList.toggle("map", map); $("mapTools").hidden = !map; if (!map) $("chooser").hidden = true;
 }
 window.addEventListener("hashchange", () => { showView(); refresh(); });
+// the divider between the workers' panel and the view: dragged, or moved with the arrow keys; its place is kept
+{
+  const app = $("app"), setH = px => { const h = Math.max(70, Math.min(innerHeight * 0.7, px)); app.style.setProperty("--wh", h + "px"); return h; };
+  const saved = store("fleet:panelH"); if (saved) setH(saved);
+  if (store("fleet:panelOff")) { app.classList.add("nopanel"); $("panelToggle").setAttribute("aria-pressed", "false"); }
+  if (store("fleet:slim")) { app.classList.add("slim"); $("ribbonToggle").textContent = "▾"; }
+  let drag = null;
+  $("split").addEventListener("pointerdown", e => { drag = { y: e.clientY, h: $("workers").offsetHeight }; $("split").setPointerCapture(e.pointerId); e.preventDefault(); });
+  $("split").addEventListener("pointermove", e => { if (drag) setH(drag.h + e.clientY - drag.y); });
+  $("split").addEventListener("pointerup", () => { if (drag) { store("fleet:panelH", $("workers").offsetHeight); drag = null; } });
+  $("split").addEventListener("keydown", e => { const k = { ArrowUp: -24, ArrowDown: 24 }[e.key]; if (k) { e.preventDefault(); store("fleet:panelH", setH($("workers").offsetHeight + k)); } });
+  $("panelToggle").addEventListener("click", () => { const off = app.classList.toggle("nopanel"); $("panelToggle").setAttribute("aria-pressed", String(!off)); store("fleet:panelOff", off ? 1 : 0); });
+  $("ribbonToggle").addEventListener("click", () => { const slim = app.classList.toggle("slim"); $("ribbonToggle").textContent = slim ? "▾" : "▴"; store("fleet:slim", slim ? 1 : 0); });
+}
 showView();
 
 document.addEventListener("click", async ev => {

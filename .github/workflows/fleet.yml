@@ -27,6 +27,7 @@ jobs:
         env:
           LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
           LOOP: "${{ github.event_name == 'workflow_dispatch' && '330' || '0' }}"
+          GH_TOKEN: "${{ github.token }}"
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -37,6 +38,9 @@ jobs:
             rm -rf snap; git worktree prune
             if git fetch -q --depth 1 origin fleet-status; then git worktree add -q --detach snap FETCH_HEAD; else git worktree add -q --detach snap; git -C snap rm -rf -q . || true; fi
             if LAB_KEY="$RUNNER_TEMP/key.json" node tools/fleet-snapshot.mjs snap fleet-cache; then
+              # the Actions runs going on now, but this one (the page's GitHub card)
+              gh run list -R "$GITHUB_REPOSITORY" --status in_progress -L 50 --json workflowName,displayTitle \
+                --jq "{at: (now * 1000 | floor), running: ([.[] | select(.workflowName != \"Fleet status\")] | length), names: [.[] | select(.workflowName != \"Fleet status\") | .workflowName] | unique}" > snap/github.json || true
               (cd snap && git checkout -q --orphan "fresh-$t0" && git add -A && git commit -q -m "Fleet status $(date -u +%FT%TZ)" && git push -q -f origin HEAD:fleet-status) || echo "::warning::push failed"
             else echo "::warning::snapshot failed"; fi
             [ $(( $(date +%s) + 600 )) -lt "$end" ] || break

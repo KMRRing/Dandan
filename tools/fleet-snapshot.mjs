@@ -7,7 +7,7 @@
 // only when changed; the workflow keeps <cache> between runs):
 //   list.json   { at, bucket, objects: [[name, updated seconds], …] }: jobs/, workers/, claims/ and the results files the page uses
 //   gce.txt     the lab's Compute Engine machines, one "name type status" a line (as `gcloud compute instances list` prints)
-//   o/<name>    the objects the page reads: every job spec, fresh worker reports, each job's done-0, a non-self-play job's
+//   o/<name>    the objects the page reads: fleet/sources.json (prices and pools, written by Claude), every job spec, fresh worker reports, each job's done-0, a non-self-play job's
 //               stdout-0.txt (cut to its last 2 MB), and a match's part files joined into o/results/<id>/parts.jsonl (one
 //               fetch for the page instead of hundreds); list.json's `joined` says which jobs have one
 import fs from "node:fs";
@@ -17,7 +17,7 @@ import { createSign } from "node:crypto";
 const BUCKET = process.env.LAB_BUCKET || "dandan-lab-807207481983";
 const PROJECT = process.env.LAB_PROJECT || "project-b753c78c-ef88-46f1-b37";
 const out = path.resolve(process.argv[2] || "fleet-status"), cache = path.resolve(process.argv[3] || "fleet-cache");
-const KEEP = /^(jobs\/[^/]+\.json|workers\/[^/]+\.json|claims\/[^/]+\/[^/]+|results\/[^/]+\/(done-\d+|part-\d+\.jsonl|stdout-0\.txt))$/;
+const KEEP = /^(fleet\/[^/]+\.json|jobs\/[^/]+\.json|workers\/[^/]+\.json|claims\/[^/]+\/[^/]+|results\/[^/]+\/(done-\d+|part-\d+\.jsonl|stdout-0\.txt))$/;
 const STDOUT_MAX = 2 << 20;
 
 async function token() {
@@ -50,7 +50,7 @@ async function list(prefix) {
 }
 
 const at = Date.now();
-const objects = (await Promise.all(["jobs/", "workers/", "claims/", "results/"].map(list))).flat().sort((a, b) => (a[0] < b[0] ? -1 : 1));
+const objects = (await Promise.all(["fleet/", "jobs/", "workers/", "claims/", "results/"].map(list))).flat().sort((a, b) => (a[0] < b[0] ? -1 : 1));
 
 // which files to keep: the page cats job specs, done-0, a match's parts, a finished job's stdout, the fresh worker reports
 const specs = {};
@@ -80,7 +80,7 @@ for (const [n, t] of objects) {
   if (m) {
     const j = specs[m[1]];
     if (m[2] === "done-0" || (j && m[2].startsWith("part-") && kind(j) === "match") || (j && m[2] === "stdout-0.txt" && kind(j) !== "selfplay")) files.push([n, t]);
-  } else if (n.startsWith("workers/") && at / 1000 - t < 6 * 60) files.push([n, t]);
+  } else if ((n.startsWith("workers/") && at / 1000 - t < 6 * 60) || n.startsWith("fleet/")) files.push([n, t]);
 }
 await pool(files, 24, ([n, t]) => keep(n, t, n.endsWith("stdout-0.txt") ? STDOUT_MAX : 0));
 
