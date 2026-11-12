@@ -6,8 +6,8 @@
 // is only a backstop for a slow one).
 // The game lab (lab.html) adds one field, `engine` (an id of dandan-engines.js): "move" then plays that engine's move (a Hard with
 // the retrained judge, say) and "think" is that engine's weighing, answered as { id, result: { move, chance, list } }. A request
-// with no engine (the live game) is answered by Hard with the live judge (LIVE_JUDGE: v14 since 11 November 2026, which beat the
-// game's own judge in its match).
+// with no engine (the live game) is answered by Hard with the live judge (LIVE_JUDGE: S4 d since 12 November 2026, v14 before it: each beat
+// the one before it in its match).
 import { think, thinkMove, coachBudget, BUDGET, DEPTH } from "./dandan-think.js";
 import { engineOf, engineMove, decide, judgeOf, LIVE_JUDGE } from "./dandan-engines.js";
 import { shownRules } from "./dandan-rules.js";
