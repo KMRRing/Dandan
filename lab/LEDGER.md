@@ -371,3 +371,6 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   queued ~590 Deep pairs; retired within minutes (shards already in hand finish). requeue.mjs fixed (5efc2eb). S4 a and v2
   twins (aa-g8-s4-a-r, aa-g8-s4-v2-r) are correct.
 - **aa-h2-q-s3d (S3 run d, 128x64x32, at Quick vs v14): 53.9% ± 2.7, 1,000 pairs** — the best Quick score so far (jt130 53.0).
+- 04:20Z: **S3 c gate final: 300 look 51.7% ± 4.8 (play on); 600 pairs 51.2% ± 3.5 → DROP.**
+- Queued aa-g9-s3dv14b: Deep gate for S3 run d (Quick 53.9%, finished after the screen; now the S3 line's best), 600 pairs,
+  the same seeds as the other gates, so it can be set against the crowned jt130 on shared pairs.
