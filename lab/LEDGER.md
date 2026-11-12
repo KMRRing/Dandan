@@ -344,3 +344,13 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 
 - The target was the fault: unguarded went from 16.4% (pt1) and 41.8% (pt2) to 53.6%, the first learned player that beats
   Medium on its own, without rails. Under the 55% bar, so no tree-order test (item 10's rule); the next step is the planning chat's.
+
+## 12 November 2026, ~01:00Z: shards lost to machines stopped at their cap
+
+- The AWS machines from 10 November (worker before 623044f) stopped at their 48-hour cap and marked the shards they were
+  running as done with code "SIGTERM" and no results: 59 of aa-g9-s3v14b's 600 pairs (all 600 'done', 541 with rows: 51.1%),
+  ~40 of aa-g9-tjt130v14b's. Its 300-pair look waited on them for ever.
+- A running worker remembers a job whose shards are all done and never revisits it, so deleting done files alone (aa-a0-rq1,
+  a15f6d4) can't bring them back. lab/requeue.mjs (060b4a7) makes a twin, <id>-r: the same spec with every kept shard pre-marked
+  done ("code": "kept"), so only the lost pairs play again; read the two together by pair. Queued as aa-a0-rq2.
+- Only 3 AWS machines report after the restart (48 slots), most slots idle, and no spf filler has been queued: to look into.
