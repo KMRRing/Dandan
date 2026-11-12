@@ -240,7 +240,7 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 @media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s ease}}
 .sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));grid-auto-rows:var(--tileh,196px);gap:8px;align-content:start}
 /* every tile the same size (12 Nov, Korbi); one opened to read its notes grows; tiles are dragged to new places along the row */
-.sources>[data-tile]{height:auto;min-height:0;overflow:auto;cursor:grab}.sources>[data-tile].open{grid-row:span 2}
+.sources>[data-tile]{height:auto;min-height:0;overflow:auto;cursor:grab}.sources>[data-tile="trk:now"]{grid-column:span 2}.sources>[data-tile].open{grid-row:span 2}
 .sources>[data-tile].dragging{opacity:.35}.sources>[data-tile].dropL{box-shadow:-3px 0 0 var(--accent)}.sources>[data-tile].dropR{box-shadow:3px 0 0 var(--accent)}
 .src{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:grid;gap:3px;align-content:start}
 .src .sh{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
@@ -654,7 +654,7 @@ function drawTracker(d) {
   // games and bar. The plain-words lines show only once a card is tapped open; a tap on a job still finds its box on the map.
   const open = new Set(store("fleet:openCards") || []), oc = k => (open.has(k) ? " open" : "");
   TRK_TILES = [["trk:next", "Pace and next improvement", `<div class="tcard${oc("next")}" data-card="next">${healthHtml(d, busy || total) || `<div class="tgrip"><span>Pace</span><span>Reading…</span></div>`}</div>`],
-    ["trk:now", "What the cores are on", `<div class="tcard${oc("now")}" data-card="now"><div class="tgrip"><span>What the cores are on</span><span>${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span></div>` +
+    ["trk:now", "What the cores are on", `<div class="tcard${oc("now")}" data-card="now"><div class="tgrip"><span></span><span>${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span></div>` +
     (rows.length ? "" : `<div class="tk"><b>Nothing running</b></div>`) + rows.slice(0, 8).map(r => `<div class="tk" role="button" tabindex="0" data-goto="${esc(r.ids.join(" "))}" title="Show ${esc(r.name)} on the map"><span class="dot live"></span><b>${esc(r.name)}</b><span>${r.running} cores${!r.shards ? "" : ` · ${r.per ? `${fmtN(r.done * r.per)}/${fmtN(r.shards * r.per)} games` : r.shards === 1 ? "training" : `${r.done}/${r.shards}`}`}</span>${r.shards > 1 ? `<div class="bar"><i style="width:${((100 * r.done) / r.shards).toFixed(1)}%"></i></div>` : ""}${r.what ? `<em>${esc(r.what)}</em>` : ""}</div>`).join("")
     + (rows.length > 8 ? `<div class="fresh">and ${rows.length - 8} more</div>` : "") + `</div>`]];
   composeTiles();
@@ -694,7 +694,7 @@ function healthHtml(d, cores) {
     why: `a net on generation 2: the every-move games done in ${h(at["ab-g2-s4d-0all"])}, then training ${TRAIN_H} h, a screen ${h(screen)} and a Deep gate ${h(gate)}` });
   next.sort((a, b) => a.h - b.h);
   const n0 = next[0], pct = n0 && n0.done + n0.left ? (100 * n0.done) / (n0.done + n0.left) : 0;
-  return `<div class="health"><div class="tgrip"><span>Pace</span><span class="st ${word[0]}">${word[1]}${pace == null ? "" : ` · ${pace.toFixed(2)}×`}</span></div>
+  return `<div class="health"><div class="tgrip"><span class="st ${word[0]}">${word[1]}${pace == null ? "" : ` · ${pace.toFixed(2)}×`}</span></div>
     <div class="why">${pace == null ? "Not enough finished work yet to compare." : `${pace.toFixed(2)}× its usual rate: each job's work finished in the last hour against its own hourly average before that.`}</div>
     ${n0 ? `<div class="tgrip" style="margin-top:4px"><span>Next possible improvement</span><span>${esc(n0.name)}</span></div>
     <div class="big3">~${h(n0.h)}<small> to go</small></div>
