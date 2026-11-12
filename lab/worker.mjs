@@ -205,7 +205,7 @@ const CLOUD = env.LAB_CLOUD || (env.AWS_BATCH_JOB_ID ? "aws" : env.LAB_KEY ? "ot
 // again, and cores that have appeared get their own slot (unless LAB_SLOTS fixed the count)
 const loops = [];
 const grow = () => { const n = env.LAB_SLOTS ? SLOTS : Math.max(SLOTS, os.cpus().length); while (loops.length < n) loops.push(slotLoop(loops.length)); };
-const beatWorker = () => { grow(); return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, slots: loops.length, busy: [...BUSY.values()], started: T0, t: Date.now() })).catch(() => {}); };
+const beatWorker = () => { grow(); return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, slots: loops.length, hw: { cpus: os.cpus().length, avail: os.availableParallelism?.(), memGB: Math.round(os.totalmem() / 2 ** 30) }, busy: [...BUSY.values()], started: T0, t: Date.now() })).catch(() => {}); };
 const workerBeat = setInterval(beatWorker, BEAT_MS);
 beatWorker();
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { store.del(`workers/${NAME}.json`).catch(() => {}); });
