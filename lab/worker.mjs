@@ -204,8 +204,16 @@ const CLOUD = env.LAB_CLOUD || (env.AWS_BATCH_JOB_ID ? "aws" : env.LAB_KEY ? "ot
 // a machine can start with fewer cores than it has (12 Nov 2026: two Rackspace VMs of 16 came up seeing one): each beat looks
 // again, and cores that have appeared get their own slot (unless LAB_SLOTS fixed the count)
 const loops = [];
-const grow = () => { const n = env.LAB_SLOTS ? SLOTS : Math.max(SLOTS, os.cpus().length); while (loops.length < n) loops.push(slotLoop(loops.length)); };
-const beatWorker = () => { grow(); return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, slots: loops.length, hw: { cpus: os.cpus().length, avail: os.availableParallelism?.(), memGB: Math.round(os.totalmem() / 2 ** 30) }, busy: [...BUSY.values()], started: T0, t: Date.now() })).catch(() => {}); };
+// Linux can be given cores it leaves switched off (hot-added, "offline"): the worker runs as root, so it switches them on first
+const CPU = "/sys/devices/system/cpu";
+const cpuList = f => { try { return fs.readFileSync(`${CPU}/${f}`, "utf8").trim().split(",").filter(Boolean).flatMap(r => { const [a, b = a] = r.split("-").map(Number); return Array.from({ length: b - a + 1 }, (_, i) => a + i); }); } catch { return []; } };
+function wakeCores() {
+  const on = new Set(cpuList("online"));
+  for (const c of cpuList("present")) if (!on.has(c)) { try { fs.writeFileSync(`${CPU}/cpu${c}/online`, "1"); } catch {} }
+}
+const grow = () => { wakeCores(); const n = env.LAB_SLOTS ? SLOTS : Math.max(SLOTS, os.cpus().length); while (loops.length < n) loops.push(slotLoop(loops.length)); };
+const hw = () => ({ cpus: os.cpus().length, avail: os.availableParallelism?.(), present: cpuList("present").length, possible: cpuList("possible").length, offline: cpuList("offline").length, memGB: Math.round(os.totalmem() / 2 ** 30) });
+const beatWorker = () => { grow(); return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, slots: loops.length, hw: hw(), busy: [...BUSY.values()], started: T0, t: Date.now() })).catch(() => {}); };
 const workerBeat = setInterval(beatWorker, BEAT_MS);
 beatWorker();
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { store.del(`workers/${NAME}.json`).catch(() => {}); });
