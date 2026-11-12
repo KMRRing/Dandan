@@ -318,3 +318,17 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   earlier keep queuing spm until they restart.
 - **Item 7:** aa-a0-jt1 (lab/noop-jt.mjs) puts empty specs at jt380-700 without a done-0, so old machines skip them.
 - **Item 5** (after S4): Quick screen of the four S4 nets, S3 d, and one judge averaging jt130 and S3 c.
+
+## 12 November 2026, ~00:05Z: item 8, how far the look-ahead plays (Hard at Quick vs Hard at Quick as it is: 2 turns; v14 both sides; seeds 230000)
+
+| job | side A | score (99%) | A's time a decision vs B's |
+|---|---|---|---|
+| aa-a1-h-t0 | looks 0 turns past this one | **29.5% ± 2.5** | 23 vs 118 ms (0.18×) |
+| aa-a1-h-t1 | 1 turn | **42.7% ± 2.7** (960 pairs) | 62 vs 126 ms (0.5×) |
+| aa-a1-h-t3 | 3 turns | **52.6% ± 2.8** (49.8–55.4) | 211 vs 134 ms (1.64×) |
+| aa-a1-h-free | play-outs by the unguarded pt1 (lost 84–16 to Medium alone) | **47.0% ± 2.6** (44.4–49.6) | 212 vs 134 ms (1.55×) |
+
+- The horizon matters, and in the other direction from the hope: 1 turn loses 7 points at half the time; 3 turns gains about
+  2.6 at 1.6× the time (the range just touches 50%). Halving the look-ahead to buy deals is out.
+- Hard does notice who plays its play-outs: the 84–16 loser costs about 3 points (range wholly under 50%), far less than its
+  34-point gap alone. The earlier "about 49% on 430 pairs" was this, seen through noise.
