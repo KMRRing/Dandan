@@ -266,7 +266,16 @@ const UPKEEP = new Set(["Brainstorm", "Predict"]);
  * player can do before the draw is part of the game the look-ahead plays out, and leaving it out had both sides passing
  * there in every simulated turn (200 games, with it against without: 53% +- 7, at the same thinking time).
  */
+/**
+ * Every stop (lab, 12 November 2026: the exact endgame calculator, dandan-solve.js). On, a seat is asked at every step of
+ * both players' turns where it has any move at all, as the rules give it priority; off (always, outside the calculator),
+ * the stops are the ones above. Korbi: the race to deck the other resolves within a single stack and in steps the usual
+ * stops pass over (the other's draw step, their main phase before combat), so the calculator must be offered all of them.
+ */
+let FULL_STOPS = false;
+export function fullStops(on) { const was = FULL_STOPS; FULL_STOPS = !!on; return was; }
 export function wants(s, seat) {
+  if (FULL_STOPS) return hasMove(s, seat) || (s.stack.length > 0 && !!s.stack[s.stack.length - 1].stop && s.stack[s.stack.length - 1].ctl === seat && s.prio === seat);
   if (s.stack.length) { const top = s.stack[s.stack.length - 1]; return hasMove(s, seat) || (!!top.stop && top.ctl === seat && s.prio === seat); }
   if (s.step === "upkeep") return upkeepStop(s, seat) || (hushed() ? predrawMove(s, seat) : fetchWindow(s, seat) || anyUpkeepMove(s, seat));
   if (!(seat === s.active ? MY_STOPS : THEIR_STOPS).has(s.step)) return false;
