@@ -391,3 +391,17 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 
 - S3 d Deep gate: 595 of 600 pairs, 53.2% ± 3.4; the range likely includes 50% at 600, so the rule's EXTEND (to 1,200) looks
   likely. S4 a and v2 twins still to train.
+
+## 12 November 2026, ~07:30Z: Korbi plays the candidates first; the planning chat's next list queued
+
+- Korbi: the candidates go into the game lab to play against; he picks the one to go live by feel in a few hours. LIVE_JUDGE
+  stays v14. In the lab (9ed33b2): Hard with jt130, S4 d, S3 d, mean(jt130, S3 c), mean(jt130, S4 d); judges/jt130.json, s3c,
+  s3d, s4d; JUDGES entries may be lists (their mean).
+- Planning chat's list: crowned nets are not chosen by shared-pair score (±4.6 can't separate them); a net replaces the live one
+  if it passes the same gate against v14, does better on the report card and keeps its edge after its extra time.
+  - item 2: aa-a0-rc1 (lab/report-card.mjs, f7c4094): v14, jt130, S4 d, S3 d and three means on the kept games.
+  - item 3: aa-g9-s4dv14b, Deep gate for S4 d, ms logged.
+  - item 4: S3 d not extended (S4 d is the same recipe on 3× the games).
+  - item 5: aa-h2-q-avg3 (jt130+S4 d), aa-h2-q-avg4 (jt130+S3 d+S4 d) at Quick; the better gets a Deep gate at 54.6%+.
+  - item 6: aa-a1-g2g, hard^aa-a1-pt3 at Quick (wholly >50%: Deep gate; ≥48%: retrain on filler moves; <48%: stage 1 stops).
+  - item 7: aa-a1-h-t3eq, three turns at 64 deals vs two turns at 105 deals.
