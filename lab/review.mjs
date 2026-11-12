@@ -18,7 +18,7 @@ const a = process.argv, file = a[2];
 const deals = Number(a[3] || 256), seat = Number(a[4] ?? 1), gap = Number(a[5] || 0.03), t0 = Number(a[6] || 0), t1 = Number(a[7] || 999), all = a[8] === "1";
 const rec = JSON.parse(fs.readFileSync(file, "utf8")), g = rec.game, moves = (() => { try { return JSON.parse(g.moves); } catch { return null; } })();
 if (!moves?.length || moves.length !== g.n) { console.log("this game does not carry all its moves; nothing to replay"); process.exit(0); }
-let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
+let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
 const key = m => JSON.stringify(m);
 const out = { file, winner: rec.result?.winner, turns: rec.result?.turns, seat, weighed: 0, behind: [] };
 for (let i = 0; i < moves.length; i++) {

@@ -16,7 +16,7 @@ const [dir, out, shard, shards, key, scope = "race", ms = "60000", max = "12"] =
 const judge = makeJudge(JSON.parse(fs.readFileSync(new URL("../judges/ag-v14.json", import.meta.url), "utf8")).layers);
 const J = x => JSON.parse(JSON.stringify(x));
 const g = JSON.parse(fs.readFileSync(path.join(dir, key + ".json"), "utf8")).game, list = JSON.parse(g.moves);
-let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
+let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
 let k = 0;
 for (let i = 0; i < list.length; i++) {
   const [who, move] = list[i], s = shownRules.restore(J(G.state));

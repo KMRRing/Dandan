@@ -43,7 +43,7 @@ const dir = path.join(tmp, "games"), games = [];
 for (const f of fs.readdirSync(dir).filter(f => f.endsWith(".json"))) {
   const rec = JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")), g = rec.game;
   let moves; try { moves = JSON.parse(g.moves); } catch { continue; }
-  if (moves?.length && moves.length === g.n) games.push({ file: f, opts: { seats: 2, seed: g.seed, seq: g.seq, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
+  if (moves?.length && moves.length === g.n) games.push({ file: f, opts: { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
 }
 
 if (process.env.LIMIT) games.splice(Number(process.env.LIMIT));   // for a quick local try

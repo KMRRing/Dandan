@@ -86,7 +86,7 @@ for (const f of files) {
   let moves_;
   try { moves_ = JSON.parse(g.moves || "[]"); } catch { continue; }
   if (!moves_.length || moves_.length !== g.n) continue;
-  let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
+  let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
   const sampled = [];
   let late = 0, midSeen = 0;
   for (let i = 0; i < moves_.length; i++) {

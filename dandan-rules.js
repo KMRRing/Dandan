@@ -12,7 +12,8 @@ export const rules = {
   id: "dandan",
   seats: { min: 2, max: 2 },
   // reading: a game whose passes are read (obs, kept through the database, which drops an empty list)
-  deal: ({ rng, prev }) => ({ ...deal({ rng, prev }), reading: 1, obs: [] }),
+  // cover: the computer's seat (1) passes at a pace that shows nothing of its hand (engine coverStop); the page's games against it
+  deal: ({ rng, prev, options }) => ({ ...deal({ rng, prev }), reading: 1, obs: [], ...(options?.cover ? { cover: 1 } : {}) }),
   toMove,
   act: (s, seat, move, ctx) => {
     const turn = s.turn, r = act(s, seat, move, ctx);

@@ -44,7 +44,7 @@ const byFile = new Map();
 for (const r of weighed) (byFile.get(r.file) ?? byFile.set(r.file, []).get(r.file)).push(r);
 for (const [file, rs] of byFile) {
   const g = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")).game, moves = JSON.parse(g.moves), want = new Map(rs.map(r => [r.i, r]));
-  let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
+  let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
   for (let i = 0; i < moves.length && want.size; i++) {
     const r = want.get(i);
     if (r) { const s = shownRules.restore(J(G.state)); r.j = judges.map(([, f]) => f(s, 0)); want.delete(i); }

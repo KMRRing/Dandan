@@ -17,7 +17,7 @@ for (const f of fs.readdirSync(dir).filter(f => f.endsWith(".json")).sort()) {
   let moves;
   try { moves = JSON.parse(g.moves); } catch { continue; }
   if (!moves?.length || moves.length !== g.n || rec.result?.drawn) continue;
-  let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
+  let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
   const curve = [];
   let lastTurn = -1, ok = true;
   for (let i = 0; i < moves.length; i++) {

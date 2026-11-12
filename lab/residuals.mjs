@@ -32,7 +32,7 @@ if (fs.existsSync(src) && fs.statSync(src).isDirectory()) {
   for (const f of fs.readdirSync(src).filter(f => f.endsWith(".json"))) {
     const rec = JSON.parse(fs.readFileSync(path.join(src, f), "utf8")), g = rec.game;
     let moves; try { moves = JSON.parse(g.moves); } catch { continue; }
-    if (moves?.length && moves.length === g.n) games.push({ R: shownRules, opts: { seats: 2, seed: g.seed, seq: g.seq, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
+    if (moves?.length && moves.length === g.n) games.push({ R: shownRules, opts: { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
   }
 } else {
   for (const id of src.split(",")) for (const text of await readParts(id)) for (const line of text.split("\n")) {

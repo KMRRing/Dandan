@@ -6,7 +6,7 @@
 // read by pointing at it or tapping it; what it can do now is a button, and a spell that needs a target lights the
 // legal ones on the table. A finished game's result goes to the database (results.js).
 import { shownRules } from "./dandan-rules.js";
-import { moves, afterFetch, bottomFor, payment, MOST_MULLS } from "./dandan-engine.js";
+import { moves, afterFetch, bottomFor, payment, MOST_MULLS, coverOnly } from "./dandan-engine.js";
 import { CARDS, DECK, HALVES, NAMES, BASICS, costWords, total, parseCost } from "./dandan-cards.js";
 import { nm, defOf, perm, pt, isLand, isCreature, manaAlts, payFrom, topKnown, needType, poolOf, knownIn, knOf, typesOf } from "./dandan-core.js";
 import { same } from "./dandan-spells.js";
@@ -143,6 +143,29 @@ function keyOf(state) {
 // move from here at once (the same move it would work out itself: the look-ahead stops at so many deals, not a time)
 const botMoves = new Map();
 let botAsked = "";
+// ---------- the computer's cover: how long it takes shows nothing (Korbi, 12 November 2026) ----------
+// Where the game stops for the computer only for cover (engine coverStop: it can do nothing, but a card you can't see would have
+// had it act here), it passes after a wait drawn from its own thinking times at real decisions of the same kind: what is on the
+// stack (nothing, its own, yours), the step, its open mana. They are kept on this device, the newest 40 of each kind.
+const THINK = "dandan:think";
+const spotOf = (s, seat) => {
+  const top = s.stack[s.stack.length - 1], open = Math.min(3, s.bf.filter(p => p.ctl === seat && !p.tapped && isLand(p) && manaAlts(p).length).length);
+  return [top ? (top.ctl === seat ? "own" : "yours") : "empty", s.step, open];
+};
+function noteThink(state, seat, ms) {
+  const t = read(THINK, {}), k = spotOf(state, seat).join("|");
+  (t[k] ||= []).push(Math.round(ms));
+  if (t[k].length > 40) t[k].splice(0, t[k].length - 40);
+  write(THINK, t);
+}
+function coverWait(state, seat) {
+  const t = read(THINK, {}), [stack, step, open] = spotOf(state, seat), all = Object.entries(t);
+  // the same kind of spot; else the same stack and open mana, any step; else the same stack; else any; else 1.5 to 4 s
+  const pools = [t[[stack, step, open].join("|")], all.filter(([k]) => k.startsWith(stack + "|") && k.endsWith("|" + open)).flatMap(([, v]) => v),
+    all.filter(([k]) => k.startsWith(stack + "|")).flatMap(([, v]) => v), all.flatMap(([, v]) => v)];
+  const pool = pools.find(p => p && p.length >= 5);
+  return pool ? pool[Math.floor(Math.random() * pool.length)] : 1500 + Math.random() * 2500;
+}
 function holdForBot() {
   if (!page || opts.level !== "hard") return false;
   const v = page.view;
@@ -151,9 +174,14 @@ function holdForBot() {
   if (botMoves.has(key) || workers.bot === false) return false;
   if (botAsked !== key) {
     botAsked = key;
-    const engine = LAB?.engine;
+    const engine = LAB?.engine, at = performance.now();
+    if (coverOnly(v.state)) {
+      setTimeout(() => { botMoves.set(key, { t: "pass" }); if (botMoves.size > 40) botMoves.delete(botMoves.keys().next().value); page.runner.kick(); }, coverWait(v.state, v.toMove));
+      return true;
+    }
     askMove(v.state, v.toMove).then(({ move, error }) => {
       if (LAB && LAB.engine !== engine) { botAsked = ""; page.runner.kick(); return; }   // the lab changed the opponent meanwhile: its answer is for another engine
+      if (move && !v.state.pending) noteThink(v.state, v.toMove, performance.now() - at);
       if (move) { botMoves.set(key, move); if (botMoves.size > 40) botMoves.delete(botMoves.keys().next().value); }
       else if (error) { console.warn("dandan: the worker's move failed", error); workers.bot = false; }
       page.runner.kick();
@@ -164,7 +192,8 @@ function holdForBot() {
 // The computer's spells are shown (engine `showStop`): you sit in seat 0, the computer in the other, and only its moves ask for it.
 const pageRules = {
   ...shownRules,
-  bot: (s, seat, ctx) => (ctx.level === "hard" && botMoves.get(keyOf(s))) || shownRules.bot(s, seat, lab ? lab.botCtx(ctx) : ctx),
+  // at a stop made only for its cover the computer passes, whatever its level (its pass is the one the game would have made)
+  bot: (s, seat, ctx) => (coverOnly(s) ? { t: "pass" } : null) || (ctx.level === "hard" && botMoves.get(keyOf(s))) || shownRules.bot(s, seat, lab ? lab.botCtx(ctx) : ctx),
 };
 // ---------- the computer's pace ----------
 // What the computer does stays on the table a while before its next move (1.5 s, 3 s), or until you tap Continue
@@ -1046,7 +1075,8 @@ function showEnd(v) {
 }
 function newGame() {
   $("endDlg").open && $("endDlg").close();
-  page.deal({}, 2);
+  // against the computer, its passes keep its hand to itself (engine coverStop); not at a table of two players
+  page.deal(page.view?.mode === "table" ? {} : { cover: 1 }, 2);
 }
 /** Whether you may concede: a game of yours still on. */
 const mayConcede = () => !!V?.G && !V.over && V.seat != null;

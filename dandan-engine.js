@@ -12,7 +12,7 @@ import { shuffle } from "./seats.js";
 import {
   LIFE, HAND, other, list, withRng, say, nm, isLandId, perm, isLand, isCreature, pt, canAttack, unblockable, fetchTypes, typesOf, needType,
   payPlan, payFrom, pay, manaAlts, draw, shuffleLib, pushItem, itemOf, leaveStack, enterBf, leaveBf, toGrave, toLib, toYard, fromYard, fromLib, fromHand,
-  mill, lands, permToLib, bounce, emptyPools, handToLib, toHandOpen, topKnown, isSpellCard, affords, tellsOf, freshTells, hushed,
+  mill, lands, permToLib, bounce, emptyPools, handToLib, toHandOpen, topKnown, isSpellCard, affords, tellsOf, freshTells, hushed, khOf, knOf,
 } from "./dandan-core.js";
 import { RES, T, same, targetLists, stillLegal, modesOf, hasType } from "./dandan-spells.js";
 import { noteAction } from "./dandan-advantage.js";
@@ -379,6 +379,7 @@ export function settle(s, shown = -1) {
     if (s.adv && !hushed()) noteAction(s, s.by ?? 0, turnAt);   // an action has settled: a dot on the end-of-game chart
     if (wants(s, s.prio)) return;
     if (shown >= 0 && showStop(s, shown)) return;
+    if (s.cover != null && !hushed() && coverStop(s)) return;
     passPriority(s);
   }
   throw new Error("dandan: the game didn't settle");
@@ -396,6 +397,36 @@ function showStop(s, by) {
   s.shown = top.sid;
   return true;
 }
+/**
+ * The computer's cover (Korbi, 12 November 2026: "timing tell"): at the page, the computer (seat `s.cover`) with nothing it
+ * could do passed at once, and skipped the steps it would stop at with a card to play, so how quickly it passed told what it
+ * held. With the cover on (a game dealt with options.cover, the page's against the computer), the game stops for it wherever
+ * some card the other player can't see (one of its hidden hand cards, or a card of the library they don't know) would have
+ * it stop if it held that card instead: a priority, at a step it stops at, where such a card could be played. It then passes
+ * like any other move, after a while the page draws from its own thinking times (dandan.js). Its moves are not changed.
+ */
+function coverStop(s) {
+  const seat = s.cover, viewer = other(seat), bit = 1 << viewer;
+  if (s.prio !== seat || s.pending || s.over) return false;
+  const hidden = s.hand[seat].filter(id => !(khOf(s, id) & bit));
+  if (!hidden.length) return false;
+  const slot = s.hand[seat].indexOf(hidden[0]), tried = new Set();
+  for (const id of [...hidden, ...s.lib.filter(x => !(knOf(s, x) & bit))]) {
+    const name = DECK[id];
+    if (tried.has(name)) continue;
+    tried.add(name);
+    const t = { ...s, hand: s.hand.slice() };
+    t.hand[seat] = s.hand[seat].slice();
+    t.hand[seat][slot] = id;
+    if (wants(t, seat)) return true;
+  }
+  return false;
+}
+/**
+ * Whether the seat to move is stopped only for the cover: the computer, at a stop its own hand would not have made (it may hold a
+ * move the stop isn't for, as a Brainstorm at a declared attack). Its move there is a pass, as the game would have made it.
+ */
+export const coverOnly = s => s.cover != null && !s.over && !s.pending && s.prio === s.cover && !wants(s, s.cover);
 /**
  * A trigger that targets has its target chosen as it goes on the stack, before anyone may answer it (Mystic
  * Sanctuary's: an instant or sorcery card in the graveyard). With none to choose, it leaves the stack. The "may" of

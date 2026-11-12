@@ -30,7 +30,7 @@ for (const f of files) {
   let list;
   try { list = JSON.parse(g.moves || "[]"); } catch { continue; }
   if (!list.length || list.length !== g.n) continue;
-  let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
+  let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
   const sampled = [];
   let late = 0, cut = 0;
   for (let i = 0; i < list.length; i++) {

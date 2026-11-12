@@ -29,7 +29,7 @@ const J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
 for (let f = shard; f < files.length; f += shards) {
   const file = files[f], want = new Map(weighed.filter(r => r.file === file).map(r => [r.i, r]));
   const g = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")).game, moves = JSON.parse(g.moves);
-  let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
+  let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
   for (let i = 0; i < moves.length && want.size; i++) {
     const r = want.get(i), [seat, move] = moves[i];
     if (r) {
