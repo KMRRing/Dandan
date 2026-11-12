@@ -365,3 +365,5 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - jt130 is the first net since v14 to beat it at Deep with the 99% range wholly above 50%. On the 596 shared pairs it is
   2.7 ± 4.6 points over S3 c: within noise, but the gate rule picks the crowned one.
 - Crowned means prepared for Korbi's decision: nothing goes live without him (LIVE_JUDGE unchanged).
+- 02:40Z: S4 run a was killed at 23:34 by a machine stopping (code 143) and S4 v2's claim lapsed at 23:33 without being
+  taken over; both, and the S3 c gate's last stragglers, go to twins via aa-a0-rq3. S4 c and d are running.
