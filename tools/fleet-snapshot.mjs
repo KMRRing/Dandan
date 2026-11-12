@@ -3,18 +3,20 @@
 // per-minute quota (12 Nov 2026, Korbi: "Google Cloud is busy" left the page hours behind). Read-only: the key in LAB_KEY is the
 // fleet-reader account (Storage Object Viewer, Compute Viewer).
 //
-// node tools/fleet-snapshot.mjs <folder>   — <folder> holds the last snapshot (kept files are re-read only when changed):
+// node tools/fleet-snapshot.mjs <folder> <cache> — <folder> holds the last snapshot, <cache> the match part files (both re-read
+// only when changed; the workflow keeps <cache> between runs):
 //   list.json   { at, bucket, objects: [[name, updated seconds], …] }: jobs/, workers/, claims/ and the results files the page uses
 //   gce.txt     the lab's Compute Engine machines, one "name type status" a line (as `gcloud compute instances list` prints)
-//   o/<name>    the objects the page reads: every job spec, fresh worker reports, each job's done-0, a match's part files,
-//               a non-self-play job's stdout-0.txt (cut to its last 2 MB)
+//   o/<name>    the objects the page reads: every job spec, fresh worker reports, each job's done-0, a non-self-play job's
+//               stdout-0.txt (cut to its last 2 MB), and a match's part files joined into o/results/<id>/parts.jsonl (one
+//               fetch for the page instead of hundreds); list.json's `joined` says which jobs have one
 import fs from "node:fs";
 import path from "node:path";
 import { createSign } from "node:crypto";
 
 const BUCKET = process.env.LAB_BUCKET || "dandan-lab-807207481983";
 const PROJECT = process.env.LAB_PROJECT || "project-b753c78c-ef88-46f1-b37";
-const out = path.resolve(process.argv[2] || "fleet-status");
+const out = path.resolve(process.argv[2] || "fleet-status"), cache = path.resolve(process.argv[3] || "fleet-cache");
 const KEEP = /^(jobs\/[^/]+\.json|workers\/[^/]+\.json|claims\/[^/]+\/[^/]+|results\/[^/]+\/(done-\d+|part-\d+\.jsonl|stdout-0\.txt))$/;
 const STDOUT_MAX = 2 << 20;
 
@@ -55,10 +57,11 @@ const specs = {};
 const want = new Map();
 for (const [n, t] of objects) if (n.startsWith("jobs/")) want.set(n, t);
 let prev = {};
-try { prev = JSON.parse(fs.readFileSync(path.join(out, "list.json"), "utf8")).updated || {}; } catch {}
+try { prev = JSON.parse(fs.readFileSync(path.join(cache, "updated.json"), "utf8")); } catch {}
 const fetchText = async n => { const r = await get(`https://storage.googleapis.com/storage/v1/b/${BUCKET}/o/${encodeURIComponent(n)}?alt=media`); return r.ok ? r.text() : null; };
+const isPart = n => /\/part-\d+\.jsonl$/.test(n);
 const keep = async (n, t, cap) => {
-  const f = path.join(out, "o", n);
+  const f = path.join(isPart(n) ? cache : out, "o", n);
   if (prev[n] === t && fs.existsSync(f)) return;
   let txt = await fetchText(n);
   if (txt == null) return;
@@ -81,10 +84,22 @@ for (const [n, t] of objects) {
 }
 await pool(files, 24, ([n, t]) => keep(n, t, n.endsWith("stdout-0.txt") ? STDOUT_MAX : 0));
 
-// files no longer wanted go (a worker that stopped, a job removed)
-const wanted = new Set([...want.keys(), ...files.map(x => x[0])]);
+// a match's parts joined, in part order; files no longer wanted go (a worker that stopped, a job removed)
+const joined = {}, byJob = new Map();
+for (const [n, t] of files) if (isPart(n)) { const id = n.split("/")[1]; if (!byJob.has(id)) byJob.set(id, []); byJob.get(id).push([n, t]); }
+for (const [id, parts] of byJob) {
+  parts.sort((a, b) => Number(a[0].match(/(\d+)\.jsonl$/)[1]) - Number(b[0].match(/(\d+)\.jsonl$/)[1]));
+  const f = path.join(out, "o", "results", id, "parts.jsonl");
+  fs.mkdirSync(path.dirname(f), { recursive: true });
+  fs.writeFileSync(f, parts.map(([n]) => { try { return fs.readFileSync(path.join(cache, "o", n), "utf8"); } catch { return ""; } }).join("\n"));
+  joined[id] = Math.max(...parts.map(x => x[1]));
+}
+const wanted = new Set([...want.keys(), ...files.map(x => x[0]), ...Object.keys(joined).map(id => `results/${id}/parts.jsonl`)]);
 const walk = d => fs.existsSync(d) ? fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]) : [];
-for (const f of walk(path.join(out, "o"))) if (!wanted.has(path.relative(path.join(out, "o"), f).split(path.sep).join("/"))) fs.rmSync(f);
+for (const base of [out, cache]) for (const f of walk(path.join(base, "o"))) {
+  const n = path.relative(path.join(base, "o"), f).split(path.sep).join("/");
+  if (!wanted.has(n) || (base === out) === isPart(n)) fs.rmSync(f);   // parts live in the cache, the rest in the snapshot
+}
 
 // the machines on Compute Engine, as the page's `gcloud compute instances list --filter="name~^lab-"` prints them
 let gce = "";
@@ -96,6 +111,8 @@ if (r.ok) {
 if (gce != null) fs.writeFileSync(path.join(out, "gce.txt"), gce);
 
 const updated = Object.fromEntries(files.concat([...want]).map(([n, t]) => [n, t]));
-fs.writeFileSync(path.join(out, "list.json"), JSON.stringify({ at, bucket: BUCKET, objects, updated }));
+fs.mkdirSync(cache, { recursive: true });
+fs.writeFileSync(path.join(cache, "updated.json"), JSON.stringify(updated));
+fs.writeFileSync(path.join(out, "list.json"), JSON.stringify({ at, bucket: BUCKET, objects, joined }));
 const bytes = walk(out).reduce((s, f) => s + fs.statSync(f).size, 0);
 console.log(`${objects.length} objects listed, ${files.length + want.size} kept, ${(bytes / 1e6).toFixed(1)} MB in ${out}, ${((Date.now() - at) / 1000).toFixed(0)} s`);

@@ -22,11 +22,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git fetch --depth 1 origin fleet-status; then git worktree add --detach snap FETCH_HEAD; else git worktree add --detach snap; git -C snap rm -rf -q . || true; fi
+      - name: The match part files kept from the last run
+        uses: actions/cache@v4
+        with: { path: fleet-cache, key: "fleet-${{ github.run_id }}", restore-keys: fleet- }
       - name: Copy from the bucket
         env: { LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}" }
         run: |
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
-          LAB_KEY="$RUNNER_TEMP/key.json" node tools/fleet-snapshot.mjs snap
+          LAB_KEY="$RUNNER_TEMP/key.json" node tools/fleet-snapshot.mjs snap fleet-cache
           rm -f "$RUNNER_TEMP/key.json"
       - name: Publish
         run: |

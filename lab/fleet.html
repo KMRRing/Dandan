@@ -301,7 +301,13 @@ const free = () => { const next = waiting.shift(); if (next) next(); else inFlig
 // Times are moved forward by the snapshot's age, so "running in the last 6 minutes" means at the snapshot.
 const SNAP_BASE = "https://raw.githubusercontent.com/KMRRing/Dandan/fleet-status/";
 let SNAP = null, SNAP_AT = 0;
-const snapGet = async (p, v) => { const r = await fetch(SNAP_BASE + p + "?v=" + v); if (!r.ok) throw Object.assign(new Error(p + ": " + r.status), { code: "server_unavailable" }); return r.text(); };
+// at most six fetches at once (a page that asks for hundreds at once runs the browser out of connections)
+let snapIn = 0; const snapWait = [];
+const snapGet = async (p, v) => {
+  if (snapIn >= 6) await new Promise(r => snapWait.push(r)); else snapIn++;
+  try { return await snapGet0(p, v); } finally { const next = snapWait.shift(); if (next) next(); else snapIn--; }
+};
+const snapGet0 = async (p, v) => { const r = await fetch(SNAP_BASE + p + "?v=" + v); if (!r.ok) throw Object.assign(new Error(p + ": " + r.status), { code: "server_unavailable" }); return r.text(); };
 async function snapLoad() {
   if (SNAP && Date.now() - SNAP_AT < 60000) return SNAP;
   const j = JSON.parse(await snapGet("list.json", Date.now()));
@@ -331,7 +337,10 @@ async function snapCmd(cmd) {
     return names.join("\n");
   }
   if (/^gcloud storage cat /.test(cmd)) {
-    const groups = urlsIn(cmd).map(match); if (groups.some(g => !g.length)) throw noObjects();
+    const urls = urlsIn(cmd), groups = urls.map(match); if (groups.some(g => !g.length)) throw noObjects();
+    // a match's part files come joined in one file
+    const one = urls.length === 1 && urls[0].match(/^results\/([^/]+)\/part-\*\.jsonl$/);
+    if (one && s.joined?.[one[1]]) return snapGet(`o/results/${one[1]}/parts.jsonl`, s.joined[one[1]]);
     const texts = await Promise.all(groups.flat().map(n => snapGet("o/" + n.split("/").map(encodeURIComponent).join("/"), s.times.get(n)).catch(() => "")));
     return texts.join("\n");
   }
@@ -597,7 +606,7 @@ function drawFleet() {
   }
   const gUnrep = g && !gw.length ? g.cores : 0;   // Google's cores before its workers report: assume they're among the busy
   const rest = Math.max(0, busyAll - reported - gUnrep);
-  if (rest) out.push(pill(rest ? "unk" : "off", aw.length ? "AWS, older workers" : "AWS", rest ? `~${rest} cores busy (about ${Math.round(rest / 16)} machines)` : "nothing running",
+  if (rest) out.push(pill(rest ? "unk" : "off", aw.length ? "AWS, older workers" : "Workers not reporting", rest ? `~${rest} cores busy (about ${Math.round(rest / 16)} machines)` : "nothing running",
     "Counted from the shards' claims: these workers started before machines reported themselves; they will as they restart"));
   out.push(pill(busyAll ? "ok" : "off", "All", `${busyAll} cores busy now`));
   bar.innerHTML = out.join("");
