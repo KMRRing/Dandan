@@ -27,8 +27,10 @@ jobs:
           printf '%s\n' "$LAB_K8S_MANIFEST" > "$RUNNER_TEMP/m.yaml"
           kubectl apply -f "$RUNNER_TEMP/m.yaml" 2>&1 | sed -E 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g'
           rm -f "$RUNNER_TEMP/m.yaml"
+          # Docker Hub refuses many anonymous pulls from shared addresses; Google's mirror of the same official image doesn't
+          kubectl set image daemonset/dandan-lab worker=mirror.gcr.io/library/node:22-bookworm
           sleep 20
           { echo '### Machines'; echo '```'; kubectl get nodes -o wide 2>&1 | cut -c1-160; echo '```'; echo '### Lab workers'; echo '```'; kubectl get pods -l app=dandan-lab -o wide 2>&1 | cut -c1-160; echo '```'
-            echo '### Recent problems'; echo '```'; kubectl get events --field-selector type=Warning --sort-by=.lastTimestamp 2>&1 | tail -15 | cut -c1-200; echo '```'
+            echo '### Recent problems'; echo '```'; kubectl get events --field-selector type=Warning --sort-by=.lastTimestamp 2>&1 | grep -v NetworkNotReady | tail -12 | cut -c1-260; echo '```'
             for p in $(kubectl get pods -l app=dandan-lab -o name | head -2); do echo "### $p (last lines)"; echo '```'; kubectl logs "$p" --tail=15 2>&1 | sed -E 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g' | cut -c1-200; echo '```'; done; } | tee -a "$GITHUB_STEP_SUMMARY"
           rm -f "$KUBECONFIG"
