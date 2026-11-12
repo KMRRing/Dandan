@@ -245,6 +245,13 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 .src .act{font-size:11.5px;color:var(--mute);line-height:1.35;overflow-wrap:anywhere}
 .src{min-width:0;overflow:hidden}
 .srcwrap{position:relative;min-width:0}
+.src[data-key]{cursor:pointer}.src[data-key]:hover{border-color:var(--mute)}.src.open{border-color:var(--accent)}
+.srcdetail{margin-top:8px;border:1px solid var(--accent);border-radius:10px;background:var(--panel);padding:8px 11px;font-size:12.5px}
+.srcdetail .dh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px}
+.srcdetail .dh b{font:700 11px var(--display);letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
+.srcdetail table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.srcdetail td{padding:2px 8px 2px 0;white-space:nowrap}.srcdetail td.on{white-space:normal;color:var(--mute);width:100%}
+.srcdetail td.m{font-family:var(--mono)}
 .srcmore{position:absolute;top:-6px;right:-4px;border:0;background:transparent;color:var(--mute);font:700 16px/1 var(--mono);padding:2px 6px;border-radius:6px;cursor:pointer;opacity:0;transition:opacity .15s}
 .srcwrap:hover .srcmore,.srcmore:focus-visible,.srcmore[aria-expanded="true"]{opacity:.55}.srcmore:hover{opacity:1;background:color-mix(in srgb,var(--line) 40%,transparent)}
 .srcmenu{position:absolute;top:18px;right:0;z-index:30;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:grid;gap:4px;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:13px}
@@ -283,7 +290,7 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
   <section id="workers" aria-label="The workers">
     <div class="srcwrap"><div class="sources" id="fleetbar" aria-live="polite"></div>
       <button class="srcmore" id="srcMore" title="Choose which cards to show" aria-label="Choose which cards to show" aria-expanded="false">⋯</button>
-      <div class="srcmenu" id="srcMenu" hidden></div></div>
+      <div class="srcmenu" id="srcMenu" hidden></div><div class="srcdetail" id="srcDetail" hidden></div></div>
     <div id="tracker"></div>
   </section>
   <div id="split" role="separator" aria-orientation="horizontal" aria-label="Move to resize the workers' panel" tabindex="0"></div>
@@ -725,6 +732,7 @@ function drawFleet() {
   };
   for (const p of pools) {
     const ws = rw.filter(w => home(w) === p), b = sum(ws, w => w.busy.length), c = sum(ws, w => w.slots);
+    MACH[`rs:${p.where}`] = [...machRows(ws), ...(p.machines || []).filter(m => !ws.some(w => w.by.startsWith(m))).map(m => ({ name: m, silent: true, cores: p.cores || 0 }))];
     // judged against the cores paid for (every machine Rackspace has given us), not only those reporting: 4 working of 10 is
     // 64 of 160 cores, underused, however busy those 4 are (12 Nov, Korbi: Sydney showed Working with 6 machines silent)
     const won = p.won ?? p.pool ?? ws.length, silent = Math.max(0, won - ws.length), hr = p.price != null ? p.price * won : null;
@@ -741,6 +749,7 @@ function drawFleet() {
   }
   // Google Cloud
   const gw = by("gcp"), g = FLEET.gce, gs = S.gcp || {};
+  MACH.gcp = machRows(gw);
   const gb = sum(gw, w => w.busy.length), gc = g ? g.cores : sum(gw, w => w.slots);
   const reported = sum(FLEET.workers, w => w.busy.length), busyAll = Object.values(last?.busyNow || {}).reduce((a, b) => a + b, 0);
   const gUnrep = !gw.length && g ? Math.min(g.cores, Math.max(0, busyAll - reported)) : 0;
@@ -748,6 +757,7 @@ function drawFleet() {
     [["Machines", g ? String(g.machines) : "not listed"], ["Price", gs.price || null]], !gw.length && g?.machines ? "Older workers: busy cores estimated" : !g ? "Needs Compute Viewer on fleet-reader" : activityOf(gw), "", "gcp"));
   // AWS
   const aw = by("aws"), ab = sum(aw, w => w.busy.length), ac = sum(aw, w => w.slots), as = S.aws || {};
+  MACH.aws = machRows(aw);
   out.push(srcCard("AWS", aw.length ? statusOf(ab, ac, aw.length) : ["red", as.state || "Off"], aw.length ? `${ab}<small>/${ac} cores</small>` : "0<small> cores</small>",
     [["Machines", String(aw.length)]], as.note || activityOf(aw), "", "aws"));
   // GitHub Actions
@@ -756,6 +766,7 @@ function drawFleet() {
     [["Running", gh ? gh.names.slice(0, 3).join(", ") || "none" : null], ["Price", "free"], ["Seen", gh ? ago(gh.at) : null]], gh ? null : "Its runs show on the public page", "", "github"));
   for (const c of [...new Set(FLEET.workers.map(w => w.cloud))].filter(c => !["gcp", "aws", "rackspace"].includes(c))) {
     const ws = by(c), b = sum(ws, w => w.busy.length), n = sum(ws, w => w.slots);
+    MACH[CLOUD_NAMES[c] || c] = machRows(ws);
     out.push(srcCard(CLOUD_NAMES[c] || c, statusOf(b, n, ws.length), `${b}<small>/${n} cores</small>`, [["Machines", String(ws.length)]], activityOf(ws)));
   }
   const hidden = new Set(store("fleet:hiddenCards") || []);
@@ -763,7 +774,31 @@ function drawFleet() {
   bar.innerHTML = out.filter(h => !hidden.has(h.match(/data-key="([^"]*)"/)?.[1])).join("") ||
     `<div class="src"><div class="sh"><b>All cards hidden</b></div><div class="act">Use ⋯ to show them again</div></div>`;
   if (!$("srcMenu").hidden) drawSrcMenu();
+  drawSrcDetail();
 }
+// a tap on a card lists its machines (12 Nov, Korbi: "show what machines are idle"): silent first (paid for, not reporting),
+// then those with idle cores, then the full ones; each with its cores, how many are busy and what on. Tap again to close.
+let MACH = {}, OPEN_SRC = null;
+const machRows = ws => ws.map(w => ({ name: w.by.replace(/-\d+$/, ""), cores: w.slots, busy: w.busy.length, on: activityOf([w]), t: w.t }));
+function drawSrcDetail() {
+  const d = $("srcDetail"); if (!d) return;
+  document.querySelectorAll("#fleetbar .src").forEach(el => el.classList.toggle("open", el.dataset.key === OPEN_SRC));
+  const rows = OPEN_SRC ? MACH[OPEN_SRC] : null;
+  if (!rows) { d.hidden = true; return; }
+  const rank = r => (r.silent ? 0 : r.busy === 0 ? 1 : r.busy < r.cores ? 2 : 3);
+  const sorted = [...rows].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+  const word = r => r.silent ? ["red", "Silent"] : !r.busy ? ["red", "Idle"] : r.busy < r.cores ? ["orange", `${r.cores - r.busy} idle`] : ["green", "Full"];
+  const idle = sumOf(rows, r => (r.silent ? r.cores : r.cores - r.busy)), name = SRC_KEYS.find(([k]) => k === OPEN_SRC)?.[1] || OPEN_SRC;
+  d.hidden = false;
+  d.innerHTML = `<div class="dh"><b>${esc(name)} · ${rows.length} machine${rows.length === 1 ? "" : "s"} · ${idle} cores idle or silent</b><button class="x" id="detailClose" aria-label="Close">×</button></div>` +
+    (rows.length ? `<table>${sorted.map(r => { const [c, w] = word(r); return `<tr><td class="m" title="${esc(r.name)}">…${esc(r.name.slice(-6))}</td><td class="st ${c}">${esc(w)}</td><td>${r.silent ? `${r.cores} cores, not reporting` : `${r.busy}/${r.cores} busy`}</td><td class="on">${esc(r.on || "")}</td></tr>`; }).join("")}</table>` : `<div class="act">No machines reporting</div>`);
+}
+const sumOf = (ws, f) => ws.reduce((a, w) => a + f(w), 0);
+$("fleetbar").addEventListener("click", e => {
+  const el = e.target.closest(".src[data-key]"); if (!el) return;
+  OPEN_SRC = OPEN_SRC === el.dataset.key ? null : el.dataset.key; drawSrcDetail();
+});
+$("srcDetail").addEventListener("click", e => { if (e.target.closest("#detailClose")) { OPEN_SRC = null; drawSrcDetail(); } });
 // the ⋯ in the panel's corner (12 Nov, Korbi): a tick list of the cards; unticked ones are hidden, remembered in this browser
 let SRC_KEYS = [];
 function drawSrcMenu() {
