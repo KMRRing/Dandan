@@ -10,6 +10,8 @@
 //   2. at a Dandân (not a land at all, so never flagged here);
 //   3. maybe: it is your only Island, their Dandâns would kill you on their next attack, and with it gone they can't attack
 //      (flagged as doubtful: nearly always the Bend belongs on one of their Dandâns).
+// Mind Bend on their Island while they have three or more lands that are Islands (a Mystic Sanctuary or any other land typed
+// Island counts) is a flaw too (Korbi, 12 November 2026): it takes nothing they need, Dandâns or mana.
 import { perm, isLand, islands, isIsland, defOf } from "./dandan-core.js";
 import { DECK } from "./dandan-cards.js";
 
@@ -18,7 +20,11 @@ export function flawAt(s, seat, move) {
   const p = s.pending;
   if (move?.t !== "bend" || p?.t !== "bend" || p.seat !== seat) return null;
   const t = perm(s, p.target);
-  if (!t || !isLand(t) || t.ctl !== seat || move.from !== "Island" || !isIsland(t)) return null;
+  if (!t || !isLand(t) || move.from !== "Island" || !isIsland(t)) return null;
+  if (t.ctl !== seat) {
+    const theirs = islands(s, t.ctl).length;
+    return theirs >= 3 ? { kind: "flaw", card: "Mind Bend", text: `Mind Bend on their Island while they had ${theirs} Islands: it takes nothing they need, and spends one of the best cards in the game` } : null;
+  }
   if (move.to === "Mountain" && s.yard.some(id => /\{R\}/.test(defOf(id).flashback || ""))) return null;
   const foe = 1 - seat, dandans = s.bf.filter(q => q.ctl === foe && DECK[q.id] === "Dandân").length;
   const last = islands(s, seat).length === 1, dying = dandans && s.life[seat] <= 4 * dandans;
