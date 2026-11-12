@@ -1,6 +1,6 @@
 # Load the lab's Kubernetes setup into a Rackspace Spot cloudspace (12 Nov 2026). The lab chat can't reach the cluster (its
 # network allowlist), and the Rackspace console has no paste box, so a GitHub runner does it: it takes the cloudspace's
-# kubeconfigs (secrets RS_KUBECONFIG, RS_KUBECONFIG_2, RS_KUBECONFIG_3: one file from each cloudspace's Kubeconfig page) and the setup file (secret LAB_K8S_MANIFEST,
+# kubeconfigs (secrets RS_KUBECONFIG, RS_KUBECONFIG_2 … RS_KUBECONFIG_9: one file from each cloudspace's Kubeconfig page) and the setup file (secret LAB_K8S_MANIFEST,
 # dandan-lab-kubernetes.yaml, which holds the bucket key) and applies them. Nothing is printed but the resources' names.
 # It runs from the Actions tab (Run workflow), or when lab/k8s/apply changes, so the lab chat can start it with a push.
 name: Load the lab into Kubernetes
@@ -22,6 +22,12 @@ jobs:
           RS_KUBECONFIG: "${{ secrets.RS_KUBECONFIG }}"
           RS_KUBECONFIG_2: "${{ secrets.RS_KUBECONFIG_2 }}"
           RS_KUBECONFIG_3: "${{ secrets.RS_KUBECONFIG_3 }}"
+          RS_KUBECONFIG_4: "${{ secrets.RS_KUBECONFIG_4 }}"
+          RS_KUBECONFIG_5: "${{ secrets.RS_KUBECONFIG_5 }}"
+          RS_KUBECONFIG_6: "${{ secrets.RS_KUBECONFIG_6 }}"
+          RS_KUBECONFIG_7: "${{ secrets.RS_KUBECONFIG_7 }}"
+          RS_KUBECONFIG_8: "${{ secrets.RS_KUBECONFIG_8 }}"
+          RS_KUBECONFIG_9: "${{ secrets.RS_KUBECONFIG_9 }}"
           LAB_K8S_MANIFEST: "${{ secrets.LAB_K8S_MANIFEST }}"
         run: |
           if [ -z "$LAB_K8S_MANIFEST" ]; then echo "::error::Add the LAB_K8S_MANIFEST secret first"; exit 1; fi
@@ -31,7 +37,7 @@ jobs:
           printf '%s\n' "$LAB_K8S_MANIFEST" | sed 's#image: node:22-bookworm#image: mirror.gcr.io/library/node:22-bookworm#' > "$RUNNER_TEMP/m.yaml"
           # one kubeconfig secret per cloudspace (13 Nov: Chicago, then Hong Kong); the same setup goes to each
           n=0
-          for name in RS_KUBECONFIG RS_KUBECONFIG_2 RS_KUBECONFIG_3; do
+          for name in RS_KUBECONFIG RS_KUBECONFIG_2 RS_KUBECONFIG_3 RS_KUBECONFIG_4 RS_KUBECONFIG_5 RS_KUBECONFIG_6 RS_KUBECONFIG_7 RS_KUBECONFIG_8 RS_KUBECONFIG_9; do
             kc="${!name}"; [ -n "$kc" ] || continue; n=$((n+1))
             export KUBECONFIG="$RUNNER_TEMP/kc"; printf '%s\n' "$kc" > "$KUBECONFIG"; chmod 600 "$KUBECONFIG"
             cluster=$(kubectl config view --minify -o jsonpath='{.clusters[0].name}' 2>/dev/null)
@@ -47,4 +53,4 @@ jobs:
             rm -f "$KUBECONFIG"
           done
           rm -f "$RUNNER_TEMP/m.yaml"
-          [ "$n" -gt 0 ] || { echo "::error::No kubeconfig secret (RS_KUBECONFIG, RS_KUBECONFIG_2, RS_KUBECONFIG_3)"; exit 1; }
+          [ "$n" -gt 0 ] || { echo "::error::No kubeconfig secret (RS_KUBECONFIG, RS_KUBECONFIG_2 … _9)"; exit 1; }
