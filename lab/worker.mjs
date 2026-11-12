@@ -175,6 +175,7 @@ async function runShard(slot, spec, shard) {
   if (fs.existsSync(out)) await store.put(`results/${id}/part-${shard}.jsonl`, fs.readFileSync(out));
   await store.put(`results/${id}/stdout-${shard}.txt`, fs.readFileSync(printed));
   await store.put(`results/${id}/done-${shard}`, JSON.stringify({ code, seconds: Math.round((Date.now() - t0) / 1000), by: NAME }));
+  if (code === 0) { FIN.push([id, Math.round((Date.now() - t0) / 1000), Date.now()]); while (FIN.length > 40) FIN.shift(); }
   log(`slot ${slot}: ${id}/${shard} ended with ${code} after ${Math.round((Date.now() - t0) / 1000)} s`);
 }
 
@@ -201,6 +202,10 @@ async function slotLoop(slot) {
 // working): which cloud, how many cores, and the shard each busy core has. Taken away when the worker stops; one a machine
 // left behind (taken back mid-run) goes stale, and the page reads only fresh ones.
 const CLOUD = env.LAB_CLOUD || (env.AWS_BATCH_JOB_ID ? "aws" : env.LAB_KEY ? "other" : "gcp"), BUSY = new Map();
+// the shards this worker finished, [job, seconds, when] (the last 40): the Fleet page compares a machine's seconds a shard with
+// the fleet's for the same job, which is its speed; LAB_POOL names the pool it belongs to (a Kubernetes cluster sets it), as
+// a pod's name says nothing of where it runs (13 Nov 2026, Korbi: cost per working core and per unit of computing power)
+const FIN = [], POOL = env.LAB_POOL || null;
 // a machine can start with fewer cores than it has (12 Nov 2026: two Rackspace VMs of 16 came up seeing one): each beat looks
 // again, and cores that have appeared get their own slot (unless LAB_SLOTS fixed the count)
 const loops = [];
@@ -216,7 +221,7 @@ const grow = () => { wakeCores(); const n = env.LAB_SLOTS ? SLOTS : Math.max(SLO
 // range (12 Nov: two Rackspace pools of 4-core machines, Hong Kong and Sydney)
 const ipv4 = () => Object.values(os.networkInterfaces()).flat().filter(a => a && a.family === "IPv4" && !a.internal).map(a => a.address);
 const hw = () => ({ cpus: os.cpus().length, avail: os.availableParallelism?.(), present: cpuList("present").length, possible: cpuList("possible").length, offline: cpuList("offline").length, memGB: Math.round(os.totalmem() / 2 ** 30), ips: ipv4() });
-const beatWorker = () => { grow(); return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, slots: loops.length, hw: hw(), busy: [...BUSY.values()], started: T0, t: Date.now() })).catch(() => {}); };
+const beatWorker = () => { grow(); return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, pool: POOL, fin: FIN, slots: loops.length, hw: hw(), busy: [...BUSY.values()], started: T0, t: Date.now() })).catch(() => {}); };
 const workerBeat = setInterval(beatWorker, BEAT_MS);
 beatWorker();
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { store.del(`workers/${NAME}.json`).catch(() => {}); });

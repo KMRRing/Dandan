@@ -5,3 +5,4 @@ Changing this file makes .github/workflows/k8s-apply.yml load the lab setup into
 2026-11-12T22:01:24Z: why are 16 machines not ready
 2026-11-12T22:03:07Z: apply without restarting workers
 2026-11-12T22:38:57Z: workflow handles several clusters
+2026-11-12T23:04:34Z: workers told their cluster (LAB_POOL)
