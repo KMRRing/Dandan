@@ -849,7 +849,7 @@ function poolSpeeds(rows) {
   const med = a => { const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; }, mid = Object.fromEntries(Object.entries(per).map(([j, a]) => [j, med(a)]));
   return rows.map(r => { const xs = r.ws.flatMap(w => (w.fin || []).filter(([j, sec]) => sec > 0 && mid[j]).map(([j, sec]) => mid[j] / sec)); return xs.length ? { speed: xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : { speed: 1, n: 0 }; });
 }
-// the Rackspace market (13 Nov, Korbi): Claude's market watch writes fleet/market.json every 2 hours: the cheapest machines a
+// the Rackspace market (13 Nov, Korbi): Claude writes fleet/market.json at each market check: the cheapest machines a
 // core a month in the regions we have clusters in, our bids against them, and what the watch did (bid on a freebie, shrank a pool).
 function marketTile() {
   const M = MARKET; if (!M) return ["mkt", "Market", `<div class="tcard cost"><div class="tgrip"><span>Market</span></div><div class="fresh">No market check yet</div></div>`];
