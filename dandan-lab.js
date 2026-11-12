@@ -9,7 +9,11 @@
 //   5. autoplay: an engine (the pilot) plays your moves for you until the shown coaches disagree, or the game ends; then it
 //      stops and the decision is yours. Started and stopped from the strip; the pilot is chosen in the sheet;
 //   4. flags: the ⚑ on a coach's pick marks it as one the player disagrees with. The flags go with the game's record (`how`), so
-//      the game history lists them and opens the game at each.
+//      the game history lists them and opens the game at each;
+//   6. the error review (12 November 2026, Korbi): positions where Monte's move was flagged as a possible error (error-review.json,
+//      lab/error-review-data.mjs), each simulated again with every engine, and a verdict per position: an objective error, not an
+//      error, or unsure. An objective error is a marker every future engine is checked against. The verdicts are kept on the
+//      device and in the database (the index room's errors, which tools/pull-games.mjs collects as errors.json).
 // The choices are kept in localStorage under dandan-lab:lab, a lab game under dandan-lab:game (never the player's own saved
 // game), and its flags under dandan-lab:flags. Lab games are recorded like any game, marked "lab · <engine>".
 import { ENGINES, engineOf, DEFAULT_ENGINE, decide } from "./dandan-engines.js";
@@ -17,6 +21,9 @@ import { moveName } from "./dandan-words.js";
 import { DECK } from "./dandan-cards.js";
 import { nm } from "./dandan-core.js";
 import { DEPTH } from "./dandan-think.js";
+import { getSync } from "./net.js";
+import { INDEX_ROOM } from "./records.js";
+import { savedName } from "./name.js";
 
 const KEY = "dandan-lab:lab";
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -75,6 +82,66 @@ export function how(v = C?.view()) {
 
 /** Whether Monte hides its timing tell (dandan.js, engine coverStop): on unless switched off here; a new game takes it up. */
 export const coverOn = () => settings.cover !== false;
+
+// ---------- the error review ----------
+const VERDICTS = "dandan-lab:errors";
+const VERDICT_WORDS = { error: "Objective error", fine: "Not an error", unsure: "Unsure" };
+let review = null, reviewLoading = null;
+const sims = new Map();                            // position id → { engine id → { status, text, chance } }
+let verdicts = (() => { try { return JSON.parse(localStorage.getItem(VERDICTS)) || {}; } catch { return {}; } })();
+function loadReview() {
+  reviewLoading ||= fetch(new URL("./error-review.json", import.meta.url)).then(r => r.json()).then(d => { review = d; paintSheet(); }, () => { review = { items: [], failed: true }; paintSheet(); });
+  return reviewLoading;
+}
+/** A verdict given: kept here and in the database, so the lab can read it back and every future engine be checked against it. */
+async function setVerdict(id, v) {
+  verdicts = { ...verdicts, [id]: { verdict: v, at: Date.now() } };
+  try { localStorage.setItem(VERDICTS, JSON.stringify(verdicts)); } catch { /* private mode */ }
+  paintSheet();
+  try {
+    const sync = await getSync();
+    await sync.update(`crates/rooms/${INDEX_ROOM}/errors`, { [id]: { verdict: v, at: Date.now(), uid: sync.uid || "", name: savedName() || "" } });
+    C?.toast(`Marked: ${VERDICT_WORDS[v]}`);
+  } catch (e) { C?.toast("Kept on this device; the database didn't take it: " + (e?.message || e)); }
+}
+/** Every engine plays the position again (Medium on this thread, Hard each in its own worker at the coaches' depth). */
+function simulate(item) {
+  const got = {};
+  sims.set(item.id, got);
+  for (const e of ENGINES.filter(x => x.available)) {
+    got[e.id] = { status: "thinking" };
+    const done = r => {
+      got[e.id] = r.error || !r.result?.move ? { status: "error", text: r.error || "no move" }
+        : { status: "done", text: moveName(r.result.move, item.state, item.seat) || "pass", chance: r.result.chance, same: JSON.stringify(r.result.move) === JSON.stringify(item.played) };
+      paintSheet();
+    };
+    if (e.kind === "medium") decide(e, structuredClone(item.state), item.seat).then(result => done({ result }), err => done({ error: String(err?.message || err) }));
+    else askCoach(e, structuredClone(item.state), item.seat).then(done);
+  }
+  paintSheet();
+}
+function reviewHtml() {
+  if (!review) { loadReview(); return `<p class="lab-note">Loading the positions…</p>`; }
+  if (review.failed || !review.items.length) return `<p class="lab-note">No positions to review.</p>`;
+  const k = new URLSearchParams(location.search).get("k") || "";
+  const names = s => s.map(id => nm(id)).join(", ") || "—";
+  const bf = (st, seat) => st.bf.filter(p => p.ctl === seat).map(p => nm(p.id) + (p.tapped ? " (tapped)" : "")).join(", ") || "—";
+  const done = review.items.filter(i => verdicts[i.id]).length;
+  return `<p class="lab-note">Positions where Monte's move was flagged as a possible error. Each can be played again by every engine (Simulate). Mark it an objective error, and every future engine is checked against it: playing the move again counts against that engine. ${done} of ${review.items.length} marked.</p>
+    ${review.items.map(i => {
+      const st = i.state, v = verdicts[i.id]?.verdict, sim = sims.get(i.id), stack = st.stack.map(x => x.name).join(" ← ");
+      return `<details class="lab-eng lab-err${v ? " marked" : ""}"${sim ? " open" : ""}><summary><b>Turn ${i.turn}: Monte ${esc(moveName(i.played, st, i.seat) || "passes")}</b>${v ? ` · <em>${esc(VERDICT_WORDS[v])}</em>` : ""}</summary>
+        <p class="lab-note">${esc(i.why)}.</p>
+        <p class="lab-note">${esc(st.step)}${stack ? ` · stack: ${esc(stack)}` : ""} · life Monte ${st.life[1]}, you ${st.life[0]} · library ${st.lib.length}</p>
+        <p class="lab-note"><b>Monte's hand:</b> ${esc(names(st.hand[1]))}<br><b>Your hand:</b> ${esc(names(st.hand[0]))}<br><b>Monte's side:</b> ${esc(bf(st, 1))}<br><b>Your side:</b> ${esc(bf(st, 0))}</p>
+        <p class="lab-note"><b>Engines at 256 deals:</b> ${Object.entries(i.engines).map(([n, m]) => `${esc(n)} ${esc(m)}`).join(" · ")}</p>
+        ${sim ? `<p class="lab-note"><b>Simulated now:</b> ${Object.entries(sim).map(([id, r]) => `${esc(engineOf(id)?.short || id)}: ${r.status === "done" ? `${esc(r.text)}${r.chance != null ? ` (${Math.round(100 * r.chance)}%)` : ""}${r.same ? " ✓ same as Monte" : ""}` : r.status === "thinking" ? "thinking…" : esc(r.text)}`).join(" · ")}</p>` : ""}
+        <div class="lab-row"><button type="button" class="btn" data-sim="${esc(i.id)}">Simulate</button>
+          <a class="btn" href="games.html?k=${encodeURIComponent(k)}&g=${esc(i.game)}&m=${i.move}" target="_blank" rel="noopener">Open the game here</a></div>
+        <div class="lab-row">${Object.entries(VERDICT_WORDS).map(([key, w]) => `<button type="button" class="btn${v === key ? " primary" : ""}" data-verdict="${esc(i.id)}" data-v="${key}">${esc(w)}</button>`).join("")}</div>
+      </details>`;
+    }).join("")}`;
+}
 
 /** The engines that are coaching now: ticked as a coach and shown. */
 export const activeCoaches = (st = settings) => ENGINES.filter(e => e.available && st.coach[e.id] && !st.hide[e.id]);
@@ -303,6 +370,8 @@ function paintSheet() {
   };
   body.innerHTML = `<p class="lab-lead">The same game as the live one. Choose who Monte is, and who coaches you: at each decision of yours every shown coach's pick is ringed on the table and listed above your hand, and you are told when they differ. A hidden coach is not run. ▶ Auto lets the chosen engine play your moves until the shown coaches disagree. Tap ⚑ on a pick you disagree with: lab games are recorded (marked lab), flags and all, so the game history lists them. Tap a name to read how it was built.</p>
     ${ENGINES.map(card).join("")}
+    <h3 class="lab-h">Error review</h3>
+    ${reviewHtml()}
     <h3 class="lab-h">Thinking</h3>
     <label class="lab-sel">Monte's look-ahead <select data-depth="oppDepth">${depth(settings.oppDepth, ["quick", "long", "deep", "deepest"])}</select></label>
     <label class="lab-sel">Autoplay: who plays for you <select data-pilot="1">${ENGINES.filter(e => e.available).map(e => `<option value="${e.id}"${settings.pilot === e.id ? " selected" : ""}>${esc(e.name)}</option>`).join("")}</select></label>
@@ -330,6 +399,10 @@ function wireSheet() {
     if (b) openSheet(b.dataset.info);
   });
   $("labBody").addEventListener("click", e => {
+    const sim = e.target.closest("button[data-sim]");
+    if (sim) { const it = review?.items.find(i => i.id === sim.dataset.sim); if (it) simulate(it); return; }
+    const ver = e.target.closest("button[data-verdict]");
+    if (ver) { setVerdict(ver.dataset.verdict, ver.dataset.v); return; }
     const b = e.target.closest("button[data-info]");
     if (!b) return;
     const id = b.dataset.info;

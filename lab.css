@@ -41,3 +41,9 @@
 
 .lab-auto { font: inherit; color: var(--ink); background: var(--sheet); border: 1px solid var(--brass); border-radius: 4px; padding: .15rem .55rem; min-height: 1.6rem; cursor: pointer; margin-left: auto; }
 .lab-auto.on { background: var(--brass); color: var(--sheet); }
+/* the error review: one position a box, its verdict shown once given */
+.lab-err summary { cursor: pointer; font-size: .85rem; }
+.lab-err.marked summary em { color: var(--ink-soft); font-style: normal; }
+.lab-err > p { margin: .35rem 0 0; }
+.lab-row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
+.lab-row .btn.primary { font-weight: 700; }

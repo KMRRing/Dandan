@@ -2,6 +2,7 @@
 //   games/<key>.json   one game: { key, room, line (its index line), game (as kept: seed, seats, moves, state…), result }
 //   index.json         every game's summary, oldest first
 //   status.json        when it last found anything, how many it has, what went wrong
+//   errors.json        the game lab's error review: { position id: { verdict (error, fine, unsure), at, uid, name } }
 // It reads as any visitor to the page does, signing in anonymously with the page's own public key, so it needs no secret:
 // the index room (records.js) lists every game with the room it is in, and a game it already has is not fetched again.
 // usage: node tools/pull-games.mjs <folder> [--check]       (IDENTITY_URL and DB_URL are for the test, which runs a stand-in)
@@ -59,6 +60,12 @@ async function main() {
       fs.rmSync(path.join(dir, "games", `${key}.json`), { force: true });
     }
   } catch (e) { fail("removed", e); }
+  // the error review's verdicts (the game lab, dandan-lab.js): which of Monte's flagged moves are objective errors, kept as they stand
+  if (base) try {
+    const errors = (await json(`${base}/crates/rooms/${INDEX_ROOM}/errors.json?auth=${token}`, { headers: HEADERS })) || {};
+    const text = JSON.stringify(errors);
+    if (text !== JSON.stringify(read("errors.json", {}))) write("errors.json", errors);
+  } catch (e) { console.error("errors (none kept, or not read):", e?.message || e); }   // not a problem: none may be kept yet
   let found = 0;
   for (const [key, line] of Object.entries(lines || {})) {
     if (have.has(key) || !line?.room || line.check) continue;
