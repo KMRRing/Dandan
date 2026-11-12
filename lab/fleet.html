@@ -1895,24 +1895,31 @@ function timeLayout(G, d, only) {
 const LANE_ROWS = [["medium", "Medium engines"], ["set", "Training sets"], ["judge", "Value networks"], ["engine", "Engines"], ["match", "Matches"], ["check", "Measurements"]];
 const LANE_OF = Object.fromEntries(LANE_ROWS.map(([t], i) => [t, i]));
 function laneLayout(G, d, only) {
-  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), GAP = 30, ROW_GAP = 70, LEFT = 150;
-  const when = n => { const x = t[n.key]; return !x ? 0 : x.plan ? 1e15 + x.rank : x.at === -Infinity ? -1 : x.at; };
+  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), GAP = 30, ROW_GAP = 70, LEFT = 150, COL_GAP = 50;
   const row = n => LANE_OF[n.t] ?? LANE_ROWS.length - 1;
+  // time columns (Korbi, 21:38: x roughly old to new): an hour each, only hours with something in them, then each planned
+  // step; a column is as wide as its fullest row; a box never starts left of the boxes that feed it
+  const bucket = n => { const x = t[n.key] || { at: -Infinity }; return x.plan ? "p" + String(x.rank).padStart(3, "0") : x.at === -Infinity ? "a" : "h" + String(Math.floor(x.at / HOUR)).padStart(9, "0"); };
+  const keys = [...new Set(nodes.map(bucket))].sort();
   const parents = new Map(nodes.map(n => [n.key, []]));
   for (const [a, b] of G.edges) if (parents.has(a) && parents.has(b)) parents.get(b).push(a);
-  // feeders before what they feed, otherwise oldest first
-  const order = [], done = new Set(), byKey = new Map(nodes.map(n => [n.key, n]));
-  const visit = (n, path = new Set()) => { if (done.has(n.key) || path.has(n.key)) return; path.add(n.key); for (const k of parents.get(n.key).map(k => byKey.get(k)).sort((a, z) => when(a) - when(z))) visit(k, path); done.add(n.key); order.push(n); };
-  [...nodes].sort((a, z) => when(a) - when(z) || a.title.localeCompare(z.title)).forEach(n => visit(n));
   const rowH = LANE_ROWS.map((_, r) => Math.max(0, ...nodes.filter(n => row(n) === r).map(hOf)));
-  const rowY = []; let y = 50; LANE_ROWS.forEach((_, r) => { rowY[r] = y; if (rowH[r]) y += rowH[r] + ROW_GAP; });
-  const cursor = LANE_ROWS.map(() => LEFT), pos = {};
-  for (const n of order) {
-    const r = row(n), from = Math.max(cursor[r], ...parents.get(n.key).filter(k => pos[k]).map(k => pos[k].x));
-    pos[n.key] = { x: from, y: rowY[r] }; cursor[r] = from + wOf(n) + GAP;
+  const rowY = []; let y = 70; LANE_ROWS.forEach((_, r) => { rowY[r] = y; if (rowH[r]) y += rowH[r] + ROW_GAP; });
+  const pos = {}, cursor = LANE_ROWS.map(() => LEFT), ticks = []; let colAt = LEFT, nowDone = false, lastDay = null;
+  for (const b of keys) {
+    if (b[0] === "p" && !nowDone) { nowDone = true; ticks.push({ y: colAt - COL_GAP / 2, label: "Now · planned →", cls: "now" }); }
+    const ns = nodes.filter(n => bucket(n) === b).sort((a, z) => (t[a.key]?.at || 0) - (t[z.key]?.at || 0) || a.title.localeCompare(z.title));
+    const start = colAt; let end = colAt;
+    for (const n of ns) {
+      const r = row(n), x = Math.max(start, cursor[r], ...parents.get(n.key).filter(k => pos[k]).map(k => pos[k].x));
+      pos[n.key] = { x, y: rowY[r] }; cursor[r] = x + wOf(n) + GAP; end = Math.max(end, cursor[r] - GAP);
+    }
+    if (b[0] === "h") { const dt = new Date(Number(b.slice(1)) * HOUR), day = dt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }); ticks.push({ y: start - 14, label: (day !== lastDay ? day + " · " : "") + dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }), cls: day !== lastDay ? "day" : "" }); lastDay = day; }
+    else if (b === "a") ticks.push({ y: start - 14, label: "Earlier", cls: "day" });
+    colAt = end + COL_GAP;
   }
-  const end = Math.max(...cursor) + 40;
-  return { pos, ticks: [], rows: LANE_ROWS.map(([, name], r) => rowH[r] ? { name, y: rowY[r], h: rowH[r] } : null).filter(Boolean), lanes: [], end, across: y };
+  if (!nowDone) ticks.push({ y: colAt - COL_GAP / 2, label: "Now", cls: "now" });
+  return { pos, ticks, rows: LANE_ROWS.map(([, name], r) => rowH[r] ? { name, y: rowY[r], h: rowH[r] } : null).filter(Boolean), lanes: [], end: colAt + 40, across: y };
 }
 // which way lines and the "feeds" menus run: lanes always flow down their rows; the time map follows the direction button
 const FLOW = () => (LAYOUT === "lanes" ? "down" : ORIENT);
@@ -2006,7 +2013,7 @@ function goToBox(key) {
 }
 function axisHtml(W, H) {
   const down = ORIENT === "down";
-  if (LAYOUT === "lanes") return (AXISMARKS.rows || []).map(r => `<div class="band lane" style="left:16px;top:${r.y - 28}px;width:${W - 32}px;height:${r.h + 44}px"><span>${esc(r.name)}</span></div>`).join("");
+  if (LAYOUT === "lanes") return AXISMARKS.ticks.map(k => `<div class="vtick ${k.cls}" style="left:${k.y}px;height:${H}px"><span>${esc(k.label)}</span></div>`).join("") + (AXISMARKS.rows || []).map(r => `<div class="band lane" style="left:16px;top:${r.y - 28}px;width:${W - 32}px;height:${r.h + 44}px"><span>${esc(r.name)}</span></div>`).join("");
   const ticks = AXISMARKS.ticks.map(k => down ? `<div class="tick ${k.cls}" style="top:${k.y - 14}px;width:${W}px"><span>${esc(k.label)}</span></div>` : `<div class="vtick ${k.cls}" style="left:${k.y - 14}px;height:${H}px"><span>${esc(k.label)}</span></div>`).join("");
   const regions = AXISMARKS.lanes.map(l => {
     const ps = l.keys.map(k => POS[k] && { ...POS[k], n: GRAPH.nodes.find(n => n.key === k) }).filter(Boolean);
@@ -2028,7 +2035,7 @@ function drawEdges() {
   const box = k => { const el = document.querySelector(`.cnode[data-key="${CSS.escape(k)}"]`); return el && { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight }; };
   const lit = FOCUS ? lineage(GRAPH, FOCUS.key, FOCUS.dir) : null;
   svg.innerHTML = `<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--mute)"/></marker><marker id="ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker></defs>` +
-    GRAPH.edges.map(([a, b]) => {
+    linksShown().map(([a, b, via]) => {
       const A = box(a), Bx = box(b); if (!A || !Bx) return "";
       const on = lit && lit.has(a) && lit.has(b);
       let d;
@@ -2036,8 +2043,29 @@ function drawEdges() {
       if (FLOW() === "lr" || (LAYOUT === "lanes" && Math.abs(A.y - Bx.y) < 20)) { const [L, R] = A.x <= Bx.x ? [A, Bx] : [Bx, A], x1 = L.x + L.w, y1 = L.y + Math.min(L.h / 2, 60), x2 = R.x - 2, y2 = R.y + Math.min(R.h / 2, 60), c = Math.max(60, Math.abs(x2 - x1) / 2); d = A === L ? `M${x1},${y1} C${x1 + c},${y1} ${x2 - c},${y2} ${x2},${y2}` : `M${x2},${y2} C${x2 - c},${y2} ${x1 + c},${y1} ${x1},${y1}`; }
       else if (A.y > Bx.y + 20) { const x1 = A.x + A.w / 2, y1 = A.y, x2 = Bx.x + Bx.w / 2, y2 = Bx.y + Bx.h + 2, c = Math.max(60, Math.abs(y2 - y1) / 2); d = `M${x1},${y1} C${x1},${y1 - c} ${x2},${y2 + c} ${x2},${y2}`; }   // up a row (an engine's self-play games)
       else { const x1 = A.x + A.w / 2, y1 = A.y + A.h, x2 = Bx.x + Bx.w / 2, y2 = Bx.y - 2, c = Math.max(60, Math.abs(y2 - y1) / 2); d = `M${x1},${y1} C${x1},${y1 + c} ${x2},${y2 - c} ${x2},${y2}`; }
-      return `<path d="${d}" fill="none" stroke="${on ? "var(--accent)" : "var(--mute)"}" stroke-width="${on ? 2.4 : 1.4}" opacity="${lit && !on ? 0.15 : on ? 1 : 0.55}" marker-end="url(#${on ? "ahl" : "ah"})"/>`;
+      return `<path d="${d}" fill="none" stroke="${on ? "var(--accent)" : "var(--mute)"}" stroke-width="${on ? 2.4 : 1.4}" opacity="${lit && !on ? 0.15 : on ? 1 : 0.55}"${via ? ` stroke-dasharray="6 5"` : ""} marker-end="url(#${on ? "ahl" : "ah"})"><title>${via ? `Through ${esc(via)} (off the map)` : ""}</title></path>`;
     }).join("");
+}
+// every connection between boxes on the map (12 Nov, Korbi: "make sure all the connections are shown"): the direct ones, and,
+// dashed, those that run through boxes off the map (a value net to its match through the engine that carries it), so no box
+// on the map looks unconnected to what it feeds
+function linksShown() {
+  const on = k => SHOWN.has(k), out = new Map(), seen = new Set(), links = [];
+  for (const [a, b] of GRAPH.edges) (out.get(a) || out.set(a, []).get(a)).push(b);
+  const title = k => GRAPH.nodes.find(n => n.key === k)?.title || k;
+  for (const a of SHOWN) for (const b0 of out.get(a) || []) {
+    if (on(b0)) { if (!seen.has(a + ">" + b0)) { seen.add(a + ">" + b0); links.push([a, b0, null]); } continue; }
+    const stack = [[b0, [title(b0)]]], been = new Set([b0]);
+    while (stack.length) {
+      const [k, via] = stack.pop();
+      for (const c of out.get(k) || []) {
+        if (been.has(c)) continue; been.add(c);
+        if (on(c)) { if (c !== a && !seen.has(a + ">" + c)) { seen.add(a + ">" + c); links.push([a, c, via.join(", ")]); } }
+        else if (via.length < 3) stack.push([c, [...via, title(c)]]);
+      }
+    }
+  }
+  return links;
 }
 // dragging boxes, panning the background, the ports
 let drag = null;
