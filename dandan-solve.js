@@ -202,11 +202,11 @@ const value = s => (s.winner === 0 ? 1 : s.winner === 1 ? 0 : 0.5);
  * opts: judge (s, me) → chance, for the cut at Memory; nodes, ms: the budget (over it: capped, value null);
  * shuffles: orders a shuffle is averaged over; rootAll: value every root choice exactly (else alpha-beta at the root too).
  */
-export function solve(root, { judge = null, nodes = 2e6, ms = 3e4, shuffles = 3, rootAll = true, turns = Infinity, scope = "all" } = {}) {
+export function solve(root, { judge = null, nodes = 2e6, ms = 3e4, shuffles = 3, rootAll = true, turns = Infinity, scope = "all", tableMax = 1e6 } = {}) {
   // turns: a horizon (the search stops as the turn `turns` after the root's begins, and takes the value net's chance there);
   // Infinity searches to the end of the game
   const lastTurn = root.turn + turns;
-  const st = { nodes: 0, hits: 0, loops: 0, chance: 0, memory: 0, horizon: 0, maxPly: 0, t0: Date.now() }, table = new Map(), path = new Set();
+  const st = { nodes: 0, hits: 0, loops: 0, chance: 0, memory: 0, horizon: 0, clears: 0, maxPly: 0, t0: Date.now() }, table = new Map(), path = new Set();
   const wasStops = fullStops(true);
   solving++;
   // one choice made: its value (null if not legal), averaged over the orders of a shuffle it led to
@@ -257,6 +257,9 @@ export function solve(root, { judge = null, nodes = 2e6, ms = 3e4, shuffles = 3,
     if (best === -1 || best === 2) best = 0.5;
     const e = table.get(k) || { lo: 0, hi: 1 };
     if (best <= a0) e.hi = Math.min(e.hi, best); else if (best >= b0) e.lo = Math.max(e.lo, best); else { e.lo = best; e.hi = best; }
+    // the table is emptied when it grows past `tableMax` positions (a long search filled the 7 GB of a lab runner): what was
+    // in it is worked out again if met again, so only the time is lost
+    if (table.size >= tableMax) { table.clear(); st.clears++; }
     table.set(k, e);
     return best;
   };
@@ -283,7 +286,7 @@ export function solve(root, { judge = null, nodes = 2e6, ms = 3e4, shuffles = 3,
     solving--;
     fullStops(wasStops);
   }
-  return { ...out, nodes: st.nodes, distinct: table.size, hits: st.hits, loops: st.loops, chance: st.chance, memory: st.memory, horizon: st.horizon, maxPly: st.maxPly, ms: Date.now() - st.t0 };
+  return { ...out, nodes: st.nodes, distinct: table.size, hits: st.hits, loops: st.loops, chance: st.chance, memory: st.memory, horizon: st.horizon, clears: st.clears, maxPly: st.maxPly, ms: Date.now() - st.t0 };
 }
 
 /** A choice's name for a report: what it is, by card names. */
