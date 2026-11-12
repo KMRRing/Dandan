@@ -1774,7 +1774,7 @@ let ORIENT = store("fleet:orient2") === "lr" ? "lr" : "down";
 // two arrangements (12 Nov, Korbi): by time (each box at the hour it happened), or in lanes by kind of box (Rearrange): Medium
 // engines, then training sets and value nets, then engines, then matches and measurements, each idea a coloured block
 let LAYOUT = store("fleet:layout") === "time" ? "time" : "lanes";
-const MKEY = () => (LAYOUT === "lanes" ? "lanes:" : "") + ORIENT;
+const MKEY = () => (LAYOUT === "lanes" ? "lanes" : ORIENT);
 // the Pipeline and the Fable plan are two maps over the same canvas, each with its boxes and places kept apart
 let MAP = location.hash.slice(1) === "pipeline" ? "pipeline" : "fable";
 const mk = k => (MAP === "fable" ? "fable:" : "fleet:") + k;
@@ -1884,28 +1884,41 @@ function timeLayout(G, d, only) {
   return { pos, ticks, lanes: lanes.map(l => ({ l, at: laneAt[l], size: laneSize[l], keys: nodes.filter(n => ideaOf(n) === l).map(n => n.key) })), end: y + 60, across: c };
 }
 // ---------- lanes (12 Nov, Korbi) ----------
-// One lane a kind of box, in the order work flows: Medium engines; training sets and value nets; engines (Hard: a net and a
-// Medium); matches and measurements. Each idea is a block across all four lanes, oldest idea first; inside a block the boxes
-// of one lane are stacked on each other (Korbi, 21:23: "stacked above each other, not next to each other"), oldest first, so
-// a block is one column wide and the map stays compact. A lane is as deep as its deepest stack.
+// Four rows, top to bottom, in the order work flows: Medium engines; training sets, then the value nets trained on them;
+// engines (Hard: a net and a Medium); matches and measurements. Each idea is a block across the four rows, its boxes side by
+// side in their row with no gaps for empty hours, blocks oldest idea first, each block tinted in its own colour. Inside a
+// block, a row is first put in time order (training sets before nets), then each box is drawn towards the boxes it connects
+// to (the mean place of its neighbours, a few sweeps up and down), so fewer lines cross. Always rows, whatever the direction.
 const LANE_OF = { medium: 0, set: 1, judge: 1, engine: 2, match: 3, check: 3 };
 const BLOCK_ORDER = ["old", "live", "medium", "games", "nets", "search", "gates", "checks", "model", "later"];
 function laneLayout(G, d, only) {
-  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), down = ORIENT === "down", GAP = 24, LANE_GAP = 70, BLOCK_GAP = 70;
-  const along = n => (down ? hOf(n) : wOf(n)), across = n => (down ? wOf(n) : hOf(n));
+  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), GAP = 28, LANE_GAP = 80, BLOCK_GAP = 90;
   const when = n => { const x = t[n.key]; return !x ? 0 : x.plan ? 1e15 + x.rank : x.at === -Infinity ? -1 : x.at; };
-  const lane = n => LANE_OF[n.t] ?? 3, blocks = BLOCK_ORDER.filter(b => nodes.some(n => ideaOf(n) === b));
-  const stacks = blocks.map(b => [0, 1, 2, 3].map(l => nodes.filter(n => ideaOf(n) === b && lane(n) === l).sort((a, z) => when(a) - when(z) || a.title.localeCompare(z.title))));
-  const depth = [0, 1, 2, 3].map(l => Math.max(0, ...stacks.map(st => st[l].reduce((s, n) => s + across(n) + GAP, 0) - (st[l].length ? GAP : 0))));
-  const laneAt = []; let c = 60; for (let l = 0; l < 4; l++) { laneAt[l] = c; if (depth[l]) c += depth[l] + LANE_GAP; }
-  const pos = {}; let x = 40;
-  blocks.forEach((b, bi) => {
-    const width = Math.max(...stacks[bi].flat().map(along));
-    stacks[bi].forEach((st, l) => { let o = laneAt[l]; for (const n of st) { pos[n.key] = down ? { x: o, y: x } : { x, y: o }; o += across(n) + GAP; } });
-    x += width + BLOCK_GAP;
-  });
-  return { pos, ticks: [], lanes: blocks.map(l => ({ l, keys: nodes.filter(n => ideaOf(n) === l).map(n => n.key) })), end: x, across: c };
+  const lane = n => LANE_OF[n.t] ?? 3, flow = n => (n.t === "set" ? 0 : 1);
+  const nb = new Map(nodes.map(n => [n.key, []]));
+  for (const [a, b] of G.edges) if (nb.has(a) && nb.has(b)) { nb.get(a).push(b); nb.get(b).push(a); }
+  const rowH = [0, 1, 2, 3].map(l => Math.max(0, ...nodes.filter(n => lane(n) === l).map(hOf)));
+  const laneAt = []; let y = 60; for (let l = 0; l < 4; l++) { laneAt[l] = y; if (rowH[l]) y += rowH[l] + LANE_GAP; }
+  const pos = {}, mid = {}, blocks = BLOCK_ORDER.filter(b => nodes.some(n => ideaOf(n) === b));
+  let x = 40;
+  for (const b of blocks) {
+    const rows = [0, 1, 2, 3].map(l => nodes.filter(n => ideaOf(n) === b && lane(n) === l).sort((a, z) => flow(a) - flow(z) || when(a) - when(z) || a.title.localeCompare(z.title)));
+    const place = () => { let w = 0; for (const r of rows) { let o = x; for (const n of r) { pos[n.key] = o; mid[n.key] = o + wOf(n) / 2; o += wOf(n) + GAP; } if (r.length) w = Math.max(w, o - x - GAP); } return w; };
+    place();
+    for (let sweep = 0; sweep < 4; sweep++) {
+      for (const r of sweep % 2 ? [...rows].reverse() : rows) {
+        const ks = new Map(r.map(n => { const ms = nb.get(n.key).filter(k => mid[k] != null).map(k => mid[k]); return [n.key, ms.length ? ms.reduce((s, v) => s + v, 0) / ms.length : mid[n.key]]; }));
+        r.sort((a, z) => (a.t === "set" && z.t === "judge" ? -1 : a.t === "judge" && z.t === "set" ? 1 : 0) || ks.get(a.key) - ks.get(z.key) || when(a) - when(z));
+      }
+      place();
+    }
+    x += place() + BLOCK_GAP;
+  }
+  const out = Object.fromEntries(nodes.map(n => [n.key, { x: pos[n.key], y: laneAt[lane(n)] }]));
+  return { pos: out, ticks: [], lanes: blocks.map(l => ({ l, keys: nodes.filter(n => ideaOf(n) === l).map(n => n.key) })), end: x, across: y };
 }
+// which way lines and the "feeds" menus run: lanes always flow down their rows; the time map follows the direction button
+const FLOW = () => (LAYOUT === "lanes" ? "down" : ORIENT);
 let AXISMARKS = { ticks: [], lanes: [] };
 // lay out what is on the map from scratch, in the current direction
 function tidy() { MANUAL = {}; for (const k in HEIGHT) delete HEIGHT[k]; }
@@ -1926,7 +1939,8 @@ function renderCanvas(d) {
   if (need.length && !FETCHING) { FETCHING = true; loadRows(need).finally(() => { FETCHING = false; rerender(); }); }
   const parents = k => G.edges.filter(e => e[1] === k).map(e => e[0]), children = k => G.edges.filter(e => e[0] === k).map(e => e[1]);
   const lit = FOCUS ? lineage(G, FOCUS.key, FOCUS.dir) : null;
-  let maxX = ORIENT === "down" ? lay.across : lay.end, maxY = ORIENT === "down" ? lay.end : lay.across;
+  const tall = LAYOUT !== "lanes" && ORIENT === "down";
+  let maxX = tall ? lay.across : lay.end, maxY = tall ? lay.end : lay.across;
   const html = shown.map(n => {
     const st = nodeStatus(n, d, G), [type, gloss] = TYPES[n.t], p = POS[n.key], w = wOf(n);
     maxX = Math.max(maxX, p.x + w + 60); maxY = Math.max(maxY, p.y + 420);
@@ -1951,12 +1965,12 @@ function renderCanvas(d) {
   }).join("")}</div>`;
   $("mapTools").innerHTML = `<span class="seg" role="group" aria-label="What is on the map"><button data-scope="relevant" aria-pressed="${SCOPE === "relevant"}" title="Running, waiting and planned work, the live net, and anything from the last 12 hours">What matters now</button><button data-scope="all" aria-pressed="${SCOPE === "all"}" title="Every box, back to the start of the lab">Everything (${G.nodes.length})</button></span>
     <button id="chooseBtn" aria-expanded="${!$("chooser").hidden}" title="Choose the boxes on the map, by idea">Choose boxes · ${shown.length}/${G.nodes.length}</button><span class="rb-sep"></span>
-    <button id="tidy" title="Lanes by kind of box (Medium engines, sets and nets, engines, matches), each idea a coloured block; every box measured again">Rearrange</button><button id="layoutTime" aria-pressed="${LAYOUT === "time"}" title="Each box at the hour it happened">By time</button><button id="orient" title="Switch direction">${LAYOUT === "lanes" ? (ORIENT === "lr" ? "Lanes as rows" : "Lanes as columns") : ORIENT === "lr" ? "Time →" : "Time ↓"}</button><span class="rb-sep"></span>
+    <button id="tidy" title="Lanes by kind of box (Medium engines, sets and nets, engines, matches), each idea a coloured block; every box measured again">Rearrange</button><button id="layoutTime" aria-pressed="${LAYOUT === "time"}" title="Each box at the hour it happened">By time</button>${LAYOUT === "lanes" ? "" : `<button id="orient" title="Switch direction">${ORIENT === "lr" ? "Time →" : "Time ↓"}</button>`}<span class="rb-sep"></span>
     <button data-zoom="-1" aria-label="Zoom out">−</button><button data-zoom="0">Fit</button><button data-zoom="1" aria-label="Zoom in">+</button>`;
   $("chooser").innerHTML = `<div class="chead"><span>Choose boxes · ${shown.length} of ${G.nodes.length} on the map</span><button class="x" id="chooseClose" aria-label="Close">×</button></div>
     <div class="legend mini">${Object.entries(TYPES).map(([k, [t]]) => `<span class="t-${k}"><i style="background:var(--t)"></i>${t}</span>`).join("")}</div>${items}`;
   $("canvasView").innerHTML = `${banner || "<div></div>"}
-    <div class="cframe"><div class="cwrap ${ORIENT === "down" ? "vert" : ""}" id="cwrap"><div class="csizer" id="csizer" style="width:${maxX * ZOOM}px;height:${maxY * ZOOM}px"><div class="canvas" id="canvas" style="width:${maxX}px;height:${maxY}px;transform:scale(${ZOOM})">${axisHtml(maxX, maxY)}<svg class="edges" id="edges" width="${maxX}" height="${maxY}"></svg>${html}</div></div></div></div>`;
+    <div class="cframe"><div class="cwrap ${FLOW() === "down" ? "vert" : ""}" id="cwrap"><div class="csizer" id="csizer" style="width:${maxX * ZOOM}px;height:${maxY * ZOOM}px"><div class="canvas" id="canvas" style="width:${maxX}px;height:${maxY}px;transform:scale(${ZOOM})">${axisHtml(maxX, maxY)}<svg class="edges" id="edges" width="${maxX}" height="${maxY}"></svg>${html}</div></div></div></div>`;
   const wrap = $("cwrap");
   if (wrap) { wrap.scrollLeft = SCROLL.l + (scrollBy ? scrollBy.dx * ZOOM : 0); wrap.scrollTop = SCROLL.t + (scrollBy ? scrollBy.dy * ZOOM : 0); scrollBy = null;
     // bring newly opened boxes (and the one they came from) into view
@@ -2019,7 +2033,9 @@ function drawEdges() {
       const A = box(a), Bx = box(b); if (!A || !Bx) return "";
       const on = lit && lit.has(a) && lit.has(b);
       let d;
-      if (ORIENT === "lr") { const x1 = A.x + A.w, y1 = A.y + Math.min(A.h / 2, 60), x2 = Bx.x - 2, y2 = Bx.y + Math.min(Bx.h / 2, 60), c = Math.max(60, Math.abs(x2 - x1) / 2); d = `M${x1},${y1} C${x1 + c},${y1} ${x2 - c},${y2} ${x2},${y2}`; }
+      // in lanes, boxes in one row (a training set and its net) are joined side to side; across rows, top to bottom
+      if (FLOW() === "lr" || (LAYOUT === "lanes" && Math.abs(A.y - Bx.y) < 20)) { const [L, R] = A.x <= Bx.x ? [A, Bx] : [Bx, A], x1 = L.x + L.w, y1 = L.y + Math.min(L.h / 2, 60), x2 = R.x - 2, y2 = R.y + Math.min(R.h / 2, 60), c = Math.max(60, Math.abs(x2 - x1) / 2); d = A === L ? `M${x1},${y1} C${x1 + c},${y1} ${x2 - c},${y2} ${x2},${y2}` : `M${x2},${y2} C${x2 - c},${y2} ${x1 + c},${y1} ${x1},${y1}`; }
+      else if (A.y > Bx.y + 20) { const x1 = A.x + A.w / 2, y1 = A.y, x2 = Bx.x + Bx.w / 2, y2 = Bx.y + Bx.h + 2, c = Math.max(60, Math.abs(y2 - y1) / 2); d = `M${x1},${y1} C${x1},${y1 - c} ${x2},${y2 + c} ${x2},${y2}`; }   // up a row (an engine's self-play games)
       else { const x1 = A.x + A.w / 2, y1 = A.y + A.h, x2 = Bx.x + Bx.w / 2, y2 = Bx.y - 2, c = Math.max(60, Math.abs(y2 - y1) / 2); d = `M${x1},${y1} C${x1},${y1 + c} ${x2},${y2 - c} ${x2},${y2}`; }
       return `<path d="${d}" fill="none" stroke="${on ? "var(--accent)" : "var(--mute)"}" stroke-width="${on ? 2.4 : 1.4}" opacity="${lit && !on ? 0.15 : on ? 1 : 0.55}" marker-end="url(#${on ? "ahl" : "ah"})"/>`;
     }).join("");
@@ -2073,7 +2089,7 @@ function drawMenu() {
   document.body.appendChild(el);
   const w = Math.min(340, innerWidth - 16);
   el.style.width = w + "px";
-  if (ORIENT === "lr") {
+  if (FLOW() === "lr") {
     const left = MENU.dir === "in" ? r.left - w - 6 : r.right + 6;
     el.style.left = Math.max(8, Math.min(innerWidth - w - 8, left)) + "px";
     el.style.top = Math.max(8, Math.min(innerHeight - el.offsetHeight - 8, r.top - 20)) + "px";
