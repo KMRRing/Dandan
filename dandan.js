@@ -17,7 +17,7 @@ import { savedName, askName } from "./name.js";
 import { recordResult, recordProgress } from "./results.js";
 import { sextant } from "./loading.js";
 import { createTable3d } from "./dandan-3d.js";
-import { curveOf, worthDrawing, hasActions, byTurn, momentsOf, linesBetween, MIN_FALL, captionOf, readoutOf, chartSvg, pointAt, BOX } from "./dandan-advantage.js";
+import { curveOf, worthDrawing, hasActions, byTurn, momentsOf, linesBetween, MIN_FALL, captionOf, readoutOf, chartSvg, pointAt, BOX, reviewed } from "./dandan-advantage.js";
 
 // Lab mode: lab.html (the owner's game lab, behind the key) sets globalThis.__dandanLab, { engine } the opponent's, before it loads this
 // file; index.html never does, and then every line below runs as it always has. In the lab the game is this same game, kept under
@@ -1081,14 +1081,55 @@ function showEnd(v) {
     ${moves ? `<div id="endMode" class="dd-rv-seg" role="group" aria-label="Chart detail"><button type="button" data-detail="acts" aria-pressed="true">Every action</button><button type="button" data-detail="turns" aria-pressed="false">By turn</button></div>` : ""}
     <div id="endChart" class="dd-adv-wrap"></div>
     <p id="endRead" class="dd-adv-read" aria-live="polite"></p>
-    <p class="dd-adv-cap">${esc(captionOf(endCurve, endNames))} <span class="dd-adv-src">Rated by the computer's judge, which sees both hands.</span></p>
-    ${moves ? `<h3 class="dd-end-h">Where it turned</h3>${movesHtml(moves)}` : ""}` : `<p class="dd-end-note">Over too soon for a chart.</p>`}
+    <p class="dd-adv-cap"><span id="endCap">${esc(captionOf(endCurve, endNames))}</span> <span id="endSrc" class="dd-adv-src">Rated by the computer's judge, which sees both hands.</span></p>
+    <p id="endEval" class="dd-adv-eval" hidden aria-live="polite"></p>
+    <div id="endMoves">${moves ? `<h3 class="dd-end-h">Where it turned</h3>${movesHtml(moves)}` : ""}</div>` : `<p class="dd-end-note">Over too soon for a chart.</p>`}
+    <div id="endFlaws"></div>
     <p class="dd-end-note">${s.turn ? `${s.turn} turn${s.turn === 1 ? "" : "s"}` : "Over before the first turn"}. ${s.lib.length} cards were left in the library. The loser goes first next game.</p>`;
   if (drawn) paintChart();
+  startReview(v, drawn);
   $("endAgain").hidden = !page.host;
   if (!$("endDlg").open) $("endDlg").showModal();
 }
+// ---------- the game rated again, after it ends (12 November 2026, the planning chat; Korbi: say while it is still being evaluated) ----------
+// The instant chart shows at once; meanwhile a worker of its own (dandan-worker.js "review") replays the game and gives each turn's
+// start Hard's look-ahead with both hands open, the live judge at the end of its lines. When it's done the chart is redrawn from
+// those (kept on this device, so the game opened again shows them at once), and the flaws found on the way are listed.
+let reviewW = null;
+const reviewKey = G => `dandan:review:${G.seed}:${G.seq}`;
+function startReview(v, drawn) {
+  reviewW?.terminate(); reviewW = null;
+  const G = v.G;
+  if (!G?.moves || (typeof G.moves !== "string" && !G.moves.length)) return;
+  const done = read(reviewKey(G), null);
+  if (done) { showReview(v, done, drawn); return; }
+  const say = t => { const e = $("endEval"); if (e) { e.hidden = false; e.textContent = t; } };
+  say("Still being evaluated: the computer is looking again at each turn with both hands open…");
+  try { reviewW = new Worker(new URL("./dandan-worker.js", import.meta.url), { type: "module" }); } catch { say(""); $("endEval").hidden = true; return; }
+  const w = reviewW, id = G.seq;
+  w.onmessage = e => {
+    if (w !== reviewW || !V?.G || V.G.seq !== G.seq) return;
+    if (e.data.progress) { const [k, n] = e.data.progress; say(`Still being evaluated: the computer is looking again at each turn with both hands open (turn ${k + 1} of ${n})…`); return; }
+    if (e.data.review) { write(reviewKey(G), e.data.review); w.terminate(); reviewW = null; showReview(v, e.data.review, drawn); return; }
+    say(""); $("endEval").hidden = true; w.terminate(); reviewW = null;
+  };
+  w.onerror = () => { const e = $("endEval"); if (e) e.hidden = true; reviewW = null; };
+  w.postMessage({ id, kind: "review", game: { seed: G.seed, seq: G.seq, options: G.options || {}, started: G.started, first: v.state.first, moves: G.moves } });
+}
+function showReview(v, r, drawn) {
+  const e = $("endEval"); if (e) e.hidden = true;
+  if (drawn && r.turns?.length >= 2) {
+    endCurve = curveOf(reviewed(v.state, r.turns), v.seat); endSel = -1; endMode = "turns"; endFlags = [];
+    $("endMode")?.remove(); $("endMoves") && ($("endMoves").innerHTML = "");
+    $("endCap").textContent = captionOf(endCurve, endNames);
+    $("endSrc").textContent = `Rated by the computer's look-ahead at each turn, both hands open (${r.deals} deals, judge ${r.judge}); the library's order unknown.`;
+    paintChart();
+  }
+  const fl = r.flaws || [];
+  $("endFlaws").innerHTML = fl.length ? `<h3 class="dd-end-h">Flaws</h3><ul class="dd-flaws">${fl.map(f => `<li class="${f.kind}"><i>Turn ${f.turn} · ${esc(nameOf(f.seat))}${f.kind === "doubt" ? " · doubtful" : ""}</i> ${esc(f.text)}</li>`).join("")}</ul>` : "";
+}
 function newGame() {
+  reviewW?.terminate(); reviewW = null;
   $("endDlg").open && $("endDlg").close();
   // against the computer, its passes keep its hand to itself (engine coverStop); not at a table of two players
   // (the lab can switch it off: dandan-lab.js coverOn)

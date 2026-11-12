@@ -130,6 +130,15 @@ export function curveOf(s, seat) {
   }
   return { points, end, endAt: Math.max(s.turn, points.at(-1)?.turn || 0) + 1, seat, first: s.first, swing };
 }
+/**
+ * The game as a finished review rated it (dandan-worker.js "review": [[turn, seat 0's percent]] at the turns' starts): the
+ * state with its `adv` remade from those, each at the log place its turn's own entry had, so curveOf draws it as before.
+ */
+export function reviewed(s, turns) {
+  const ln = new Map();
+  for (const v of s.adv || []) { const u = unpack(v); if (u.kind === 0 && !ln.has(u.turn)) ln.set(u.turn, u.ln ?? 0); }
+  return { ...s, adv: turns.map(([turn, pct]) => pack(turn, Math.max(0, Math.min(100, pct)), { kind: 0, by: 0, ln: ln.get(turn) ?? 0 })) };
+}
 /** A chart is worth drawing from two turns' starts. */
 export const worthDrawing = c => c.points.filter(p => p.kind === 0).length >= 2;
 /** Whether there is more than the turns to show: actions noted. */

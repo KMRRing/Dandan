@@ -256,6 +256,12 @@ dialog.dd-sheet:has(.pick-head) { padding-top: 0; }
 .dd-adv-read { min-height: 2.75em; margin: .35rem 0 0; font-size: .85rem; font-weight: 650; line-height: 1.35; }
 .dd-adv-cap { margin: .2rem 0 0; font-size: .85rem; line-height: 1.4; color: var(--ink-soft); }
 .dd-adv-src { display: block; margin-top: .15rem; font-size: .78rem; }
+.dd-adv-eval { margin: .35rem 0 0; font-size: .82rem; color: var(--ink-soft); font-style: italic; }
+.dd-adv-eval::before { content: ""; display: inline-block; width: .6rem; height: .6rem; margin-right: .4rem; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; vertical-align: -.05rem; animation: dd-spin 1s linear infinite; }
+@keyframes dd-spin { to { transform: rotate(360deg); } }
+.dd-flaws { margin: .3rem 0 0; padding-left: 1.1rem; font-size: .88rem; line-height: 1.45; }
+.dd-flaws li i { color: var(--ink-soft); font-style: normal; margin-right: .3rem; }
+.dd-flaws li.doubt { opacity: .8; }
 .dd-rec-top { display: flex; align-items: baseline; gap: .6rem; margin: .1rem 0 .25rem; font-size: .95rem; }
 .dd-rec-top span { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 .dd-rec-rows { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
