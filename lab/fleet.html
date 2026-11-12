@@ -243,6 +243,12 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 .src dt{color:var(--mute)}.src dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .src .act{font-size:11.5px;color:var(--mute);line-height:1.35;overflow-wrap:anywhere}
 .src{min-width:0;overflow:hidden}
+.srcwrap{position:relative;min-width:0}
+.srcmore{position:absolute;top:-6px;right:-4px;border:0;background:transparent;color:var(--mute);font:700 16px/1 var(--mono);padding:2px 6px;border-radius:6px;cursor:pointer;opacity:0;transition:opacity .15s}
+.srcwrap:hover .srcmore,.srcmore:focus-visible,.srcmore[aria-expanded="true"]{opacity:.55}.srcmore:hover{opacity:1;background:color-mix(in srgb,var(--line) 40%,transparent)}
+.srcmenu{position:absolute;top:18px;right:0;z-index:30;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:grid;gap:4px;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:13px}
+.srcmenu b{font:700 11px var(--display);letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
+.srcmenu label{display:flex;gap:7px;align-items:center;cursor:pointer}
 .lamp{width:9px;height:9px;border-radius:50%;flex:none}
 .tk[data-goto]{cursor:pointer;border-radius:8px}.tk[data-goto]:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 .cnode.flash{outline:3px solid var(--accent);outline-offset:3px;transition:outline-color 1.5s}
@@ -274,7 +280,9 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
       <button class="tiny" id="ribbonToggle" title="Collapse or expand the ribbon" aria-label="Collapse the ribbon">▴</button></div>
   </header>
   <section id="workers" aria-label="The workers">
-    <div class="sources" id="fleetbar" aria-live="polite"></div>
+    <div class="srcwrap"><div class="sources" id="fleetbar" aria-live="polite"></div>
+      <button class="srcmore" id="srcMore" title="Choose which cards to show" aria-label="Choose which cards to show" aria-expanded="false">⋯</button>
+      <div class="srcmenu" id="srcMenu" hidden></div></div>
     <div id="tracker"></div>
   </section>
   <div id="split" role="separator" aria-orientation="horizontal" aria-label="Move to resize the workers' panel" tabindex="0"></div>
@@ -691,8 +699,8 @@ function activityOf(ws) {
   for (const w of ws) for (const b of w.busy || []) { const g = trackGroup(b.split("/")[0]); by[g] = (by[g] || 0) + 1; }
   return Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([g, n]) => `${NAMES[g] || g} (${n})`).join(", ");
 }
-function srcCard(name, st, big, rows, act, title = "") {
-  return `<div class="src" title="${esc(title)}"><div class="sh"><b>${esc(name)}</b><span class="st ${st[0]}">${esc(st[1])}</span></div>
+function srcCard(name, st, big, rows, act, title = "", key = name) {
+  return `<div class="src" data-key="${esc(key)}" title="${esc(title)}"><div class="sh"><b>${esc(name)}</b><span class="st ${st[0]}">${esc(st[1])}</span></div>
     <div class="big2">${big}</div><dl>${rows.filter(r => r[1] != null && r[1] !== "").map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>${act ? `<div class="act">${esc(act)}</div>` : ""}</div>`;
 }
 function drawFleet() {
@@ -701,32 +709,71 @@ function drawFleet() {
   const by = c => FLEET.workers.filter(w => w.cloud === c), sum = (ws, f) => ws.reduce((a, w) => a + f(w), 0), S = SOURCES || {};
   const ago = t => t ? `${Math.max(0, Math.round((Date.now() - t) / 60000))} min ago` : null;
   const out = [];
-  // Rackspace Spot
-  const rw = by("rackspace"), rb = sum(rw, w => w.busy.length), rc = sum(rw, w => w.slots), rs = S.rackspace || {};
-  out.push(srcCard("Rackspace", statusOf(rb, rc, rw.length), `${rb}<small>/${rc} cores</small>`,
-    [["Machines", `${rw.length}${rs.pool ? ` of ${rs.pool}` : ""}`], ["Price", rs.price != null ? `$${rs.price}/h each, $${(rs.price * (rs.pool || rw.length)).toFixed(2)}/h` : null], ["Where", rs.where]],
-    activityOf(rw), "Rackspace Spot: each machine reports itself about 4 minutes after it boots"));
+  // Rackspace Spot, a card per pool (12 Nov, Korbi: Hong Kong and Sydney apart, with cost, machines and WORKING cores).
+  // fleet/sources.json lists each pool's machines by name (Claude copies them from Rackspace at each check); a worker whose name
+  // isn't listed goes to the pool whose machine size is nearest its own core count. Machines in a pool that don't report are
+  // "silent": paid for but not working, which is what this card is for.
+  const rw = by("rackspace"), rs = S.rackspace || {};
+  const pools = rs.pools?.length ? rs.pools : [{ where: rs.where || "", cores: 0, pool: rs.pool, price: rs.price, bid: rs.bid }];
+  const home = w => {
+    const named = pools.find(p => (p.machines || []).some(m => w.by.startsWith(m)));
+    if (named) return named;
+    const c = w.hw?.present || w.slots || 0;
+    return pools.reduce((a, p) => (Math.abs((p.cores || 0) - c) < Math.abs((a.cores || 0) - c) ? p : a), pools[0]);
+  };
+  for (const p of pools) {
+    const ws = rw.filter(w => home(w) === p), b = sum(ws, w => w.busy.length), c = sum(ws, w => w.slots);
+    const won = p.won ?? p.pool ?? ws.length, silent = Math.max(0, won - ws.length), hr = p.price != null ? p.price * won : null;
+    out.push(srcCard(`Rackspace ${p.where}`.trim(), statusOf(b, c, ws.length), `${b}<small>/${c} working cores</small>`,
+      [["Machines", `${ws.length} working${silent ? `, ${silent} silent` : ""}${p.pool && p.pool !== won ? ` (${won} of ${p.pool} won)` : ""}`],
+       ["Size", p.cores ? `${p.cores} cores each` : null],
+       ["Cost", hr != null ? `$${hr.toFixed(3)}/h, ~$${Math.round(hr * 730)}/mo` : null],
+       ["Per core", hr != null && c ? `$${(hr / c * 100).toFixed(3)}/h per 100 working` : null],
+       ["Price", p.price != null ? `$${p.price} each (bid $${p.bid})` : null]],
+      silent ? `${silent} paid-for machine${silent > 1 ? "s" : ""} not reporting. ${activityOf(ws)}` : activityOf(ws),
+      "Rackspace Spot: each machine reports itself about 4 minutes after it boots", `rs:${p.where}`));
+  }
   // Google Cloud
   const gw = by("gcp"), g = FLEET.gce, gs = S.gcp || {};
   const gb = sum(gw, w => w.busy.length), gc = g ? g.cores : sum(gw, w => w.slots);
   const reported = sum(FLEET.workers, w => w.busy.length), busyAll = Object.values(last?.busyNow || {}).reduce((a, b) => a + b, 0);
   const gUnrep = !gw.length && g ? Math.min(g.cores, Math.max(0, busyAll - reported)) : 0;
   out.push(srcCard("Google Cloud", g ? statusOf(gb + gUnrep, gc, g.machines) : ["orange", "Can't list"], g ? `${gb + gUnrep}<small>/${gc} cores</small>` : "—",
-    [["Machines", g ? String(g.machines) : "not listed"], ["Price", gs.price || null]], !gw.length && g?.machines ? "Older workers: busy cores estimated" : !g ? "Needs Compute Viewer on fleet-reader" : activityOf(gw)));
+    [["Machines", g ? String(g.machines) : "not listed"], ["Price", gs.price || null]], !gw.length && g?.machines ? "Older workers: busy cores estimated" : !g ? "Needs Compute Viewer on fleet-reader" : activityOf(gw), "", "gcp"));
   // AWS
   const aw = by("aws"), ab = sum(aw, w => w.busy.length), ac = sum(aw, w => w.slots), as = S.aws || {};
   out.push(srcCard("AWS", aw.length ? statusOf(ab, ac, aw.length) : ["red", as.state || "Off"], aw.length ? `${ab}<small>/${ac} cores</small>` : "0<small> cores</small>",
-    [["Machines", String(aw.length)]], as.note || activityOf(aw)));
+    [["Machines", String(aw.length)]], as.note || activityOf(aw), "", "aws"));
   // GitHub Actions
   const gh = GH;
   out.push(srcCard("GitHub", gh ? (gh.running ? ["green", "Working"] : ["yellow", "Idle"]) : ["orange", "Hidden"], gh ? `${gh.running}<small> runs</small>` : "—",
-    [["Running", gh ? gh.names.slice(0, 3).join(", ") || "none" : null], ["Price", "free"], ["Seen", gh ? ago(gh.at) : null]], gh ? null : "Its runs show on the public page"));
+    [["Running", gh ? gh.names.slice(0, 3).join(", ") || "none" : null], ["Price", "free"], ["Seen", gh ? ago(gh.at) : null]], gh ? null : "Its runs show on the public page", "", "github"));
   for (const c of [...new Set(FLEET.workers.map(w => w.cloud))].filter(c => !["gcp", "aws", "rackspace"].includes(c))) {
     const ws = by(c), b = sum(ws, w => w.busy.length), n = sum(ws, w => w.slots);
     out.push(srcCard(CLOUD_NAMES[c] || c, statusOf(b, n, ws.length), `${b}<small>/${n} cores</small>`, [["Machines", String(ws.length)]], activityOf(ws)));
   }
-  bar.innerHTML = out.join("");
+  const hidden = new Set(store("fleet:hiddenCards") || []);
+  SRC_KEYS = out.map(h => [h.match(/data-key="([^"]*)"/)?.[1], h.match(/<b>([^<]*)<\/b>/)?.[1]]);
+  bar.innerHTML = out.filter(h => !hidden.has(h.match(/data-key="([^"]*)"/)?.[1])).join("") ||
+    `<div class="src"><div class="sh"><b>All cards hidden</b></div><div class="act">Use ⋯ to show them again</div></div>`;
+  if (!$("srcMenu").hidden) drawSrcMenu();
 }
+// the ⋯ in the panel's corner (12 Nov, Korbi): a tick list of the cards; unticked ones are hidden, remembered in this browser
+let SRC_KEYS = [];
+function drawSrcMenu() {
+  const hidden = new Set(store("fleet:hiddenCards") || []);
+  $("srcMenu").innerHTML = `<b>Show</b>` + SRC_KEYS.map(([k, n]) =>
+    `<label><input type="checkbox" data-k="${k}" ${hidden.has(k) ? "" : "checked"}>${n}</label>`).join("");
+}
+$("srcMore").addEventListener("click", e => {
+  e.stopPropagation(); const m = $("srcMenu"); m.hidden = !m.hidden; $("srcMore").setAttribute("aria-expanded", String(!m.hidden)); if (!m.hidden) drawSrcMenu();
+});
+$("srcMenu").addEventListener("change", e => {
+  const k = e.target.dataset?.k; if (!k) return;
+  const hidden = new Set(store("fleet:hiddenCards") || []); e.target.checked ? hidden.delete(k) : hidden.add(k);
+  store("fleet:hiddenCards", [...hidden]); drawFleet();
+});
+document.addEventListener("click", e => { if (!e.target.closest(".srcwrap")) { $("srcMenu").hidden = true; $("srcMore").setAttribute("aria-expanded", "false"); } });
 
 async function refresh() {
   if (!mcp || busy) return;
