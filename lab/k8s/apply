@@ -1,1 +1,2 @@
 Changing this file makes .github/workflows/k8s-apply.yml load the lab setup into the Kubernetes cloudspace.
+2026-11-12T21:31:33Z: secrets added, applying
