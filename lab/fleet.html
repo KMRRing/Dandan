@@ -280,6 +280,9 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 .idea .itemlist2{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 14px;padding:6px 0 4px 26px}
 .idea .itemlist2 label{font-size:13px;display:flex;gap:6px;align-items:baseline;min-width:0}.idea .itemlist2 label input{flex:none}.idea .itemlist2 label em{color:var(--mute);font-style:normal;font-size:12px}
 .band{position:absolute;border:1.5px dashed var(--line);border-radius:16px;background:color-mix(in srgb,var(--line) 12%,transparent);pointer-events:none}
+.band.i-live{--bh:140}.band.i-games{--bh:35}.band.i-nets{--bh:265}.band.i-gates{--bh:20}.band.i-search{--bh:190}.band.i-checks{--bh:300}
+.band.i-model{--bh:95}.band.i-medium{--bh:55}.band.i-later{--bh:220}.band.i-old{--bh:0}
+.band[class*="i-"]{border-color:hsl(var(--bh) 45% 50% / .45);background:hsl(var(--bh) 45% 50% / .08)}.band.i-old{background:color-mix(in srgb,var(--line) 10%,transparent);border-color:var(--line)}
 .band span{position:absolute;left:12px;top:8px;font:600 11.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--mute)}
 .tick{position:absolute;left:0;height:0;border-top:1px dashed color-mix(in srgb,var(--line) 70%,transparent);pointer-events:none}
 .tick span{position:absolute;left:8px;top:6px;max-width:84px;line-height:1.3;font:600 11.5px var(--mono);color:var(--mute)}
@@ -1768,16 +1771,22 @@ function nodeStatus(n, d, G) {
 const store = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem(k) || "null"); localStorage.setItem(k, JSON.stringify(v)); } catch { return null; } };
 // "down" (the default, 12 Nov, Korbi): time runs top to bottom, earlier above; "lr": time runs left to right
 let ORIENT = store("fleet:orient2") === "lr" ? "lr" : "down";
+// two arrangements (12 Nov, Korbi): by time (each box at the hour it happened), or in lanes by kind of box (Rearrange): Medium
+// engines, then training sets and value nets, then engines, then matches and measurements, each idea a coloured block
+let LAYOUT = store("fleet:layout") === "time" ? "time" : "lanes";
+const MKEY = () => (LAYOUT === "lanes" ? "lanes:" : "") + ORIENT;
 // the Pipeline and the Fable plan are two maps over the same canvas, each with its boxes and places kept apart
 let MAP = location.hash.slice(1) === "pipeline" ? "pipeline" : "fable";
 const mk = k => (MAP === "fable" ? "fable:" : "fleet:") + k;
 // the map opens on what matters now (Korbi, 12 Nov: running, waiting, planned, the live net, and anything from the last 36
 // hours); "Everything" puts every box on it; either way each box sits at the height of when it happened, and a box dragged by
 // hand stays where it was put until Rearrange
-let SCOPE = store(mk("scope")) === "all" ? "all" : "relevant", MANUAL = store(mk("manual:" + ORIENT)) || {};
+let SCOPE = store(mk("scope")) === "all" ? "all" : "relevant", MANUAL = store(mk("manual:" + MKEY())) || {};
 let POS = {}, SHOWN = new Set(store(mk("shown3")) || []), ZOOM = store("fleet:zoom") || (innerWidth < 700 ? 0.5 : 0.8), FOCUS = null, GRAPH = null;
-const W_NODE = 240, W_MATCH = 290;
-const HEIGHT = {}, hOf = n => HEIGHT[n?.key] || (n?.t === "match" ? 380 : 330), wOf = n => (n?.t === "match" ? W_MATCH : W_NODE);
+// a tad wider than before, and wider again for a box with a long description, so tall boxes grow sideways (12 Nov, Korbi)
+const W_NODE = 270, W_MATCH = 320;
+const HEIGHT = {}, hOf = n => HEIGHT[n?.key] || (n?.t === "match" ? 380 : 330);
+const wOf = n => (n?.t === "match" ? W_MATCH : W_NODE) + ((n?.what || "").length > 420 ? 120 : (n?.what || "").length > 240 ? 60 : 0);
 // ---------- ideas: what each box is part of (the regions on the map, and the groups in Choose boxes) ----------
 const IDEAS = [
   ["live", "The live game", "v14 and today's Medium: what Monte plays now"],
@@ -1874,6 +1883,44 @@ function timeLayout(G, d, only) {
   if (nowAt == null) ticks.push({ y, label: "Now", cls: "now" });
   return { pos, ticks, lanes: lanes.map(l => ({ l, at: laneAt[l], size: laneSize[l], keys: nodes.filter(n => ideaOf(n) === l).map(n => n.key) })), end: y + 60, across: c };
 }
+// ---------- lanes (12 Nov, Korbi) ----------
+// One lane a kind of box, in the order work flows: Medium engines; training sets and value nets; engines (Hard: a net and a
+// Medium); matches and measurements. Each idea is a block across all four lanes, its boxes packed side by side with no time
+// gaps; blocks run oldest idea first. Inside a block each lane is ordered by when its boxes happened, then pulled under the
+// boxes they connect to (the mean place of their neighbours, a few sweeps), so lines cross less.
+const LANE_OF = { medium: 0, set: 1, judge: 1, engine: 2, match: 3, check: 3 };
+const BLOCK_ORDER = ["old", "live", "medium", "games", "nets", "search", "gates", "checks", "model", "later"];
+function laneLayout(G, d, only) {
+  const t = timesOf(G, d), nodes = G.nodes.filter(n => only.has(n.key)), down = ORIENT === "down", GAP = 28, BLOCK_GAP = 90;
+  const along = n => (down ? hOf(n) : wOf(n)), across = n => (down ? wOf(n) : hOf(n));
+  const when = n => { const x = t[n.key]; return !x ? 0 : x.plan ? 1e15 + x.rank : x.at === -Infinity ? -1 : x.at; };
+  const nb = new Map(nodes.map(n => [n.key, []]));
+  for (const [a, b] of G.edges) if (nb.has(a) && nb.has(b)) { nb.get(a).push(b); nb.get(b).push(a); }
+  const laneSize = [0, 0, 0, 0];
+  for (const n of nodes) laneSize[LANE_OF[n.t] ?? 3] = Math.max(laneSize[LANE_OF[n.t] ?? 3], across(n));
+  const laneAt = []; let c = 60; for (let i = 0; i < 4; i++) { laneAt[i] = c; c += (laneSize[i] || 0) + (laneSize[i] ? 70 : 0); }
+  const pos = {}, mid = {}, blocks = BLOCK_ORDER.filter(b => nodes.some(n => ideaOf(n) === b));
+  let x = 40;
+  for (const b of blocks) {
+    const rows = [[], [], [], []];
+    for (const n of nodes.filter(n => ideaOf(n) === b)) rows[LANE_OF[n.t] ?? 3].push(n);
+    rows.forEach(r => r.sort((a, z) => when(a) - when(z) || a.title.localeCompare(z.title)));
+    const place = () => { let w = 0; for (const r of rows) { let o = x; for (const n of r) { pos[n.key] = o; mid[n.key] = o + along(n) / 2; o += along(n) + GAP; } w = Math.max(w, o - x - GAP); } return w; };
+    place();
+    for (let sweep = 0; sweep < 4; sweep++) {
+      for (const r of sweep % 2 ? [...rows].reverse() : rows) {
+        const key = n => { const ms = nb.get(n.key).filter(k => mid[k] != null).map(k => mid[k]); return ms.length ? ms.reduce((s, v) => s + v, 0) / ms.length : mid[n.key]; };
+        const ks = new Map(r.map(n => [n.key, key(n)]));
+        r.sort((a, z) => ks.get(a.key) - ks.get(z.key) || when(a) - when(z));
+      }
+      place();
+    }
+    x += place() + BLOCK_GAP;
+  }
+  const out = {};
+  for (const n of nodes) { const a = pos[n.key], l = laneAt[LANE_OF[n.t] ?? 3]; out[n.key] = down ? { x: l, y: a } : { x: a, y: l }; }
+  return { pos: out, ticks: [], lanes: blocks.map(l => ({ l, keys: nodes.filter(n => ideaOf(n) === l).map(n => n.key) })), end: x, across: c };
+}
 let AXISMARKS = { ticks: [], lanes: [] };
 // lay out what is on the map from scratch, in the current direction
 function tidy() { MANUAL = {}; for (const k in HEIGHT) delete HEIGHT[k]; }
@@ -1886,7 +1933,7 @@ function renderCanvas(d) {
   else for (const k of rel) if (!seen.has(k)) { SHOWN.add(k); seen.add(k); }
   if (!SHOWN.size) (SCOPE === "all" ? G.nodes.map(n => n.key) : [...rel]).forEach(k => SHOWN.add(k));
   store(mk("relseen"), [...seen]); store(mk("shown3"), [...SHOWN]);
-  const lay = timeLayout(G, d, SHOWN);
+  const lay = LAYOUT === "lanes" ? laneLayout(G, d, SHOWN) : timeLayout(G, d, SHOWN);
   POS = { ...lay.pos, ...Object.fromEntries(Object.entries(MANUAL).filter(([k]) => SHOWN.has(k))) };
   AXISMARKS = lay;
   const shown = G.nodes.filter(n => SHOWN.has(n.key));
@@ -1896,7 +1943,7 @@ function renderCanvas(d) {
   const lit = FOCUS ? lineage(G, FOCUS.key, FOCUS.dir) : null;
   let maxX = ORIENT === "down" ? lay.across : lay.end, maxY = ORIENT === "down" ? lay.end : lay.across;
   const html = shown.map(n => {
-    const st = nodeStatus(n, d, G), [type, gloss] = TYPES[n.t], p = POS[n.key], w = n.t === "match" ? W_MATCH : W_NODE;
+    const st = nodeStatus(n, d, G), [type, gloss] = TYPES[n.t], p = POS[n.key], w = wOf(n);
     maxX = Math.max(maxX, p.x + w + 60); maxY = Math.max(maxY, p.y + 420);
     const vs = n.a ? `<dl class="vs"><dt>A</dt><dd>${esc(n.a)}</dd><dt>B</dt><dd>${esc(n.b)}</dd></dl>` : "";
     const chart = n.t === "match" ? roughChart(st.rows || [], (n.jobs || []).reduce((s, j) => s + (plannedPairs(j) || 0), 0), st, n.a ? [shortSide(n.a), shortSide(n.b)] : null) : "";
@@ -1919,7 +1966,7 @@ function renderCanvas(d) {
   }).join("")}</div>`;
   $("mapTools").innerHTML = `<span class="seg" role="group" aria-label="What is on the map"><button data-scope="relevant" aria-pressed="${SCOPE === "relevant"}" title="Running, waiting and planned work, the live net, and anything from the last 12 hours">What matters now</button><button data-scope="all" aria-pressed="${SCOPE === "all"}" title="Every box, back to the start of the lab">Everything (${G.nodes.length})</button></span>
     <button id="chooseBtn" aria-expanded="${!$("chooser").hidden}" title="Choose the boxes on the map, by idea">Choose boxes · ${shown.length}/${G.nodes.length}</button><span class="rb-sep"></span>
-    <button id="tidy" title="Every box back in its region at its time, measured again so none overlap">Rearrange</button><button id="orient" title="Switch direction">${ORIENT === "lr" ? "Time →" : "Time ↓"}</button><span class="rb-sep"></span>
+    <button id="tidy" title="Lanes by kind of box (Medium engines, sets and nets, engines, matches), each idea a coloured block; every box measured again">Rearrange</button><button id="layoutTime" aria-pressed="${LAYOUT === "time"}" title="Each box at the hour it happened">By time</button><button id="orient" title="Switch direction">${LAYOUT === "lanes" ? (ORIENT === "lr" ? "Lanes as rows" : "Lanes as columns") : ORIENT === "lr" ? "Time →" : "Time ↓"}</button><span class="rb-sep"></span>
     <button data-zoom="-1" aria-label="Zoom out">−</button><button data-zoom="0">Fit</button><button data-zoom="1" aria-label="Zoom in">+</button>`;
   $("chooser").innerHTML = `<div class="chead"><span>Choose boxes · ${shown.length} of ${G.nodes.length} on the map</span><button class="x" id="chooseClose" aria-label="Close">×</button></div>
     <div class="legend mini">${Object.entries(TYPES).map(([k, [t]]) => `<span class="t-${k}"><i style="background:var(--t)"></i>${t}</span>`).join("")}</div>${items}`;
@@ -1968,7 +2015,7 @@ function axisHtml(W, H) {
     const ps = l.keys.map(k => POS[k] && { ...POS[k], n: GRAPH.nodes.find(n => n.key === k) }).filter(Boolean);
     if (!ps.length) return "";
     const x0 = Math.min(...ps.map(p => p.x)) - 14, y0 = Math.min(...ps.map(p => p.y)) - 40, x1 = Math.max(...ps.map(p => p.x + wOf(p.n))) + 14, y1 = Math.max(...ps.map(p => p.y + hOf(p.n))) + 14;
-    return `<div class="band" style="left:${x0}px;top:${y0}px;width:${x1 - x0}px;height:${y1 - y0}px" title="${esc(IDEAS.find(i => i[0] === l.l)[2])}"><span>${esc(IDEA_NAME[l.l])}</span></div>`;
+    return `<div class="band i-${l.l}" style="left:${x0}px;top:${y0}px;width:${x1 - x0}px;height:${y1 - y0}px" title="${esc(IDEAS.find(i => i[0] === l.l)[2])}"><span>${esc(IDEA_NAME[l.l])}</span></div>`;
   }).join("");
   return regions + ticks;
 }
@@ -2014,10 +2061,10 @@ document.addEventListener("pointermove", ev => {
 });
 let justDragged = 0;
 document.addEventListener("pointerup", () => { if (drag && !drag.pan && drag.moved) { saveMap(); justDragged = Date.now(); } drag = null; });
-const saveMap = () => { store(mk("manual:" + ORIENT), MANUAL); store(mk("shown3"), [...SHOWN]); store(mk("scope"), SCOPE); };
+const saveMap = () => { store(mk("manual:" + MKEY()), MANUAL); store(mk("shown3"), [...SHOWN]); store(mk("scope"), SCOPE); };
 function setMap(m) {
   if (MAP === m) return;
-  saveMap(); MAP = m; SCOPE = store(mk("scope")) === "all" ? "all" : "relevant"; MANUAL = store(mk("manual:" + ORIENT)) || {}; SHOWN = new Set(store(mk("shown3")) || []); FOCUS = null; MENU = null; DETAIL = null;
+  saveMap(); MAP = m; SCOPE = store(mk("scope")) === "all" ? "all" : "relevant"; MANUAL = store(mk("manual:" + MKEY())) || {}; SHOWN = new Set(store(mk("shown3")) || []); FOCUS = null; MENU = null; DETAIL = null;
 }
 // new boxes go beside the one they were opened from: inputs to its left, outputs to its right, centred on it
 // boxes opened from a side of a box join the map at the height of when they happened
@@ -2125,10 +2172,11 @@ document.addEventListener("click", ev => {
   if (box && !ev.target.closest("button,input,a") && Date.now() - justDragged > 300) { DETAIL = box.dataset.key; MENU = null; drawMenu(); drawDetail(); pollLive(); return; }
   const hide = ev.target.dataset?.hide;
   if (hide) { SHOWN.delete(hide); if (FOCUS?.key === hide) FOCUS = null; saveMap(); rerender(); return; }
-  if (ev.target.id === "orient") { saveMap(); ORIENT = ORIENT === "lr" ? "down" : "lr"; store("fleet:orient2", ORIENT); MANUAL = store(mk("manual:" + ORIENT)) || {}; MENU = null; SCROLL = { l: 0, t: 0 }; rerender(); return; }
+  if (ev.target.id === "orient") { saveMap(); ORIENT = ORIENT === "lr" ? "down" : "lr"; store("fleet:orient2", ORIENT); MANUAL = store(mk("manual:" + MKEY())) || {}; MENU = null; SCROLL = { l: 0, t: 0 }; rerender(); return; }
   if (ev.target.id === "chooseBtn") { $("chooser").hidden = !$("chooser").hidden; ev.target.setAttribute("aria-expanded", String(!$("chooser").hidden)); return; }
   if (ev.target.id === "chooseClose") { $("chooser").hidden = true; $("chooseBtn")?.setAttribute("aria-expanded", "false"); return; }
-  if (ev.target.id === "tidy") { tidy(); saveMap(); rerender(); return; }
+  if (ev.target.id === "tidy") { saveMap(); LAYOUT = "lanes"; store("fleet:layout", LAYOUT); MANUAL = {}; tidy(); saveMap(); rerender(); return; }
+  if (ev.target.id === "layoutTime") { saveMap(); LAYOUT = "time"; store("fleet:layout", LAYOUT); MANUAL = store(mk("manual:" + MKEY())) || {}; rerender(); return; }
   const scope = ev.target.closest?.("[data-scope]")?.dataset.scope;
   if (scope && GRAPH && last) {
     SCOPE = scope; FOCUS = null; MENU = null;
