@@ -38,7 +38,7 @@ body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);-webkit-fon
 .rb-right .fresh{font:11.5px var(--mono);color:var(--mute);white-space:nowrap}
 .rb-right .tiny{padding:2px 7px;font:600 11px var(--mono);color:var(--mute)}
 #app.slim .rb-tools,#app.slim .tabs{display:none}
-#workers{overflow:auto;min-height:0;display:grid;grid-template-columns:minmax(0,3fr) minmax(260px,2fr);gap:10px;padding:10px 12px;background:var(--bg)}
+#workers{overflow:auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,1.15fr);gap:10px;padding:10px 12px;background:var(--bg)}
 #app.nopanel #workers{display:none}
 @media (max-width:760px){#workers{grid-template-columns:minmax(0,1fr)}}
 #split{cursor:row-resize;background:var(--line);position:relative;touch-action:none}
@@ -57,8 +57,16 @@ h1{font:800 26px/1.1 var(--display);font-stretch:85%;letter-spacing:.01em;margin
 h1 small{display:block;font:500 12px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
 .fresh{font:12.5px var(--mono);color:var(--mute)}
 .cframe{position:relative}
-#tracker{display:grid;gap:4px;align-content:start;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0}
-#tracker .health{display:grid;gap:5px;margin:2px 0 4px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+#tracker{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-content:start;min-width:0}
+@media (max-width:1100px){#tracker{grid-template-columns:minmax(0,1fr)}}
+#tracker .tcard{display:grid;gap:4px;align-content:start;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0;cursor:pointer}
+#tracker .tcard:hover{border-color:var(--mute)}#tracker .tcard.open{border-color:var(--accent)}
+#tracker .tcard:not(.open) em,#tracker .tcard:not(.open) .why{display:none}
+#tracker .big3{font:600 22px/1.1 var(--mono);font-variant-numeric:tabular-nums}#tracker .big3 small{font-size:12px;color:var(--mute);font-weight:500}
+#tracker .bigbar{height:14px;border-radius:7px;margin:3px 0 1px}#tracker .bigbar i{border-radius:7px}
+#tracker .nums{display:flex;justify-content:space-between;gap:8px;font:11.5px var(--mono);color:var(--mute);font-variant-numeric:tabular-nums}
+#tracker .why{font-size:11.5px;color:var(--mute);line-height:1.35}
+#tracker .health{display:grid;gap:5px}
 #tracker .hrow{display:grid;grid-template-columns:auto auto 1fr;gap:2px 8px;align-items:baseline;font-size:12px}
 #tracker .hrow b{font:700 10.5px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
 #tracker .hrow>span:last-child{grid-column:1 / -1;color:var(--mute);font-size:11.5px;line-height:1.35}
@@ -598,6 +606,12 @@ const TRACK_WHAT = (g, j) => ({
 // the shards each machine says it is on (workers/<name>.json): exact, and small to read, where a job of a thousand shards' claims
 // are too many for one connector reply (12 Nov: generation 2 showed as 1 core busy of 80)
 let REPORTED = {};
+// a tap on a tracker card (not on a job, which goes to its box) opens or closes its plain-words lines; remembered in this browser
+document.addEventListener("click", e => {
+  const c = e.target.closest?.("#tracker .tcard"); if (!c || e.target.closest("[data-goto]")) return;
+  const open = new Set(store("fleet:openCards") || []), k = c.dataset.card;
+  open.has(k) ? open.delete(k) : open.add(k); store("fleet:openCards", [...open]); c.classList.toggle("open", open.has(k));
+});
 // the plan's data last read (the cores box shows it whatever the view; the other views read other prefixes)
 let TRACK_D = null;
 function drawTracker(d) {
@@ -623,8 +637,13 @@ function drawTracker(d) {
   const busy = rows.reduce((a, r) => a + r.running, 0);
   const total = FLEET ? FLEET.workers.reduce((a, w) => a + w.slots, 0) + (FLEET.gce && !FLEET.workers.some(w => w.cloud === "gcp") ? FLEET.gce.cores : 0) : 0;
   if (!$("tracker")) return;
-  $("tracker").innerHTML = `<div class="tgrip"><span>What the cores are on</span><span>${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span></div>` + healthHtml(d, busy || total) + (rows.length ? "" : `<div class="tk"><b>Nothing running</b></div>`) + rows.slice(0, 8).map(r => `<div class="tk" role="button" tabindex="0" data-goto="${esc(r.ids.join(" "))}" title="Show ${esc(r.name)} on the map"><span class="dot live"></span><b>${esc(r.name)}</b><span>${r.running} cores${!r.shards ? "" : ` · ${r.per ? `${fmtN(r.done * r.per)}/${fmtN(r.shards * r.per)} games` : r.shards === 1 ? "training" : `${r.done}/${r.shards}`}`}</span>${r.shards > 1 ? `<div class="bar"><i style="width:${((100 * r.done) / r.shards).toFixed(1)}%"></i></div>` : ""}${r.what ? `<em>${esc(r.what)}</em>` : ""}</div>`).join("")
-    + (rows.length > 8 ? `<div class="fresh">and ${rows.length - 8} more</div>` : "");
+  // two cards (12 Nov, Korbi): pace and the next possible improvement, with a big bar; and what each job is, with its cores,
+  // games and bar. The plain-words lines show only once a card is tapped open; a tap on a job still finds its box on the map.
+  const open = new Set(store("fleet:openCards") || []), oc = k => (open.has(k) ? " open" : "");
+  $("tracker").innerHTML = `<div class="tcard${oc("next")}" data-card="next">${healthHtml(d, busy || total)}</div>` +
+    `<div class="tcard${oc("now")}" data-card="now"><div class="tgrip"><span>What the cores are on</span><span>${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span></div>` +
+    (rows.length ? "" : `<div class="tk"><b>Nothing running</b></div>`) + rows.slice(0, 8).map(r => `<div class="tk" role="button" tabindex="0" data-goto="${esc(r.ids.join(" "))}" title="Show ${esc(r.name)} on the map"><span class="dot live"></span><b>${esc(r.name)}</b><span>${r.running} cores${!r.shards ? "" : ` · ${r.per ? `${fmtN(r.done * r.per)}/${fmtN(r.shards * r.per)} games` : r.shards === 1 ? "training" : `${r.done}/${r.shards}`}`}</span>${r.shards > 1 ? `<div class="bar"><i style="width:${((100 * r.done) / r.shards).toFixed(1)}%"></i></div>` : ""}${r.what ? `<em>${esc(r.what)}</em>` : ""}</div>`).join("")
+    + (rows.length > 8 ? `<div class="fresh">and ${rows.length - 8} more</div>` : "") + `</div>`;
 }
 // ---------- pace and the next possible improvement (Korbi, 12 Nov) ----------
 // A shard's work, relative (core-hours by today's run times; only the ratios matter): the last hour's finished work against the
@@ -649,14 +668,25 @@ function healthHtml(d, cores) {
   const word = pace == null ? ["yellow", "Measuring"] : pace >= 1.1 ? ["green", "Quick"] : pace >= 0.85 ? ["green", "Steady"] : pace >= 0.6 ? ["yellow", "A bit slow"] : ["orange", "Slow"];
   const hrs = w => (rate ? w / rate : Infinity), h = x => (!isFinite(x) ? "?" : x < 1 ? `${Math.max(1, Math.round(x * 60))} min` : `${x < 10 ? x.toFixed(1) : Math.round(x)} h`);
   // the queue, in the order the workers take it (by name): hours until each job is done, at the last hour's rate
-  let w = 0; const at = {};
-  for (const id of Object.keys(COST).filter(id => d.jobs.some(j => j.id === id)).sort()) { w += COST[id] * left(id); at[id] = hrs(w); }
-  const gate = hrs(GATE), screen = hrs(SCREEN), next = [];
-  if (at["ab-g2-q-s5"] != null) next.push([at["ab-g2-q-s5"] + gate, `S5 (race inputs): its head-to-head with S4 d ends in ${h(at["ab-g2-q-s5"])}; if it wins, a Deep gate adds ${h(gate)}`]);
-  if (at["ab-g2-s4d-0all"] != null) next.push([at["ab-g2-s4d-0all"] + TRAIN_H + screen + gate, `a net on generation 2: the every-move games done in ${h(at["ab-g2-s4d-0all"])}, then training ${TRAIN_H} h, a screen ${h(screen)} and a Deep gate ${h(gate)}`]);
-  next.sort((a, b) => a[0] - b[0]);
-  return `<div class="health"><div class="hrow"><b>Pace</b><span class="st ${word[0]}">${word[1]}</span><span>${pace == null ? "Not enough finished work yet to compare." : `${pace.toFixed(2)}× its usual rate: each job's work finished in the last hour against its own hourly average before that.`}</span></div>
-    ${next.length ? `<div class="hrow"><b>Next possible improvement</b><span class="st green">~${h(next[0][0])}</span><span>${esc(next[0][1][0].toUpperCase() + next[0][1].slice(1))}${next[1] ? `. Then ${esc(next[1][1])}: ~${h(next[1][0])}` : ""}. Estimates at the last hour's rate.</span></div>` : ""}</div>`;
+  // done is the same queue's finished work, so the bar is how far along the road to that improvement the lab is
+  let w = 0, doneW = 0; const at = {}, sofar = {};
+  for (const id of Object.keys(COST).filter(id => d.jobs.some(j => j.id === id)).sort()) {
+    w += COST[id] * left(id); doneW += COST[id] * (d.done[id] || []).length; at[id] = hrs(w); sofar[id] = [doneW, w];
+  }
+  const gate = hrs(GATE), screen = hrs(SCREEN), next = [], work = x => (isFinite(x) ? x * rate : 0);
+  if (at["ab-g2-q-s5"] != null) next.push({ h: at["ab-g2-q-s5"] + gate, name: "S5 race net, gated", done: sofar["ab-g2-q-s5"][0], left: sofar["ab-g2-q-s5"][1] + GATE,
+    why: `S5 (race inputs): its head-to-head with S4 d ends in ${h(at["ab-g2-q-s5"])}; if it wins, a Deep gate adds ${h(gate)}` });
+  if (at["ab-g2-s4d-0all"] != null) next.push({ h: at["ab-g2-s4d-0all"] + TRAIN_H + screen + gate, name: "Generation-2 net, gated", done: sofar["ab-g2-s4d-0all"][0], left: sofar["ab-g2-s4d-0all"][1] + work(TRAIN_H) + SCREEN + GATE,
+    why: `a net on generation 2: the every-move games done in ${h(at["ab-g2-s4d-0all"])}, then training ${TRAIN_H} h, a screen ${h(screen)} and a Deep gate ${h(gate)}` });
+  next.sort((a, b) => a.h - b.h);
+  const n0 = next[0], pct = n0 && n0.done + n0.left ? (100 * n0.done) / (n0.done + n0.left) : 0;
+  return `<div class="health"><div class="tgrip"><span>Pace</span><span class="st ${word[0]}">${word[1]}${pace == null ? "" : ` · ${pace.toFixed(2)}×`}</span></div>
+    <div class="why">${pace == null ? "Not enough finished work yet to compare." : `${pace.toFixed(2)}× its usual rate: each job's work finished in the last hour against its own hourly average before that.`}</div>
+    ${n0 ? `<div class="tgrip" style="margin-top:4px"><span>Next possible improvement</span><span>${esc(n0.name)}</span></div>
+    <div class="big3">~${h(n0.h)}<small> to go</small></div>
+    <div class="bar bigbar" title="Work done on the way to it"><i style="width:${pct.toFixed(1)}%"></i></div>
+    <div class="nums"><span>${pct.toFixed(0)}% of the way</span>${next[1] ? `<span>then ${esc(next[1].name)} ~${h(next[1].h)}</span>` : ""}</div>
+    <div class="why">${esc(n0.why[0].toUpperCase() + n0.why.slice(1))}${next[1] ? `. Then ${esc(next[1].why)}: ~${h(next[1].h)}` : ""}. Estimates at the last hour's rate; the bar is the finished share of the work queued up to it, including the jobs ahead of it.</div>` : ""}</div>`;
 }
 function paint(v) {
   if (!last) return;
