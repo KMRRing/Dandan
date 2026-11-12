@@ -3,13 +3,17 @@
 # with a per-minute quota. The branch holds one commit, replaced each time (no history piles up). The key is the read-only
 # fleet-reader account, stored as the LAB_READ_KEY secret (12 Nov 2026, Korbi).
 # GitHub's schedule is unreliable here (games.yml's hourly runs come hours apart, and this one's never came), so a run started
-# by hand (Run workflow) keeps going itself: a snapshot every 10 minutes for 5½ hours, then it starts the next such run, unless
-# one is already waiting. A scheduled run, if GitHub makes one, takes a single snapshot.
+# by hand (Run workflow), by schedule or by a push of this file keeps going itself: a snapshot every 10 minutes for 5½ hours, then it starts the next such run, unless
+# one is already waiting.
 name: Fleet status
 on:
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
+  # a change to this file or the snapshot script starts it too, so the lab chat (which can't dispatch runs) can restart it
+  push:
+    branches: [main]
+    paths: [.github/workflows/fleet.yml, tools/fleet-snapshot.mjs]
 permissions: { contents: write, actions: write }
 concurrency: { group: fleet-status, cancel-in-progress: false }
 jobs:
@@ -26,7 +30,7 @@ jobs:
       - name: Copy from the bucket, every 10 minutes
         env:
           LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
-          LOOP: "${{ github.event_name == 'workflow_dispatch' && '330' || '0' }}"
+          LOOP: "330"
           GH_TOKEN: "${{ github.token }}"
         run: |
           git config user.name "github-actions[bot]"
@@ -47,8 +51,9 @@ jobs:
             left=$(( 600 - ($(date +%s) - t0) )); if [ "$left" -gt 0 ]; then sleep "$left"; fi
           done
           rm -f "$RUNNER_TEMP/key.json"
+      # every run, however it started, keeps going 5½ hours and then starts the next (12 Nov: a scheduled run waiting in the queue
+      # made the loop end without a successor, and the scheduled run itself took one snapshot and stopped)
       - name: The next run
-        if: github.event_name == 'workflow_dispatch'
         env: { GH_TOKEN: "${{ github.token }}" }
         run: |
           waiting=$(gh run list -R "$GITHUB_REPOSITORY" --workflow fleet.yml --json status -q '[.[] | select(.status == "queued" or .status == "pending" or .status == "waiting")] | length')
