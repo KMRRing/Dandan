@@ -764,6 +764,9 @@ function drawFleet() {
   const home = w => {
     const named = pools.find(p => (p.machines || []).some(m => w.by.startsWith(m)));
     if (named) return named;
+    // then by address range (sources.json "net", e.g. 119.9.22.), for machines too new to be listed by name
+    const byNet = pools.find(p => p.net && (w.hw?.ips || []).some(ip => ip.startsWith(p.net)));
+    if (byNet) return byNet;
     const c = w.hw?.present || w.slots || 0;
     return pools.reduce((a, p) => (Math.abs((p.cores || 0) - c) < Math.abs((a.cores || 0) - c) ? p : a), pools[0]);
   };

@@ -212,7 +212,10 @@ function wakeCores() {
   for (const c of cpuList("present")) if (!on.has(c)) { try { fs.writeFileSync(`${CPU}/cpu${c}/online`, "1"); } catch {} }
 }
 const grow = () => { wakeCores(); const n = env.LAB_SLOTS ? SLOTS : Math.max(SLOTS, os.cpus().length); while (loops.length < n) loops.push(slotLoop(loops.length)); };
-const hw = () => ({ cpus: os.cpus().length, avail: os.availableParallelism?.(), present: cpuList("present").length, possible: cpuList("possible").length, offline: cpuList("offline").length, memGB: Math.round(os.totalmem() / 2 ** 30) });
+// the machine's own IPv4 addresses (not loopback): the fleet page tells two pools of the same machine size apart by address
+// range (12 Nov: two Rackspace pools of 4-core machines, Hong Kong and Sydney)
+const ipv4 = () => Object.values(os.networkInterfaces()).flat().filter(a => a && a.family === "IPv4" && !a.internal).map(a => a.address);
+const hw = () => ({ cpus: os.cpus().length, avail: os.availableParallelism?.(), present: cpuList("present").length, possible: cpuList("possible").length, offline: cpuList("offline").length, memGB: Math.round(os.totalmem() / 2 ** 30), ips: ipv4() });
 const beatWorker = () => { grow(); return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, slots: loops.length, hw: hw(), busy: [...BUSY.values()], started: T0, t: Date.now() })).catch(() => {}); };
 const workerBeat = setInterval(beatWorker, BEAT_MS);
 beatWorker();
