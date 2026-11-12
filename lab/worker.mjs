@@ -201,12 +201,17 @@ async function slotLoop(slot) {
 // working): which cloud, how many cores, and the shard each busy core has. Taken away when the worker stops; one a machine
 // left behind (taken back mid-run) goes stale, and the page reads only fresh ones.
 const CLOUD = env.LAB_CLOUD || (env.AWS_BATCH_JOB_ID ? "aws" : env.LAB_KEY ? "other" : "gcp"), BUSY = new Map();
-const beatWorker = () => store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, slots: SLOTS, busy: [...BUSY.values()], started: T0, t: Date.now() })).catch(() => {});
+// a machine can start with fewer cores than it has (12 Nov 2026: two Rackspace VMs of 16 came up seeing one): each beat looks
+// again, and cores that have appeared get their own slot (unless LAB_SLOTS fixed the count)
+const loops = [];
+const grow = () => { const n = env.LAB_SLOTS ? SLOTS : Math.max(SLOTS, os.cpus().length); while (loops.length < n) loops.push(slotLoop(loops.length)); };
+const beatWorker = () => { grow(); return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, slots: loops.length, busy: [...BUSY.values()], started: T0, t: Date.now() })).catch(() => {}); };
 const workerBeat = setInterval(beatWorker, BEAT_MS);
 beatWorker();
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { store.del(`workers/${NAME}.json`).catch(() => {}); });
 log(`worker ${NAME}: ${SLOTS} slots, ${env.LAB_DIR ? "folder " + env.LAB_DIR : "bucket " + env.LAB_BUCKET}`);
-await Promise.all(Array.from({ length: SLOTS }, (_, i) => slotLoop(i)));
+grow();
+for (let n = 0; n < loops.length; ) { n = loops.length; await Promise.all(loops); }   // a slot added while waiting is waited for too
 clearInterval(workerBeat);
 await store.del(`workers/${NAME}.json`).catch(() => {});
 log("no more work: stopping");
