@@ -7,8 +7,8 @@ import { scene, islandsOf } from "./dandan-scene.js";
 
 let bad = 0;
 const check = (ok, what) => { console.log(`${ok ? "ok  " : "FAIL"} ${what}`); if (!ok) bad++; };
-function at({ mine = 3, foe = 3, theirs = [], yard = [], life = 20, target = "mine" } = {}) {
-  const s = scene({ active: 1, step: "main1", prio: 1, turn: 9, drawn: [0, 1], yard, hand: [[], []],
+function at({ mine = 3, foe = 3, theirs = [], yard = [], hand = [], life = 20, target = "mine" } = {}) {
+  const s = scene({ active: 1, step: "main1", prio: 1, turn: 9, drawn: [0, 1], yard, hand: [[], hand],
     bf: [...islandsOf(0, foe), ...islandsOf(1, mine), ...theirs.map(n => [0, n])] });
   s.life[1] = life;
   const p = s.bf.find(q => DECK[q.id] === (target === "dandan" ? "Dandân" : "Island") && q.ctl === (target === "mine" ? 1 : 0));
@@ -19,6 +19,7 @@ const bend = to => ({ t: "bend", from: "Island", to });
 check(flawAt(at(), 1, bend("Swamp"))?.kind === "flaw", "own Island to a Swamp: a flaw");
 check(flawAt(at(), 1, bend("Mountain"))?.kind === "flaw", "own Island to a Mountain with no Retrieval to flash back: a flaw");
 check(flawAt(at({ yard: ["Mystic Retrieval"] }), 1, bend("Mountain")) === null, "own Island to a Mountain, a Retrieval in the graveyard: fine");
+check(flawAt(at({ hand: ["Mystic Retrieval"] }), 1, bend("Mountain")) === null, "own Island to a Mountain, a Retrieval in hand (planning ahead): fine");
 check(flawAt(at({ target: "theirs" }), 1, bend("Swamp"))?.kind === "flaw", "their Island with three Islands: a flaw");
 check(flawAt(at({ target: "theirs", foe: 2 }), 1, bend("Swamp")) === null, "their Island with two Islands: not flagged");
 check(flawAt(at({ target: "dandan", theirs: ["Dandân"] }), 1, bend("Swamp")) === null, "their Dandân: not flagged");

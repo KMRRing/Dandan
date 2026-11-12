@@ -6,7 +6,7 @@
 // Mind Bend on your own Island (Korbi, 12 November 2026: "the purest recurring error there is"; one of the best cards in the
 // game, a Dandân killer). Fine only:
 //   1. to make it a Mountain for red mana you need (the deck's one red cost: Mystic Retrieval's flashback, {2}{R}, so a
-//      Retrieval in the graveyard);
+//      Retrieval in the graveyard, or in your hand to cast and flash back later: planning ahead);
 //   2. at a Dandân (not a land at all, so never flagged here);
 //   3. maybe: it is your only Island, their Dandâns would kill you on their next attack, and with it gone they can't attack
 //      (flagged as doubtful: nearly always the Bend belongs on one of their Dandâns).
@@ -25,10 +25,11 @@ export function flawAt(s, seat, move) {
     const theirs = islands(s, t.ctl).length;
     return theirs >= 3 ? { kind: "flaw", card: "Mind Bend", text: `Mind Bend on their Island while they had ${theirs} Islands: it takes nothing they need, and spends one of the best cards in the game` } : null;
   }
-  if (move.to === "Mountain" && s.yard.some(id => /\{R\}/.test(defOf(id).flashback || ""))) return null;
+  const red = id => /\{R\}/.test(defOf(id).flashback || "");
+  if (move.to === "Mountain" && (s.yard.some(red) || s.hand[seat].some(red))) return null;
   const foe = 1 - seat, dandans = s.bf.filter(q => q.ctl === foe && DECK[q.id] === "Dandân").length;
   const last = islands(s, seat).length === 1, dying = dandans && s.life[seat] <= 4 * dandans;
-  const made = move.to === "Mountain" ? "a Mountain, with no Retrieval to flash back" : `a ${move.to}`;
+  const made = move.to === "Mountain" ? "a Mountain, with no Retrieval in hand or graveyard to flash back" : `a ${move.to}`;
   if (last && dying) return { kind: "doubt", card: "Mind Bend", text: `Mind Bend on its own last Island (made it ${made}) to stop the Dandâns attacking: nearly always better aimed at a Dandân` };
   return { kind: "flaw", card: "Mind Bend", text: `Mind Bend on its own Island (made it ${made}): one of the best cards in the game spent for nothing` };
 }
