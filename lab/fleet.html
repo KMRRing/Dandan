@@ -777,14 +777,16 @@ function drawFleet() {
     // 64 of 160 cores, underused, however busy those 4 are (12 Nov, Korbi: Sydney showed Working with 6 machines silent)
     const won = p.won ?? p.pool ?? ws.length, silent = Math.max(0, won - ws.length), hr = p.price != null ? p.price * won : null;
     const paid = Math.max(c, p.cores ? won * p.cores : c);
-    out.push(srcCard(`Rackspace ${p.where}`.trim(), statusOf(b, paid, ws.length), `${b}<small>/${paid} paid cores busy</small>`,
+    // a pool still bidding, with no machine yet, waits rather than being down (12 Nov: the new Sydney pool, "SpeedBump Hit")
+    const st = !won && !ws.length ? ["yellow", "Bidding"] : statusOf(b, paid, ws.length);
+    out.push(srcCard(`Rackspace ${p.where}`.trim(), st, `${b}<small>/${paid} paid cores busy</small>`,
       [["Working", `${c} of ${paid} cores`],
        ["Machines", `${ws.length} working${silent ? `, ${silent} silent` : ""}${p.pool && p.pool !== won ? ` (${won} of ${p.pool} won)` : ""}`],
        ["Size", p.cores ? `${p.cores} cores each` : null],
        ["Cost", hr != null ? `$${hr.toFixed(3)}/h, ~$${Math.round(hr * 730)}/mo` : null],
        ["Per core", hr != null && c ? `$${(hr / c * 100).toFixed(3)}/h per 100 working` : null],
        ["Price", p.price != null ? `$${p.price} each (bid $${p.bid})` : null]],
-      silent ? `${silent} paid-for machine${silent > 1 ? "s" : ""} not reporting. ${activityOf(ws)}` : activityOf(ws),
+      [p.note, silent ? `${silent} paid-for machine${silent > 1 ? "s" : ""} not reporting.` : "", activityOf(ws)].filter(Boolean).join(" "),
       "Rackspace Spot: each machine reports itself about 4 minutes after it boots", `rs:${p.where}`));
   }
   // Google Cloud
