@@ -19,6 +19,13 @@ import { makeJudge } from "./dandan-eval.js";
 export const JUDGES = {
   "ac-jh2": "./judges/ac-jh2.json",
   "ag-v14": "./judges/ag-v14.json",
+  "jt130": "./judges/jt130.json",
+  "s3c": "./judges/s3c.json",
+  "s3d": "./judges/s3d.json",
+  "s4d": "./judges/s4d.json",
+  // a list: the mean of those judges' chances (12 November 2026: two nets averaged screened better than either alone)
+  "avg-jt130-s3c": ["./judges/jt130.json", "./judges/s3c.json"],
+  "avg-jt130-s4d": ["./judges/jt130.json", "./judges/s4d.json"],
 };
 /** The judge the live game's Hard plays with (dandan-worker.js, a request with no engine): the one that won its match. */
 export const LIVE_JUDGE = "ag-v14";
@@ -64,6 +71,32 @@ export const ENGINES = [
     description: "Hard with the retrained judge (judges/ac-jh2.json): the same look-ahead, but the judge was retrained on about 2,900 Hard-vs-Hard self-play games (11 November 2026), with a rule that a card in hand may never lower its holder's chance.",
     expect: "It predicts game results better (Brier score 0.170 to 0.161 on held-out games) and almost never calls a card worth less than nothing (3.0% to 0.5% of positions). In a 1,066-game match against today's Hard it scored 50.8% ± 1.5: not yet shown stronger. It agrees with human moves slightly more often.",
   },
+  // ---- the night of 11–12 November 2026 (lab ledger): candidates for Monte 1.1, to play against before one goes live ----
+  {
+    id: "hard-jt130", name: "Hard (judge jt130)", short: "Hard jt130", kind: "hard", judge: "jt130", available: true,
+    description: "Hard with judge jt130 (judges/jt130.json): v14's own recipe (the same size and inputs) retrained on 15,462 of the lab's quick self-play games (Hard at 128–256 deals). The first judge since v14 to pass the planning chat's Deep gate.",
+    expect: "Against Hard with v14, both at Deep (1,024 deals), 600 deals played both ways: 54.0% ± 3.5 (99% range 50.5–57.5): CROWNED. At Quick it screened 53.0%. Same speed as v14. Part of its edge is the luck of being the best of 18 screened, so the true edge is likelier near 2 points than 4.",
+  },
+  {
+    id: "hard-s4d", name: "Hard (judge S4 d)", short: "Hard S4d", kind: "hard", judge: "s4d", available: true,
+    description: "Hard with judge S4 d (judges/s4d.json): a larger network (128·64·32, about six times v14's weights) trained on all ~56,000 of the lab's quick self-play games, with the squeeze inputs and the rule that a card in hand may not lower its holder's chance.",
+    expect: "At Quick against Hard with v14: 54.6% ± 2.6 over 1,000 deals played both ways, the best single net so far. Not yet gated at Deep. Predicts results best of all (Brier 0.143 against v14's 0.155 on held-out games). Somewhat slower per position judged than v14.",
+  },
+  {
+    id: "hard-s3d", name: "Hard (judge S3 d)", short: "Hard S3d", kind: "hard", judge: "s3d", available: true,
+    description: "Hard with judge S3 d (judges/s3d.json): the same larger network as S4 d, trained on a third of the games (17,297).",
+    expect: "At Quick against v14: 53.9% ± 2.7. At Deep: 53.2% ± 3.4 over 595 of 600 deals (the gate would extend; not extended, since S4 d is the same recipe on more games).",
+  },
+  {
+    id: "hard-avg-jt130-s3c", name: "Hard (mean of jt130 and S3 c)", short: "Hard mean", kind: "hard", judge: "avg-jt130-s3c", available: true,
+    description: "Hard whose judge is the mean of two: jt130 and S3 c (v14's size, the squeeze inputs, turn starts only, 17,297 games). Averaging two judges smooths out where either is wrong.",
+    expect: "At Quick against v14: 54.6% ± 2.5, better than either alone (53.0% and 52.2%). Not yet gated at Deep. Twice the judging work of v14 per position.",
+  },
+  {
+    id: "hard-avg-jt130-s4d", name: "Hard (mean of jt130 and S4 d)", short: "Hard mean2", kind: "hard", judge: "avg-jt130-s4d", available: true,
+    description: "Hard whose judge is the mean of jt130 and S4 d, the two strongest single judges.",
+    expect: "Being screened at Quick against v14 (lab 12 November): no result yet. The slowest of these: S4 d's larger network plus jt130.",
+  },
 ];
 
 /** An engine by id (or undefined). */
@@ -83,7 +116,10 @@ const fetchJson = url => fetch(url).then(r => { if (!r.ok) throw new Error(`${ur
  */
 export async function judgeOf(engine, load = fetchJson) {
   if (!engine?.judge) return undefined;
-  if (!judges.has(engine.judge)) judges.set(engine.judge, load(new URL(JUDGES[engine.judge], import.meta.url).href).then(j => makeJudge(j.layers)));
+  if (!judges.has(engine.judge)) {
+    const one = file => load(new URL(file, import.meta.url).href).then(j => makeJudge(j.layers)), f = JUDGES[engine.judge];
+    judges.set(engine.judge, Array.isArray(f) ? Promise.all(f.map(one)).then(js => (s, me) => js.reduce((a, j) => a + j(s, me), 0) / js.length) : one(f));
+  }
   return judges.get(engine.judge);
 }
 

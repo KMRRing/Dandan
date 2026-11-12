@@ -20,7 +20,7 @@ check(ENGINES.every(e => e.id && e.name && e.short && ["medium", "hard"].include
 check(new Set(ENGINES.map(e => e.id)).size === ENGINES.length && new Set(ENGINES.map(e => e.short)).size === ENGINES.length, "ids and short names are unique (the strip names a coach by its short name)");
 check(["medium-tempo", "medium-squeeze", "medium-deckout", "hard-today", "hard-jh2", "hard-v14"].every(id => engineOf(id)), "the engines are listed");
 check(!engineOf("medium-deckout").available && /not built yet/i.test(engineOf("medium-deckout").description) && !seatable().some(e => e.id === "medium-deckout"), "the deckout Medium is listed but cannot be seated");
-check(ENGINES.filter(e => e.judge).every(e => JUDGES[e.judge] && fs.existsSync(new URL(JUDGES[e.judge], new URL("../dandan-engines.js", import.meta.url)))), "every retrained judge named has its file");
+check(ENGINES.filter(e => e.judge).every(e => JUDGES[e.judge] && [JUDGES[e.judge]].flat().every(f => fs.existsSync(new URL(f, new URL("../dandan-engines.js", import.meta.url))))), "every retrained judge named has its file (each of a mean's)");
 check(engineOf(DEFAULT_ENGINE).kind === "hard" && engineOf(DEFAULT_ENGINE).judge === LIVE_JUDGE, "Monte starts as the live game's Hard, with the live judge");
 
 // ---------- the settings ----------
