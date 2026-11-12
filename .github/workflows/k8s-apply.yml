@@ -32,5 +32,9 @@ jobs:
           sleep 20
           { echo '### Machines'; echo '```'; kubectl get nodes -o wide 2>&1 | cut -c1-160; echo '```'; echo '### Lab workers'; echo '```'; kubectl get pods -l app=dandan-lab -o wide 2>&1 | cut -c1-160; echo '```'
             echo '### Recent problems'; echo '```'; kubectl get events --field-selector type=Warning --sort-by=.lastTimestamp 2>&1 | grep -v NetworkNotReady | tail -12 | cut -c1-260; echo '```'
+            nr=$(kubectl get nodes --no-headers | awk '$2!="Ready"{print $1; exit}')
+            if [ -n "$nr" ]; then echo "### Why $nr is not ready"; echo '```'; kubectl get node "$nr" -o jsonpath='{range .status.conditions[*]}{.type}={.status} {.reason}: {.message}{"\n"}{end}' 2>&1 | cut -c1-240; echo '```'; fi
+            echo '### Cluster system parts not running'; echo '```'; kubectl get pods -n kube-system -o wide --no-headers 2>&1 | grep -v " Running " | cut -c1-200 | head -30; echo '```'
+            echo '### Cluster system warnings'; echo '```'; kubectl get events -n kube-system --field-selector type=Warning --sort-by=.lastTimestamp 2>&1 | tail -12 | cut -c1-260; echo '```'
             for p in $(kubectl get pods -l app=dandan-lab -o name | head -2); do echo "### $p (last lines)"; echo '```'; kubectl logs "$p" --tail=15 2>&1 | sed -E 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g' | cut -c1-200; echo '```'; done; } | tee -a "$GITHUB_STEP_SUMMARY"
           rm -f "$KUBECONFIG"
