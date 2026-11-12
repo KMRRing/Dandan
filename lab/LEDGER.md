@@ -378,3 +378,16 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   0.1428 vs 0.1546, flaws 0.003. Screens queued: aa-h2-q-s4c, aa-h2-q-s4d (ref cb02856) and aa-h2-q-avg2 (mean of jt130 and
   S3 c; hard-match's avg() form, a57f059; aa-h2-q-avg retired at once, queued with a bad ref). S4 a and v2 twins still to run.
 - S3 d Deep gate: 458 of 600 pairs, 53.6% so far.
+
+## 12 November 2026, ~06:20Z: item 5 screens so far (Hard at Quick vs v14, 1,000 pairs, seeds 230000)
+
+| net | score (99%) |
+|---|---|
+| **S4 d** (128x64x32, all ~56,000 filler games) | **54.6% ± 2.6** |
+| **mean of jt130 and S3 c** (aa-h2-q-avg2) | **54.6% ± 2.5** |
+| S3 d (earlier) | 53.9% ± 2.7 |
+| jt130 (earlier) | 53.0% ± 2.6 |
+| S4 c (turn starts) | 52.1% ± 2.7 |
+
+- S3 d Deep gate: 595 of 600 pairs, 53.2% ± 3.4; the range likely includes 50% at 600, so the rule's EXTEND (to 1,200) looks
+  likely. S4 a and v2 twins still to train.
