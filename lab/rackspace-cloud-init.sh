@@ -1,16 +1,19 @@
 #!/bin/bash
-# A cloud machine for the Dandan lab (Rackspace Spot "Cloud-init"; Azure "Custom data", Oracle "Initialization script"; 12 November 2026). Paste this whole file in
-# when creating the machine or scale set, after replacing PASTE_KEY_HERE with the bucket key (the same base64 line used for AWS). The machine
+# A cloud machine for the Dandan lab (Rackspace Spot "Cloud-init", 12 November 2026). Paste this whole file in when creating the
+# machines, after replacing the line PASTE THE WHOLE KEY FILE HERE with the contents of the bucket key's JSON file (the file Google
+# Cloud downloads from IAM & Admin → Service accounts → the lab's account → Keys → Add key → JSON; opened in any text editor). The machine
 # installs Node 22 and git, then runs lab/worker.mjs on every core against the lab bucket, restarting it if it ever stops.
 # Works on Ampere A1 (ARM) and on AMD/Intel shapes, Oracle Linux or Ubuntu.
-KEY='PASTE_KEY_HERE'
 CLOUD='rackspace'
 set -e
 if command -v dnf >/dev/null; then dnf -y install git tar xz >/dev/null; else apt-get update -q && apt-get install -y -q git xz-utils >/dev/null; fi
 ARCH=$(uname -m); case "$ARCH" in aarch64) A=arm64;; *) A=x64;; esac
 curl -fsSL "https://nodejs.org/dist/v22.11.0/node-v22.11.0-linux-$A.tar.xz" | tar -xJ -C /opt
 ln -sf /opt/node-v22.11.0-linux-$A/bin/node /usr/local/bin/node
-echo "$KEY" | base64 -d > /opt/lab-key.json && chmod 600 /opt/lab-key.json
+cat > /opt/lab-key.json <<'KEYFILE'
+PASTE THE WHOLE KEY FILE HERE
+KEYFILE
+chmod 600 /opt/lab-key.json
 cat > /opt/lab-run.sh <<EOF
 #!/bin/bash
 while true; do
