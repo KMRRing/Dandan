@@ -254,8 +254,11 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 .src{min-width:0;overflow:hidden}
 .srcwrap{position:relative;min-width:0}
 .src[data-key]{cursor:pointer}.src[data-key]:hover{border-color:var(--mute)}.src.open{border-color:var(--accent)}
-.srcdetail{margin-top:8px;border:1px solid var(--accent);border-radius:10px;background:var(--panel);padding:8px 11px;font-size:12.5px}
-.srcdetail .dh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px}
+.srcdetail{position:fixed;z-index:60;width:min(560px,94vw);max-height:70vh;overflow:auto;border:1px solid var(--accent);border-radius:12px;background:var(--panel);padding:0 12px 10px;font-size:12.5px;box-shadow:0 14px 40px rgba(0,0,0,.45)}
+.srcdetail .dh{position:sticky;top:0;background:var(--panel);padding:9px 0 6px;cursor:move;user-select:none;touch-action:none}
+.srcdetail .dact{color:var(--mute);font-size:12px;line-height:1.4;margin:0 0 8px}
+.src .act{display:none}
+.srcdetail .dh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
 .srcdetail .dh b{font:700 11px var(--display);letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
 .srcdetail table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 .srcdetail td{padding:2px 8px 2px 0;white-space:nowrap}.srcdetail td.on{white-space:normal;color:var(--mute);width:100%}
@@ -739,6 +742,7 @@ function activityOf(ws) {
   return Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([g, n]) => `${NAMES[g] || g} (${n})`).join(", ");
 }
 function srcCard(name, st, big, rows, act, title = "", key = name) {
+  ACTS[key] = act || "";
   return `<div class="src" data-key="${esc(key)}" title="${esc(title)}"><div class="sh"><b>${esc(name)}</b><span class="st ${st[0]}">${esc(st[1])}</span></div>
     <div class="big2">${big}</div><dl>${rows.filter(r => r[1] != null && r[1] !== "").map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>${act ? `<div class="act">${esc(act)}</div>` : ""}</div>`;
 }
@@ -808,7 +812,7 @@ function drawFleet() {
 }
 // a tap on a card lists its machines (12 Nov, Korbi: "show what machines are idle"): silent first (paid for, not reporting),
 // then those with idle cores, then the full ones; each with its cores, how many are busy and what on. Tap again to close.
-let MACH = {}, OPEN_SRC = null;
+let MACH = {}, OPEN_SRC = null, ACTS = {}, POP_AT = null;
 const machRows = ws => ws.map(w => ({ name: w.by.replace(/-\d+$/, ""), cores: w.slots, busy: w.busy.length, on: activityOf([w]), t: w.t }));
 function drawSrcDetail() {
   const d = $("srcDetail"); if (!d) return;
@@ -820,15 +824,34 @@ function drawSrcDetail() {
   const word = r => r.silent ? ["red", "Silent"] : !r.busy ? ["red", "Idle"] : r.busy < r.cores ? ["orange", `${r.cores - r.busy} idle`] : ["green", "Full"];
   const idle = sumOf(rows, r => (r.silent ? r.cores : r.cores - r.busy)), name = SRC_KEYS.find(([k]) => k === OPEN_SRC)?.[1] || OPEN_SRC;
   d.hidden = false;
-  d.innerHTML = `<div class="dh"><b>${esc(name)} · ${rows.length} machine${rows.length === 1 ? "" : "s"} · ${idle} cores idle or silent</b><button class="x" id="detailClose" aria-label="Close">×</button></div>` +
+  d.innerHTML = `<div class="dh" id="popGrip" title="Drag to move"><b>${esc(name)} · ${rows.length} machine${rows.length === 1 ? "" : "s"} · ${idle} cores idle or silent</b><button class="x" id="detailClose" aria-label="Close">×</button></div>` + (ACTS[OPEN_SRC] ? `<div class="dact">${esc(ACTS[OPEN_SRC])}</div>` : "") +
     (rows.length ? `<table>${sorted.map(r => { const [c, w] = word(r); return `<tr><td class="m" title="${esc(r.name)}">…${esc(r.name.slice(-6))}</td><td class="st ${c}">${esc(w)}</td><td>${r.silent ? `${r.cores} cores, not reporting` : `${r.busy}/${r.cores} busy`}</td><td class="on">${esc(r.on || "")}</td></tr>`; }).join("")}</table>` : `<div class="act">No machines reporting</div>`);
 }
 const sumOf = (ws, f) => ws.reduce((a, w) => a + f(w), 0);
 $("fleetbar").addEventListener("click", e => {
   const el = e.target.closest(".src[data-key]"); if (!el) return;
-  OPEN_SRC = OPEN_SRC === el.dataset.key ? null : el.dataset.key; drawSrcDetail();
+  OPEN_SRC = OPEN_SRC === el.dataset.key ? null : el.dataset.key; drawSrcDetail(); if (OPEN_SRC) placePop(el);
 });
 $("srcDetail").addEventListener("click", e => { if (e.target.closest("#detailClose")) { OPEN_SRC = null; drawSrcDetail(); } });
+// a real pop-up (12 Nov, Korbi): above everything, dragged by its header, closed with × or Escape; it opens beside the card
+// tapped, and once moved it stays where it was put for the next card
+document.body.appendChild($("srcDetail"));
+function placePop(card) {
+  const d = $("srcDetail"), w = d.offsetWidth, h = d.offsetHeight;
+  let x, y;
+  if (POP_AT) [x, y] = POP_AT;
+  else { const r = card?.getBoundingClientRect() || { left: 40, bottom: 80 }; x = r.left; y = r.bottom + 8; }
+  d.style.left = Math.max(8, Math.min(innerWidth - w - 8, x)) + "px"; d.style.top = Math.max(8, Math.min(innerHeight - h - 8, y)) + "px";
+}
+let popDrag = null;
+$("srcDetail").addEventListener("pointerdown", e => {
+  if (!e.target.closest("#popGrip") || e.target.closest("button")) return;
+  const r = $("srcDetail").getBoundingClientRect(); popDrag = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+  e.target.setPointerCapture?.(e.pointerId); e.preventDefault();
+});
+document.addEventListener("pointermove", e => { if (!popDrag) return; POP_AT = [e.clientX - popDrag.dx, e.clientY - popDrag.dy]; placePop(); });
+document.addEventListener("pointerup", () => { popDrag = null; });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && OPEN_SRC) { OPEN_SRC = null; drawSrcDetail(); } });
 // the ⋯ in the panel's corner (12 Nov, Korbi): a tick list of the cards; unticked ones are hidden, remembered in this browser
 let SRC_KEYS = [];
 function drawSrcMenu() {
