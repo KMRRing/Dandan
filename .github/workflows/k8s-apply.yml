@@ -1,0 +1,32 @@
+# Load the lab's Kubernetes setup into a Rackspace Spot cloudspace (12 Nov 2026). The lab chat can't reach the cluster (its
+# network allowlist), and the Rackspace console has no paste box, so a GitHub runner does it: it takes the cloudspace's
+# kubeconfig (secret RS_KUBECONFIG, the file from the console's Kubeconfig page) and the setup file (secret LAB_K8S_MANIFEST,
+# dandan-lab-kubernetes.yaml, which holds the bucket key) and applies them. Nothing is printed but the resources' names.
+# It runs from the Actions tab (Run workflow), or when lab/k8s/apply changes, so the lab chat can start it with a push.
+name: Load the lab into Kubernetes
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [lab/k8s/apply]
+permissions: { contents: read }
+concurrency: { group: k8s-apply, cancel-in-progress: false }
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: azure/setup-kubectl@v4
+      - name: Apply the setup and list what runs
+        env:
+          RS_KUBECONFIG: "${{ secrets.RS_KUBECONFIG }}"
+          LAB_K8S_MANIFEST: "${{ secrets.LAB_K8S_MANIFEST }}"
+        run: |
+          if [ -z "$RS_KUBECONFIG" ] || [ -z "$LAB_K8S_MANIFEST" ]; then echo "::error::Add the RS_KUBECONFIG and LAB_K8S_MANIFEST secrets first"; exit 1; fi
+          export KUBECONFIG="$RUNNER_TEMP/kc"; printf '%s\n' "$RS_KUBECONFIG" > "$KUBECONFIG"; chmod 600 "$KUBECONFIG"
+          printf '%s\n' "$LAB_K8S_MANIFEST" > "$RUNNER_TEMP/m.yaml"
+          kubectl apply -f "$RUNNER_TEMP/m.yaml" 2>&1 | sed -E 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g'
+          rm -f "$RUNNER_TEMP/m.yaml"
+          sleep 20
+          { echo '### Machines'; echo '```'; kubectl get nodes -o wide 2>&1 | cut -c1-160; echo '```'; echo '### Lab workers'; echo '```'; kubectl get pods -l app=dandan-lab -o wide 2>&1 | cut -c1-160; echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -f "$KUBECONFIG"
