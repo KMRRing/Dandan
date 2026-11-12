@@ -105,9 +105,9 @@ const finished = new Set(), FILL = env.LAB_FILL === "1";
 let STOPPING = false;
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { STOPPING = true; log(`${sig}: stopping, shards in hand left unfinished`); setTimeout(() => process.exit(0), 5000); });
 const doneCount = async id => (await store.list(`results/${id}/`)).filter(r => /\/done-\d+$/.test(r.name)).length;
-// spf<n> (12 November 2026, plan item 6): flat 128 deals with v14 again, no Deep share (a mixed-depth game cost about 5.5 flat
-// ones, and its Deep decisions were for stage 1's lessons); spm<n> before it
-const batch = n => `spf${String(n).padStart(3, "0")}`;
+// sps<n> (12 November 2026, Fable: S4 d crowned, so the games it learns from next are its own): flat 128 deals with value net
+// S4 d in both seats; spf<n> before it played v14 the same way, spm<n> before that mixed depths
+const batch = n => `sps${String(n).padStart(3, "0")}`;
 /** The commit `main` is at now: a batch queued at it says which engine played it (one queued at "main" can't, as main moves on). */
 function mainSha() {
   try { return execFileSync("git", ["ls-remote", REPO, "refs/heads/main"], { encoding: "utf8", timeout: 20000 }).split(/\s+/)[0] || "main"; } catch { return "main"; }
@@ -115,11 +115,11 @@ function mainSha() {
 /** The queue run dry, with LAB_FILL: the next batch of self-play, once the last one is finished or all taken. */
 async function refill() {
   const ids = (await store.list("jobs/")).map(o => path.basename(o.name, ".json"));
-  const last = Math.max(0, ...ids.filter(i => /^spf\d+$/.test(i)).map(i => Number(i.slice(3))));
+  const last = Math.max(0, ...ids.filter(i => /^sps\d+$/.test(i)).map(i => Number(i.slice(3))));
   if (last && (await doneCount(batch(last))) < 24 && !(await allClaimed(batch(last)))) return;
   const spec = {
-    ref: mainSha(), repo: REPO, id: batch(last + 1), script: "selfplay.mjs", args: `{shard} {shards} {out} 128 120 ${3000000 + 120 * last} hard ag-v14.json`, shards: 24, timeoutMin: 240,
-    purpose: "Hard at 128 deals with value net v14 against itself (flat, no Deep share): games for the next value net",
+    ref: mainSha(), repo: REPO, id: batch(last + 1), script: "selfplay.mjs", args: `{shard} {shards} {out} 128 120 ${5000000 + 120 * last} hard s4d.json`, shards: 24, timeoutMin: 240,
+    purpose: "Hard at 128 deals with value net S4 d against itself: filler games for the next value net",
     made: { by: NAME, at: new Date().toISOString() },
   };
   await store.put(`jobs/${spec.id}.json`, JSON.stringify(spec), { ifAbsent: true });
