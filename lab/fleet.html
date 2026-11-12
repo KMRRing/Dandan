@@ -37,7 +37,6 @@ body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);-webkit-fon
 .rb-right{margin-left:auto;display:flex;align-items:center;gap:6px}
 .rb-right .fresh{font:11.5px var(--mono);color:var(--mute);white-space:nowrap}
 .rb-right .tiny{padding:2px 7px;font:600 11px var(--mono);color:var(--mute)}
-#app.slim .rb-tools,#app.slim .tabs{display:none}
 #workers{overflow:auto;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,1.15fr);gap:10px;padding:10px 12px;background:var(--bg)}
 #app.nopanel #workers{display:none}
 @media (max-width:760px){#workers{grid-template-columns:minmax(0,1fr)}}
@@ -297,9 +296,9 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
   <header id="ribbon">
     <nav class="tabs" aria-label="Views"><a href="#fable" id="tab-fable">Fable plan</a><a href="#pipeline" id="tab-pipeline">Pipeline</a><a href="#now" id="tab-now">Now</a><a href="#matches" id="tab-matches">Matches</a><a href="#jobs" id="tab-jobs">All jobs</a></nav>
     <div id="mapTools" class="rb-tools"></div>
-    <div class="rb-right"><span class="fresh" id="fresh">Connecting to the lab bucket…</span>
-      <button class="tiny" id="panelToggle" title="Show or hide the workers' panel" aria-pressed="true">Workers</button>
-      <button class="tiny" id="ribbonToggle" title="Collapse or expand the ribbon" aria-label="Collapse the ribbon">▴</button></div>
+    <div class="rb-right"><span class="fresh" id="fresh" title="When the lab was read, and (in brackets) minutes to the next read">Connecting…</span>
+      <button class="tiny" id="refreshNow" title="Read the lab now" aria-label="Refresh">↻</button>
+      <button class="tiny" id="panelToggle" title="Show or hide the workers' panel" aria-pressed="true">Workers</button></div>
   </header>
   <section id="workers" aria-label="The workers">
     <div class="srcwrap"><div class="sources" id="fleetbar" aria-live="polite"></div>
@@ -360,7 +359,17 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;",
 const fmtN = n => Math.round(n).toLocaleString("en-GB");
 const hm = t => new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 let mcp = null, busy = false, last = null, rawJobs = null, SNAP_MODE = false;
-const stamp = at => SNAP_MODE && SNAP ? `Lab as of ${hm(SNAP.at)}` : `Updated ${hm(at)}`;
+// the ribbon's clock (12 Nov, Korbi): when the lab was read (the snapshot's time on GitHub), and in brackets the minutes to the
+// next read, or … while one is under way. The reads come every 2 minutes while the page is in view; ↻ reads at once.
+const READ_EVERY = 120000;
+let NEXT_AT = 0, FRESH_AT = 0, FRESH_BUSY = false;
+const stamp = at => hm(SNAP_MODE && SNAP ? SNAP.at : at);
+function showFresh(at, loading = false) {
+  if (at != null) FRESH_AT = at;
+  FRESH_BUSY = loading;
+  if (!FRESH_AT) return;
+  $("fresh").textContent = `${stamp(FRESH_AT)} (${loading ? "…" : Math.max(0, Math.ceil((NEXT_AT - Date.now()) / 60000))})`;
+}
 const matchCache = {}; // finished matches: rows kept, not re-read (also kept in the browser between visits)
 let matchCacheLoaded = false;
 let reads = 0, readsDone = 0; // connector reads this load, for the "Reading…" line
@@ -899,7 +908,8 @@ async function refresh() {
   busy = true; reads = readsDone = 0; $("go").disabled = true; $("go").textContent = "Loading…";
   // show the last saved state at once, then bring it up to date
   if (!last || last.pfx !== pfx) { const saved = store("fleet:last:" + pfx); if (saved) { last = saved; if (v !== "now") paint(v); } }
-  $("fresh").textContent = last ? `Showing ${hm(last.at)} · updating…` : "Connecting to the lab bucket…";
+  NEXT_AT = Date.now() + READ_EVERY;
+  if (last) showFresh(last.at, true); else $("fresh").textContent = "Connecting…";
   try {
     // first the small reads (the job list, which shards are done or claimed: three a prefix), painted at once with the scores
     // last seen; then each match's results, the big reads, filled in as they come (12 Nov, Korbi: a new browser waited for all)
@@ -911,15 +921,15 @@ async function refresh() {
     else if (v === "now") { try { await loadNow(); } catch (e) { nowList = []; } paint(v); }
     else if (v === "matches") { paint(v); await loadSpecs(last); await loadShow(); paint(v); }
     else paint(v);
-    $("fresh").textContent = `${stamp(last.at)} · scores loading…`;
+    showFresh(last.at, true);
     await fillRows(last, pfx === "fable" ? j => !/^aa-h2-/.test(j.id) : () => true, () => repaint(v));
     store("fleet:last:" + pfx, last);
     repaint(v, true);
-    $("fresh").textContent = `${stamp(last.at)} · next in 2 min`;
+    showFresh(last.at);
     loadFleet().then(() => { drawFleet(); try { drawTracker(last); } catch {} }, () => {}); drawFleet();
     $("msg").innerHTML = "";
   } catch (e) { showErr(e); }
-  finally { busy = false; $("go").disabled = false; $("go").textContent = "Refresh"; }
+  finally { busy = false; $("go").disabled = false; $("go").textContent = "Refresh"; if (FRESH_BUSY) showFresh(); }
 }
 
 function showErr(e) {
@@ -999,7 +1009,7 @@ function roughChart(rows, planned, v, names) {
 
 // ---------- drawing ----------
 function render({ jobs, done, claims, ended, rows, at }) {
-  $("fresh").textContent = `${stamp(at)} · next in 2 min`;
+  if (!busy) showFresh(at);
   const groups = new Map();
   for (const j of [...jobs].sort((a, b) => a.id.localeCompare(b.id))) {
     const g = groupOf(j.id);
@@ -2213,14 +2223,12 @@ window.addEventListener("hashchange", () => { showView(); refresh(); });
   const app = $("app"), setH = px => { const h = Math.max(70, Math.min(innerHeight * 0.7, px)); app.style.setProperty("--wh", h + "px"); return h; };
   const saved = store("fleet:panelH"); if (saved) setH(saved);
   if (store("fleet:panelOff")) { app.classList.add("nopanel"); $("panelToggle").setAttribute("aria-pressed", "false"); }
-  if (store("fleet:slim")) { app.classList.add("slim"); $("ribbonToggle").textContent = "▾"; }
   let drag = null;
   $("split").addEventListener("pointerdown", e => { drag = { y: e.clientY, h: $("workers").offsetHeight }; $("split").setPointerCapture(e.pointerId); e.preventDefault(); });
   $("split").addEventListener("pointermove", e => { if (drag) setH(drag.h + e.clientY - drag.y); });
   $("split").addEventListener("pointerup", () => { if (drag) { store("fleet:panelH", $("workers").offsetHeight); drag = null; } });
   $("split").addEventListener("keydown", e => { const k = { ArrowUp: -24, ArrowDown: 24 }[e.key]; if (k) { e.preventDefault(); store("fleet:panelH", setH($("workers").offsetHeight + k)); } });
   $("panelToggle").addEventListener("click", () => { const off = app.classList.toggle("nopanel"); $("panelToggle").setAttribute("aria-pressed", String(!off)); store("fleet:panelOff", off ? 1 : 0); });
-  $("ribbonToggle").addEventListener("click", () => { const slim = app.classList.toggle("slim"); $("ribbonToggle").textContent = slim ? "▾" : "▴"; store("fleet:slim", slim ? 1 : 0); });
 }
 showView();
 
@@ -2236,14 +2244,16 @@ document.addEventListener("click", async ev => {
   } catch (e) { box.innerHTML = `<p class="err">${esc(e?.message || e?.code || e)}</p>`; }
 });
 $("go").addEventListener("click", refresh);
+$("refreshNow").addEventListener("click", () => refresh());
 $("pfx").addEventListener("keydown", e => { if (e.key === "Enter") refresh(); });
 
 (async () => {
-  if (!window.claude?.use) { SNAP_MODE = true; mcp = {}; refresh(); setInterval(() => { if (!document.hidden) refresh(); }, 120000); return; }
+  // one clock for both: a read when the next is due (and the page is in view), and the bracket's minutes kept current
+  setInterval(() => { if (!FRESH_BUSY) showFresh(); if (mcp && !busy && !document.hidden && Date.now() >= NEXT_AT) refresh(); }, 5000);
+  if (!window.claude?.use) { SNAP_MODE = true; mcp = {}; refresh(); return; }
   mcp = await window.claude.use("mcp");
   if (!mcp) { $("msg").innerHTML = '<p class="err">This view can\'t reach your connectors. Open the page in the Claude app or on claude.ai.</p>'; return; }
   refresh();
-  setInterval(() => { if (!document.hidden) refresh(); }, 120000);
 })();
 </script>
 </body>
