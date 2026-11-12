@@ -30,15 +30,9 @@ const judge = makeJudge(JSON.parse(fs.readFileSync(new URL(`../judges/${judgeFil
 const key = m => JSON.stringify(m), realRandom = Math.random;
 fs.writeFileSync(out, "");
 
-// ---------- the games: this shard's share of the self-play parts, then of the kept games ----------
+// ---------- the games: this shard's share of the kept games first (where Korbi saw the misplays: every eligible decision is
+// searched), then of the self-play parts, which fill the shard's quota (Fable, 16:45Z) ----------
 const games = [];
-const store = await labStore();
-const parts = (await store.list(`results/${job}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)).sort();
-for (let k = shard; k < parts.length; k += shards) {
-  for (const l of ((await store.get(parts[k])) || "").split("\n").filter(Boolean)) {
-    try { const g = JSON.parse(l); games.push({ src: `${job}:${g.game}`, R: rules, opts: { seats: 2, seed: g.seed, now: 0 }, moves: g.moves, now: 0 }); } catch {}
-  }
-}
 try {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "games-"));
   execSync(`git fetch -q --depth=1 origin game-records && git archive FETCH_HEAD games | tar -x -C ${tmp}`, { stdio: "ignore" });
@@ -46,41 +40,26 @@ try {
   for (let k = shard; k < files.length; k += shards) {
     const rec = JSON.parse(fs.readFileSync(path.join(tmp, "games", files[k]), "utf8")), g = rec.game;
     let moves; try { moves = JSON.parse(g.moves); } catch { continue; }
-    if (moves?.length === g.n) games.push({ src: `kept:${files[k]}`, R: shownRules, opts: { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
+    if (moves?.length === g.n) games.push({ kept: true, src: `kept:${files[k]}`, R: shownRules, opts: { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
   }
 } catch { /* no game-records: self-play only */ }
-
-// ---------- the kind of a move: card, mode, whose target ----------
-function kindOf(s, seat, m) {
-  const t = m.targets?.[0], p = t?.id != null ? perm(s, t.id) : null;
-  return { t: m.t, card: m.card != null ? DECK[m.card] ?? "token" : null, mode: m.mode ?? null, target: !t ? null : t.k === "p" ? (t.seat === seat ? "own player" : "their player") : t.sid != null ? "spell" : p ? (p.ctl === seat ? "own" : "theirs") : t.k };
-}
-/** The real game played on from record `G` (before its next move) after `m` by `seat`, the engines salted by `salt`: 1 if `seat` won, 0 lost, ½ both. */
-function playOn(R, G, seat, m, salt) {
-  let r = applyMove(R, G, seat, m, 0);
-  if (r.error) return null;
-  G = r.G;
-  for (let i = 0; i < 4000 && !R.over(G.state); i++) {
-    const who = R.toMove(G.state), x = R.restore(J(G.state));
-    Math.random = seeded(mix(salt, i + 1));
-    const mv = thinkMove(x, who, { deals, ms: 1e9, judge, all: false, salt });
-    Math.random = realRandom;
-    r = applyMove(R, G, who, mv, 0);
-    if (r.error) return null;
-    G = r.G;
+const store = await labStore();
+const parts = (await store.list(`results/${job}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)).sort();
+for (let k = shard; k < parts.length; k += shards) {
+  for (const l of ((await store.get(parts[k])) || "").split("\n").filter(Boolean)) {
+    try { const g = JSON.parse(l); games.push({ src: `${job}:${g.game}`, R: rules, opts: { seats: 2, seed: g.seed, now: 0 }, moves: g.moves, now: 0 }); } catch {}
   }
-  const w = G.state.winner;
-  return w === seat ? 1 : w == null || w < 0 ? 0.5 : 0;
 }
 
-// ---------- the decisions: one in five of each game's priority decisions that can leave the shortlist, by its seed ----------
+// ---------- the decisions: priority decisions that can leave the shortlist; every one in a kept game, one in five by the seed in
+// self-play, till the shard's share (the kept games are searched whole, whatever the share) ----------
 let searched = 0, cases = 0, offs = 0;
 for (const game of games) {
-  if (searched >= want || cases >= cap) break;
+  if (!game.kept && (searched >= want || cases >= cap)) break;
   let G = newRecord(game.R, game.opts);
-  for (let i = 0; i < game.moves.length && searched < want && cases < cap; i++) {
+  for (let i = 0; i < game.moves.length && (game.kept || (searched < want && cases < cap)); i++) {
     const [who, move] = game.moves[i], st = G.state, p = st.pending;
-    const pick = !p && seeded(mix(game.opts.seed, 7000001 + i))() < 0.2 && legal(st, who, true).length
+    const pick = !p && (game.kept || seeded(mix(game.opts.seed, 7000001 + i))() < 0.2) && legal(st, who, true).length
       && candidates(game.R.restore(J(st)), who, { all: true }).length > candidates(game.R.restore(J(st)), who, { all: false }).length;
     if (pick) {
       const s = game.R.restore(J(st));
@@ -100,7 +79,7 @@ for (const game of games) {
             const mean = ok.length ? ok.reduce((x, y) => x + y, 0) / ok.length : null;
             const sd = ok.length > 1 ? Math.sqrt(ok.reduce((x, y) => x + (y - mean) ** 2, 0) / (ok.length - 1)) : null;
             fs.appendFileSync(out, JSON.stringify({ src: game.src, i, seat: who, turn: st.turn, lib: st.lib.length, kind: kindOf(st, who, r.best),
-              pick: r.best, short: sp, est: +(r.list[0].mean - sb.mean).toFixed(4), real: mean == null ? null : +mean.toFixed(4), realSe: sd == null ? null : +(sd / Math.sqrt(ok.length)).toFixed(4), plays: ok.length, state: st }) + "\n");
+              pick: r.best, short: sp, est: +(r.list[0].mean - sb.mean).toFixed(4), real: mean == null ? null : +mean.toFixed(4), realSe: sd == null ? null : +(sd / Math.sqrt(ok.length)).toFixed(4), plays: ok.length, a, b, state: st }) + "\n");
           }
         }
       }
