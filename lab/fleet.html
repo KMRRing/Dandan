@@ -256,6 +256,8 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 .src[data-key]{cursor:pointer}.src[data-key]:hover{border-color:var(--mute)}.src.open{border-color:var(--accent)}
 .srcdetail{position:fixed;z-index:60;width:min(560px,94vw);max-height:70vh;overflow:auto;border:1px solid var(--accent);border-radius:12px;background:var(--panel);padding:0 12px 10px;font-size:12.5px;box-shadow:0 14px 40px rgba(0,0,0,.45)}
 .srcdetail .dh{position:sticky;top:0;background:var(--panel);padding:9px 0 6px;cursor:move;user-select:none;touch-action:none}
+.srcdetail .dcard{display:flex;gap:12px;align-items:baseline;margin-bottom:4px}.srcdetail .big2{font:600 20px/1.1 var(--mono)}.srcdetail .big2 small{font-size:12px;color:var(--mute);font-weight:500}
+.srcdetail .ddl{display:grid;grid-template-columns:auto 1fr;gap:1px 12px;margin:0 0 8px}.srcdetail .ddl dt{color:var(--mute)}.srcdetail .ddl dd{margin:0;font-family:var(--mono)}
 .srcdetail .dact{color:var(--mute);font-size:12px;line-height:1.4;margin:0 0 8px}
 .src .act{display:none}
 .srcdetail .dh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
@@ -742,7 +744,7 @@ function activityOf(ws) {
   return Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([g, n]) => `${NAMES[g] || g} (${n})`).join(", ");
 }
 function srcCard(name, st, big, rows, act, title = "", key = name) {
-  ACTS[key] = act || "";
+  ACTS[key] = act || ""; CARDS[key] = { st, big, rows };
   return `<div class="src" data-key="${esc(key)}" title="${esc(title)}"><div class="sh"><b>${esc(name)}</b><span class="st ${st[0]}">${esc(st[1])}</span></div>
     <div class="big2">${big}</div><dl>${rows.filter(r => r[1] != null && r[1] !== "").map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>${act ? `<div class="act">${esc(act)}</div>` : ""}</div>`;
 }
@@ -812,7 +814,7 @@ function drawFleet() {
 }
 // a tap on a card lists its machines (12 Nov, Korbi: "show what machines are idle"): silent first (paid for, not reporting),
 // then those with idle cores, then the full ones; each with its cores, how many are busy and what on. Tap again to close.
-let MACH = {}, OPEN_SRC = null, ACTS = {}, POP_AT = null;
+let MACH = {}, OPEN_SRC = null, ACTS = {}, CARDS = {}, POP_AT = null;
 const machRows = ws => ws.map(w => ({ name: w.by.replace(/-\d+$/, ""), cores: w.slots, busy: w.busy.length, on: activityOf([w]), t: w.t }));
 function drawSrcDetail() {
   const d = $("srcDetail"); if (!d) return;
@@ -824,10 +826,13 @@ function drawSrcDetail() {
   const word = r => r.silent ? ["red", "Silent"] : !r.busy ? ["red", "Idle"] : r.busy < r.cores ? ["orange", `${r.cores - r.busy} idle`] : ["green", "Full"];
   const idle = sumOf(rows, r => (r.silent ? r.cores : r.cores - r.busy)), name = SRC_KEYS.find(([k]) => k === OPEN_SRC)?.[1] || OPEN_SRC;
   d.hidden = false;
-  d.innerHTML = `<div class="dh" id="popGrip" title="Drag to move"><b>${esc(name)} · ${rows.length} machine${rows.length === 1 ? "" : "s"} · ${idle} cores idle or silent</b><button class="x" id="detailClose" aria-label="Close">×</button></div>` + (ACTS[OPEN_SRC] ? `<div class="dact">${esc(ACTS[OPEN_SRC])}</div>` : "") +
+  d.innerHTML = `<div class="dh" id="popGrip" title="Drag to move"><b>${esc(name)} · ${rows.length} machine${rows.length === 1 ? "" : "s"} · ${idle} cores idle or silent</b><button class="x" id="detailClose" aria-label="Close">×</button></div>` + cardFull(CARDS[OPEN_SRC]) + (ACTS[OPEN_SRC] ? `<div class="dact">${esc(ACTS[OPEN_SRC])}</div>` : "") +
     (rows.length ? `<table>${sorted.map(r => { const [c, w] = word(r); return `<tr><td class="m" title="${esc(r.name)}">…${esc(r.name.slice(-6))}</td><td class="st ${c}">${esc(w)}</td><td>${r.silent ? `${r.cores} cores, not reporting` : `${r.busy}/${r.cores} busy`}</td><td class="on">${esc(r.on || "")}</td></tr>`; }).join("")}</table>` : `<div class="act">No machines reporting</div>`);
 }
 const sumOf = (ws, f) => ws.reduce((a, w) => a + f(w), 0);
+// everything the card says, in the pop-up too (12 Nov, Korbi): status, the big number and every row
+const cardFull = c => !c ? "" : `<div class="dcard"><span class="st ${c.st[0]}">${esc(c.st[1])}</span><span class="big2">${c.big}</span></div>
+  <dl class="ddl">${c.rows.filter(r => r[1] != null && r[1] !== "").map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
 $("fleetbar").addEventListener("click", e => {
   const el = e.target.closest(".src[data-key]"); if (!el) return;
   OPEN_SRC = OPEN_SRC === el.dataset.key ? null : el.dataset.key; drawSrcDetail(); if (OPEN_SRC) placePop(el);
