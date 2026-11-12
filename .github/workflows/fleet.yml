@@ -1,0 +1,37 @@
+# The Fleet page's data (lab/fleet.html): tools/fleet-snapshot.mjs copies what the page reads out of the lab bucket onto the
+# fleet-status branch every 10 minutes, so the page loads plain files from GitHub instead of asking Google through a connector
+# with a per-minute quota. The branch holds one commit, replaced each run (no history piles up). The key is the read-only
+# fleet-reader account, stored as the LAB_READ_KEY secret (12 Nov 2026, Korbi). GitHub may start a scheduled run late.
+name: Fleet status
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+permissions: { contents: write }
+concurrency: { group: fleet-status, cancel-in-progress: false }
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: The last snapshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch --depth 1 origin fleet-status; then git worktree add --detach snap FETCH_HEAD; else git worktree add --detach snap; git -C snap rm -rf -q . || true; fi
+      - name: Copy from the bucket
+        env: { LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}" }
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          LAB_KEY="$RUNNER_TEMP/key.json" node tools/fleet-snapshot.mjs snap
+          rm -f "$RUNNER_TEMP/key.json"
+      - name: Publish
+        run: |
+          cd snap
+          git checkout -q --orphan fresh
+          git add -A
+          git commit -q -m "Fleet status $(date -u +%FT%TZ)"
+          git push -q -f origin HEAD:fleet-status
