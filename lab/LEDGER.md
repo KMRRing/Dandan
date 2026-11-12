@@ -354,3 +354,14 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   a15f6d4) can't bring them back. lab/requeue.mjs (060b4a7) makes a twin, <id>-r: the same spec with every kept shard pre-marked
   done ("code": "kept"), so only the lost pairs play again; read the two together by pair. Queued as aa-a0-rq2.
 - Only 3 AWS machines report after the restart (48 slots), most slots idle, and no spf filler has been queued: to look into.
+
+## 12 November 2026, ~01:55Z: Deep gate verdicts (Hard at Deep, 1,024 deals, vs Hard at Deep with v14; seeds 220000; gate-sum rules)
+
+| gate | 300-pair look | 600 pairs | verdict |
+|---|---|---|---|
+| aa-g9-tjt130v14b (+ -r) | 54.3% ± 4.9: play on | **54.0% ± 3.5 (99%: 50.5–57.5)** | **CROWN** |
+| aa-g9-s3v14b (+ -r) | waiting on 4 stragglers | 51.2% ± 3.5 over 596 pairs | DROP unless the last 4 pairs are all wins |
+
+- jt130 is the first net since v14 to beat it at Deep with the 99% range wholly above 50%. On the 596 shared pairs it is
+  2.7 ± 4.6 points over S3 c: within noise, but the gate rule picks the crowned one.
+- Crowned means prepared for Korbi's decision: nothing goes live without him (LIVE_JUDGE unchanged).
