@@ -1,0 +1,1 @@
+{"id": "aa-a0-cc1", "script": "chart-card.mjs", "args": "{shard} {shards} {out} s4d.json 256,1024", "shards": 98, "timeoutMin": 120, "purpose": "End-of-game chart report card (Fable, 12 Nov)", "ref": "a79d688804f21017962602f893fa4d97d2c4061b", "repo": "https://github.com/KMRRing/Dandan.git", "made": "2026-11-12"}
