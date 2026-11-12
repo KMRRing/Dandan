@@ -27,3 +27,5 @@ body { background: var(--yard); color: var(--ink); margin: 0; }
 #gv { height: 100vh; height: 100svh; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .gv-remove .gv-lost { color: #E8806F; }
 
+/* a link that is a button: Replay in the lab */
+.gv-btn { display: inline-block; padding: .45rem .8rem; border: 1px solid currentColor; border-radius: 5px; text-decoration: none; font-weight: 600; }

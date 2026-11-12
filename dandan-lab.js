@@ -13,7 +13,11 @@
 //   6. the error review (12 November 2026, Korbi): positions where Monte's move was flagged as a possible error (error-review.json,
 //      lab/error-review-data.mjs), each simulated again with every engine, and a verdict per position: an objective error, not an
 //      error, or unsure. An objective error is a marker every future engine is checked against. The verdicts are kept on the
-//      device and in the database (the index room's errors, which tools/pull-games.mjs collects as errors.json).
+//      device and in the database (the index room's errors, which tools/pull-games.mjs collects as errors.json);
+//   7. replays (12 November 2026, Korbi: "taken fully into the exact game replay"): any kept game played again on the lab's own table,
+//      both hands face up, a move at a time; the coaches play each decision of either side, a play can be flagged as a possible
+//      error, and at a flagged play the verdict is given there. Opened from the games page (Replay), the error review, or
+//      lab.html?replay=<game key>&m=<moves made>. The lab's own game waits underneath.
 // The choices are kept in localStorage under dandan-lab:lab, a lab game under dandan-lab:game (never the player's own saved
 // game), and its flags under dandan-lab:flags. Lab games are recorded like any game, marked "lab · <engine>".
 import { ENGINES, engineOf, DEFAULT_ENGINE, decide } from "./dandan-engines.js";
@@ -24,6 +28,9 @@ import { DEPTH } from "./dandan-think.js";
 import { getSync } from "./net.js";
 import { INDEX_ROOM } from "./records.js";
 import { savedName } from "./name.js";
+import { shownRules } from "./dandan-rules.js";
+import { replay as replayGame } from "./records.js";
+import { khSet, BOTH } from "./dandan-core.js";
 
 const KEY = "dandan-lab:lab";
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -90,18 +97,18 @@ let review = null, reviewLoading = null;
 const sims = new Map();                            // position id → { engine id → { status, text, chance } }
 let verdicts = (() => { try { return JSON.parse(localStorage.getItem(VERDICTS)) || {}; } catch { return {}; } })();
 function loadReview() {
-  reviewLoading ||= fetch(new URL("./error-review.json", import.meta.url)).then(r => r.json()).then(d => { review = d; paintSheet(); }, () => { review = { items: [], failed: true }; paintSheet(); });
+  reviewLoading ||= fetch(new URL("./error-review.json", import.meta.url)).then(r => r.json()).then(d => { review = d; paintSheet(); C?.redraw(); }, () => { review = { items: [], failed: true }; paintSheet(); });
   return reviewLoading;
 }
 /** A verdict given: kept here and in the database, so the lab can read it back and every future engine be checked against it. */
-async function setVerdict(id, v) {
-  verdicts = { ...verdicts, [id]: { verdict: v, at: Date.now() } };
+async function setVerdict(id, v, flag = verdicts[id]?.flag) {
+  verdicts = { ...verdicts, [id]: { verdict: v, at: Date.now(), ...(flag ? { flag } : {}) } };
   try { localStorage.setItem(VERDICTS, JSON.stringify(verdicts)); } catch { /* private mode */ }
   paintSheet();
   try {
     const sync = await getSync();
-    await sync.update(`crates/rooms/${INDEX_ROOM}/errors`, { [id]: { verdict: v, at: Date.now(), uid: sync.uid || "", name: savedName() || "" } });
-    C?.toast(`Marked: ${VERDICT_WORDS[v]}`);
+    await sync.update(`crates/rooms/${INDEX_ROOM}/errors`, { [id]: { verdict: v, at: Date.now(), uid: sync.uid || "", name: savedName() || "", ...(flag ? { flag } : {}) } });
+    C?.toast(v === "flagged" ? "Flagged: it is in the error review" : `Marked: ${VERDICT_WORDS[v]}`);
   } catch (e) { C?.toast("Kept on this device; the database didn't take it: " + (e?.message || e)); }
 }
 /** Every engine plays the position again (Medium on this thread, Hard each in its own worker at the coaches' depth). */
@@ -127,6 +134,7 @@ function reviewHtml() {
   const names = s => s.map(id => nm(id)).join(", ") || "—";
   const bf = (st, seat) => st.bf.filter(p => p.ctl === seat).map(p => nm(p.id) + (p.tapped ? " (tapped)" : "")).join(", ") || "—";
   const done = review.items.filter(i => verdicts[i.id]).length;
+  const extra = Object.entries(verdicts).filter(([id, v]) => v.flag && !review.items.some(i => i.id === id));
   return `<p class="lab-note">Positions where Monte's move was flagged as a possible error. Each can be played again by every engine (Simulate). Mark it an objective error, and every future engine is checked against it: playing the move again counts against that engine. ${done} of ${review.items.length} marked.</p>
     ${review.items.map(i => {
       const st = i.state, v = verdicts[i.id]?.verdict, sim = sims.get(i.id), stack = st.stack.map(x => x.name).join(" ← ");
@@ -136,11 +144,77 @@ function reviewHtml() {
         <p class="lab-note"><b>Monte's hand:</b> ${esc(names(st.hand[1]))}<br><b>Your hand:</b> ${esc(names(st.hand[0]))}<br><b>Monte's side:</b> ${esc(bf(st, 1))}<br><b>Your side:</b> ${esc(bf(st, 0))}</p>
         <p class="lab-note"><b>Engines at 256 deals:</b> ${Object.entries(i.engines).map(([n, m]) => `${esc(n)} ${esc(m)}`).join(" · ")}</p>
         ${sim ? `<p class="lab-note"><b>Simulated now:</b> ${Object.entries(sim).map(([id, r]) => `${esc(engineOf(id)?.short || id)}: ${r.status === "done" ? `${esc(r.text)}${r.chance != null ? ` (${Math.round(100 * r.chance)}%)` : ""}${r.same ? " ✓ same as Monte" : ""}` : r.status === "thinking" ? "thinking…" : esc(r.text)}`).join(" · ")}</p>` : ""}
-        <div class="lab-row"><button type="button" class="btn" data-sim="${esc(i.id)}">Simulate</button>
-          <a class="btn" href="games.html?k=${encodeURIComponent(k)}&g=${esc(i.game)}&m=${i.move}" target="_blank" rel="noopener">Open the game here</a></div>
+        <div class="lab-row"><button type="button" class="btn primary" data-replay="${esc(i.game)}" data-m="${i.move}">Replay to here</button><button type="button" class="btn" data-sim="${esc(i.id)}">Simulate</button>
+          <a class="btn" href="games.html?k=${encodeURIComponent(k)}&g=${esc(i.game)}&m=${i.move}" target="_blank" rel="noopener">Game viewer</a></div>
         <div class="lab-row">${Object.entries(VERDICT_WORDS).map(([key, w]) => `<button type="button" class="btn${v === key ? " primary" : ""}" data-verdict="${esc(i.id)}" data-v="${key}">${esc(w)}</button>`).join("")}</div>
       </details>`;
-    }).join("")}`;
+    }).join("")}
+    ${extra.length ? `<h3 class="lab-h">Flagged in replays</h3>${extra.map(([id, v]) => `<div class="lab-eng lab-err"><b>Turn ${v.flag.turn}: ${esc(v.flag.who)} ${esc(v.flag.play)}</b>${v.verdict !== "flagged" ? ` · <em>${esc(VERDICT_WORDS[v.verdict] || v.verdict)}</em>` : " · <em>flagged</em>"}
+      <div class="lab-row"><button type="button" class="btn primary" data-replay="${esc(v.flag.game)}" data-m="${v.flag.move}">Replay to here</button></div></div>`).join("")}` : ""}`;
+}
+
+// ---------- replays ----------
+let RP = null;                                     // { key, game, names, at, total, view }
+/** Once a value: the database answers a path's watch with what is there, then the watch is dropped. */
+const once = (sync, path) => new Promise((res, rej) => { let off = null, done = false; off = sync.watch(path, v => { if (done) return; done = true; res(v); queueMicrotask(() => off?.()); }, rej); });
+/** A kept game from the database: its index line's room, or the unfinished games' copy. */
+async function fetchGame(key) {
+  const sync = await getSync(), line = await once(sync, `crates/rooms/${INDEX_ROOM}/games/${key}`);
+  if (line?.room) { const g = await once(sync, `crates/rooms/${line.room}/dandan/game`); if (g) return { game: g, name: line.name }; }
+  const live = await once(sync, `crates/rooms/${INDEX_ROOM}/live/${key}`);
+  if (live?.game) return { game: live.game, name: live.name };
+  throw new Error("that game isn't kept");
+}
+/** The view of a replay at a move: the game as it stood, both hands face up. */
+function replayView() {
+  const G = replayGame(shownRules, RP.game, RP.at);
+  if (G.error) throw new Error(`the moves stop making sense at move ${G.at + 1}: ${G.error}`);
+  const state = JSON.parse(JSON.stringify(G.state));
+  for (const seat of [0, 1]) for (const id of state.hand[seat]) khSet(state, id, BOTH);
+  return { G: { ...G, seq: `replay:${RP.key}:${RP.at}` }, state, seat: 0, seats: [{ name: RP.names[0] }, { name: RP.names[1], bot: true }], toMove: state.over ? null : shownRules.toMove(state),
+    over: !!state.over, mode: "replay", replay: true, me: null, code: "" };
+}
+async function startReplay(key, at = 0, given = null) {
+  try {
+    C.toast("Loading the game…", 1500);
+    loadReview();
+    const { game, name } = given || await fetchGame(key);
+    const moves = typeof game.moves === "string" ? JSON.parse(game.moves) : game.moves || [];
+    const names = [String(game.seats?.[0]?.name || name || "You"), String(game.seats?.[1]?.name || "Monte")];
+    RP = { key, game, moves, names, total: moves.length, at: Math.max(0, Math.min(moves.length, at || 0)) };
+    goTo(RP.at);
+  } catch (e) { RP = null; C.toast("Couldn't replay that game: " + (e?.message || e), 4000); }
+}
+function goTo(at) {
+  RP.at = Math.max(0, Math.min(RP.total, at));
+  try { C.showReplay(replayView()); } catch (e) { C.toast(String(e?.message || e), 4000); }
+}
+function leaveReplay() { RP = null; C.showReplay(null); }
+const playAt = () => RP.moves[RP.at];
+/** The replay's controls, in the place of the game's buttons: back and on, the move made here, flagging it, the verdict. */
+export function replayControls(box) {
+  if (!RP) { box.innerHTML = ""; return; }
+  const v = C.view(), s = v.state, next = playAt(), id = `${RP.key}-${RP.at}`, mark = verdicts[id];
+  const who = next ? RP.names[next[0]] : "", play = next ? moveName(next[1], s, next[0]) || (next[1].t === "pass" ? "passes" : next[1].t) : "";
+  const listed = review?.items.some(i => i.id === id);
+  box.innerHTML = `<div class="lab-replay">
+    <p class="lab-note"><b>Replay</b> · ${esc(RP.names[0])} vs ${esc(RP.names[1])} · move ${RP.at} of ${RP.total} · turn ${s.turn}${s.over ? " · over" : ""}</p>
+    <div class="lab-row"><button type="button" class="btn" data-rp="-10">−10</button><button type="button" class="btn" data-rp="-1">◀</button><button type="button" class="btn primary" data-rp="1">▶</button><button type="button" class="btn" data-rp="10">+10</button><button type="button" class="btn" data-rp="leave">Back to my game</button></div>
+    ${next ? `<p class="lab-note">Next: <b>${esc(who)} ${esc(play)}</b></p>` : `<p class="lab-note">The end of the game.</p>`}
+    ${next ? `${mark || listed ? `<p class="lab-note">⚑ ${mark?.verdict && mark.verdict !== "flagged" ? `Marked: <b>${esc(VERDICT_WORDS[mark.verdict])}</b>` : "Flagged as a possible error: is it one?"}</p>
+      <div class="lab-row">${Object.entries(VERDICT_WORDS).map(([k, w]) => `<button type="button" class="btn${mark?.verdict === k ? " primary" : ""}" data-rv="${k}">${esc(w)}</button>`).join("")}</div>`
+      : `<div class="lab-row"><button type="button" class="btn" data-rv="flagged">⚑ Flag this play</button></div>`}` : ""}
+  </div>`;
+}
+function replayClick(e) {
+  if (!RP) return;
+  const b = e.target.closest("[data-rp]"), r = e.target.closest("[data-rv]");
+  if (b) { if (b.dataset.rp === "leave") leaveReplay(); else goTo(RP.at + Number(b.dataset.rp)); return; }
+  if (r) {
+    const next = playAt(), s = C.view().state, id = `${RP.key}-${RP.at}`;
+    const flag = { game: RP.key, move: RP.at, turn: s.turn, seat: next[0], who: RP.names[next[0]], play: moveName(next[1], s, next[0]) || next[1].t };
+    setVerdict(id, r.dataset.rv, flag).then(() => C.redraw());
+  }
 }
 
 /** The engines that are coaching now: ticked as a coach and shown. */
@@ -225,7 +299,7 @@ let key = "";                                      // the decision the coaches w
 const picks = new Map();                           // engine id → { status: thinking | done | error, move, text, chance, list, error }
 const coachWorkers = new Map();                    // a Hard coach's own worker, so the opponent's move never waits behind a coach
 
-const myNow = v => !!v?.G && v.seat != null && !v.over && v.toMove === v.seat;
+const myNow = v => !!v?.G && !v.over && (v.replay ? v.toMove != null : v.seat != null && v.toMove === v.seat);
 
 /** Asks a Hard coach's worker (the look-ahead off the page's thread, dandan-worker.js with an engine id). */
 function askCoach(e, state, seatNo) {
@@ -260,7 +334,7 @@ export function onView(v) {
   paintStrip();
 }
 function ask(v, k) {
-  const state = v.state, seatNo = v.seat;
+  const state = v.state, seatNo = v.replay ? v.toMove : v.seat;
   for (const e of asked()) {
     picks.set(e.id, { status: "thinking" });
     const done = r => {
@@ -342,12 +416,12 @@ function paintStrip() {
   const chips = coaches.map(e => {
     const p = picks.get(e.id);
     const say = !mine ? "…" : !p || p.status === "thinking" ? "thinking…" : p.status === "error" ? "no answer" : `${esc(p.text)}${pct(p.chance)}`;
-    const done = mine && p?.status === "done", on = done && flagged(e.id);
-    return `<span class="lab-chip${done ? " done" : ""}${on ? " flagged" : ""}"><button type="button" class="lab-say" data-info="${e.id}" title="${esc(e.name)}: how it was built"><b>${esc(e.short)}</b> ${say}</button>${done ? `<button type="button" class="lab-flag" data-flag="${e.id}" aria-pressed="${on}" title="Flag this pick as one you disagree with">⚑</button>` : ""}</span>`;
+    const done = mine && p?.status === "done", on = done && !RP && flagged(e.id);
+    return `<span class="lab-chip${done ? " done" : ""}${on ? " flagged" : ""}"><button type="button" class="lab-say" data-info="${e.id}" title="${esc(e.name)}: how it was built"><b>${esc(e.short)}</b> ${say}</button>${done && !RP ? `<button type="button" class="lab-flag" data-flag="${e.id}" aria-pressed="${on}" title="Flag this pick as one you disagree with">⚑</button>` : ""}</span>`;
   }).join("");
   const line = disagreement(coaches.map(e => ({ e, p: picks.get(e.id) })).filter(x => x.p?.status === "done").map(x => ({ short: x.e.short, text: x.p.text })));
   box.classList.toggle("split", !!line);
-  box.innerHTML = `${line ? `<p class="lab-split">${esc(line)}</p>` : ""}<div class="lab-chips">${chips}${autoBtn}</div>`;
+  box.innerHTML = `${line ? `<p class="lab-split">${esc(line)}</p>` : ""}<div class="lab-chips">${chips}${RP ? "" : autoBtn}</div>`;
 }
 
 // ---------- the sheet ----------
@@ -401,6 +475,8 @@ function wireSheet() {
   $("labBody").addEventListener("click", e => {
     const sim = e.target.closest("button[data-sim]");
     if (sim) { const it = review?.items.find(i => i.id === sim.dataset.sim); if (it) simulate(it); return; }
+    const rb = e.target.closest("button[data-replay]");
+    if (rb) { $("labDlg").close(); startReplay(rb.dataset.replay, Number(rb.dataset.m)); return; }
     const ver = e.target.closest("button[data-verdict]");
     if (ver) { setVerdict(ver.dataset.verdict, ver.dataset.v); return; }
     const b = e.target.closest("button[data-info]");
@@ -428,6 +504,10 @@ function wireSheet() {
 /** Called once by dandan.js when its table is up: ctx is { LAB, opts, toast, redraw, rings, view, myDecision, page, forgetBot, record }. */
 export function attach(ctx) {
   C = ctx;
+  $("controls").addEventListener("click", replayClick);
+  // a game record handed in directly (the tests, or a game not in the database): window.__dandanReplay(record, at)
+  globalThis.__dandanReplay = (game, at = 0, key = "local") => startReplay(key, at, { game, name: "" });
+  { const q = new URLSearchParams(location.search), key = q.get("replay"); if (key) { loadReview(); startReplay(key, Number(q.get("m")) || 0); } }
   seatOpponent();
   wireSheet();
   onView(C.view());

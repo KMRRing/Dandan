@@ -47,3 +47,6 @@
 .lab-err > p { margin: .35rem 0 0; }
 .lab-row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
 .lab-row .btn.primary { font-weight: 700; }
+/* a replay's controls, in the place of the game's buttons */
+.lab-replay { display: grid; gap: .35rem; }
+.lab-replay .lab-note { margin: 0; }

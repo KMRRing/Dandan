@@ -44,7 +44,10 @@ let opts = { level: "hard", think: "deepest", coach: "off", reveals: false, full
   hold: !!saved.hold, manual: !!saved.manual, pace: PACES.some(([k]) => k === saved.pace) ? saved.pace : "slow" };
 // Show revealed cards: never. Nothing marks what you have seen of the other hand or of the library (the cards known
 // there, the top card when it is known): you have to remember
-const sees = () => false;
+// A game played again in the lab (dandan-lab.js replay): its view stands in for the live one, nothing can be done on it, and both
+// hands are face up (the replay's state marks every card in them known to you)
+let REPLAY = null;
+const sees = () => !!REPLAY;
 let table3d = null;                                // the 3D view, once the page is wired (the foot of this file)
 const in3d = () => !!table3d;
 const saveOpts = () => write(OPTS, { hold: opts.hold, manual: opts.manual, pace: opts.pace });
@@ -167,7 +170,7 @@ function coverWait(state, seat) {
   return pool ? pool[Math.floor(Math.random() * pool.length)] : 1500 + Math.random() * 2500;
 }
 function holdForBot() {
-  if (!page || opts.level !== "hard") return false;
+  if (!page || opts.level !== "hard" || REPLAY) return false;
   const v = page.view;
   if (!v.G || v.over || v.mode !== "solo" || v.toMove == null || !v.seats[v.toMove]?.bot) return false;
   const key = keyOf(v.state);
@@ -264,6 +267,7 @@ page = seatPage({
   // Hard works its move out while a tap is awaited, so it comes the moment you tap
   hold: () => { const thinking = holdForBot(); return tapHold() || thinking; },
   onView: v => {
+    if (REPLAY) { REPLAY.live = v; return; }        // the lab's own game goes on underneath a replay, unseen until it ends
     noteFresh(V, v);
     V = v;
     recordProgress(v, how());
@@ -291,7 +295,7 @@ const myDecision = () => !!V?.G && V.seat != null && !V.over && V.toMove === V.s
 const RING = new Set();                            // no coach to ring its move: the table's drawing keeps the hook
 
 // ---------- the table, drawn ----------
-const canAct = () => V?.G && V.seat != null && !S().over && !S().pending && S().prio === V.seat;
+const canAct = () => !REPLAY && V?.G && V.seat != null && !S().over && !S().pending && S().prio === V.seat;
 
 function draw() {
   if (!page) return;
@@ -499,6 +503,7 @@ function drawLog() {
  * the hand), ordered, dlg ({ title, html, choices }: a list to choose from, in a sheet) }.
  */
 function question() {
+  if (REPLAY) return null;
   const s = S(), q = s.pending, me = V.seat;
   if (!q || q.seat !== me) return null;
   const send = m => act(m);
@@ -646,6 +651,7 @@ function tword(t) {
 let BTN = [];                                      // this draw's buttons, by position (the page's data-b)
 function drawControls(q) {
   const box = $("controls"), s = S();
+  if (REPLAY) { lab.replayControls(box); BTN = []; return; }
   if (V.seat == null) { box.innerHTML = `<p class="dd-status">${s.over ? headline() : "Watching"}</p>`; BTN = []; return; }
   let list = [];
   if (s.over) list = [{ label: "The result", kind: "primary", fn: () => showEnd(V) }, ...(page.host ? [{ label: "New game", fn: newGame }] : [])];
@@ -1186,8 +1192,17 @@ table3d = createTable3d({
 showView();
 window.__dandan = { page, get view() { return V; }, get ui() { return ui; }, opts };
 // the lab's hooks into this page: the view, the options, the coach's rings, a redraw, the computer's moves worked out so far (to forget)
+/** A replay's view shown in place of the live game (the lab), or the live game back (null). */
+function showReplay(v) {
+  if (v) { if (!REPLAY) { REPLAY = { live: V }; page.runner.stop(); } V = v; }
+  else if (REPLAY) { V = REPLAY.live; REPLAY = null; page.runner.kick(); }
+  else return;
+  ui = blank(); uiKey = ""; closeView(); closeCard();
+  lab?.onView(V);
+  draw();
+}
 lab?.attach({
-  LAB, opts, toast, redraw: draw, rings: RING, view: () => V, myDecision, page,
+  LAB, opts, toast, redraw: draw, rings: RING, view: () => V, myDecision, page, showReplay,
   forgetBot: () => { botMoves.clear(); botAsked = ""; page.runner.kick(); },
   record: () => { if (V) recordProgress(V, how()); },
 });
