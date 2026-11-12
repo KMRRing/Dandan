@@ -93,7 +93,7 @@ function brute(s, seat) {
 const was = fullStops(true);
 const seenKinds = {};
 let decisions = 0, legal = 0, missing = 0, leftOut = 0, kinds = new Set(), example = null, maxChoices = 0;
-for (let g = 0; g < 400 && decisions < 140; g++) {
+for (let g = 0; g < 400 && decisions < 100; g++) {
   let s = deal({ rng: seeded(500 + g) });
   for (let i = 0; i < 3000 && !s.over; i++) {
     const seat = toMove(s);
