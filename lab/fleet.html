@@ -57,6 +57,10 @@ h1 small{display:block;font:500 12px/1.4 var(--mono);letter-spacing:.12em;text-t
 .fresh{font:12.5px var(--mono);color:var(--mute)}
 .cframe{position:relative}
 #tracker{display:grid;gap:4px;align-content:start;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel);min-width:0}
+#tracker .health{display:grid;gap:5px;margin:2px 0 4px;padding-bottom:7px;border-bottom:1px solid var(--line)}
+#tracker .hrow{display:grid;grid-template-columns:auto auto 1fr;gap:2px 8px;align-items:baseline;font-size:12px}
+#tracker .hrow b{font:700 10.5px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+#tracker .hrow>span:last-child{grid-column:1 / -1;color:var(--mute);font-size:11.5px;line-height:1.35}
 #tracker .tgrip{font:700 11px var(--display);letter-spacing:.09em;text-transform:uppercase;color:var(--mute);display:flex;justify-content:space-between}
 #tracker .tk{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;font-size:12px}
 #tracker .tk b{font-weight:600;grid-column:2;line-height:1.3}
@@ -236,7 +240,7 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 .st.green{color:#2da44e}.st.yellow{color:#c69500}.st.orange{color:#e8710a}.st.red{color:#e5534b}
 .src .big2{font:600 20px/1.1 var(--mono);font-variant-numeric:tabular-nums}.src .big2 small{font-size:12px;color:var(--mute);font-weight:500}
 .src dl{display:grid;grid-template-columns:auto 1fr;gap:1px 10px;margin:2px 0 0;font-size:12px}
-.src dt{color:var(--mute)}.src dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.src dt{color:var(--mute)}.src dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .src .act{font-size:11.5px;color:var(--mute);line-height:1.35;overflow-wrap:anywhere}
 .src{min-width:0;overflow:hidden}
 .lamp{width:9px;height:9px;border-radius:50%;flex:none}
@@ -557,7 +561,7 @@ function repaint(v, now = false) {
   if (now || Date.now() - repaintAt > 1000) go(); else repaintTimer = setTimeout(go, 1000);
 }
 // the Fable plan's jobs: the new value nets (aa-g8), the Quick screen (aa-h2), stage 1 (aa-a1), read as one
-const FABLE_PFX = ["aa-g8", "aa-g9", "aa-h2", "aa-a0", "aa-a1", "ab-g2", "spm", "sps"];
+const FABLE_PFX = ["aa-g8", "aa-g9", "aa-h2", "aa-a0", "aa-a1", "aa-i", "ab-g2", "spm", "sps"];
 async function loadFable() {
   // all at once, and without the screen's match results (18 sets of files): those load when the screen's box is opened
   const parts = await Promise.all(FABLE_PFX.map(p => loadMain(p, { rows: false })));
@@ -603,8 +607,40 @@ function drawTracker(d) {
   const busy = rows.reduce((a, r) => a + r.running, 0);
   const total = FLEET ? FLEET.workers.reduce((a, w) => a + w.slots, 0) + (FLEET.gce && !FLEET.workers.some(w => w.cloud === "gcp") ? FLEET.gce.cores : 0) : 0;
   if (!$("tracker")) return;
-  $("tracker").innerHTML = `<div class="tgrip"><span>What the cores are on</span><span>${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span></div>` + (rows.length ? "" : `<div class="tk"><b>Nothing running</b></div>`) + rows.slice(0, 8).map(r => `<div class="tk" role="button" tabindex="0" data-goto="${esc(r.ids.join(" "))}" title="Show ${esc(r.name)} on the map"><span class="dot live"></span><b>${esc(r.name)}</b><span>${r.running} cores${!r.shards ? "" : ` · ${r.per ? `${fmtN(r.done * r.per)}/${fmtN(r.shards * r.per)} games` : r.shards === 1 ? "training" : `${r.done}/${r.shards}`}`}</span>${r.shards > 1 ? `<div class="bar"><i style="width:${((100 * r.done) / r.shards).toFixed(1)}%"></i></div>` : ""}${r.what ? `<em>${esc(r.what)}</em>` : ""}</div>`).join("")
+  $("tracker").innerHTML = `<div class="tgrip"><span>What the cores are on</span><span>${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span></div>` + healthHtml(d, busy || total) + (rows.length ? "" : `<div class="tk"><b>Nothing running</b></div>`) + rows.slice(0, 8).map(r => `<div class="tk" role="button" tabindex="0" data-goto="${esc(r.ids.join(" "))}" title="Show ${esc(r.name)} on the map"><span class="dot live"></span><b>${esc(r.name)}</b><span>${r.running} cores${!r.shards ? "" : ` · ${r.per ? `${fmtN(r.done * r.per)}/${fmtN(r.shards * r.per)} games` : r.shards === 1 ? "training" : `${r.done}/${r.shards}`}`}</span>${r.shards > 1 ? `<div class="bar"><i style="width:${((100 * r.done) / r.shards).toFixed(1)}%"></i></div>` : ""}${r.what ? `<em>${esc(r.what)}</em>` : ""}</div>`).join("")
     + (rows.length > 8 ? `<div class="fresh">and ${rows.length - 8} more</div>` : "");
+}
+// ---------- pace and the next possible improvement (Korbi, 12 Nov) ----------
+// A shard's work, relative (core-hours by today's run times; only the ratios matter): the last hour's finished work against the
+// three hours before it is the pace (about 1: steady, above it quicker, below it slower); what is left, at the last hour's rate,
+// is the time to each job's end. A job not listed is not counted. Training a net is wall-clock time (one core).
+const COST = { "aa-i1": 0.26, "aa-i3b": 0.26, "aa-i2b": 0.63, "ab-g2-q-s5": 0.11, "ab-g2-s4d-0all": 0.4, "ab-g2-s4d-1": 0.4 };
+const H = 3600000, TRAIN_H = 4, SCREEN = 45, GATE = 155;   // a net's training (hours), a Quick screen and a Deep gate (work)
+function healthHtml(d, cores) {
+  if (!d?.jobs?.length) return "";
+  const now = Date.now(), left = id => { const j = d.jobs.find(x => x.id === id); return j ? Math.max(0, j.shards - (d.done[id] || []).length) : 0; };
+  // each job against its own history: shards an hour in the last hour against its average from its first finished shard up to
+  // an hour ago (a job with under half an hour of history before the last hour is left out), summed by the work they stand for
+  let nowW = 0, thenW = 0, rate = 0;
+  for (const [id, c] of Object.entries(COST)) {
+    const ts = d.done[id] || []; if (!ts.length) continue;
+    const recent = ts.filter(x => now - x < H).length; rate += c * recent;
+    const first = Math.min(...ts), span = (now - H - first) / H;
+    if (span < 0.5) continue;
+    nowW += c * recent; thenW += c * ts.filter(x => now - x >= H).length / span;
+  }
+  const pace = thenW ? nowW / thenW : null;
+  const word = pace == null ? ["yellow", "Measuring"] : pace >= 1.1 ? ["green", "Quick"] : pace >= 0.85 ? ["green", "Steady"] : pace >= 0.6 ? ["yellow", "A bit slow"] : ["orange", "Slow"];
+  const hrs = w => (rate ? w / rate : Infinity), h = x => (!isFinite(x) ? "?" : x < 1 ? `${Math.max(1, Math.round(x * 60))} min` : `${x < 10 ? x.toFixed(1) : Math.round(x)} h`);
+  // the queue, in the order the workers take it (by name): hours until each job is done, at the last hour's rate
+  let w = 0; const at = {};
+  for (const id of Object.keys(COST).filter(id => d.jobs.some(j => j.id === id)).sort()) { w += COST[id] * left(id); at[id] = hrs(w); }
+  const gate = hrs(GATE), screen = hrs(SCREEN), next = [];
+  if (at["ab-g2-q-s5"] != null) next.push([at["ab-g2-q-s5"] + gate, `S5 (race inputs): its head-to-head with S4 d ends in ${h(at["ab-g2-q-s5"])}; if it wins, a Deep gate adds ${h(gate)}`]);
+  if (at["ab-g2-s4d-0all"] != null) next.push([at["ab-g2-s4d-0all"] + TRAIN_H + screen + gate, `a net on generation 2: the every-move games done in ${h(at["ab-g2-s4d-0all"])}, then training ${TRAIN_H} h, a screen ${h(screen)} and a Deep gate ${h(gate)}`]);
+  next.sort((a, b) => a[0] - b[0]);
+  return `<div class="health"><div class="hrow"><b>Pace</b><span class="st ${word[0]}">${word[1]}</span><span>${pace == null ? "Not enough finished work yet to compare." : `${pace.toFixed(2)}× its usual rate: each job's work finished in the last hour against its own hourly average before that.`}</span></div>
+    ${next.length ? `<div class="hrow"><b>Next possible improvement</b><span class="st green">~${h(next[0][0])}</span><span>${esc(next[0][1][0].toUpperCase() + next[0][1].slice(1))}${next[1] ? `. Then ${esc(next[1][1])}: ~${h(next[1][0])}` : ""}. Estimates at the last hour's rate.</span></div>` : ""}</div>`;
 }
 function paint(v) {
   if (!last) return;
@@ -668,7 +704,7 @@ function drawFleet() {
   // Rackspace Spot
   const rw = by("rackspace"), rb = sum(rw, w => w.busy.length), rc = sum(rw, w => w.slots), rs = S.rackspace || {};
   out.push(srcCard("Rackspace", statusOf(rb, rc, rw.length), `${rb}<small>/${rc} cores</small>`,
-    [["Machines", `${rw.length}${rs.pool ? ` of ${rs.pool}` : ""}`], ["Price", rs.price != null ? `$${rs.price}/h each · bid $${rs.bid}` : null], ["Per hour", rs.price != null ? `$${(rs.price * rw.length).toFixed(2)}` : null], ["Where", rs.where]],
+    [["Machines", `${rw.length}${rs.pool ? ` of ${rs.pool}` : ""}`], ["Price", rs.price != null ? `$${rs.price}/h each, $${(rs.price * (rs.pool || rw.length)).toFixed(2)}/h` : null], ["Where", rs.where]],
     activityOf(rw), "Rackspace Spot: each machine reports itself about 4 minutes after it boots"));
   // Google Cloud
   const gw = by("gcp"), g = FLEET.gce, gs = S.gcp || {};
@@ -676,15 +712,15 @@ function drawFleet() {
   const reported = sum(FLEET.workers, w => w.busy.length), busyAll = Object.values(last?.busyNow || {}).reduce((a, b) => a + b, 0);
   const gUnrep = !gw.length && g ? Math.min(g.cores, Math.max(0, busyAll - reported)) : 0;
   out.push(srcCard("Google Cloud", g ? statusOf(gb + gUnrep, gc, g.machines) : ["orange", "Can't list"], g ? `${gb + gUnrep}<small>/${gc} cores</small>` : "—",
-    [["Machines", g ? String(g.machines) : "not listed"], ["Price", gs.price || null], ["Note", !gw.length && g?.machines ? "older workers: busy cores estimated" : null]], activityOf(gw)));
+    [["Machines", g ? String(g.machines) : "not listed"], ["Price", gs.price || null]], !gw.length && g?.machines ? "Older workers: busy cores estimated" : !g ? "Needs Compute Viewer on fleet-reader" : activityOf(gw)));
   // AWS
   const aw = by("aws"), ab = sum(aw, w => w.busy.length), ac = sum(aw, w => w.slots), as = S.aws || {};
   out.push(srcCard("AWS", aw.length ? statusOf(ab, ac, aw.length) : ["red", as.state || "Off"], aw.length ? `${ab}<small>/${ac} cores</small>` : "0<small> cores</small>",
-    [["Machines", String(aw.length)], ["Price", as.price || null], ["Note", as.note || null]], activityOf(aw)));
+    [["Machines", String(aw.length)]], as.note || activityOf(aw)));
   // GitHub Actions
   const gh = GH;
   out.push(srcCard("GitHub", gh ? (gh.running ? ["green", "Working"] : ["yellow", "Idle"]) : ["orange", "Hidden"], gh ? `${gh.running}<small> runs</small>` : "—",
-    [["Running", gh ? gh.names.slice(0, 3).join(", ") || "none" : null], ["Price", "free (public repo)"], ["Seen", gh ? ago(gh.at) : null]], gh ? null : "Its runs show on the public page"));
+    [["Running", gh ? gh.names.slice(0, 3).join(", ") || "none" : null], ["Price", "free"], ["Seen", gh ? ago(gh.at) : null]], gh ? null : "Its runs show on the public page"));
   for (const c of [...new Set(FLEET.workers.map(w => w.cloud))].filter(c => !["gcp", "aws", "rackspace"].includes(c))) {
     const ws = by(c), b = sum(ws, w => w.busy.length), n = sum(ws, w => w.slots);
     out.push(srcCard(CLOUD_NAMES[c] || c, statusOf(b, n, ws.length), `${b}<small>/${n} cores</small>`, [["Machines", String(ws.length)]], activityOf(ws)));
