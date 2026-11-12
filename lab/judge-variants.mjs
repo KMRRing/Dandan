@@ -9,18 +9,21 @@
 // usage: node lab/judge-variants.mjs <shard> <shards> <out> <self-play job ids, comma-separated> [variants: e.g. 14,15 (shard n trains
 //        the n-th listed; else shard n trains variant n)] [warm start: a file in judges/ of the variant's width (else today's weights), or -]
 //        [most games to read, else all] [positions a game, else all; or "turns": the first position of each turn] [learning rate]
+//        [judges to screen alongside, e.g. ag-v14.json,s4d.json]
 import fs from "node:fs";
 import { labStore } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove } from "../seats.js";
 import { act as engineAct, passPoints } from "../dandan-engine.js";
-import { features, featuresPlus, FEATURES, PLUS } from "../dandan-eval.js";
+import { features, featuresPlus, featuresRace, FEATURES, PLUS, RACE } from "../dandan-eval.js";
 import { creatures, needType, isLand, typesOf, other } from "../dandan-core.js";
 
 const [shard, , out, ids] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5]];
 const VARIANTS = [];
 for (const plus of [false, true]) for (const shape of ["32x16 warm", "64x32", "128x64x32"]) for (const blend of [0, 0.5]) for (const floor of [0, 1])
   VARIANTS.push({ plus, shape, blend, floor });
+// 24 (12 November 2026, Fable's item 2): S4 d's recipe (variant 23) with the race inputs too (dandan-eval.js featuresRace)
+VARIANTS.push({ plus: true, race: true, shape: "128x64x32", blend: 0.5, floor: 1 });
 const cap = Number(process.argv[8]) || Infinity;
 // positions a game (11 Nov, Korbi: so long games and their decided endings don't outweigh the rest): this many, spread evenly from
 // the first move to the last, each the first usable decision at or after its mark; 0 or absent, every usable one as before
@@ -33,10 +36,10 @@ const lrArg = Number(process.argv[10]) || 0; // learning rate, else 1e-3 (3e-4 s
 const only = process.argv[6] && process.argv[6] !== "-" ? process.argv[6].split(",").map(Number) : null, fromFile = process.argv[7] && process.argv[7] !== "-" ? process.argv[7] : undefined;
 const vNo = only ? only[shard] : shard, V = VARIANTS[vNo];
 if (!V) { console.log(`no variant ${shard} (there are ${VARIANTS.length})`); process.exit(0); }
-const N = FEATURES.length, HALF = (N - 3 - 17) / 2, M = V.plus ? N + 2 * PLUS : N;
+const N = FEATURES.length, HALF = (N - 3 - 17) / 2, M = V.race ? N + 2 * PLUS + 2 * RACE : V.plus ? N + 2 * PLUS : N;
 // inputs kept as 32-bit floats: half the memory of 64-bit, and far finer than the judge's 8-bit weights (11 Nov: two runs on
 // 30,000 Medium games were killed with no output on 16-slot workers sharing 16 GB)
-const featuresOf = (s, me) => Float32Array.from(V.plus ? featuresPlus(s, me) : features(s, me));
+const featuresOf = (s, me) => Float32Array.from(V.race ? featuresRace(s, me) : V.plus ? featuresPlus(s, me) : features(s, me));
 const mb = () => Math.round(process.memoryUsage().rss / 1048576);
 const say = m => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m} (memory ${mb()} MB)`);
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { say(`stopped by ${sig}`); process.exit(143); });
@@ -44,6 +47,7 @@ const swap = a => {
   const t = new Float32Array(M);
   t.set(a.subarray(HALF, 2 * HALF), 0); t.set(a.subarray(0, HALF), HALF); t.set(a.subarray(2 * HALF, N), 2 * HALF); t[2 * HALF] = 1 - a[2 * HALF];
   if (M > N) { t.set(a.subarray(N + PLUS, N + 2 * PLUS), N); t.set(a.subarray(N, N + PLUS), N + PLUS); }
+  if (V.race) { const r = N + 2 * PLUS; t.set(a.subarray(r + RACE, r + 2 * RACE), r); t.set(a.subarray(r, r + RACE), r + RACE); }
   return t;
 };
 
@@ -142,7 +146,7 @@ for (const id of ids.split(",").flatMap(expand)) for (const name of (await store
       if (marks) while (next < marks.length && marks[next] <= i) next++;
       const me = d.seat, won = rec.winner === me ? 1 : rec.winner < 0 ? 0.5 : 0, search = d.medium || !valued ? won : d.list[d.pick][2];
       const st = rules.restore(JSON.parse(JSON.stringify(s)));
-      const row = { a: featuresOf(st, me), y: V.blend * search + (1 - V.blend) * won, won, lib: s.lib.length, slow: slowOf(s), hold };
+      const row = { a: featuresOf(st, me), y: V.blend * search + (1 - V.blend) * won, won, lib: s.lib.length, slow: slowOf(s), hold, decked: rec.why === "library", game: games };
       if (V.floor || hold) {
         // the position with one card gone from each hand, read afresh (the squeeze inputs move with the hand)
         row.w = [me, other(me)].map(x => {
@@ -172,7 +176,13 @@ function screen(p) {
     const d = p({ a: x }) - p(r);
     if (side === 0 ? d > 0.01 : d < -0.01) bad++;
   });
-  return { all: brier(test), slow: brier(test.filter(r => r.slow)), late: brier(test.filter(r => r.lib <= 20)), flaws: n ? +(bad / n).toFixed(4) : null };
+  // the games that ended by a draw from the empty library: at each one's first position with a library of 12 or fewer, the
+  // share where it gives the eventual winner more than half (Fable's item 2)
+  const first = new Map();
+  for (const r of test) if (r.decked && r.lib <= 12 && r.won !== 0.5 && !first.has(r.game)) first.set(r.game, r);
+  const calls = [...first.values()], right = calls.filter(r => (p(r) > 0.5) === (r.won === 1)).length;
+  return { all: brier(test), slow: brier(test.filter(r => r.slow)), late: brier(test.filter(r => r.lib <= 20)), flaws: n ? +(bad / n).toFixed(4) : null,
+    decked12: calls.length ? +(right / calls.length).toFixed(4) : null, decked12n: calls.length };
 }
 
 // ---------- training ----------
@@ -226,6 +236,21 @@ function chance0(net, a) {
   const b = new Float32Array(N); b.set(a.subarray(HALF, 2 * HALF), 0); b.set(a.subarray(0, HALF), HALF); b.set(a.subarray(2 * HALF, N), 2 * HALF); b[2 * HALF] = 1 - a[2 * HALF];
   return 1 / (1 + Math.exp(forward(net, b).at(-1)[0] - forward(net, a).at(-1)[0]));
 }
-const line = { variant: vNo, from: fromFile || "today", spec: V, perGame: turnsOnly ? "turns" : perGame, lr, games, positions: data.length, epoch: best.epoch, metrics, today: base, layers };
+// other judges on the same positions (argument 10, or env COMPARE: files in judges/, comma-separated; each reads as many numbers as it has inputs,
+// all three blocks swapped as each has them)
+const swapW = (a, m) => {
+  const t = new Float32Array(m);
+  t.set(a.subarray(HALF, 2 * HALF), 0); t.set(a.subarray(0, HALF), HALF); t.set(a.subarray(2 * HALF, N), 2 * HALF); t[2 * HALF] = 1 - a[2 * HALF];
+  if (m > N) { t.set(a.subarray(N + PLUS, N + 2 * PLUS), N); t.set(a.subarray(N, N + PLUS), N + PLUS); }
+  if (m > N + 2 * PLUS) { const r = N + 2 * PLUS; t.set(a.subarray(r + RACE, r + 2 * RACE), r); t.set(a.subarray(r, r + RACE), r + RACE); }
+  return t;
+};
+const others = {};
+for (const f of (process.argv[11] || process.env.COMPARE || "").split(",").filter(Boolean)) {
+  const net = JSON.parse(fs.readFileSync(new URL(`../judges/${f}`, import.meta.url), "utf8")).layers.map(dequant), m = net[0].nIn;
+  if (m > M) { others[f] = `reads ${m} numbers, these rows ${M}`; continue; }
+  others[f] = screen(r => { const a = r.a.subarray(0, m); return 1 / (1 + Math.exp(forward(net, swapW(a, m)).at(-1)[0] - forward(net, a).at(-1)[0])); });
+}
+const line = { variant: vNo, from: fromFile || "today", spec: V, perGame: turnsOnly ? "turns" : perGame, lr, games, positions: data.length, epoch: best.epoch, metrics, today: base, others, layers };
 console.log(JSON.stringify({ ...line, layers: undefined }));
 fs.writeFileSync(out, JSON.stringify(line) + "\n");

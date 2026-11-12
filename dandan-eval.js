@@ -120,6 +120,36 @@ export function featuresPlus(s, me, out = new Float32Array(N + 2 * PLUS)) {
   return out;
 }
 
+// ---------- the race inputs (lab, 12 November 2026: Fable's item 2) ----------
+// Who draws from the empty library is a matter of odd and even, which a small network fed the library's size as one number
+// can't learn. So each seat is told: whether it is the one to face the empty library if nobody draws extra or puts a card
+// back, and in how many draws; and the cards it has that take from the library (a draw, a cycling, a Clue, a Flood Plain) or
+// add to it (a Memory Lapse, Commit, Gone Missing, Deem Inferior, Metamorphose, Mystic Sanctuary), in hand and where they can
+// be used from the battlefield or the graveyard (Memory, Mystic Retrieval's flashback). Mine, then the other seat's.
+export const RACE = 8;
+export const RACE_NAMES = ["faces the empty library", "draws until then", "takers held", "cards they take", "adders held", "Clues and Flood Plains", "Memory in the graveyard", "Retrieval in the graveyard"];
+const TAKES = { "Brainstorm": 1, "Predict": 2, "Quicken": 1, "Repulse": 1, "Chart a Course": 2, "Lórien Revealed": 3, "Take Inventory": 1, "Lonely Sandbar": 1, "Remote Isle": 1, "Flood Plain": 1 };
+const ADDS = new Set(["Memory Lapse", "Commit // Memory", "Gone Missing", "Deem Inferior", "Metamorphose", "Mystic Sanctuary"]);
+function seatRace(s, x, out, k) {
+  const L = s.lib.length, next = s.step === "upkeep" && s.turn > 1 ? s.active : other(s.active), fatal = L % 2 === 0 ? next : other(next);
+  let takers = 0, power = 0, adders = 0, onBf = 0, memory = 0, retrieval = 0;
+  for (const id of s.hand[x]) { const n = DECK[id]; if (TAKES[n]) { takers++; power += TAKES[n]; } if (ADDS.has(n)) adders++; }
+  for (const p of s.bf) if (p.ctl === x && (p.id >= TOKEN_AT || DECK[p.id] === "Flood Plain")) onBf++;
+  for (const id of s.yard) { if (DECK[id] === "Commit // Memory") memory = 1; else if (DECK[id] === "Mystic Retrieval") retrieval = 1; }
+  out[k++] = fatal === x ? 1 : 0;
+  out[k++] = fatal === x ? Math.min(L + 1, 20) / 20 : 1;
+  out[k++] = Math.min(3, takers) / 3; out[k++] = Math.min(6, power) / 6; out[k++] = Math.min(3, adders) / 3; out[k++] = Math.min(3, onBf) / 3;
+  out[k++] = memory; out[k++] = retrieval;
+  return k;
+}
+/** The features, the squeeze inputs and the race inputs: each block mine, then the other seat's. */
+export function featuresRace(s, me, out = new Float32Array(N + 2 * PLUS + 2 * RACE)) {
+  featuresPlus(s, me, out);
+  let k = seatRace(s, me, out, N + 2 * PLUS);
+  seatRace(s, other(me), out, k);
+  return out;
+}
+
 // ---------- the network ----------
 // Each layer's weights (inputs by outputs) as signed bytes, base64, with a scale for each output; the hidden layers'
 // biases (the last layer's would cancel in g(mine) − g(theirs)). Trained in float and rounded so, which moves a chance
@@ -137,7 +167,7 @@ export function build(layers) {
     if (L.b.length) b.set(L.b);
     return { nIn, nOut, W, b, y: new Float32Array(nOut) };
   });
-  if (net[0].nIn !== N && net[0].nIn !== N + 2 * PLUS) throw new Error("dandan-eval: the network reads a different number of features");
+  if (![N, N + 2 * PLUS, N + 2 * PLUS + 2 * RACE].includes(net[0].nIn)) throw new Error("dandan-eval: the network reads a different number of features");
   return net;
 }
 
@@ -165,16 +195,17 @@ export function score(net, x) {
  * its place, as think() takes any judge.
  */
 export function makeJudge(layers) {
-  const net = build(layers), plus = net[0].nIn > N, M = net[0].nIn, mine = new Float32Array(M), theirs = new Float32Array(M), half = (N - 3 - SPELLS.length) / 2;
+  const net = build(layers), plus = net[0].nIn > N, race = net[0].nIn >= N + 2 * PLUS + 2 * RACE, M = net[0].nIn, mine = new Float32Array(M), theirs = new Float32Array(M), half = (N - 3 - SPELLS.length) / 2;
   return (s, me) => {
     if (s.over) return s.winner < 0 ? 0.5 : s.winner === me ? 1 : 0;
     // the other side's view is the same numbers with the seats' halves swapped and the turn the other way round
-    if (plus) featuresPlus(s, me, mine); else features(s, me, mine);
+    if (race) featuresRace(s, me, mine); else if (plus) featuresPlus(s, me, mine); else features(s, me, mine);
     theirs.set(mine.subarray(half, 2 * half), 0);
     theirs.set(mine.subarray(0, half), half);
     theirs.set(mine.subarray(2 * half, N), 2 * half);
     theirs[2 * half] = 1 - mine[2 * half];
     if (plus) { theirs.set(mine.subarray(N + PLUS, N + 2 * PLUS), N); theirs.set(mine.subarray(N, N + PLUS), N + PLUS); }
+    if (race) { const r = N + 2 * PLUS; theirs.set(mine.subarray(r + RACE, r + 2 * RACE), r); theirs.set(mine.subarray(r, r + RACE), r + RACE); }
     return 1 / (1 + Math.exp(score(net, theirs) - score(net, mine)));
   };
 }
