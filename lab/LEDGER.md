@@ -332,3 +332,15 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   2.6 at 1.6× the time (the range just touches 50%). Halving the look-ahead to buy deals is out.
 - Hard does notice who plays its play-outs: the 84–16 loser costs about 3 points (range wholly under 50%), far less than its
   34-point gap alone. The earlier "about 49% on 430 pairs" was this, seen through noise.
+
+## 12 November 2026, ~00:15Z: item 10, the model taught the search's played move (aa-a1-pt3)
+
+- Offline: agrees with the search 80.6% (Medium 76.3%; pt1 70.4, pt2 69.1); G0 1.47 → 0.996.
+
+| job | test | result |
+|---|---|---|
+| aa-a1-g1e | unguarded (the model decides everything) vs Medium, 20,000 pairs | **53.6% ± 0.6** |
+| aa-a1-g1f | guarded vs Medium, 20,000 pairs | **52.3% ± 0.5** |
+
+- The target was the fault: unguarded went from 16.4% (pt1) and 41.8% (pt2) to 53.6%, the first learned player that beats
+  Medium on its own, without rails. Under the 55% bar, so no tree-order test (item 10's rule); the next step is the planning chat's.
