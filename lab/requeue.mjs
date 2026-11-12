@@ -28,7 +28,7 @@ for (const id of ids) {
   for (let s = 0; s < spec.shards; s++) {
     if (names.has(`results/${id}/part-${s}.jsonl`)) continue;
     if (!names.has(`results/${id}/done-${s}`) && live.has(s)) continue;   // still being played
-    if (names.has(`results/${id}/done-${s}`) && JSON.parse((await get(`results/${id}/done-${s}`)) || "{}").code === 0) continue;   // ended well, wrote nothing
+    if (names.has(`results/${id}/done-${s}`) && [0, "kept"].includes(JSON.parse((await get(`results/${id}/done-${s}`)) || "{}").code)) continue;   // ended well, or kept from the job this twins
     lost.push(s);
   }
   if (!lost.length) { console.log(JSON.stringify({ id, lost })); continue; }
