@@ -208,6 +208,16 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 .fleetbar .fb{display:flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;font-size:12.5px;background:var(--panel,transparent)}
 .fleetbar .fb b{font-weight:600}.fleetbar .fb span{font:12px var(--mono);color:var(--mute);font-variant-numeric:tabular-nums}
 .fleetbar .lamp{width:9px;height:9px;border-radius:50%;flex:none}.lamp.ok{background:#3fb950}.lamp.part{background:#d29922}.lamp.off{background:#f85149}.lamp.unk{background:var(--mute)}
+.tk[data-goto]{cursor:pointer;border-radius:8px}.tk[data-goto]:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.cnode.flash{outline:3px solid var(--accent);outline-offset:3px;transition:outline-color 1.5s}
+.ideas{display:grid;gap:4px;padding:8px 0}.idea{border:1px solid var(--line);border-radius:10px;padding:6px 10px}
+.idea>summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none}.idea>summary::-webkit-details-marker{display:none}
+.idea>summary::before{content:"▸";color:var(--mute);width:10px}.idea[open]>summary::before{content:"▾"}
+.idea>summary em{color:var(--mute);font-style:normal;font-size:12.5px;margin-left:auto}
+.idea .itemlist2{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 14px;padding:6px 0 4px 26px}
+.idea .itemlist2 label{font-size:13px;display:flex;gap:6px;align-items:baseline;min-width:0}.idea .itemlist2 label input{flex:none}.idea .itemlist2 label em{color:var(--mute);font-style:normal;font-size:12px}
+.band{position:absolute;border:1.5px dashed var(--line);border-radius:16px;background:color-mix(in srgb,var(--line) 12%,transparent);pointer-events:none}
+.band span{position:absolute;left:12px;top:8px;font:600 11.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--mute)}
 .tick{position:absolute;left:0;height:0;border-top:1px dashed color-mix(in srgb,var(--line) 70%,transparent);pointer-events:none}
 .tick span{position:absolute;left:8px;top:6px;max-width:84px;line-height:1.3;font:600 11.5px var(--mono);color:var(--mute)}
 .tick.day span{color:var(--ink);font-size:12.5px}
@@ -215,11 +225,7 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 .vtick{position:absolute;top:0;width:0;border-left:1px dashed color-mix(in srgb,var(--line) 70%,transparent);pointer-events:none}
 .vtick span{position:absolute;left:6px;top:8px;font:600 11.5px var(--mono);color:var(--mute);white-space:nowrap}
 .vtick.day span{color:var(--ink)}.vtick.now{border-left:2px solid var(--accent)}.vtick.now span{color:var(--accent)}
-.lanehead{position:absolute;font:600 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mute);pointer-events:none}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}.seg button{border:0;border-radius:0}.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
-.band{position:absolute;border:1.5px dashed var(--line);border-radius:16px;background:color-mix(in srgb,var(--line) 12%,transparent);pointer-events:none}
-.band span{position:absolute;left:16px;top:12px;font:600 13px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
-.band-start{border-style:solid}
 </style>
 </head>
 <body>
@@ -540,14 +546,14 @@ function drawTracker(d) {
     for (const j of js) { const dn = (d.done[j.id] || []).length; shards += j.shards; done += dn; running += d.busyNow ? (d.busyNow[j.id] || 0) : Math.max(0, (d.claims[j.id] || 0) - dn); }
     if (!running || done >= shards) continue;
     const per = gamesPerShard(js[0]), name = NAMES[g] || (/^aa-g1-sweep/.test(g) ? "Base value net run " + g.slice(-1) : /^aa-g1-base/.test(g) ? "Base value net" : js[0].purpose?.split(/[:(,]/)[0] || g);
-    rows.push({ name, done, shards, per, running, what: TRACK_WHAT(g, js[0]) });
+    rows.push({ name, done, shards, per, running, what: TRACK_WHAT(g, js[0]), ids: js.map(j => j.id) });
   }
   rows.sort((a, b) => (a.name.startsWith("Filler") ? 1 : 0) - (b.name.startsWith("Filler") ? 1 : 0) || b.running - a.running);
   const busy = rows.reduce((a, r) => a + r.running, 0);
   const total = FLEET ? FLEET.workers.reduce((a, w) => a + w.slots, 0) + (FLEET.gce && !FLEET.workers.some(w => w.cloud === "gcp") ? FLEET.gce.cores : 0) : 0;
   if (!$("tracker")) return;
   placeTracker();
-  $("tracker").innerHTML = `<div class="tgrip"><span>What the cores are on · ${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span><span aria-hidden="true">⠿</span></div>` + (rows.length ? "" : `<div class="tk"><b>Nothing running</b></div>`) + rows.slice(0, 8).map(r => `<div class="tk" title="${esc(r.name)}"><span class="dot live"></span><b>${esc(r.name)}</b><span>${r.running} cores · ${r.per ? `${fmtN(r.done * r.per)}/${fmtN(r.shards * r.per)} games` : r.shards === 1 ? "training" : `${r.done}/${r.shards}`}</span>${r.shards > 1 ? `<div class="bar"><i style="width:${((100 * r.done) / r.shards).toFixed(1)}%"></i></div>` : ""}${r.what ? `<em>${esc(r.what)}</em>` : ""}</div>`).join("")
+  $("tracker").innerHTML = `<div class="tgrip"><span>What the cores are on · ${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span><span aria-hidden="true">⠿</span></div>` + (rows.length ? "" : `<div class="tk"><b>Nothing running</b></div>`) + rows.slice(0, 8).map(r => `<div class="tk" role="button" tabindex="0" data-goto="${esc(r.ids.join(" "))}" title="Show ${esc(r.name)} on the map"><span class="dot live"></span><b>${esc(r.name)}</b><span>${r.running} cores · ${r.per ? `${fmtN(r.done * r.per)}/${fmtN(r.shards * r.per)} games` : r.shards === 1 ? "training" : `${r.done}/${r.shards}`}</span>${r.shards > 1 ? `<div class="bar"><i style="width:${((100 * r.done) / r.shards).toFixed(1)}%"></i></div>` : ""}${r.what ? `<em>${esc(r.what)}</em>` : ""}</div>`).join("")
     + (rows.length > 8 ? `<div class="fresh">and ${rows.length - 8} more</div>` : "");
 }
 function paint(v) {
@@ -1460,11 +1466,38 @@ let MAP = location.hash.slice(1) === "pipeline" ? "pipeline" : "fable";
 const mk = k => (MAP === "fable" ? "fable:" : "fleet:") + k;
 // the map opens on what matters now (Korbi, 12 Nov: running, waiting, planned, the live net, and anything from the last 36
 // hours); "Everything" puts every box on it; either way each box sits at the height of when it happened, and a box dragged by
-// hand stays where it was put until Tidy
+// hand stays where it was put until Rearrange
 let SCOPE = store(mk("scope")) === "all" ? "all" : "relevant", MANUAL = store(mk("manual:" + ORIENT)) || {};
 let POS = {}, SHOWN = new Set(store(mk("shown3")) || []), ZOOM = store("fleet:zoom") || (innerWidth < 700 ? 0.5 : 0.8), FOCUS = null, GRAPH = null;
 const W_NODE = 240, W_MATCH = 290;
 const HEIGHT = {}, hOf = n => HEIGHT[n?.key] || (n?.t === "match" ? 380 : 330), wOf = n => (n?.t === "match" ? W_MATCH : W_NODE);
+// ---------- ideas: what each box is part of (the regions on the map, and the groups in Choose boxes) ----------
+const IDEAS = [
+  ["live", "The live game", "v14 and today's Medium: what Monte plays now"],
+  ["games", "Games to learn from", "self-play and filler games that value nets train on"],
+  ["nets", "New value nets", "the nets trained to replace v14, and their Quick screen"],
+  ["gates", "Deep gates vs v14", "a new net against v14, Hard at Deep: the step before live"],
+  ["checks", "Measurements", "report cards and checks: no verdict, they inform"],
+  ["model", "The fast player", "stage 1: a model that plays out Hard's look-aheads"],
+  ["medium", "Medium engine rules", "rules tried on the rule-based player"],
+  ["later", "Later stages", "stage 2 and 3 of the plan, and the release calls"],
+  ["old", "Earlier experiments", "work before the current plan"],
+];
+const IDEA_NAME = Object.fromEntries(IDEAS.map(([k, n]) => [k, n]));
+function ideaOf(n) {
+  const k = n.key;
+  if (n.stage === "s2" || n.stage === "s3" || n.stage === "crown" || /^check:crown/.test(k)) return "later";
+  if (n.stage === "s1" || /model|hardplus|^match:g\d|g2g|^match:turns|^match:vd-|^check:(g0|alt|speed)|^set:(export|spm)/.test(k)) return "model";
+  if (k === V14 || k === "engine:medium" || /^engine:(hard|paths):\d+:judge:file:ag-v14\.json~engine:medium$/.test(k)) return "live";
+  if (n.t === "medium" || /^match:(aa-f1|aa-ag|aa-ai|local-)/.test(k)) return "medium";
+  if (/builtin|@oct|oct-medium|aa-b0|aa-b2|aa-b3|aa-jm14|aa-g6-floor|aa-g1-base|aa-g0-m|aa-g2-|aa-g3-|aa-g4-|aa-g7-|@d3aabb6|@landplan|@stack/.test(k)) return "old";
+  if (n.t === "match" && /gate|aa-g9/.test(k)) return "gates";
+  if (n.t === "engine") return /:1024:/.test(k) ? "gates" : "nets";
+  if (n.t === "judge" || k === "check:screen") return "nets";
+  if (n.t === "check") return "checks";
+  if (n.t === "set") return "games";
+  return "old";
+}
 // ---------- the time axis ----------
 // when each box happened: a job's first finished shard (a job queued or running with none finished: now); a box with no job
 // of its own (an engine, a net built earlier) when its newest input happened; a planned box after now, in plan order
@@ -1507,17 +1540,17 @@ function timeLayout(G, d, only) {
   const along = n => (down ? hOf(n) : wOf(n)) + 24, across = n => (down ? wOf(n) : hOf(n));
   const bucket = n => { const x = t[n.key] || { at: -Infinity }; return x.plan ? "p" + String(x.rank).padStart(3, "0") : x.at === -Infinity ? "a" : "h" + String(Math.floor(x.at / HOUR)).padStart(9, "0"); };
   const rows = new Map();
-  for (const n of nodes) { const b = bucket(n); if (!rows.has(b)) rows.set(b, {}); (rows.get(b)[n.t] ??= []).push(n); }
+  for (const n of nodes) { const b = bucket(n); if (!rows.has(b)) rows.set(b, {}); (rows.get(b)[ideaOf(n)] ??= []).push(n); }
   const keys = [...rows.keys()].sort();
-  const lanes = LANES.filter(l => nodes.some(n => n.t === l)), laneSize = {}, laneAt = {};
-  for (const l of lanes) laneSize[l] = Math.max(...nodes.filter(n => n.t === l).map(across));
-  let c = AXIS + 24; for (const l of lanes) { laneAt[l] = c; c += laneSize[l] + 34; }
-  const pos = {}, ticks = []; let y = 70, nowAt = null, lastDay = null;
+  const lanes = IDEAS.map(i => i[0]).filter(l => nodes.some(n => ideaOf(n) === l)), laneSize = {}, laneAt = {};
+  for (const l of lanes) laneSize[l] = Math.max(...nodes.filter(n => ideaOf(n) === l).map(across));
+  let c = AXIS + 40; for (const l of lanes) { laneAt[l] = c; c += laneSize[l] + 64; }
+  const pos = {}, ticks = []; let y = 90, nowAt = null, lastDay = null;
   for (const b of keys) {
     if (b[0] === "p" && nowAt == null) { nowAt = y; ticks.push({ y, label: "Now · planned below", cls: "now" }); y += 50; }
     const row = rows.get(b); let size = 0;
     for (const [l, ns] of Object.entries(row)) {
-      let s = 0; ns.sort((a, z) => (t[a.key]?.at || 0) - (t[z.key]?.at || 0) || a.title.localeCompare(z.title));
+      let s = 0; ns.sort((a, z) => LANES.indexOf(a.t) - LANES.indexOf(z.t) || (t[a.key]?.at || 0) - (t[z.key]?.at || 0) || a.title.localeCompare(z.title));
       for (const n of ns) { pos[n.key] = down ? { x: laneAt[l], y: y + s } : { x: y + s, y: laneAt[l] }; s += along(n); }
       size = Math.max(size, s);
     }
@@ -1529,11 +1562,11 @@ function timeLayout(G, d, only) {
     y += size + 40;
   }
   if (nowAt == null) ticks.push({ y, label: "Now", cls: "now" });
-  return { pos, ticks, lanes: lanes.map(l => ({ l, at: laneAt[l], size: laneSize[l] })), end: y + 60, across: c };
+  return { pos, ticks, lanes: lanes.map(l => ({ l, at: laneAt[l], size: laneSize[l], keys: nodes.filter(n => ideaOf(n) === l).map(n => n.key) })), end: y + 60, across: c };
 }
 let AXISMARKS = { ticks: [], lanes: [] };
 // lay out what is on the map from scratch, in the current direction
-function tidy() { MANUAL = {}; }
+function tidy() { MANUAL = {}; for (const k in HEIGHT) delete HEIGHT[k]; }
 function renderCanvas(d) {
   const G = MAP === "fable" ? buildGraph(d, true) : buildGraph(d); GRAPH = G;
   for (const k of [...SHOWN]) if (!G.nodes.some(n => n.key === k)) SHOWN.delete(k);
@@ -1569,10 +1602,14 @@ function renderCanvas(d) {
     </article>`;
   }).join("");
   const banner = FOCUS ? `<div class="focus"><span>${FOCUS.dir === "in" ? "Everything that feeds" : "Everything fed by"} <b>${esc(G.nodes.find(n => n.key === FOCUS.key)?.title || "")}</b></span><button id="clearFocus">Show all</button></div>` : "";
-  const items = `<details class="items"><summary>Choose boxes (${shown.length} of ${G.nodes.length} on the map)</summary><div class="itemlist">${Object.keys(TYPES).map(t => `<div><b>${TYPES[t][0]}s</b>${G.nodes.filter(n => n.t === t).map(n => `<label><input type="checkbox" data-item="${esc(n.key)}" ${SHOWN.has(n.key) ? "checked" : ""}> ${esc(n.title)}</label>`).join("")}</div>`).join("")}</div></details>`;
+  const items = `<details class="items"><summary>Choose boxes (${shown.length} of ${G.nodes.length} on the map)</summary><div class="ideas">${IDEAS.map(([k, name, gloss]) => {
+    const ns = G.nodes.filter(n => ideaOf(n) === k); if (!ns.length) return "";
+    const on = ns.filter(n => SHOWN.has(n.key)).length;
+    return `<details class="idea"><summary><input type="checkbox" data-idea="${k}" ${on === ns.length ? "checked" : ""} ${on && on < ns.length ? 'data-mixed="1"' : ""} aria-label="${esc(name)}: all on the map"><b>${esc(name)}</b><span class="note">${esc(gloss)}</span><em>${on} of ${ns.length}</em></summary><div class="itemlist2">${ns.map(n => `<label><input type="checkbox" data-item="${esc(n.key)}" ${SHOWN.has(n.key) ? "checked" : ""}> ${esc(n.title)} <em>${esc(nodeStatus(n, d, G).label)}</em></label>`).join("")}</div></details>`;
+  }).join("")}</div></details>`;
   $("canvasView").innerHTML = `
     <div class="ctools"><div class="legend">${Object.entries(TYPES).map(([k, [t, g]]) => `<span class="t-${k}"><i style="background:var(--t)"></i><b>${t}</b></span>`).join("")}</div>
-      <div class="zoom"><button data-zoom="-1" aria-label="Zoom out">−</button><button data-zoom="0">Fit</button><button data-zoom="1" aria-label="Zoom in">+</button><span class="seg" role="group" aria-label="What is on the map"><button data-scope="relevant" aria-pressed="${SCOPE === "relevant"}" title="Running, waiting and planned work, the live net, and anything from the last 36 hours">What matters now</button><button data-scope="all" aria-pressed="${SCOPE === "all"}" title="Every box, back to the start of the lab">Everything (${G.nodes.length})</button></span><button id="tidy" title="Put boxes moved by hand back in their place">Tidy</button><button id="orient" title="Switch direction">${ORIENT === "lr" ? "Time → left to right" : "Time ↓ top to bottom"}</button></div></div>
+      <div class="zoom"><button data-zoom="-1" aria-label="Zoom out">−</button><button data-zoom="0">Fit</button><button data-zoom="1" aria-label="Zoom in">+</button><span class="seg" role="group" aria-label="What is on the map"><button data-scope="relevant" aria-pressed="${SCOPE === "relevant"}" title="Running, waiting and planned work, the live net, and anything from the last 36 hours">What matters now</button><button data-scope="all" aria-pressed="${SCOPE === "all"}" title="Every box, back to the start of the lab">Everything (${G.nodes.length})</button></span><button id="tidy" title="Every box back in its region at its time, measured again so none overlap">Rearrange</button><button id="orient" title="Switch direction">${ORIENT === "lr" ? "Time → left to right" : "Time ↓ top to bottom"}</button></div></div>
     ${banner}${items}
     <div class="cframe"><div id="tracker"></div><div class="cwrap ${ORIENT === "down" ? "vert" : ""}" id="cwrap"><div class="csizer" id="csizer" style="width:${maxX * ZOOM}px;height:${maxY * ZOOM}px"><div class="canvas" id="canvas" style="width:${maxX}px;height:${maxY}px;transform:scale(${ZOOM})">${axisHtml(maxX, maxY)}<svg class="edges" id="edges" width="${maxX}" height="${maxY}"></svg>${html}</div></div></div></div>`;
   const wrap = $("cwrap");
@@ -1594,14 +1631,35 @@ function renderCanvas(d) {
   // until a zoom is chosen, the map fits the width of the screen
   const cw = $("cwrap"), cv = $("canvas");
   if (!store("fleet:zoom") && cw && cv && Math.abs(ZOOM - Math.min(1, cw.clientWidth / cv.offsetWidth)) > 0.02) { applyZoom(Math.max(0.3, Math.min(1, cw.clientWidth / cv.offsetWidth))); }
+  document.querySelectorAll("[data-mixed]").forEach(x => { x.indeterminate = true; });
+  if (OPEN_IDEAS.items) { const it = document.querySelector(".items"); if (it) it.open = true; }
+  document.querySelectorAll(".idea").forEach(el => { const k = el.querySelector("[data-idea]")?.dataset.idea; if (OPEN_IDEAS[k]) el.open = true; el.addEventListener("toggle", () => { OPEN_IDEAS[k] = el.open; }); });
+  document.querySelector(".items")?.addEventListener("toggle", e => { OPEN_IDEAS.items = e.target.open; });
   drawEdges(); drawMenu(); drawDetail();
   try { if (d.pfx === "aa-g" || d.pfx === "fable") drawTracker(d); } catch {}
+}
+const OPEN_IDEAS = {};
+// a box asked for from elsewhere (the cores box): put on the map if it isn't, brought into view and flashed
+function goToBox(key) {
+  if (!SHOWN.has(key)) { SHOWN.add(key); saveMap(); rerender(); }
+  const el = document.querySelector(`.cnode[data-key="${CSS.escape(key)}"]`), wrap = $("cwrap");
+  if (!el || !wrap) return;
+  wrap.scrollLeft = Math.max(0, (el.offsetLeft + el.offsetWidth / 2) * ZOOM - wrap.clientWidth / 2);
+  wrap.scrollTop = Math.max(0, (el.offsetTop + el.offsetHeight / 2) * ZOOM - wrap.clientHeight / 2);
+  SCROLL = { l: wrap.scrollLeft, t: wrap.scrollTop };
+  wrap.scrollIntoView({ block: "nearest" });
+  el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1800);
 }
 function axisHtml(W, H) {
   const down = ORIENT === "down";
   const ticks = AXISMARKS.ticks.map(k => down ? `<div class="tick ${k.cls}" style="top:${k.y - 14}px;width:${W}px"><span>${esc(k.label)}</span></div>` : `<div class="vtick ${k.cls}" style="left:${k.y - 14}px;height:${H}px"><span>${esc(k.label)}</span></div>`).join("");
-  const heads = AXISMARKS.lanes.map(l => down ? `<div class="lanehead" style="left:${l.at}px;top:14px">${esc(TYPES[l.l][0])}s</div>` : `<div class="lanehead" style="left:${14}px;top:${l.at - 18}px">${esc(TYPES[l.l][0])}s</div>`).join("");
-  return ticks + heads;
+  const regions = AXISMARKS.lanes.map(l => {
+    const ps = l.keys.map(k => POS[k] && { ...POS[k], n: GRAPH.nodes.find(n => n.key === k) }).filter(Boolean);
+    if (!ps.length) return "";
+    const x0 = Math.min(...ps.map(p => p.x)) - 14, y0 = Math.min(...ps.map(p => p.y)) - 40, x1 = Math.max(...ps.map(p => p.x + wOf(p.n))) + 14, y1 = Math.max(...ps.map(p => p.y + hOf(p.n))) + 14;
+    return `<div class="band" style="left:${x0}px;top:${y0}px;width:${x1 - x0}px;height:${y1 - y0}px" title="${esc(IDEAS.find(i => i[0] === l.l)[2])}"><span>${esc(IDEA_NAME[l.l])}</span></div>`;
+  }).join("");
+  return regions + ticks;
 }
 let SCROLL = { l: 0, t: 0 };
 function lineage(G, key, dir) {
@@ -1743,6 +1801,12 @@ document.addEventListener("touchmove", e => {
 document.addEventListener("touchend", e => { if (pan1 && !e.touches.length) { SCROLL = { l: pan1.w.scrollLeft, t: pan1.w.scrollTop }; pan1 = null; } if (pinch && e.touches.length < 2) { pinch = null; store("fleet:zoom", +ZOOM.toFixed(3)); SCROLL = { l: $("cwrap").scrollLeft, t: $("cwrap").scrollTop }; } });
 function rerender() { if (last) renderCanvas(last); }
 document.addEventListener("click", ev => {
+  const go = ev.target.closest?.("[data-goto]");
+  if (go && GRAPH) {
+    const ids = go.dataset.goto.split(" "), n = GRAPH.nodes.find(n => (n.jobs || []).some(j => ids.includes(j.id)));
+    if (n) goToBox(n.key);
+    return;
+  }
   const port = ev.target.closest?.("[data-port]");
   if (port) { const key = port.closest(".cnode").dataset.key, dir = port.dataset.port; MENU = MENU && MENU.key === key && MENU.dir === dir ? null : { key, dir }; drawMenu(); return; }
   const mi = ev.target.closest?.("[data-mi]");
@@ -1779,9 +1843,11 @@ document.addEventListener("click", ev => {
 document.addEventListener("change", ev => {
   const mk = ev.target.dataset?.mk;
   if (mk && MENU) { if (ev.target.checked) reveal(MENU.key, [mk]); else SHOWN.delete(mk); saveMap(); rerender(); return; }
+  const idea = ev.target.dataset?.idea;
+  if (idea && GRAPH) { for (const n of GRAPH.nodes) if (ideaOf(n) === idea) { if (ev.target.checked) SHOWN.add(n.key); else SHOWN.delete(n.key); } saveMap(); rerender(); return; }
   const k = ev.target.dataset?.item; if (!k) return;
   if (ev.target.checked) SHOWN.add(k); else SHOWN.delete(k);
-  saveMap(); const open = document.querySelector(".items")?.open; rerender(); if (open) document.querySelector(".items").open = true;
+  saveMap(); rerender();
 });
 
 // ---------- now and the show matches ----------
