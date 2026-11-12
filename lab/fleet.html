@@ -749,12 +749,13 @@ async function loadFleet() {
   }
   FLEET = { workers, gce, at: Date.now() };
   SOURCES = await gcloud(`gcloud storage cat "${B}/fleet/sources.json"`).then(r => parsed(r.out)[0] || null, () => SOURCES);
+  MARKET = await gcloud(`gcloud storage cat "${B}/fleet/market.json"`).then(r => parsed(r.out)[0] || null, () => MARKET);
   if (typeof SNAP_MODE !== "undefined" && SNAP_MODE) GH = await fetch(SNAP_BASE + "github.json?v=" + Date.now()).then(r => (r.ok ? r.json() : null), () => null);
 }
 // the sources, a card each (12 Nov, Korbi): machines and cores, how busy, what they are on, the price, and a status word in
 // green (working), yellow (mostly), orange (underused) or red (idle or down). Prices and pools come from fleet/sources.json,
 // which Claude writes at each check (the page can't ask Rackspace or AWS itself); GitHub's runs from the snapshot's github.json.
-let SOURCES = null, GH = null;
+let SOURCES = null, GH = null, MARKET = null;
 const statusOf = (busy, cores, machines) => !machines ? ["red", "Down"] : !busy ? ["red", "Idle"] : busy >= 0.9 * cores ? ["green", "Working"] : busy >= 0.5 * cores ? ["yellow", "Mostly busy"] : ["orange", "Underused"];
 function activityOf(ws) {
   const by = {};
@@ -848,6 +849,15 @@ function poolSpeeds(rows) {
   const med = a => { const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; }, mid = Object.fromEntries(Object.entries(per).map(([j, a]) => [j, med(a)]));
   return rows.map(r => { const xs = r.ws.flatMap(w => (w.fin || []).filter(([j, sec]) => sec > 0 && mid[j]).map(([j, sec]) => mid[j] / sec)); return xs.length ? { speed: xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : { speed: 1, n: 0 }; });
 }
+// the Rackspace market (13 Nov, Korbi): Claude's market watch writes fleet/market.json every 2 hours: the cheapest machines a
+// core a month in the regions we have clusters in, our bids against them, and what the watch did (bid on a freebie, shrank a pool).
+function marketTile() {
+  const M = MARKET; if (!M) return ["mkt", "Market", `<div class="tcard cost"><div class="tgrip"><span>Market</span></div><div class="fresh">No market check yet</div></div>`];
+  const m = x => (x < 0.1 ? x.toFixed(3) : x < 10 ? x.toFixed(2) : Math.round(x)), age = Math.round((Date.now() - M.t) / 60000);
+  const rows = (M.best || []).slice(0, 5).map(b => `<tr><td>${esc(b.where)} ${b.cores}c</td><td>$${m(b.coreMonth)}</td><td>${esc(b.ours || "no bid")}</td></tr>`);
+  const log = (M.log || []).slice(-6).map(esc).join("<br>");
+  return ["mkt", "Market", `<div class="tcard cost" data-card="cost"><div class="tgrip"><span>Market · ${age < 120 ? age + " min" : Math.round(age / 60) + " h"} ago</span><span>$ a core a month</span></div><table class="ctab">${rows.join("")}</table><div class="why">${esc(M.note || "")}${log ? "<br>" + log : ""}</div></div>`];
+}
 function costTiles() {
   const rows = COSTROWS, sp = poolSpeeds(rows), hr = rows.reduce((a, r) => a + r.hr, 0), m = x => (x < 0.1 ? x.toFixed(3) : x < 10 ? x.toFixed(2) : Math.round(x));
   const tbl = (cells, why) => `<table class="ctab">${cells.join("")}</table><div class="why">${why}</div>`;
@@ -863,7 +873,7 @@ function costTiles() {
 function composeTiles() {
   const bar = $("fleetbar"); if (!bar) return;
   const hidden = new Set(store("fleet:hiddenCards") || []), order = store("fleet:tileOrder") || [];
-  const all = [...SRC_TILES, ...TRK_TILES, ...costTiles()], at = k => { const i = order.indexOf(k); return i < 0 ? 1e6 + all.findIndex(t => t[0] === k) : i; };
+  const all = [...SRC_TILES, ...TRK_TILES, ...costTiles(), marketTile()], at = k => { const i = order.indexOf(k); return i < 0 ? 1e6 + all.findIndex(t => t[0] === k) : i; };
   SRC_KEYS = all.map(([k, n]) => [k, n]);
   const shown = all.filter(([k]) => !hidden.has(k)).sort((a, b) => at(a[0]) - at(b[0]));
   bar.innerHTML = shown.map(([k, , h]) => h.replace(/^\s*<div /, `<div draggable="true" data-tile="${esc(k)}" `)).join("") ||
