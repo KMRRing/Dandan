@@ -415,13 +415,13 @@ function where(c, seat) {
  * decisions it chose as the full search did every time, for 15% fewer deals (lab/variants.mjs, ae-var3).
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false } = {}) {
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide, all, rank });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
   const n = cands.length;
   if (n === 1) return { best: cands[0], list: [{ move: cands[0], mean: NaN, se: 0, n: 0 }], deals: 0, only: true };
-  const to = s.turn + Math.max(turns, endOfLibrary(s)), seed = seedOf(s, seat);
+  const to = s.turn + Math.max(turns, endOfLibrary(s)), seed = salt ? mix(seedOf(s, seat), salt) : seedOf(s, seat);   // salt: the lab's play-outs, the same position searched afresh
   const vals = cands.map(() => []), seen = cands.map(() => []), roots = cands.map(newNode);
   const table = reuse ? tableFor(s, seat) : merge ? new Map() : null;
   if (table) table.reads = merge === "reads";
@@ -467,41 +467,43 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
     };
   });
   // the best of the moves still in the race, by their average over the same deals (a move dropped on a few deals keeps
-  // the average of those, which may be lucky: it was clearly behind when it went, and stays behind). Medium's own move
-  // stands unless another beats it by more than the deals can explain (a standard error of the gap, deal by deal, and
-  // half a point): what two turns can't show, a land drop kept for nothing above all (the judge counts a land in hand
-  // nearly as one down), is in Medium's habits, and a gap that is mostly chance would otherwise decide it
+  // the average of those, which may be lucky: it was clearly behind when it went, and stays behind), protected below
   const byMean = (a, b) => b.mean - a.mean;
   const ranked = [...list.filter(c => alive.includes(c.i)).sort(byMean), ...list.filter(c => !alive.includes(c.i)).sort(byMean)];
   for (const c of list) c.out = !alive.includes(c.i);
+  // with every legal move weighed (`all`) the lab asks (`offCheck`) whether the pick is off Medium's shortlist (what the
+  // shortlist alone would have weighed), and what the shortlist alone would have picked from the same values (`shortPick`);
+  // with `margin` ({ se, pts }: the lab's margin arm, 12 November 2026, the planning chat) a move off the shortlist stands only
+  // if it leads the best shortlist move by se standard errors of the gap, deal by deal, plus pts. Either way the pick then
+  // gets the two protections below (Fable, 16:30Z: the margin's fallback must not skip them)
+  const short = all && (offCheck || margin) ? new Set(candidates(s, seat, { wide, all: false, rank }).map(key)) : null;
+  const sb = short ? ranked.find(c => short.has(key(c.move))) : null;
   let best = ranked[0];
-  if (best.i !== 0 && alive.includes(0) && vals[0].length) {
-    const k = Math.min(vals[0].length, vals[best.i].length);
-    const diffs = vals[best.i].slice(0, k).map((x, j) => x - vals[0][j]);
-    const m = diffs.reduce((a, b) => a + b, 0) / k;
+  if (margin && sb && !short.has(key(best.move))) {
+    const k = Math.min(vals[sb.i].length, vals[best.i].length);
+    const diffs = vals[best.i].slice(0, k).map((x, j) => x - vals[sb.i][j]), m = diffs.reduce((a, b) => a + b, 0) / Math.max(1, k);
     const sd = Math.sqrt(diffs.reduce((a, x) => a + (x - m) ** 2, 0) / Math.max(1, k - 1));
-    if (m < sd / Math.sqrt(k) + 0.005) best = list[0];
+    if (!k || m < margin.se * sd / Math.sqrt(k) + margin.pts) best = sb;
   }
-  // nor does a pass at the end of the main phases outweigh the land Medium would play: it loses the drop for good, which
-  // the look can't see past (the judge counts a land in hand nearly as one down: the search kept one back now and
-  // then, by a point or two in its favour at any depth), and nothing is gained by it, as the reads take it of the other
-  // player (dandan-observe.js). A land kept back at the first main phase may still go down after combat.
-  if (s.step === "main2" && !s.stack.length && best.move.t === "pass" && list[0].move.t === "land") best = list[0];
-  // weighing every legal move (`all`), asked by the lab (`offCheck`): whether the pick is off Medium's shortlist (what the shortlist alone would have weighed),
-  // and with `margin` ({ se, pts }: the lab's margin arm, 12 November 2026, the planning chat) such a pick stands only if it
-  // leads the best shortlist move by se standard errors of the gap, deal by deal, plus pts
-  let off = false;
-  if (all && (offCheck || margin)) {
-    const short = new Set(candidates(s, seat, { wide, all: false, rank }).map(key));
-    off = !short.has(key(best.move));
-    const sb = off && margin ? ranked.find(c => short.has(key(c.move))) : null;
-    if (sb) {
-      const k = Math.min(vals[sb.i].length, vals[best.i].length);
-      const diffs = vals[best.i].slice(0, k).map((x, j) => x - vals[sb.i][j]), m = diffs.reduce((a, b) => a + b, 0) / Math.max(1, k);
+  const protect = b => {
+    // Medium's own move stands unless another beats it by more than the deals can explain (a standard error of the gap, deal
+    // by deal, and half a point): what two turns can't show, a land drop kept for nothing above all (the judge counts a land
+    // in hand nearly as one down), is in Medium's habits, and a gap that is mostly chance would otherwise decide it
+    if (b.i !== 0 && alive.includes(0) && vals[0].length) {
+      const k = Math.min(vals[0].length, vals[b.i].length);
+      const diffs = vals[b.i].slice(0, k).map((x, j) => x - vals[0][j]);
+      const m = diffs.reduce((a, x) => a + x, 0) / k;
       const sd = Math.sqrt(diffs.reduce((a, x) => a + (x - m) ** 2, 0) / Math.max(1, k - 1));
-      if (!k || m < margin.se * sd / Math.sqrt(k) + margin.pts) { best = sb; off = false; }
+      if (m < sd / Math.sqrt(k) + 0.005) b = list[0];
     }
-  }
+    // nor does a pass at the end of the main phases outweigh the land Medium would play: it loses the drop for good, which
+    // the look can't see past, and nothing is gained by it, as the reads take it of the other player (dandan-observe.js).
+    // A land kept back at the first main phase may still go down after combat.
+    if (s.step === "main2" && !s.stack.length && b.move.t === "pass" && list[0].move.t === "land") b = list[0];
+    return b;
+  };
+  best = protect(best);
+  const off = !!short && !short.has(key(best.move)), shortPick = sb ? protect(sb).move : null;
   // each other move against the chosen one, deal by deal over the deals they share: how often the chosen one came out
   // ahead (better), and behind (worse); what's left were even
   for (const c of list) {
@@ -511,7 +513,7 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
     for (let j = 0; j < k; j++) { const g = vals[best.i][j] - vals[c.i][j]; if (g > 1e-6) better++; else if (g < -1e-6) worse++; }
     Object.assign(c, { vs: k, better, worse });
   }
-  return { best: best.move, list: [best, ...ranked.filter(c => c !== best)], deals: d, only: false, off };
+  return { best: best.move, list: [best, ...ranked.filter(c => c !== best)], deals: d, only: false, off, shortPick };
 }
 /**
  * The moves still in the race: one goes when, over the deals they share, it trails the leader by more than three times
