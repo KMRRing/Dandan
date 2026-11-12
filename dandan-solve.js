@@ -155,11 +155,14 @@ function payments(s, seat, m) {
  * fought, and Medium's own choice elsewhere. Every land; every cast, cycling and ability that takes from or adds to the
  * library (below), with every target; with a spell on the stack, every response of any kind; every answer that orders, puts
  * back, mills, finds, names or discards; and Medium's move at each decision as well, so what it would do besides is played.
- * Paid as the game pays by itself (the auto plan), holding priority; attacks and blocks are Medium's.
+ * Paid as the game pays by itself (the auto plan), holding priority.
  */
 const LIBRARY = new Set(["Brainstorm", "Predict", "Quicken", "Repulse", "Memory Lapse", "Commit", "Memory", "Gone Missing", "Deem Inferior", "Metamorphose",
   "Chart a Course", "Lórien Revealed", "Take Inventory", "Narset's Reversal"]);
-const MEDIUM_ANSWERS = new Set(["attack", "block"]);
+// attacks and blocks were Medium's at first; the referee (12 Nov: 68 positions both versions solved) found the race version's
+// value wrong in 5, three of them a win called a loss, through combat: every attack and block is in now (one or two Dandâns give
+// few options)
+const MEDIUM_ANSWERS = new Set();
 const half = m => { const full = DECK[m.card]; return m.from === "yard" && full === "Commit // Memory" ? "Memory" : HALVES[full] ? HALVES[full][0] : full; };
 const sameMove = (a, b) => JSON.stringify({ ...a, hold: undefined, taps: undefined }) === JSON.stringify({ ...b, hold: undefined, taps: undefined });
 function raceChoices(s, seat) {
