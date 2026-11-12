@@ -616,6 +616,10 @@ function priorityMove(s, seat, m) {
       // the page asks for a land played by a person: its trigger waits for them to pass (wants), though they could do nothing else
       const top = s.stack[s.stack.length - 1];
       if (m.hold && top?.kind === "trigger" && top.ctl === seat) top.stop = true;
+      // the page's own land, played without holding priority: its trigger goes to the other player at once and resolves, with
+      // no "answer, or let it resolve" for its player even when they hold an instant (Korbi, 12 November 2026). The computer's
+      // lands keep their stop where it has a move (pass is a page flag only, so the look-ahead and the records' replays are as before).
+      else if (m.pass && top?.kind === "trigger" && top.ctl === seat) holdOrPass(s, seat, false);
       break;
     }
     case "cast": doCast(s, seat, r, !!m.hold); break;

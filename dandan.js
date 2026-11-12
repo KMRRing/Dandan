@@ -758,7 +758,8 @@ async function act(m) {
   // holding priority keeps it after a spell or ability goes on the stack, to answer it yourself (fetch a land to shuffle, cycle another card to draw first); a cycled card always does (Korbi, 23 October 2026), and the game moves on where there is nothing you could do
   // a land you play whose trigger goes on the stack resolves at once, unless you hold priority (Korbi, 9 November 2026, over 6 November's stop at Halimar Depths)
   const hold = m.t === "cycle" || (opts.hold && (m.t === "cast" || m.t === "ability" || m.t === "land"));
-  const why = await page.move(hold ? { ...m, hold: true } : m);
+  // and a land played without holding goes straight on: its trigger resolves, then any choice it brings is theirs (12 Nov)
+  const why = await page.move(hold ? { ...m, hold: true } : m.t === "land" ? { ...m, pass: true } : m);
   if (why) { toast(why); return; }
   closeView();
 }
