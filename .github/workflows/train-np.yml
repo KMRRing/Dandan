@@ -55,13 +55,17 @@ jobs:
               path = f"judges/np-{name}-s{d['seed']}.json"
               json.dump({"source": f"train-np {name} seed {d['seed']}", "note": f"lab/train_np.py variant {d['variant']}, {d['games']:,} games, {d['positions']:,} positions; held-out loss {d['heldLoss']}", "layers": d["layers"]}, open(path, "w"))
               d.pop("layers"); d["name"] = name; d["batches"] = "${{ inputs.batches }}"; runs.append(d)
-          with open("lab/np-runs.jsonl", "a") as o:
+          # one file a run (13 Nov: nine parallel runs appending to one lab/np-runs.jsonl conflicted on rebase, and eight runs'
+          # judges were never pushed while the runs showed green)
+          os.makedirs("lab/np-runs", exist_ok=True)
+          with open(f"lab/np-runs/{name}-${{ github.run_id }}.jsonl", "w") as o:
               for d in runs: o.write(json.dumps(d) + "\n")
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as o:
               for d in runs: o.write(f"- seed {d['seed']}: held-out loss {d['heldLoss']} (8-bit {d['heldLossRounded']}), epoch {d['epoch']}, stopped {d['stopped']}, {d['seconds']} s, {d['metrics']}\n")
           EOF
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add judges/np-*.json lab/np-runs.jsonl
+          git add judges/np-*.json lab/np-runs/
           git commit -q -m "Judges trained on NumPy: ${{ inputs.name }} (seeds ${{ inputs.seeds }})" || exit 0
-          for i in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q origin HEAD:main && break; sleep 5; done
+          for i in 1 2 3 4 5 6 7 8; do git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0; git rebase --abort 2>/dev/null; sleep $((5 + RANDOM % 20)); done
+          echo "::error::the judges could not be pushed"; exit 1
