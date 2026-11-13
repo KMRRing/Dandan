@@ -1,5 +1,5 @@
 {
- "at": "2026-11-13T15:35:00Z",
+ "at": "2026-11-13T16:15:00Z",
  "rackspace": {
   "price": 0.001,
   "bid": 0.01,
@@ -11,7 +11,7 @@
     "cores": 4,
     "pool": 50,
     "won": 20,
-    "price": 0.01,
+    "price": 0.02,
     "bid": 0.02,
     "net": "119.9.118.",
     "machines": [
@@ -30,17 +30,17 @@
      "prod-instance-17945050086570198",
      "prod-instance-17945051844230199"
     ],
-    "note": "VMs, gp.vs1.large-hkg, bid $0.02; 20 of 20 won (Fulfilled 15:33Z), target raised to 50"
+    "note": "VMs, gp.vs1.large-hkg, bid $0.02 = market; 20 reporting of 50 wanted (Ops 16:15Z: due for deletion in the console, $0.005/vCPU-h)"
    },
    {
     "where": "US East 2 (VMs)",
     "cores": 2,
-    "pool": 30,
-    "won": 30,
+    "pool": 1,
+    "won": 1,
     "price": 0.01,
     "bid": 0.01,
     "net": "10.0.",
-    "note": "VMs, gp.vs2.medium-iad2 (newer generation); target back to 30 for the speed-bump test"
+    "note": "VMs, gp.vs2.medium-iad2, bid $0.01; cut 30 to 1 at 15:40Z, 1 reporting (Ops 16:15Z)"
    },
    {
     "where": "Chicago (Kubernetes)",
@@ -103,33 +103,33 @@
     "where": "Sydney (VMs)",
     "cores": 4,
     "pool": 5,
-    "won": 0,
-    "price": 0.001,
+    "won": 13,
+    "price": 0.01,
     "bid": 0.02,
     "net": "119.9.22.",
     "machines": [],
-    "note": "VMs, gp.vs1.large-syd at $0.02; SpeedBump"
+    "note": "VMs, gp.vs1.large-syd at $0.02; 13 reporting (Ops 16:15Z; wanted count not confirmed)"
    },
    {
     "where": "London (VMs)",
     "cores": 4,
     "pool": 5,
-    "won": 0,
-    "price": 0.001,
+    "won": 5,
+    "price": 0.01,
     "bid": 0.02,
     "machines": [],
-    "note": "VMs, gp.vs1.large-lon at $0.02; SpeedBump",
+    "note": "VMs, gp.vs1.large-lon at $0.02; 5 reporting (Ops 16:15Z)",
     "net": "134.213.133."
    },
    {
     "where": "US East (VMs)",
     "cores": 4,
     "pool": 5,
-    "won": 0,
-    "price": 0.001,
+    "won": 5,
+    "price": 0.01,
     "bid": 0.02,
     "machines": [],
-    "note": "VMs, gp.vs1.large-iad at $0.02; SpeedBump",
+    "note": "VMs, gp.vs1.large-iad at $0.02; 5 reporting (Ops 16:15Z)",
     "net": "162.209.124."
    }
   ]
