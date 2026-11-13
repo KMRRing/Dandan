@@ -1,0 +1,2 @@
+# one job id a line (queue-push retires it: spec to retired/, off the open list)
+af-k2-knet  # 18:20Z: 51.9% (99%: 50.7 to 53.1) over 3,470 pairs, bottom above 50%: decided
