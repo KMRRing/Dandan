@@ -154,6 +154,32 @@
         "note": "VMs, ch.vs1.2xlarge-hkg (Compute - Double Extra Large), bid $0.04; created by Korbi in the console 18:22Z with the current start-up script, wanted 5 / won 3 (Partial) - cut to 3 at 18:32Z: our 13 Kubernetes + 5 VMs in this class lifted the market $0.01 to $0.04. Full pool ID from the console.",
         "cloudspace": "kmr-ring1-49",
         "vmPool": "0e83f5f1-8c88-4c1d-a389-289c4dae4237"
+      },
+      {
+        "where": "Sydney 2 (VMs)",
+        "cores": 16,
+        "pool": 5,
+        "won": 0,
+        "price": 0.01,
+        "bid": 0.04,
+        "net": "",
+        "machines": [],
+        "note": "VMs, ch.vs1.2xlarge-syd (Compute - Double Extra Large), bid $0.04; created by Korbi 18:36Z, 0 won at 18:38Z (just created). Full pool ID from the console.",
+        "cloudspace": "kmr-ring1-27",
+        "vmPool": "78c626c3-537f-4c9b-ac22-79bcaa544d71"
+      },
+      {
+        "where": "US East 3 (VMs)",
+        "cores": 16,
+        "pool": 3,
+        "won": 0,
+        "price": 0.01,
+        "bid": 0.04,
+        "net": "",
+        "machines": [],
+        "note": "VMs, ch.vs1.2xlarge-iad (Compute - Double Extra Large), bid $0.04; created by Korbi 18:37Z, 0 won at 18:38Z (just created). Full pool ID from the console.",
+        "cloudspace": "kmr-ring1-94",
+        "vmPool": "a2b0e1bf-3c79-4ba7-9dcb-e59ebc74129f"
       }
     ]
   },
