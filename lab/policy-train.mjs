@@ -39,6 +39,10 @@ const say = (...a) => console.log(`[${new Date().toISOString().slice(11, 19)}]`,
 
 // ---------- the decisions, packed ----------
 const STREAM = process.argv[16] === "stream";
+// [nomedium] (13 Nov 2026, Fable No. 4: the Medium-free move-picker): score(a) = f(position, marks of a) alone, no Medium score,
+// no alpha and no beta; trained only on decisions where the search weighed every legal move (every: 1), so its candidates are
+// passing and every legal move, as it will play
+const NOMED = process.argv[17] === "nomedium";
 const train = [], held = [], trainFiles = [];
 let XN = 0, trainN = 0;
 const store = await labStore();
@@ -71,6 +75,7 @@ for (const [id, evalOnly] of sources) for (const name of (await store.list(`resu
     if (!line) continue;
     const d = JSON.parse(line);
     if (evalOnly && !d.hold) continue;
+    if (NOMED && !d.every) continue;
     if (!evalOnly && !seen.has(d.g)) { if (seen.size >= CAP) continue; seen.add(d.g); }
     if (d.hold) held.push(pack(d, evalOnly));
     else if (STREAM) { keepLines.push(line); trainN++; }
@@ -83,9 +88,9 @@ say(`read ${seen.size} games: ${trainN} training${STREAM ? ` (streamed from ${tr
 // ---------- the model ----------
 const rnd = (() => { let a = 12345 + shard; return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 2 ** 32 - 0.5; }; })();
 const P = {
-  alpha: Float64Array.of(1 / 0.3), beta: Float64Array.of(10),
+  alpha: Float64Array.of(NOMED ? 0 : 1 / 0.3), beta: Float64Array.of(NOMED ? 0 : 10),
   wx: Float64Array.from({ length: XN * H1 }, () => rnd() * 2 * Math.sqrt(1 / XN)), wm: Float64Array.from({ length: MOVE_N * H1 }, () => rnd() * 2 * Math.sqrt(1 / 8)),
-  ws: Float64Array.from({ length: H1 }, () => rnd() * 0.2), b1: new Float64Array(H1),
+  ws: Float64Array.from({ length: H1 }, () => (NOMED ? 0 : rnd() * 0.2)), b1: new Float64Array(H1),
   w2: Float64Array.from({ length: H1 * H2 }, () => rnd() * 2 * Math.sqrt(2 / H1)), b2: new Float64Array(H2), w3: new Float64Array(H2),
 };
 const zero = () => Object.fromEntries(Object.entries(P).map(([k, v]) => [k, new Float64Array(v.length)]));
@@ -142,6 +147,8 @@ function backward(D, G) {
   return D.w * loss;
 }
 function adam(G, n) {
+  // the Medium-free model: alpha, beta and the Medium-score weights stay at zero
+  if (NOMED) { G.alpha[0] = 0; G.beta[0] = 0; G.ws.fill(0); }
   step++;
   const b1 = 0.9, b2 = 0.999, c1 = 1 - b1 ** step, c2 = 1 - b2 ** step;
   for (const k in P) {
@@ -206,4 +213,4 @@ const net = { XN, H1, H2, wx: r5(bestP.wx), wm: r5(bestP.wm), ws: r5(bestP.ws), 
 const g0 = best.mediumGivesUp > 0 ? +(1 - best.modelGivesUp / best.mediumGivesUp).toFixed(4) : 0;
 const metrics = { ...best, games: seen.size, train: trainN, held: held.length, g0Reduction: g0, g0Pass: g0 >= 0.25 };
 console.log(JSON.stringify({ metrics, alpha: bestP.alpha[0], beta: bestP.beta[0], epochs: EPOCHS, lr: LR, T, light: LIGHT }));
-fs.writeFileSync(out, JSON.stringify({ alpha: bestP.alpha[0], beta: bestP.beta[0], net, metrics }) + "\n");
+fs.writeFileSync(out, JSON.stringify({ alpha: bestP.alpha[0], beta: bestP.beta[0], ...(NOMED ? { medium: false } : {}), net, metrics }) + "\n");

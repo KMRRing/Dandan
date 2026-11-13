@@ -1,9 +1,9 @@
 {
   "prefix": "sps",
   "shards": 240,
-  "games": 1200,
-  "seedBase": 5000000,
-  "timeoutMin": 240,
-  "args": "{shard} {shards} {out} 128 1200 {seed} hardall-cut-explore-knet @aa-g8-s5-r#24",
-  "purpose": "Hard at 128 deals with value net S5 (the benchmark) against itself, every legal move weighed, harder cutting; the first seven by the keep net (the benchmark's keep since 18:30Z), each seat's first seven by a coin 1 time in 10, later keeps by a coin and the bottom cards at random 1 time in 10 each, marked (explore / explore2): filler games for the next nets"
+  "games": 480,
+  "seedBase": 6000000,
+  "timeoutMin": 120,
+  "args": "{shard} {shards} {out} 1024 480 {seed} hardall-explore-knet @aa-g8-s5-r#24",
+  "purpose": "Deep self-play (Fable No. 3, 20:35Z): the benchmark against itself at 1,024 deals, every legal move weighed, no harder cutting, the keep net on the first seven; each seat's first seven by a coin 1 time in 10 (explore), later keeps by a coin and the bottoms at random 1 time in 10 each (explore2); two games a shard (30-40 min). Seeds from 6,000,000, apart from every earlier batch"
 }

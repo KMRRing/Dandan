@@ -20,11 +20,14 @@ async function side(spec) {
   return makePlus(JSON.parse(line), { free }).move;
 }
 const A = await side(specA), B = await side(specB), J = x => JSON.parse(JSON.stringify(x));
+// each side's milliseconds and decisions over a pair (13 Nov, Fable No. 4: time per move beside Medium's), as hard-match writes them
+let ms = [0, 0], n = [0, 0];
 function game(seed, aSeat) {
   let G = newRecord(rules, { seats: 2, seed, now: 0 });
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state));
-    const m = (who === aSeat ? A : B)(s, who, seeded(mix(seed, i + 1)));
+    const t0 = performance.now(), k = who === aSeat ? 0 : 1, m = (k === 0 ? A : B)(s, who, seeded(mix(seed, i + 1)));
+    ms[k] += performance.now() - t0; n[k]++;
     const r = applyMove(rules, G, who, m, 0);
     if (r.error) throw new Error(`deal ${seed} move ${i}: ${r.error}`);
     G = r.G;
@@ -34,8 +37,9 @@ function game(seed, aSeat) {
 }
 const rows = [];
 for (let p = shard; p < pairs; p += shards) {
+  ms = [0, 0]; n = [0, 0];
   const g = [game(first + p, 0), game(first + p, 1)];
-  rows.push(JSON.stringify({ pair: p, a: (g[0] + g[1]) / 2, games: g }));
+  rows.push(JSON.stringify({ pair: p, a: (g[0] + g[1]) / 2, games: g, ms: ms.map(v => Math.round(v)), n }));
   if (rows.length >= 200) { fs.appendFileSync(out, rows.join("\n") + "\n"); rows.length = 0; }
 }
 if (rows.length) fs.appendFileSync(out, rows.join("\n") + "\n");

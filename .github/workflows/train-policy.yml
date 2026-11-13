@@ -12,6 +12,7 @@ on:
       h1: { description: "First hidden layer", required: true, default: "64" }
       h2: { description: "Second hidden layer", required: true, default: "32" }
       name: { description: "Name (lab/policy/<name>.json)", required: true }
+      nomedium: { description: "nomedium: the Medium-free model (no Medium score, alpha or beta; every-move decisions only)", required: false, default: "" }
       stream: { description: "stream: keep only held-out decisions in memory, read training files from disk each epoch (more games than the runner holds)", required: false, default: "" }
 permissions:
   contents: write
@@ -31,7 +32,7 @@ jobs:
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
           # epochs 6, lr 1e-3, T 0.02, light 1, act 0, target pick
           LAB_KEY="$RUNNER_TEMP/key.json" node --max-old-space-size=14000 lab/policy-train.mjs 0 1 "$RUNNER_TEMP/model.json" \
-            "${{ inputs.exports }}" 6 1e-3 "${{ inputs.h1 }}" "${{ inputs.h2 }}" 0.02 1 0 pick "${{ inputs.games }}" "${{ inputs.measure }}" "${{ inputs.stream }}" | tee "$RUNNER_TEMP/log.txt"
+            "${{ inputs.exports }}" 6 1e-3 "${{ inputs.h1 }}" "${{ inputs.h2 }}" 0.02 1 0 pick "${{ inputs.games }}" "${{ inputs.measure }}" "${{ inputs.stream }}" "${{ inputs.nomedium }}" | tee "$RUNNER_TEMP/log.txt"
           rm -f "$RUNNER_TEMP/key.json"
           { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the model

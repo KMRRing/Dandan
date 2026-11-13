@@ -146,9 +146,21 @@ export function makePlus(model, { wide = 5, free = false } = {}) {
     }
     return out;
   };
+  // the Medium-free model (13 Nov 2026, Fable No. 4; lab/policy-train.mjs nomedium, `medium: false`): passing and every legal
+  // move, each scored by f(position, move) alone; Medium neither scores nor shortlists. Questions (attack, block, a mulligan…)
+  // stay with Medium for now.
+  const noMedium = model.medium === false;
   const move = (s, seat, rng = Math.random) => {
     if (s.pending) return policyMove(s, seat, { rng });
     if (!moves(s, seat).length) return PASS;
+    if (noMedium) {
+      const x = viewOf(s, seat);
+      base.set(b1);
+      for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H1; for (let o = 0; o < H1; o++) base[o] += v * wx[r + o]; }
+      let best = PASS, top = -Infinity;
+      for (const m of choices(s, seat)) { const v = f(s, seat, x, m, 0); if (v > top) { top = v; best = m; } }
+      return best;
+    }
     const { scored, bar, pick } = mediumView(s, seat, rng);
     // Lands stay Medium's (11 November 2026, G1 lost 16% to Medium): in the search a land played now or later is worth about the
     // same, so the model learned passing ≈ a land and, playing, kept putting its land off. When Medium plays a land, so does it.
