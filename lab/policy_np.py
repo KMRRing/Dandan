@@ -8,14 +8,15 @@ to pick the search's move among passing and every legal move (target "pick": cro
   head  a policy head: a trunk reads the position once (XN -> H1 -> H2, ReLU both), each mark has a learned vector of H2 numbers
         (E) and a bias (eb); a move scores trunk · (sum of its marks' vectors) + the sum of its marks' biases.
 
-Adam (lr 1e-3), batches of 64, each decision at weight 1 (the JavaScript trainer's light 1), 6 epochs; the held-out decisions
+Adam (lr 1e-3), batches of 64, a Deep decision at weight 1 and any other at --light (1 by default, the JavaScript trainer's
+light 1; No. 7 point 7's Deep retrains 0.3), 6 epochs; the held-out decisions
 (the export's every fifth game, never trained on) measured after each epoch and the epoch with the lowest held-out loss kept.
 Metrics as policy-train.mjs's (agreement with the search beside Medium's, value given up in points, off-shortlist picks), and
 Fable No. 8 point 1's: agreement by the kind of the search's move, and passing where the search acted / acting where it passed.
 The model is written as one JSON line that dandan-netpolicy.js makePlus plays (medium: false; form "head" for the head).
 
 usage: python3 lab/policy_np.py <packed folder> <out> [--form mlp|head] [--h1 128] [--h2 64] [--epochs 6] [--lr 1e-3]
-       [--batch 64] [--seed 1]
+       [--batch 64] [--seed 1] [--light 1]
 """
 import argparse, json, os, time
 
@@ -27,6 +28,7 @@ ap.add_argument("--form", default="mlp", choices=["mlp", "head"])
 ap.add_argument("--h1", type=int, default=128); ap.add_argument("--h2", type=int, default=64)
 ap.add_argument("--epochs", type=int, default=6); ap.add_argument("--lr", type=float, default=1e-3)
 ap.add_argument("--batch", type=int, default=64); ap.add_argument("--seed", type=int, default=1)
+ap.add_argument("--light", type=float, default=1.0)  # the weight of a decision that is not Deep (No. 7 point 7: 0.3); Deep ones 1
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 MOVE_N = 80
@@ -43,6 +45,7 @@ Q, mark, MARKS = rd("q.f32", np.float32), rd("mark.i32", np.int32).astype(np.int
 ncand = np.diff(cand)
 kind = MARKS[mark[:-1]]                                   # a candidate's first mark is its kind
 held_mask = (flags & 1) > 0
+WEIGHT = np.where((flags & 2) > 0, 1.0, A.light)
 train_idx, held_idx = np.flatnonzero(~held_mask), np.flatnonzero(held_mask)
 say(f"{D} decisions ({len(train_idx)} training, {len(held_idx)} held out), {len(Q)} candidates, {len(MARKS)} marks, {XN} inputs; "
     f"{meta['exports']}; form {A.form} {A.h1}x{A.h2}")
@@ -103,8 +106,9 @@ def step(g, t):
     f, c = forward(g)
     p = softmax(f, g)
     n = len(g["idx"])
-    loss = -np.log(p[g["target"]] + 1e-12).sum()
-    df = p.copy(); df[g["target"]] -= 1; df /= n
+    w = WEIGHT[g["idx"]]
+    loss = -(w * np.log(p[g["target"]] + 1e-12)).sum()
+    df = p.copy(); df[g["target"]] -= 1; df *= w[g["dec"]] / n
     G = {}
     if A.form == "mlp":
         G["w3"] = c["h2"].T @ df
@@ -190,8 +194,12 @@ if A.form == "mlp":   # dandan-netpolicy.js's layout: wx[i·H1 + o], wm[mark·H1
 else:
     net = dict(XN=XN, H1=H1, H2=H2, W1=r5(bestP["W1"]), c1=r5(bestP["c1"]), W2=r5(bestP["W2"]), c2=r5(bestP["c2"]), E=r5(bestP["E"]),
                eb=r5(bestP["eb"]))
+# the held-out Deep decisions on their own (No. 7 point 7: agreement on held-out Deep decisions beside Medium's), at the best epoch
+P.update(bestP)
+deep_held = held_idx[(flags[held_idx] & 2) > 0]
+deep = measure(deep_held) if len(deep_held) else dict(decisions=0)
 g0 = 1 - best["modelGivesUp"] / best["mediumGivesUp"] if best["mediumGivesUp"] > 0 else 0
-metrics = dict(best, every=dict(best), games=None, train=int(len(train_idx)), held=int(len(held_idx)), g0Reduction=round(g0, 4), g0Pass=g0 >= 0.25,
+metrics = dict(best, every=dict(best), deep=deep, games=None, train=int(len(train_idx)), held=int(len(held_idx)), g0Reduction=round(g0, 4), g0Pass=g0 >= 0.25,
                trainer="policy_np.py", form=A.form)
 out = dict(alpha=0, beta=0, medium=False, **({"form": "head"} if A.form == "head" else {}), net=net, metrics=metrics)
 open(A.out, "w").write(json.dumps(out) + "\n")
