@@ -1,5 +1,5 @@
 {
- "at": "2026-11-13T16:15:00Z",
+ "at": "2026-11-13T16:22:00Z",
  "rackspace": {
   "price": 0.001,
   "bid": 0.01,
@@ -9,7 +9,7 @@
    {
     "where": "Hong Kong (VMs)",
     "cores": 4,
-    "pool": 50,
+    "pool": 1,
     "won": 20,
     "price": 0.02,
     "bid": 0.02,
@@ -30,7 +30,9 @@
      "prod-instance-17945050086570198",
      "prod-instance-17945051844230199"
     ],
-    "note": "VMs, gp.vs1.large-hkg, bid $0.02 = market; 20 reporting of 50 wanted (Ops 16:15Z: due for deletion in the console, $0.005/vCPU-h)"
+    "note": "VMs, gp.vs1.large-hkg, bid $0.02; wanted 20 -> 1 at 16:22Z (Ops, Korbi). Old worker code (queues S4 d filler, no SSH): delete the last machine if Korbi agrees. vmPool is the full ID (from the console), the others are prefixes only",
+    "cloudspace": "kmr-ring1-18",
+    "vmPool": "e72934ed-6772-47ac-bd25-feaac3d1e162"
    },
    {
     "where": "US East 2 (VMs)",
@@ -40,7 +42,9 @@
     "price": 0.01,
     "bid": 0.01,
     "net": "10.0.",
-    "note": "VMs, gp.vs2.medium-iad2, bid $0.01; cut 30 to 1 at 15:40Z, 1 reporting (Ops 16:15Z)"
+    "note": "VMs, gp.vs2.medium-iad2, bid $0.01; cut 30 to 1 at 15:40Z, 1 reporting (Ops 16:15Z)",
+    "cloudspace": "us-east",
+    "vmPool": "45c5952f"
    },
    {
     "where": "Chicago (Kubernetes)",
@@ -108,7 +112,9 @@
     "bid": 0.02,
     "net": "119.9.22.",
     "machines": [],
-    "note": "VMs, gp.vs1.large-syd at $0.02; 13 reporting (Ops 16:15Z; wanted count not confirmed)"
+    "note": "VMs, gp.vs1.large-syd at $0.02; 13 reporting (Ops 16:15Z; wanted count not confirmed)",
+    "cloudspace": "kmr-ring1-88",
+    "vmPool": "09546bc6"
    },
    {
     "where": "London (VMs)",
@@ -119,7 +125,9 @@
     "bid": 0.02,
     "machines": [],
     "note": "VMs, gp.vs1.large-lon at $0.02; 5 reporting (Ops 16:15Z)",
-    "net": "134.213.133."
+    "net": "134.213.133.",
+    "cloudspace": "kmr-ring1-21",
+    "vmPool": "c82eac0a"
    },
    {
     "where": "US East (VMs)",
@@ -130,7 +138,9 @@
     "bid": 0.02,
     "machines": [],
     "note": "VMs, gp.vs1.large-iad at $0.02; 5 reporting (Ops 16:15Z)",
-    "net": "162.209.124."
+    "net": "162.209.124.",
+    "cloudspace": "dandan-us",
+    "vmPool": "335fb7c2"
    }
   ]
  },
