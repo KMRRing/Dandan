@@ -13,6 +13,8 @@
 // a true 5 points 82.)
 // usage: node lab/gate-sum.mjs [--screen] <job id or id+id…>…     (as a lab job: one shard, the table is what it prints)
 //   --screen: a screen, not a gate (many nets against one champion on the same deals): the scores and ranges without the gate's word
+//   --upto=<n> (13 Nov, the three-look rule): only pairs 0 to n-1, so a screen is read at its look (2,000 / 5,000 / 10,000) and
+//   not at whatever has come in; a set missing any of those pairs says how many it lacks
 import { readParts } from "./lib.mjs";
 
 const Z99 = 2.576, pc = x => (100 * x).toFixed(1);
@@ -48,10 +50,12 @@ export function gate(byPair) {
   return at ? `${word} at the ${at}-pair look` : "running (the first look is at pairs 0 to 299, all in)";
 }
 
+const upto = Number((process.argv.find(a => a.startsWith("--upto=")) || "").slice(7)) || Infinity;
 const screen = process.argv.includes("--screen"), args = process.argv.slice(2).filter(a => /^[a-z@]/i.test(a) && !a.includes("/"));
 const sets = [];
 for (const arg of args) {
-  const rows = await rowsOf(arg);
+  const rows = (await rowsOf(arg)).filter(r => r.pair < upto);
+  if (upto < Infinity && rows.length < upto) console.log(`${arg}: ${upto - rows.length} of pairs 0 to ${upto - 1} not in yet`);
   sets.push({ arg, rows, byPair: new Map(rows.map(r => [r.pair, r.a])), ...stats(rows.map(r => r.a)) });
 }
 sets.sort((a, b) => b.mean - a.mean);
