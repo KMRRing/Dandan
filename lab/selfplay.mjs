@@ -15,7 +15,7 @@
 //   rest at <deals>, which keeps the games cheap and many: the lessons for a value net. Each decision says which it was.
 //   any mode + "-cut" (13 Nov 2026): the harder cutting of lab/halving.mjs (first look at 8 deals, 2 standard errors); self-play only
 //   any mode + "-explore" (13 Nov 2026, Fable: data for a keep net trained on results): each seat's decision on its first seven is,
-//   1 time in 10, a fair coin (keep or throw back) instead of Medium's rule, marked in the line as explore: [{ seat, move }]
+//   1 time in 4 (1 in 10 until 13 Nov 21:30Z), a fair coin (keep or throw back) instead of Medium's rule, marked in the line as explore: [{ seat, move }]
 //   ("hardall-cut-explore": both)
 //   hardall (12 November 2026, the planning chat: ab-g2-s4d-2all): Hard weighing every legal move, as the live game does at Deep,
 //   at <deals>; each decision marks with `off: 1` a move played that Medium's shortlist would not have weighed.
@@ -40,7 +40,7 @@ const mode0 = process.argv[8] || "hard", judgeFile = process.argv[9];
 // judges/keep-net.json, as the benchmark keeps since 18:30Z; Medium's throw-backs still go back, later keeps Medium's)
 const [mode, ...flags] = mode0.split("-"), explore = flags.includes("explore"), cut = flags.includes("cut");
 const knet = flags.includes("knet") ? JSON.parse(fs.readFileSync(new URL("../judges/keep-net.json", import.meta.url), "utf8")) : null;
-const EXPLORE_SHARE = 0.1;
+const EXPLORE_SHARE = 0.25; // 1 in 4 (Fable No. 7 point 3, Korbi 23:30 local); was 1 in 10
 // a judge file in judges/, or @<job>[#variant]: a lab/judge-variants.mjs run's (its first line, or the line of that variant)
 async function judgeFrom(t) {
   if (!t || t === "-") return undefined;
@@ -71,8 +71,8 @@ for (let g = first; g < first + n; g++) {
       move = { t: seeded(mix(seed0 + g, 9200003 + who))() < 0.5 ? "keep" : "mull" };
       explored.push({ seat: who, move: move.t });
     }
-    // (18:30Z, Fable) explore past the first seven too: each later keep by a coin 1 time in 10, and the bottom cards at random
-    // 1 time in 10, from the game's seed and the move's number; marked in explore2 (explore keeps the first sevens only)
+    // (18:30Z, Fable) explore past the first seven too: each later keep by a coin 1 time in 4 (1 in 10 until 13 Nov 21:30Z), and the bottom cards at random
+    // 1 time in 4 (1 in 10 until 13 Nov 21:30Z), from the game's seed and the move's number; marked in explore2 (explore keeps the first sevens only)
     else if (explore && p?.t === "mull" && p.taken > 0 && seeded(mix(seed0 + g, 9300003 + i))() < EXPLORE_SHARE) {
       move = { t: seeded(mix(seed0 + g, 9400003 + i))() < 0.5 ? "keep" : "mull" };
       explored2.push({ seat: who, i, kind: "keep", taken: p.taken, move: move.t });
