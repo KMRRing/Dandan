@@ -63,8 +63,11 @@ const LEASE_MS = 15 * M;
 const jobs = [], finished = [], jdir = path.join(snap, "o/jobs");
 for (const f of fs.existsSync(jdir) ? fs.readdirSync(jdir) : []) {
   const spec = (() => { try { return JSON.parse(fs.readFileSync(path.join(jdir, f), "utf8")); } catch { return null; } })();
-  if (!spec?.shards) continue;
-  const id = f.replace(/\.json$/, ""), d = done[id] || 0;
+  const id = f.replace(/\.json$/, "");
+  // a spec of no shards (the jt no-op stand-ins) is finished: listed so that workers' full looks skip it (19:55Z: 300 of
+  // them sat on the open list, each costing a read and an open-list write when a worker looked)
+  if (!spec?.shards) { if (spec) finished.push(id); continue; }
+  const d = done[id] || 0;
   if (d >= spec.shards) { finished.push(id); continue; }
   const c = claims[id] || 0, s = shardMin[id], perHour = s?.n || 0;
   const lapsed = Object.entries(claimAt[id] || {}).filter(([k, t]) => now - t > LEASE_MS && !doneSet[id]?.has(k)).length;
