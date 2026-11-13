@@ -880,7 +880,7 @@ function poolSpeeds(rows) {
 function marketTile() {
   const M = MARKET; if (!M) return ["mkt", "Market", `<div class="tcard cost"><div class="tgrip"><span>Market</span></div><div class="fresh">No market check yet</div></div>`];
   const m = x => (x < 0.1 ? x.toFixed(3) : x < 10 ? x.toFixed(2) : Math.round(x)), age = Math.round((Date.now() - M.t) / 60000);
-  const rows = (M.best || []).slice(0, 5).map(b => `<tr><td>${esc(b.where)} ${b.cores}c</td><td>$${m(b.coreMonth)}</td><td>${esc(b.ours || "no bid")}</td></tr>`);
+  const best = M.best || [], rows = [...best.slice(0, 3), ...best.slice(3).filter(b => b.won)].map(b => `<tr><td>${esc(b.where)} ${b.cores}c${b.won ? ` ×${b.won}` : ""}</td><td>$${m(b.coreMonth)}</td><td>${esc(b.ours || "no bid")}</td></tr>`);
   const log = (M.log || []).slice(-6).map(esc).join("<br>");
   return ["mkt", "Market", `<div class="tcard cost" data-card="cost"><div class="tgrip"><span>Market · ${age < 120 ? age + " min" : Math.round(age / 60) + " h"} ago</span><span>$ a core a month</span></div><table class="ctab">${rows.join("")}</table><div class="why">${esc(M.note || "")}${log ? "<br>" + log : ""}</div></div>`];
 }
