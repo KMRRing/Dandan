@@ -684,7 +684,7 @@ function drawTracker(d) {
 // a shard's work in core-hours where a job has no finished shards to measure yet (its own measured median replaces it)
 const COST = { "aa-i1": 0.26, "aa-i3b": 0.26, "aa-i2d": 0.63, "ab-g2-q-s5": 0.11, "ab-g2-s4d-0all": 0.8, "ab-g2-s4d-1": 0.6, "ab-g2-s4d-1c": 0.6,
   "ab-g3-s5-gate": 0.3, "ac-i1-600": 0.26, "ac-i3b-600": 0.26 };
-const H = 3600000, TRAIN_H = 2, SCREEN_PAIRS = 1000, GATE_LOOK = 300;   // a NumPy training (hours), a Quick screen (pairs), a gate's first look (pairs)
+const H = 3600000, TRAIN_H = 2, SCREEN_PAIRS = 2000;   // a NumPy training (hours), a Quick screen's first look (pairs)
 function healthHtml(d, cores) {
   if (!d?.jobs?.length) return "";
   const now = Date.now(), left = j => Math.max(0, j.shards - (d.done[j.id] || []).length);
@@ -706,26 +706,25 @@ function healthHtml(d, cores) {
   const word = pace == null ? ["yellow", "Measuring"] : pace >= 1.1 ? ["green", "Quick"] : pace >= 0.85 ? ["green", "Steady"] : pace >= 0.6 ? ["yellow", "A bit slow"] : ["orange", "Slow"];
   const rate = Math.max(1, cores || Object.values(d.busyNow || {}).reduce((x, y) => x + y, 0));   // core-hours an hour
   const hrs = w => w / rate, h = x => (!isFinite(x) ? "?" : x < 1 ? `${Math.max(1, Math.round(x * 60))} min` : `${x < 10 ? x.toFixed(1) : Math.round(x)} h`);
-  // the queue in the order the workers take it (by name): the work ahead of and in each job; a one-shard job takes at least its own length
+  // the queue in the order the workers take it (by name): the work ahead of and in each job. A job ends no sooner than one of its
+  // own shards from now (13 Nov, Korbi: "stuck at 2 mins to go for ages": the last shards of a job run one a slot, so its tail
+  // is a shard's length whatever the fleet's size)
   let w = 0, doneW = 0; const at = {}, sofar = {}, job = id => d.jobs.find(j => j.id === id);
   for (const j of [...d.jobs].filter(j => left(j)).sort((x, y) => (x.id < y.id ? -1 : 1))) {
     const c = cost(j); w += c * left(j); doneW += c * (d.done[j.id] || []).length;
-    at[j.id] = Math.max(hrs(w), j.shards === 1 ? c : 0); sofar[j.id] = [doneW, w];
+    at[j.id] = Math.max(hrs(w), c); sofar[j.id] = [doneW, w];
   }
   const doneAll = d.jobs.reduce((x, j) => x + cost(j) * (d.done[j.id] || []).length, 0), next = [];
-  // S5 gated: the Deep gate's first look (300 pairs) in the queue
-  const g5 = job("ab-g3-s5-gate");
-  if (g5 && left(g5)) {
-    const c = cost(g5), ahead = sofar[g5.id][1] - c * left(g5), look = Math.max(0, GATE_LOOK - (d.done[g5.id] || []).length) * c;
-    next.push({ h: hrs(ahead + look), name: "S5 race net, gated", done: doneAll, left: ahead + look,
-      why: `S5 (race inputs) against S4 d at Deep: its gate's first look at ${GATE_LOOK} pairs, behind ${h(hrs(ahead))} of work queued ahead of it` });
-  }
-  // a generation-2 net: both game sets done, a NumPy training, a Quick screen and a Deep gate's first look
-  const ctl = job("ab-g2-s4d-1c"), all0 = job("ab-g2-s4d-0all");
-  if (ctl || all0) {
-    const setsAt = Math.max(at[ctl?.id] ?? 0, at[all0?.id] ?? 0), after = SCREEN_PAIRS * (COST["ab-g2-q-s5"] / 5) + GATE_LOOK * COST["ab-g3-s5-gate"];
-    next.push({ h: setsAt + TRAIN_H + hrs(after), name: "Generation-2 net, gated", done: doneAll, left: setsAt * rate + after,
-      why: `a net on generations 1 + 2: the games done in ${h(setsAt)}, then a NumPy training (~${TRAIN_H} h), a Quick screen and a Deep gate's first look (${h(hrs(after))})` });
+  const until = (id, name, why) => { const j = job(id); if (j && left(j)) next.push({ h: at[id], name, done: doneAll, left: sofar[id][1], why: `${why}: ${left(j)} of ${j.shards} shards to go, behind ${h(hrs(sofar[id][1] - cost(j) * left(j)))} of work queued ahead of it` }); };
+  // what is next to decide (the plan of 13 Nov, 16:40): the benchmark against the live version, then S5's Deep gate complete
+  until("ad-n1-s5keep", "Benchmark vs live, first look", "S5 + value keep against the live version at Quick, 2,000 pairs; at its first look Korbi decides what goes live");
+  until("ab-g3-s5-gate", "S5's Deep gate, complete", "S5 against S4 d at Deep, all 1,200 pairs (pooled with Quick it already meets the rule for going live)");
+  // a generation-2 net on S5's inputs: its caches written, a NumPy training and a Quick screen against the benchmark
+  const caches = ["ab-c1-rows24", "ab-c2-rows24"].map(job).filter(Boolean);
+  if (caches.length) {
+    const ready = Math.max(0, ...caches.map(j => (left(j) ? at[j.id] : 0))), after = SCREEN_PAIRS * (COST["ab-g2-q-s5"] / 5);
+    next.push({ h: ready + TRAIN_H + hrs(after), name: "Generation-2 net, screened", done: doneAll, left: ready * rate + after,
+      why: `a net on generations 1 + 2 with S5's inputs: its position caches in ${h(ready)}, then a NumPy training (~${TRAIN_H} h) and a Quick screen against the benchmark (${h(hrs(after))})` });
   }
   next.sort((a, b) => a.h - b.h);
   const n0 = next[0], pct = n0 && n0.done + n0.left ? (100 * n0.done) / (n0.done + n0.left) : 0;
