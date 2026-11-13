@@ -11,6 +11,10 @@ on:
         description: "Also restart every lab pod (rollout restart), so each picks up main's worker"
         type: boolean
         default: false
+      logs:
+        description: "Pod or node names (comma-separated, any part of the name) whose lab worker's last 40 log lines to show, or 'unready' for every pod not running"
+        required: false
+        default: ""
   push:
     branches: [main]
     paths: [lab/k8s/apply]
@@ -34,6 +38,7 @@ jobs:
           RS_KUBECONFIG_8: "${{ secrets.RS_KUBECONFIG_8 }}"
           RS_KUBECONFIG_9: "${{ secrets.RS_KUBECONFIG_9 }}"
           LAB_K8S_MANIFEST: "${{ secrets.LAB_K8S_MANIFEST }}"
+          LOGS: "${{ inputs.logs }}"
         run: |
           if [ -z "$LAB_K8S_MANIFEST" ]; then echo "::error::Add the LAB_K8S_MANIFEST secret first"; exit 1; fi
           # Docker Hub refuses many anonymous pulls from shared addresses; Google's mirror of the same official image doesn't. The image
@@ -59,6 +64,11 @@ jobs:
               echo "### Lab workers: $(kubectl get pods -l app=dandan-lab --no-headers 2>/dev/null | grep -c ' Running ') running of $(kubectl get pods -l app=dandan-lab --no-headers 2>/dev/null | wc -l)"
               echo '```'; kubectl get pods -l app=dandan-lab --no-headers 2>&1 | grep -v ' Running ' | cut -c1-120; echo '```'
               echo '### Recent problems'; echo '```'; kubectl get events -A --field-selector type=Warning --sort-by=.lastTimestamp 2>&1 | grep -v NetworkNotReady | tail -8 | cut -c1-220; echo '```'
+              # (13 Nov, the fleet director: a red machine's own log) the worker's last lines, long tokens and key-like lines blanked
+              if [ -n "$LOGS" ]; then
+                pods=$(kubectl get pods -l app=dandan-lab -o wide --no-headers 2>/dev/null | awk -v want="$LOGS" 'BEGIN{n=split(want,w,",")} { for(i=1;i<=n;i++) if ((w[i]=="unready" && $3!="Running") || (w[i]!="unready" && w[i]!="" && (index($1,w[i]) || index($7,w[i])))) { print $1; break } }')
+                for pod in $pods; do echo "### log $pod"; echo '```'; kubectl logs "$pod" --tail=40 2>&1 | sed -E -e '/[Kk][Ee][Yy]|[Ss][Ee][Cc][Rr][Ee][Tt]|[Tt][Oo][Kk][Ee][Nn]|BEGIN|END /c\[line hidden]' -e 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g' | cut -c1-220; echo '```'; done
+              fi
             } | tee -a "$GITHUB_STEP_SUMMARY"
             rm -f "$KUBECONFIG"
           done
