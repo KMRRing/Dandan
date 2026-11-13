@@ -6,8 +6,7 @@ A small network (26 -> 32 -> 1, logistic), Adam, early stopping on the held-out 
 
 How it decides (first keep only): keep when its rating is at or above the real redraw value (49.9% on the play, 49.0% on the
 draw, first-sevens); a seven Medium throws back still goes back until exploration has data for it.
-Yardstick (keep-share by hand type, held-out sevens): it passes when it throws back under 5% of 3 lands + 3+ good, under 15% of
-3 lands + 2 good, and over 70% of each of the three weak types (2 lands + 2 good, 3 lands + 1 good, 4 lands + 1 good).
+Check (17:10Z, Fable; the hand-type yardstick is withdrawn): held-out played sevens by seat and rating, with their real win rate.
 usage: python3 lab/keep_net.py <rows.tsv> <out.json> [--hidden 32] [--seed 1]
 """
 import argparse, json, math, sys, time
@@ -67,21 +66,23 @@ _, rate = fwd(Z)
 redraw = np.where(play == 1, A.redraw_play, A.redraw_draw)
 # the decision on every held-out first seven: Medium's throw-backs still go back; a kept one goes back when rated under the redraw
 thrown = np.where(kept == 1, rate < redraw, True) | (coin == 1) & (kept == 0)
-cell = lambda L, S: (lands == L) & ((good >= 3) if S == "3+" else (good == S))
-report, ok = [], True
-checks = [(3, "3+", "<", 0.05), (3, 2, "<", 0.15), (2, 2, ">", 0.70), (3, 1, ">", 0.70), (4, 1, ">", 0.70)]
-for L, S, op, bar in checks:
-    for side, sv in (("play", 1), ("draw", 0)):
-        m = hold & cell(L, S) & (play == sv)
-        share = float(thrown[m].mean()) if m.any() else float("nan")
-        good_ = share < bar if op == "<" else share > bar
-        ok &= bool(good_)
-        report.append(f"{L} lands + {S} good, {side}: throws back {100 * share:.0f}% (bar {op} {100 * bar:.0f}%), {int(m.sum())} hands, rated {rate[m & (kept == 1)].mean():.3f} kept, won {won[m & (kept == 1)].mean():.3f} kept {'ok' if good_ else 'FAIL'}")
+# the check (17:10Z, Fable: the hand-type yardstick judged by Medium's types and is withdrawn): on held-out sevens that were
+# played (kept by Medium or by a coin), by seat and the net's rating, how many hands, their mean rating and their real win rate.
+# Calibrated ratings match the win rates bin by bin; the gain the keep claims rests on the bins below the bar.
+report = ["held-out sevens played, by seat and rating: hands, mean rating, real win rate (99% range)"]
+for side, sv in (("play", 1), ("draw", 0)):
+    bar = A.redraw_play if sv == 1 else A.redraw_draw
+    for name, lo, hi in (("under 45%", 0, 0.45), (f"45% to the bar ({100 * bar:.1f}%)", 0.45, bar), ("the bar to 55%", bar, 0.55), ("over 55%", 0.55, 1.01)):
+        m = te & (play == sv) & (rate >= lo) & (rate < hi)
+        n = int(m.sum())
+        if not n: report.append(f"  {side}, {name}: no hands"); continue
+        w = float(won[m].mean()); e = 2.576 * math.sqrt(max(w * (1 - w), 1e-9) / n)
+        report.append(f"  {side}, {name}: {n} hands, rated {float(rate[m].mean()):.3f}, won {w:.3f} ({w - e:.3f} to {w + e:.3f})")
 tot = {side: float(thrown[hold & (play == sv)].mean()) for side, sv in (("play", 1), ("draw", 0))}
 out = dict(names=names, mu=mu.tolist(), sd=sd.tolist(), W1=W1.tolist(), b1=b1.tolist(), W2=W2[:, 0].tolist(), b2=float(b2[0]),
            redraw=dict(play=A.redraw_play, draw=A.redraw_draw), rows=N, trained=int(tr.sum()), held=int(te.sum()), heldLoss=round(best, 5),
-           baseLoss=round(base, 5), thrownBack=tot, passes=ok, seconds=round(time.time() - T0))
+           baseLoss=round(base, 5), thrownBack=tot, seconds=round(time.time() - T0))
 json.dump(out, open(A.out, "w"))
 print(json.dumps({k: v for k, v in out.items() if k not in ("mu", "sd", "W1", "b1", "W2", "names")}))
 print("\n".join(report))
-print(f"thrown back of all held-out first sevens: play {100 * tot['play']:.1f}%, draw {100 * tot['draw']:.1f}%; {'PASSES' if ok else 'does not pass'} the yardstick")
+print(f"thrown back of all held-out first sevens: play {100 * tot['play']:.1f}%, draw {100 * tot['draw']:.1f}%")
