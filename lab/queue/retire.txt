@@ -3,3 +3,5 @@ af-k2-knet  # 18:20Z: 51.9% (99%: 50.7 to 53.1) over 3,470 pairs, bottom above 5
 af-k4-hybrid  # 18:35Z (Fable): dominated, −1.41 ± 0.83 against the keep net on shared deals
 af-k1-keepval  # 18:35Z (Fable): nothing rides on the remaining pairs
 af-k3-knetval  # 18:35Z (Fable): nothing rides on the remaining pairs
+ag-g2-all2  # 20:25Z: first look (3,045 pairs) 49.3% (99%: 47.7 to 50.8), top under 51%: dropped
+ag-g2-ctl3  # 20:25Z: first look (3,155 pairs) 51.7% (99%: 50.2 to 53.2), bottom above 50%: kept; its second 10,000 on new deals is ag-h1-ctl3
