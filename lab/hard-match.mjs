@@ -30,7 +30,10 @@ async function judgeOf(t) {
     const [job, v] = t.slice(1).split("#"), ls = (await readParts(job)).flatMap(x => x.split("\n").filter(Boolean)).map(l => JSON.parse(l));
     return makeJudge((v == null ? ls[0] : ls.find(l => l.variant === Number(v))).layers);
   }
-  return makeJudge(JSON.parse(fs.readFileSync(new URL(`../judges/${t}`, import.meta.url), "utf8")).layers);
+  // a net's redraw table (dandan-keep.js) comes with it, for "-keep" sides
+  const file = JSON.parse(fs.readFileSync(new URL(`../judges/${t}`, import.meta.url), "utf8")), judge = makeJudge(file.layers);
+  if (file.mull) judge.mull = file.mull;
+  return judge;
 }
 async function side(spec) {
   // "plus@<policy-train job>" or "medium": no search at all, the stage-1 model or Medium alone (to see where the model stands)
@@ -44,10 +47,12 @@ async function side(spec) {
   if (ranker) budget.rank = makePlus(JSON.parse((await readParts(ranker)).flatMap(x => x.split("\n").filter(Boolean))[0])).rank;
   const [search2, model] = search1.split("+");
   // "hard-t<n>" (12 November 2026, plan item 8): the look-ahead plays n turns ahead instead of 2
-  const [, search, tn, arm] = search2.match(/^([a-z]+)(?:-t(\d+))?(?:-(short|margin))?$/) || [, search2];
+  const [, search, tn, arm] = search2.match(/^([a-z]+)(?:-t(\d+))?(?:-(short|margin|keep))?$/) || [, search2];
   if (tn != null) budget.turns = Number(tn);
   if (arm === "short") budget.all = false;
   if (arm === "margin") Object.assign(budget, { all: true, margin: { se: 3, pts: 0.02 } });
+  // "hard-keep" (13 Nov 2026): the keep and the bottoms by the value net and its redraw table (dandan-keep.js), not Medium's count
+  if (arm === "keep") { if (!judge?.mull) throw new Error(`${spec}: the net has no redraw table (lab/keep-table.mjs)`); budget.keep = true; }
   // "hard+free~<job>": the model unguarded (it decides passing and lands too)
   if (model) { const free = model.startsWith("free~"); budget.rollout = makePlus(JSON.parse((await readParts(model.replace(/^free~/, ""))).flatMap(x => x.split("\n").filter(Boolean))[0]), { free }).move; }
   if (search === "paths") {
