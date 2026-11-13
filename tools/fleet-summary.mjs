@@ -36,12 +36,11 @@ for (const w of ws) {
   if (where.startsWith("unmapped")) unmapped.add(where.slice(9));
   const g = (groups[`${where}|${kind}|${cores}`] ||= { where, kind, cores, machines: 0, slots: 0, busy: 0, fin10: 0, fin60: 0, oldest: now, listH: 0, writeH: 0, readH: 0 });
   g.machines++; g.slots += w.slots; g.busy += (w.busy || []).length; g.oldest = Math.min(g.oldest, w.started || now);
-  // bucket requests per hour, from each report's counts since the one before (13 Nov, the fleet director). A report written
-  // when a shard starts closes a window of seconds that holds that claim's requests, and scaling it to an hour made Dallas
-  // look 30 times dearer than it was (19:05Z): only windows of a minute or more are used, and the group's rate is scaled up
-  // from the machines that had one
-  g.sampled ||= 0;
-  if (w.req?.ms >= 60000) { g.sampled++; const k = 3600000 / w.req.ms; g.listH += w.req.list * k; g.writeH += w.req.write * k; g.readH += w.req.read * k; }
+  // bucket requests per hour, from each report's counts since the one before (13 Nov, the fleet director). A report is also
+  // written when a shard starts, so windows are uneven and the short ones hold a claim's requests: each group's rate is its
+  // machines' counts summed over their windows summed (one rate a machine-hour, times the machines), not window by window
+  // (19:05Z and 19:55Z: Dallas and US East read many times their real rate)
+  if (w.req?.ms > 0) { g.ms = (g.ms || 0) + w.req.ms; g.listH += w.req.list; g.writeH += w.req.write; g.readH += w.req.read; }
   for (const [job, sec, at] of w.fin || []) {
     if (now - at < 10 * M) g.fin10++;
     if (now - at < 60 * M) { g.fin60++; const s = (shardMin[job] ||= { n: 0, sec: 0 }); s.n++; s.sec += sec; }
@@ -49,7 +48,7 @@ for (const w of ws) {
 }
 // Google's prices for the bucket's class: lists and writes are class A, reads class B (dollars a request)
 const CLASS_A = 0.005 / 1000, CLASS_B = 0.0004 / 1000;
-for (const g of Object.values(groups)) { const k = g.sampled ? g.machines / g.sampled : 0; g.listH *= k; g.writeH *= k; g.readH *= k; delete g.sampled; }
+for (const g of Object.values(groups)) { const k = g.ms ? (3600000 / g.ms) * g.machines : 0; g.listH *= k; g.writeH *= k; g.readH *= k; delete g.ms; }
 const workers = Object.values(groups).map(g => ({ ...g, listH: Math.round(g.listH), writeH: Math.round(g.writeH), readH: Math.round(g.readH), reqCostH: Math.round(((g.listH + g.writeH) * CLASS_A + g.readH * CLASS_B) * 1000) / 1000, upMin: Math.round((now - g.oldest) / M), oldest: undefined }))
   .sort((a, b) => a.where.localeCompare(b.where) || a.kind.localeCompare(b.kind) || a.cores - b.cores);
 
