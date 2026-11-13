@@ -118,8 +118,8 @@ async function refill() {
   const last = Math.max(0, ...ids.filter(i => /^sps\d+$/.test(i)).map(i => Number(i.slice(3))));
   if (last && (await doneCount(batch(last))) < 24 && !(await allClaimed(batch(last)))) return;
   const spec = {
-    ref: mainSha(), repo: REPO, id: batch(last + 1), script: "selfplay.mjs", args: `{shard} {shards} {out} 128 120 ${5000000 + 120 * last} hardall-cut s4d.json`, shards: 24, timeoutMin: 240,
-    purpose: "Hard at 128 deals with value net S4 d against itself, every legal move weighed, harder cutting (hardall-cut, 13 Nov, Fable): filler games for the next value net",
+    ref: mainSha(), repo: REPO, id: batch(last + 1), script: "selfplay.mjs", args: `{shard} {shards} {out} 128 120 ${5000000 + 120 * last} hardall-cut @aa-g8-s5-r#24`, shards: 24, timeoutMin: 240,
+    purpose: "Hard at 128 deals with value net S5 (the benchmark, 13 Nov) against itself, every legal move weighed, harder cutting (hardall-cut, 13 Nov, Fable): filler games for the next value net",
     made: { by: NAME, at: new Date().toISOString() },
   };
   await store.put(`jobs/${spec.id}.json`, JSON.stringify(spec), { ifAbsent: true });
