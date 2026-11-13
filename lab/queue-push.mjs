@@ -26,6 +26,20 @@ for (const f of files) {
 // the workers' open list (fleet/open.json): new jobs go on it, or idle machines would find them only at their next full look
 if (added.length) console.log((await editOpen(store, jobs => { for (const id of added) jobs[id] = 1; return true; }, { by: "queue-push" })) ? `open list: ${added.join(", ")} added` : "open list: not written (the workers' next full look finds them)");
 console.log(`${queued} queued of ${files.length} in lab/queue/`);
+// lab/queue/retire.txt (17:25Z, Fable's three-look rule: a match whose look has decided is retired, the rest never played):
+// one job id a line; its spec moves from jobs/ to retired/ (kept, as lab/ledger.mjs lists retired jobs), and it leaves the
+// open list. Shards already running finish; nobody takes another.
+const retireFile = new URL("./queue/retire.txt", import.meta.url);
+if (fs.existsSync(retireFile)) {
+  const gone = [];
+  for (const id of fs.readFileSync(retireFile, "utf8").split("\n").map(l => l.replace(/#.*/, "").trim()).filter(Boolean)) {
+    const spec = await store.get(`jobs/${id}.json`);
+    if (!spec) continue;
+    await store.put(`retired/${id}.json`, spec); await store.del(`jobs/${id}.json`); gone.push(id);
+    console.log(`${id}: retired`);
+  }
+  if (gone.length) await editOpen(store, jobs => { for (const id of gone) delete jobs[id]; return true; }, { by: "queue-push" });
+}
 // the fleet's own files, copied over their old selves: the filler's spec, and the sources the Fleet page's cards read (13 Nov)
 for (const [local, remote] of [["./filler.json", "fleet/filler.json"], ["./fleet-sources.json", "fleet/sources.json"]]) {
   const f = new URL(local, import.meta.url);

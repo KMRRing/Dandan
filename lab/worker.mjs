@@ -213,8 +213,10 @@ async function scan(ids, open) {
       if (!c) free.push(k); else if (now - c.t > LEASE_MS) lapsed.push(c);
     }
     if (!free.length && !lapsed.length) { fullUntil.set(id, now + FULL_MS); seen.set(id, false); continue; }
-    // each slot starts at a random free shard, so slots don't all race for the same one
-    const start = Math.floor(Math.random() * free.length);
+    // each slot starts at a random free shard, so slots don't all race for the same one; a match (anything but the filler) is
+    // played from its first shards up, random among the lowest 32 free, so a look at 2,000 or 5,000 pairs completes early
+    // (17:25Z, Fable's three-look rule: the shards past a deciding look are never played)
+    const start = /^sps\d+$/.test(id) ? Math.floor(Math.random() * free.length) : Math.floor(Math.random() * Math.min(32, free.length));
     for (let k = 0; k < free.length && !found; k++) {
       const shard = free[(start + k) % free.length];
       if (await store.put(`claims/${id}/${shard}`, claimBody(), { ifAbsent: true })) found = { spec, shard, left: free.length - 1 + lapsed.length };

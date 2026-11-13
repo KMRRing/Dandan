@@ -20,6 +20,7 @@ export async function labStore() {
         if (ifGeneration && (!fs.existsSync(f) || String(fs.statSync(f).mtimeMs) !== String(ifGeneration))) return false;
         fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, text); return true;
       },
+      del: async name => { fs.rmSync(path.join(root, name), { force: true }); },
       getG: async name => { const f = path.join(root, name); return fs.existsSync(f) ? { text: fs.readFileSync(f, "utf8"), generation: String(fs.statSync(f).mtimeMs) } : null; },
       create: async (name, text) => { const f = path.join(root, name); if (fs.existsSync(f)) return false; fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, text); return true; },
     };
@@ -57,6 +58,10 @@ export async function labStore() {
       if (r.status === 412) return false;
       if (!r.ok) throw new Error(`put ${name}: ${r.status}`);
       return true;
+    },
+    async del(name) {
+      const r = await call(`${api}/${encodeURIComponent(name)}`, { method: "DELETE" });
+      if (!r.ok && r.status !== 404) throw new Error(`delete ${name}: ${r.status}`);
     },
     // the text and its generation (from the download's x-goog-generation header), or null
     async getG(name) {
