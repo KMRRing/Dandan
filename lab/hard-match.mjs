@@ -35,6 +35,12 @@ async function judgeOf(t) {
   if (file.mull) judge.mull = file.mull;
   return judge;
 }
+/** A stage-1 model: lab/policy/<name>.json when the repository holds one (19:05Z, Fable No. 1: mpD), else a policy-train job's first line. */
+async function modelOf(name) {
+  const file = new URL(`./policy/${name}.json`, import.meta.url);
+  if (/^[A-Za-z0-9_-]+$/.test(name) && fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, "utf8"));
+  return JSON.parse((await readParts(name)).flatMap(x => x.split("\n").filter(Boolean))[0]);
+}
 async function side(spec) {
   // "plus@<policy-train job>" or "medium": no search at all, the stage-1 model or Medium alone (to see where the model stands)
   if (spec === "medium") return (s, seat) => ({ move: policyMove(s, seat, { rng: Math.random }), off: false });
@@ -44,7 +50,7 @@ async function side(spec) {
   // "hard+<policy-train job>": Hard whose look-aheads are played past the tree by the stage-1 model instead of Medium (gate G2)
   // "hard^<policy-train job>": Hard whose shortlist the stage-1 model orders (plan 3.5's fallback after G2), Medium playing on
   const [search1, ranker] = search0.split("^");
-  if (ranker) budget.rank = makePlus(JSON.parse((await readParts(ranker)).flatMap(x => x.split("\n").filter(Boolean))[0])).rank;
+  if (ranker) budget.rank = makePlus(await modelOf(ranker)).rank;
   const [search2, model] = search1.split("+");
   // "hard-t<n>" (12 November 2026, plan item 8): the look-ahead plays n turns ahead instead of 2
   const [, search, tn, arm] = search2.match(/^([a-z]+)(?:-t(\d+))?(?:-(short|margin|keep|knet|knetkeep))?$/) || [, search2];
@@ -57,7 +63,7 @@ async function side(spec) {
   // "hard-knetkeep": the keep net on the first seven, the value net's table after it
   if (arm === "knet" || arm === "knetkeep") budget.knet = JSON.parse(fs.readFileSync(new URL("../judges/keep-net.json", import.meta.url), "utf8"));
   // "hard+free~<job>": the model unguarded (it decides passing and lands too)
-  if (model) { const free = model.startsWith("free~"); budget.rollout = makePlus(JSON.parse((await readParts(model.replace(/^free~/, ""))).flatMap(x => x.split("\n").filter(Boolean))[0]), { free }).move; }
+  if (model) { const free = model.startsWith("free~"); budget.rollout = makePlus(await modelOf(model.replace(/^free~/, "")), { free }).move; }
   if (search === "paths") {
     const judges = { ...(tj ? { "tempo-tempo": tj } : {}), ...(sj ? { "squeeze-squeeze": sj } : {}) };
     return (s, seat) => ({ move: thinkPathsMove(s, seat, { ...budget, judges }), off: false });
