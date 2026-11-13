@@ -58,7 +58,7 @@ export function keptGames() {
       // the person's seat (the players list holds only people), so Monte's is the other (13 Nov: the from-60 run)
       const human = Object.values(file.players || {})[0]?.seat ?? null;
       let moves; try { moves = JSON.parse(g.moves); } catch { continue; }
-      if (moves?.length === g.n) games.push({ kept: true, at, file: f, src: `kept:${f}`, human, winner: file.result?.winner ?? g.state?.winner, R: shownRules, opts: { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
+      if (moves?.length === g.n) games.push({ kept: true, at, file: f, src: `kept:${f}`, human, page: file.result?.page || "", winner: file.result?.winner ?? g.state?.winner, R: shownRules, opts: { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
     }
   } catch { /* no game-records */ }
   return games;

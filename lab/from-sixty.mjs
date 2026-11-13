@@ -12,10 +12,29 @@ import { makeJudge } from "../dandan-eval.js";
 import { keptGames, recordAt } from "./mine-lib.mjs";
 
 if (process.argv[2] === "sum") {
+  // (Fable 17:10Z) every game counted; positions split by where the game was played (the game lab, lab.html, has the coach
+  // beside Korbi, so those are told apart); a table by Monte's replay share of a position, with Monte's real wins in each
   const rows = (await readParts(process.argv[3])).flatMap(x => x.split("\n").filter(Boolean)).map(l => JSON.parse(l));
-  const by = new Map();
-  for (const r of rows) { const k = r.realMonte === 1 ? "Monte won the real game" : r.realMonte === 0 ? "Monte lost the real game" : "drawn"; const c = by.get(k) || { games: 0, monte: 0, positions: new Set() }; c.games++; c.monte += r.monte; c.positions.add(r.key); by.set(k, c); }
-  for (const [k, c] of by) { const p = c.monte / c.games; console.log(`${k}: ${c.positions.size} positions, ${c.games} games, Monte ${(100 * p).toFixed(1)}% ± ${(100 * Math.sqrt(p * (1 - p) / c.games)).toFixed(1)}`); }
+  const lab = new Set(keptGames().filter(g => /lab\.html/.test(g.page)).map(g => g.file.replace(/\.json$/, "")));
+  const pos = new Map();
+  for (const r of rows) { const c = pos.get(r.key) || { n: 0, monte: 0, real: r.realMonte, lab: lab.has(r.key) }; c.n++; c.monte += r.monte; pos.set(r.key, c); }
+  console.log(`${rows.length} games over ${pos.size} positions (${[...pos.values()].filter(c => c.lab).length} from the game lab)`);
+  const pc = x => (100 * x).toFixed(1) + "%";
+  for (const [label, keep] of [["all positions", () => true], ["the game lab out", c => !c.lab], ["the game lab only", c => c.lab]]) {
+    const ps = [...pos.values()].filter(keep);
+    if (!ps.length) continue;
+    const g = ps.reduce((a, c) => a + c.n, 0), m = ps.reduce((a, c) => a + c.monte, 0) / g;
+    console.log(`\n${label}: ${ps.length} positions, ${g} games, Monte's seat ${pc(m)} ± ${(100 * 2.576 * Math.sqrt(m * (1 - m) / g)).toFixed(1)} (99%); Monte won ${ps.filter(c => c.real === 1).length} of the ${ps.length} real games`);
+    for (const [k, test] of [["won the real game", c => c.real === 1], ["lost the real game", c => c.real === 0]]) {
+      const q = ps.filter(test), gq = q.reduce((a, c) => a + c.n, 0); if (!gq) continue;
+      console.log(`  Monte ${k}: ${q.length} positions, Monte's seat ${pc(q.reduce((a, c) => a + c.monte, 0) / gq)}`);
+    }
+    console.log("  by Monte's share of a position's replays: positions, Monte's real wins among them");
+    for (const [k, lo, hi] of [["under 30%", 0, 0.3], ["30% to 70%", 0.3, 0.7], ["over 70%", 0.7, 1.01]]) {
+      const q = ps.filter(c => c.monte / c.n >= lo && c.monte / c.n < hi);
+      console.log(`    ${k.padEnd(11)} ${String(q.length).padStart(3)} positions, Monte won ${q.filter(c => c.real === 1).length} (${q.length ? pc(q.filter(c => c.real === 1).length / q.length) : "—"})`);
+    }
+  }
   process.exit(0);
 }
 const [shard, , out] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4]];
