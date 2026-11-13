@@ -10,6 +10,11 @@
 // chosen move's, in points), Medium's pick against the model's; it passes when the model gives up at least a quarter less.
 // One JSON line out: { alpha, beta, net, metrics }; dandan-netpolicy.js makePlus reads it.
 // usage: node lab/policy-train.mjs <shard> <shards> <out> <export job ids, comma-separated> [epochs 6] [lr 1e-3] [H1 64] [H2 32] [T 0.02] [light 0.3]
+//        … [act] [target] [most games] [measured only] [stream]
+// [stream] (13 Nov 2026, Fable No. 1: every every-move game exported, more than a runner holds): "stream" keeps only the held-out
+// decisions in memory; the training decisions stay as the export's files on the runner's disk and are read file by file each
+// epoch, the files in a new order each epoch, eight at a time with their decisions shuffled together. The held-out set is the export's every fifth
+// game, as before, which no model has trained on.
 import fs from "node:fs";
 import { labStore } from "./lib.mjs";
 import { MOVE_N } from "../dandan-netpolicy.js";
@@ -33,38 +38,47 @@ const EVAL = process.argv[15] && process.argv[15] !== "-" ? process.argv[15].spl
 const say = (...a) => console.log(`[${new Date().toISOString().slice(11, 19)}]`, ...a, `(memory ${Math.round(process.memoryUsage().rss / 1e6)} MB)`);
 
 // ---------- the decisions, packed ----------
-const train = [], held = [];
-let XN = 0;
+const STREAM = process.argv[16] === "stream";
+const train = [], held = [], trainFiles = [];
+let XN = 0, trainN = 0;
 const store = await labStore();
 const seen = new Set(), sources = [...ids.split(",").map(id => [id, false]), ...EVAL.map(id => [id, true])];
+/** One export line as the trainer keeps it. */
+function pack(d, evalOnly) {
+  XN = d.x.length;
+  const q = d.c.map(c => c.q), qt = q.slice();
+  if (ACT) {
+    const ip = d.c.findIndex(c => c.m.length === 1 && c.m[0] === 0);
+    let ib = -1; d.c.forEach((c, i) => { if (i !== ip && (ib < 0 || c.q > d.c[ib].q)) ib = i; });
+    if (ip >= 0 && ib >= 0) {
+      const noise = Math.max(T, 2 * Math.hypot(d.c[ip].se || 0, d.c[ib].se || 0));
+      if (d.c[ib].q >= d.c[ip].q - noise) qt[ip] = Math.min(qt[ip], d.c[ib].q - noise);
+    }
+  }
+  const qmax = Math.max(...qt);
+  return {
+    x: Float32Array.from(d.x), m: d.c.map(c => Int16Array.from(c.m)), s: Float32Array.from(d.c.map(c => c.s)), q: Float32Array.from(q),
+    med: d.med, pick: d.pick, deep: d.deep, every: !!d.every, off: !!d.off, evalOnly, w: d.deep ? 1 : LIGHT,
+    // the target: softmax of the search's means at temperature T
+    p: PICK && d.pick != null && d.pick >= 0 && d.pick < d.c.length ? Float32Array.from(d.c, (_, k) => (k === d.pick ? 1 : 0)) : (() => { const e = qt.map(v => Math.exp((v - qmax) / T)), z = e.reduce((a, b) => a + b, 0); return Float32Array.from(e, v => v / z); })(),
+  };
+}
+const tmp = STREAM ? fs.mkdtempSync((process.env.RUNNER_TEMP || "/tmp") + "/pt-") : null;
 for (const [id, evalOnly] of sources) for (const name of (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n))) {
   if (!evalOnly && seen.size >= CAP) break;
+  const keepLines = [];
   for (const line of ((await store.get(name)) || "").split("\n")) {
     if (!line) continue;
     const d = JSON.parse(line);
     if (evalOnly && !d.hold) continue;
     if (!evalOnly && !seen.has(d.g)) { if (seen.size >= CAP) continue; seen.add(d.g); }
-    XN = d.x.length;
-    const q = d.c.map(c => c.q), qt = q.slice();
-    if (ACT) {
-      const ip = d.c.findIndex(c => c.m.length === 1 && c.m[0] === 0);
-      let ib = -1; d.c.forEach((c, i) => { if (i !== ip && (ib < 0 || c.q > d.c[ib].q)) ib = i; });
-      if (ip >= 0 && ib >= 0) {
-        const noise = Math.max(T, 2 * Math.hypot(d.c[ip].se || 0, d.c[ib].se || 0));
-        if (d.c[ib].q >= d.c[ip].q - noise) qt[ip] = Math.min(qt[ip], d.c[ib].q - noise);
-      }
-    }
-    const qmax = Math.max(...qt);
-    const D = {
-      x: Float32Array.from(d.x), m: d.c.map(c => Int16Array.from(c.m)), s: Float32Array.from(d.c.map(c => c.s)), q: Float32Array.from(q),
-      med: d.med, pick: d.pick, deep: d.deep, every: !!d.every, off: !!d.off, evalOnly, w: d.deep ? 1 : LIGHT,
-      // the target: softmax of the search's means at temperature T
-      p: PICK && d.pick != null && d.pick >= 0 && d.pick < d.c.length ? Float32Array.from(d.c, (_, k) => (k === d.pick ? 1 : 0)) : (() => { const e = qt.map(v => Math.exp((v - qmax) / T)), z = e.reduce((a, b) => a + b, 0); return Float32Array.from(e, v => v / z); })(),
-    };
-    (d.hold ? held : train).push(D);
+    if (d.hold) held.push(pack(d, evalOnly));
+    else if (STREAM) { keepLines.push(line); trainN++; }
+    else { train.push(pack(d, evalOnly)); trainN++; }
   }
+  if (STREAM && keepLines.length) { const f = `${tmp}/${trainFiles.length}.jsonl`; fs.writeFileSync(f, keepLines.join("\n")); trainFiles.push(f); }
 }
-say(`read ${seen.size} games: ${train.length} training and ${held.length} held-out decisions, ${XN} position inputs`);
+say(`read ${seen.size} games: ${trainN} training${STREAM ? ` (streamed from ${trainFiles.length} files)` : ""} and ${held.length} held-out decisions, ${XN} position inputs`);
 
 // ---------- the model ----------
 const rnd = (() => { let a = 12345 + shard; return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 2 ** 32 - 0.5; }; })();
@@ -168,21 +182,28 @@ function measure(set) {
 
 let best = { ...measure(held), epoch: 0 }, bestP = JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(P).map(([k, v]) => [k, Array.from(v)]))));
 say("before training (Medium exactly):", JSON.stringify(best));
-const BATCH = 64, order = train.map((_, i) => i);
+const BATCH = 64;
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor((rnd() + 0.5) * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+/** The training decisions of one epoch, in a new order: all of them, or file by file from disk when streaming. */
+function* epochOrder() {
+  if (!STREAM) { for (const i of shuffle(train.map((_, i) => i))) yield train[i]; return; }
+  // eight files at a time, their decisions shuffled together, so neighbouring steps rarely come from one game or batch
+  const files = shuffle(trainFiles.slice());
+  for (let i = 0; i < files.length; i += 8) for (const line of shuffle(files.slice(i, i + 8).flatMap(f => fs.readFileSync(f, "utf8").split("\n")))) if (line) yield pack(JSON.parse(line), false);
+}
 for (let e = 1; e <= EPOCHS; e++) {
-  for (let i = order.length - 1; i > 0; i--) { const j = Math.floor((rnd() + 0.5) * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
   let G = zero(), n = 0, tl = 0;
-  for (const idx of order) {
-    tl += backward(train[idx], G);
+  for (const D of epochOrder()) {
+    tl += backward(D, G);
     if (++n % BATCH === 0) { adam(G, BATCH); G = zero(); }
   }
   const h = measure(held);
-  say(`epoch ${e}: training loss ${(tl / order.length).toFixed(4)}, held out ${JSON.stringify(h)}, alpha ${P.alpha[0].toFixed(3)}, beta ${P.beta[0].toFixed(3)}`);
+  say(`epoch ${e}: training loss ${(tl / n).toFixed(4)}, held out ${JSON.stringify(h)}, alpha ${P.alpha[0].toFixed(3)}, beta ${P.beta[0].toFixed(3)}`);
   if (h.allLoss < best.allLoss) { best = { ...h, epoch: e }; bestP = JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(P).map(([k, v]) => [k, Array.from(v)])))); }
 }
 const r5 = a => a.map(v => Math.round(v * 1e5) / 1e5);
 const net = { XN, H1, H2, wx: r5(bestP.wx), wm: r5(bestP.wm), ws: r5(bestP.ws), b1: r5(bestP.b1), w2: r5(bestP.w2), b2: r5(bestP.b2), w3: r5(bestP.w3) };
 const g0 = best.mediumGivesUp > 0 ? +(1 - best.modelGivesUp / best.mediumGivesUp).toFixed(4) : 0;
-const metrics = { ...best, games: seen.size, train: train.length, held: held.length, g0Reduction: g0, g0Pass: g0 >= 0.25 };
+const metrics = { ...best, games: seen.size, train: trainN, held: held.length, g0Reduction: g0, g0Pass: g0 >= 0.25 };
 console.log(JSON.stringify({ metrics, alpha: bestP.alpha[0], beta: bestP.beta[0], epochs: EPOCHS, lr: LR, T, light: LIGHT }));
 fs.writeFileSync(out, JSON.stringify({ alpha: bestP.alpha[0], beta: bestP.beta[0], net, metrics }) + "\n");

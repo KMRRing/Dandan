@@ -1,0 +1,1 @@
+{"id": "ae-x1-ex", "script": "export.mjs", "args": "{shard} {shards} {out} ab-g2-s4d-0all/300-449,ab-g2-s4d-0all/450-599", "shards": 60, "timeoutMin": 180, "purpose": "Fable No. 1 step 2 (the streaming trainer's data): every recorded decision of generation 2's other 7,500 every-legal-move games (ab-g2-s4d-0all, shards 300-599; ad-m2-ex holds 0-299)"}

@@ -1,0 +1,1 @@
+{"id": "ae-x2-ex", "script": "export.mjs", "args": "{shard} {shards} {out} sps042,sps043,sps044,sps045,sps046,sps047", "shards": 60, "timeoutMin": 180, "purpose": "Fable No. 1 step 2: every recorded decision of tonight's S5 every-legal-move self-play (sps042-047, the batches made by current workers on fleet/filler.json: S5, harder cutting, exploration), for trainings E and F"}
