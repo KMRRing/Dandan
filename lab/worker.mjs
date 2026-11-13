@@ -46,14 +46,16 @@ function folderStore(root) {
   const file = n => path.join(root, n), gen = f => String(fs.statSync(f).mtimeMs);
   return {
     async list(prefix) {
+      REQ.list++;
       const out = [];
       const walk = d => { for (const e of fs.existsSync(d) ? fs.readdirSync(d, { withFileTypes: true }) : []) { const f = path.join(d, e.name); if (e.isDirectory()) walk(f); else out.push({ name: path.relative(root, f), generation: gen(f), t: fs.statSync(f).mtimeMs }); } };
       walk(root);
       return out.filter(o => o.name.startsWith(prefix));
     },
-    async get(name) { return fs.existsSync(file(name)) ? fs.readFileSync(file(name), "utf8") : null; },
-    async getG(name) { return fs.existsSync(file(name)) ? { text: fs.readFileSync(file(name), "utf8"), generation: gen(file(name)) } : null; },
+    async get(name) { REQ.read++; return fs.existsSync(file(name)) ? fs.readFileSync(file(name), "utf8") : null; },
+    async getG(name) { REQ.read++; return fs.existsSync(file(name)) ? { text: fs.readFileSync(file(name), "utf8"), generation: gen(file(name)) } : null; },
     async put(name, body, { ifAbsent, ifGeneration } = {}) {
+      REQ.write++;
       const f = file(name);
       fs.mkdirSync(path.dirname(f), { recursive: true });
       if (ifAbsent) { try { fs.writeFileSync(f, body, { flag: "wx" }); return true; } catch (e) { if (e.code === "EEXIST") return false; throw e; } }
@@ -110,7 +112,7 @@ function bucketStore(bucket) {
 }
 // the bucket requests this worker made (13 Nov, the fleet director): lists and writes are Google's class A (about $0.005 a
 // thousand), reads class B (about $0.0004); each report carries the counts since the one before
-const REQ = { list: 0, write: 0, read: 0 };
+const REQ = { list: 0, write: 0, read: 0 }, REQ_ALL = { list: 0, write: 0, read: 0 };
 const store = env.LAB_DIR ? folderStore(path.resolve(env.LAB_DIR)) : bucketStore(env.LAB_BUCKET || (() => { throw new Error("set LAB_BUCKET (or LAB_DIR to try it in a folder)"); })());
 
 // ---------- finding a shard to run ----------
@@ -240,8 +242,16 @@ async function scan(ids, open) {
  * jobs it names. A full look instead when the file is missing, unreadable or older than OPEN_STALE_MS, or has said "nothing"
  * for OPEN_STALE_MS on end, so a lost or stale update can't leave slots asleep. Returns { work, empty }.
  */
-let emptySince = 0;
+let emptySince = 0, finishedAt = 0;
+// the jobs the fleet snapshot found finished (fleet/finished.json, every 10 min): a full look skips them instead of listing
+// each one's claims and done marks (16:47Z, the fleet director: restarted workers' first full looks listed hundreds of old jobs)
+async function loadFinished() {
+  if (Date.now() - finishedAt < 10 * 60000) return;
+  finishedAt = Date.now();
+  try { const t = await store.get("fleet/finished.json"); for (const id of t ? JSON.parse(t) : []) finished.add(id); } catch (e) { log("fleet/finished.json:", e.message); }
+}
 async function findWork() {
+  await loadFinished();
   const open = await readOpen(store), now = Date.now(), ids = open ? Object.keys(open.jobs) : [];
   if (open && !ids.length) emptySince ||= now; else emptySince = 0;
   if (!open || now - open.t > OPEN_STALE_MS || (emptySince && now - emptySince > OPEN_STALE_MS)) {
@@ -312,9 +322,12 @@ const BACKOFF_MAX = (Number(env.LAB_BACKOFF_SEC) || 120) * 1000;
 let gate = null, backoff = POLL_MS;
 const closeGate = () => { let open; gate = { p: new Promise(r => (open = r)), open: () => open() }; };
 const openGate = () => { const g = gate; gate = null; backoff = POLL_MS; g?.open(); };
+// a starting machine looks once, with slot 0, and the other slots wait for it (16:47Z: every slot of a fresh 16-core machine
+// made its own full look at once)
+closeGate();
 async function slotLoop(slot) {
   await sleep(slot * 700);
-  let idleSince = Date.now(), polling = false;
+  let idleSince = Date.now(), polling = slot === 0;
   while (Date.now() - T0 < MAX_MS && !DRAIN) {
     if (gate && !polling) { await gate.p; continue; }
     let work = null, empty = true;
@@ -365,7 +378,8 @@ let lastBeat = T0;
 const beatWorker = () => {
   grow();
   // the bucket requests since the last report, over `ms` (13 Nov, the fleet director); this report's own write counts in the next
-  const now = Date.now(), req = { ...REQ, ms: now - lastBeat }; REQ.list = REQ.write = REQ.read = 0; lastBeat = now;
+  const now = Date.now(), req = { ...REQ, ms: now - lastBeat };
+  for (const k in REQ) { REQ_ALL[k] += REQ[k]; REQ[k] = 0; } lastBeat = now;
   return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, pool: POOL, fin: FIN, slots: loops.length, hw: hw(), busy: [...BUSY.values()], req, started: T0, t: now })).catch(() => {});
 };
 const workerBeat = setInterval(beatWorker, BEAT_MS);
@@ -376,5 +390,6 @@ grow();
 for (let n = 0; n < loops.length; ) { n = loops.length; await Promise.all(loops); }   // a slot added while waiting is waited for too
 clearInterval(workerBeat);
 await store.del(`workers/${NAME}.json`).catch(() => {});
-log(DRAIN ? "restarting for the newer worker" : "no more work: stopping");
+for (const k in REQ) REQ_ALL[k] += REQ[k];
+log(DRAIN ? "restarting for the newer worker" : "no more work: stopping", `(bucket requests: ${REQ_ALL.list} lists, ${REQ_ALL.write} writes, ${REQ_ALL.read} reads)`);
 process.exit(0);

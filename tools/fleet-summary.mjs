@@ -55,12 +55,12 @@ for (const [name, updated] of list.objects) {
   m = name.match(/^results\/([^/]+)\/done-(\d+)$/); if (m) { done[m[1]] = (done[m[1]] || 0) + 1; (doneSet[m[1]] ||= new Set()).add(m[2]); }
 }
 const LEASE_MS = 15 * M;
-const jobs = [], jdir = path.join(snap, "o/jobs");
+const jobs = [], finished = [], jdir = path.join(snap, "o/jobs");
 for (const f of fs.existsSync(jdir) ? fs.readdirSync(jdir) : []) {
   const spec = (() => { try { return JSON.parse(fs.readFileSync(path.join(jdir, f), "utf8")); } catch { return null; } })();
   if (!spec?.shards) continue;
   const id = f.replace(/\.json$/, ""), d = done[id] || 0;
-  if (d >= spec.shards) continue;
+  if (d >= spec.shards) { finished.push(id); continue; }
   const c = claims[id] || 0, s = shardMin[id], perHour = s?.n || 0;
   const lapsed = Object.entries(claimAt[id] || {}).filter(([k, t]) => now - t > LEASE_MS && !doneSet[id]?.has(k)).length;
   jobs.push({ id, purpose: (spec.purpose || "").slice(0, 160), shards: spec.shards, done: d, running: Math.max(0, c - d), unclaimed: Math.max(0, spec.shards - c), lapsed,
@@ -73,4 +73,4 @@ const tot = workers.reduce((a, g) => ({ machines: a.machines + g.machines, slots
 tot.reqCostH = Math.round(tot.reqCostH * 1000) / 1000;
 // open: the jobs with a free or lapsed shard, which fleet.yml adds to fleet/open.json (a backstop that only adds)
 const open = jobs.filter(j => j.unclaimed > 0 || j.lapsed > 0).map(j => j.id);
-process.stdout.write(JSON.stringify({ at: new Date(now).toISOString(), total: { ...tot, stale }, workers, unmapped: [...unmapped], jobs, k8s, open }));
+process.stdout.write(JSON.stringify({ at: new Date(now).toISOString(), total: { ...tot, stale }, workers, unmapped: [...unmapped], jobs, k8s, open, finished }));
