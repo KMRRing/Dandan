@@ -611,3 +611,5 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - 19:17Z ops: Sydney kmr-ring1-9 pool e086d81d (Compute - Large, ch.vs1.large-syd) was wanted 10 / won 6 at $0.01 = our bid = market (it had been $0.001 before this pool). Cut to 3 to let the price fall; check at the next market pass and grow back slowly only if it stays low.
 
 - 19:19Z ops (market pass): US East 3 VMs a2b0e1bf (16-core compute) fully reporting, market $0.01 → grown 3 → 5. US East holds 14 Kubernetes + 5 VMs in that class now; check the price next pass and step back if it lifts. Sydney 2 16-core VMs 4 of 5 reporting. Fleet 1,117/1,118 busy at 19:12Z.
+
+- 19:36Z ops (market pass): US East 16-core compute held $0.01 with 14 K8s + 5 VMs; Sydney 16-core compute $0.01 with 5/5 VMs reporting → both VM pools grown to 7 (+64 vCPUs). Sydney 4-core compute (ch.vs1.large-syd) stayed $0.01 even at 3 — 10x Sydney 4-core general ($0.001) — so kmr-ring1-9 e086d81d cut to 1. Fleet 1,157/1,158 busy at 19:32Z.
