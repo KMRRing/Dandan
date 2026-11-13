@@ -12,6 +12,7 @@
 // lists it, seats it and runs it with no other change.
 import { policyMove, PASS, TUNE } from "./dandan-policy.js";
 import { think, thinkMove } from "./dandan-think.js";
+import { keepMove } from "./dandan-keep.js";
 import { moves } from "./dandan-engine.js";
 import { makeJudge } from "./dandan-eval.js";
 
@@ -23,6 +24,7 @@ export const JUDGES = {
   "s3c": "./judges/s3c.json",
   "s3d": "./judges/s3d.json",
   "s4d": "./judges/s4d.json",
+  "s5": "./judges/s5.json",
   // a list: the mean of those judges' chances (12 November 2026: two nets averaged screened better than either alone)
   "avg-jt130-s3c": ["./judges/jt130.json", "./judges/s3c.json"],
   "avg-jt130-s4d": ["./judges/jt130.json", "./judges/s4d.json"],
@@ -84,6 +86,11 @@ export const ENGINES = [
     expect: "Against Hard with v14, both at Deep (1,024 deals): 57.6% ± 3.6 after 575 of 600 deals played both ways, and above 50% even if it lost every deal still to come: CROWNED (12 November). At Quick: 54.6% ± 2.6 over 1,000. Predicts results best of all (Brier 0.143 against v14's 0.155 on held-out games). About 1.3× v14's thinking time a decision. The live game's Hard since 12 November 2026.",
   },
   {
+    id: "hard-s5-keep", name: "Hard (S5 + value keep): the benchmark", short: "Bench", kind: "hard", judge: "s5", keep: true, available: true,
+    description: "The lab's benchmark since 13 November 2026: Hard with value net S5 (judges/s5.json: S4 d's recipe with the race inputs: who faces the empty library first, draws left, the cards that take or add to it) and the keep by the value net: each opening hand is rated at the start of turn 1 over 256 deals of what the other player may hold (dealt a hand he would keep), and thrown back when a redraw is worth more, by S5's own redraw table. Not the live game.",
+    expect: "S5 against S4 d at Quick: 51.8% ± 1.8 over 2,000 pairs (99% range from 50.01%). Its Deep gate against S4 d runs on as its test for going live. The keep by the value net alone scored 51.1% ± 1.7 against Medium's keep and was adopted as the general solution.",
+  },
+  {
     id: "hard-s3d", name: "Hard (judge S3 d)", short: "Hard S3d", kind: "hard", judge: "s3d", available: true,
     description: "Hard with judge S3 d (judges/s3d.json): the same larger network as S4 d, trained on a third of the games (17,297).",
     expect: "At Quick against v14: 53.9% ± 2.7. At Deep: 53.2% ± 3.4 over 595 of 600 deals (the gate would extend; not extended, since S4 d is the same recipe on more games).",
@@ -106,6 +113,8 @@ export const engineOf = id => ENGINES.find(e => e.id === id);
 export const seatable = () => ENGINES.filter(e => e.available);
 /** The engine Monte is at the start: what the live game plays. */
 export const DEFAULT_ENGINE = "hard-s4d";
+/** The lab's benchmark (13 Nov 2026, Korbi: the benchmark and the live game are two things): what new candidates must beat. */
+export const BENCHMARK_ENGINE = "hard-s5-keep";
 
 // ---------- the judges ----------
 const judges = new Map();
@@ -118,7 +127,8 @@ const fetchJson = url => fetch(url).then(r => { if (!r.ok) throw new Error(`${ur
 export async function judgeOf(engine, load = fetchJson) {
   if (!engine?.judge) return undefined;
   if (!judges.has(engine.judge)) {
-    const one = file => load(new URL(file, import.meta.url).href).then(j => makeJudge(j.layers)), f = JUDGES[engine.judge];
+    // a net's redraw table (`mull`, lab/keep-table.mjs) rides on its judge, for the keep by the value net
+    const one = file => load(new URL(file, import.meta.url).href).then(j => Object.assign(makeJudge(j.layers), j.mull ? { mull: j.mull } : {})), f = JUDGES[engine.judge];
     judges.set(engine.judge, Array.isArray(f) ? Promise.all(f.map(one)).then(js => (s, me) => js.reduce((a, j) => a + j(s, me), 0) / js.length) : one(f));
   }
   return judges.get(engine.judge);
@@ -142,10 +152,12 @@ export function mediumMove(engine, s, seat, opts = {}) {
 }
 export async function decide(engine, s, seat, { budget = {}, must = null, load } = {}) {
   if (engine.kind === "medium") return { move: mediumMove(engine, s, seat), chance: null, list: [] };
-  const p = s.pending;
+  const p = s.pending, judge = await judgeOf(engine, load);
+  // the keep by the value net (an engine with `keep`, its net carrying a redraw table); else Medium's, as before
+  const kept = engine.keep && p && (p.t === "mull" || p.t === "bottom") ? keepMove(s, seat, judge) : null;
+  if (kept) return { move: kept.move, chance: kept.why?.keep ?? null, list: [] };
   if (p && MEDIUM_ONLY.includes(p.t)) return { move: policyMove(s, seat), chance: null, list: [] };
   if (!p && !moves(s, seat, true).length) return { move: PASS, chance: null, list: [] };
-  const judge = await judgeOf(engine, load);
   const r = think(s, seat, { ...budget, ...(judge ? { judge } : {}), must });
   const top = r.list[0], chance = top && Number.isFinite(top.mean) && top.mean >= 0 ? top.mean : null;
   return { move: r.best, chance, list: r.list.slice(0, 4).map(c => ({ move: c.move, mean: c.mean })) };
@@ -155,5 +167,5 @@ export async function decide(engine, s, seat, { budget = {}, must = null, load }
 export async function engineMove(engine, s, seat, budget, load) {
   if (engine.kind === "medium") return mediumMove(engine, s, seat);
   const judge = await judgeOf(engine, load);
-  return thinkMove(s, seat, judge ? { ...budget, judge } : budget);
+  return thinkMove(s, seat, { ...budget, ...(judge ? { judge } : {}), ...(engine.keep && judge?.mull ? { keep: true } : {}) });
 }

@@ -15,6 +15,7 @@ export async function labStore() {
       list: async prefix => walk(path.join(root, path.dirname(prefix + "x"))).map(f => path.relative(root, f)).filter(n => n.startsWith(prefix)).sort(),
       get: async name => (fs.existsSync(path.join(root, name)) ? fs.readFileSync(path.join(root, name), "utf8") : null),
       put: async (name, text) => { fs.mkdirSync(path.dirname(path.join(root, name)), { recursive: true }); fs.writeFileSync(path.join(root, name), text); },
+      create: async (name, text) => { const f = path.join(root, name); if (fs.existsSync(f)) return false; fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, text); return true; },
     };
   }
   const api = `https://storage.googleapis.com/storage/v1/b/${process.env.LAB_BUCKET}/o`;
@@ -34,6 +35,13 @@ export async function labStore() {
         try { const r = await call(`${api}/${encodeURIComponent(name)}?alt=media`); return r.ok ? await r.text() : null; }
         catch (e) { if (tries >= 5) throw e; await new Promise(res => setTimeout(res, 2000 * 2 ** tries)); }
       }
+    },
+    // (13 Nov: queue by commit) written only if absent: true if written, false if it was there already
+    async create(name, text) {
+      const r = await call(`https://storage.googleapis.com/upload/storage/v1/b/${process.env.LAB_BUCKET}/o?uploadType=media&ifGenerationMatch=0&name=${encodeURIComponent(name)}`, { method: "POST", headers: { "content-type": "application/json" }, body: text });
+      if (r.status === 412) return false;
+      if (!r.ok) throw new Error(`create ${name}: ${r.status}`);
+      return true;
     },
     // (13 Nov: the trainer's position cache) a text object written whole
     async put(name, text) {

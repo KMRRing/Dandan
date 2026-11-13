@@ -107,24 +107,36 @@ for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { STOPPING = true
 const doneCount = async id => (await store.list(`results/${id}/`)).filter(r => /\/done-\d+$/.test(r.name)).length;
 // sps<n> (12 November 2026, Fable: S4 d crowned, so the games it learns from next are its own): flat 128 deals with value net
 // S4 d in both seats; spf<n> before it played v14 the same way, spm<n> before that mixed depths
-const batch = n => `sps${String(n).padStart(3, "0")}`;
+/**
+ * The filler's spec (13 Nov 2026, Fable): read from fleet/filler.json in the bucket at every refill, so a new benchmark reaches
+ * running workers without a restart: { prefix, shards, games (a shard's games), seedBase, args (with {seed} for the batch's
+ * first seed), purpose }. Without the file, or with one that doesn't parse, the built-in below.
+ */
+const FILLER = {
+  prefix: "sps", shards: 24, games: 120, seedBase: 5000000, timeoutMin: 240,
+  args: "{shard} {shards} {out} 128 120 {seed} hardall-cut @aa-g8-s5-r#24",
+  purpose: "Hard at 128 deals with value net S5 (the benchmark, 13 Nov) against itself, every legal move weighed, harder cutting (hardall-cut): filler games for the next value net",
+};
 /** The commit `main` is at now: a batch queued at it says which engine played it (one queued at "main" can't, as main moves on). */
 function mainSha() {
   try { return execFileSync("git", ["ls-remote", REPO, "refs/heads/main"], { encoding: "utf8", timeout: 20000 }).split(/\s+/)[0] || "main"; } catch { return "main"; }
 }
+async function fillerSpec() {
+  try { const t = await store.get("fleet/filler.json"); if (t) return { ...FILLER, ...JSON.parse(t) }; } catch (e) { log("fleet/filler.json:", e.message); }
+  return FILLER;
+}
 /** The queue run dry, with LAB_FILL: the next batch of self-play, once the last one is finished or all taken. */
 async function refill() {
+  const F = await fillerSpec(), batch = n => `${F.prefix}${String(n).padStart(3, "0")}`, re = new RegExp(`^${F.prefix}\\d+$`);
   const ids = (await store.list("jobs/")).map(o => path.basename(o.name, ".json"));
-  const last = Math.max(0, ...ids.filter(i => /^sps\d+$/.test(i)).map(i => Number(i.slice(3))));
-  if (last && (await doneCount(batch(last))) < 24 && !(await allClaimed(batch(last)))) return;
+  const last = Math.max(0, ...ids.filter(i => re.test(i)).map(i => Number(i.slice(F.prefix.length))));
+  if (last && (await doneCount(batch(last))) < F.shards && (await store.list(`claims/${batch(last)}/`)).length < F.shards) return;
   const spec = {
-    ref: mainSha(), repo: REPO, id: batch(last + 1), script: "selfplay.mjs", args: `{shard} {shards} {out} 128 120 ${5000000 + 120 * last} hardall-cut @aa-g8-s5-r#24`, shards: 24, timeoutMin: 240,
-    purpose: "Hard at 128 deals with value net S5 (the benchmark, 13 Nov) against itself, every legal move weighed, harder cutting (hardall-cut, 13 Nov, Fable): filler games for the next value net",
-    made: { by: NAME, at: new Date().toISOString() },
+    ref: mainSha(), repo: REPO, id: batch(last + 1), script: F.script || "selfplay.mjs", args: F.args.replace("{seed}", String(F.seedBase + F.games * last)), shards: F.shards, timeoutMin: F.timeoutMin,
+    purpose: F.purpose, made: { by: NAME, at: new Date().toISOString() },
   };
   await store.put(`jobs/${spec.id}.json`, JSON.stringify(spec), { ifAbsent: true });
 }
-const allClaimed = async id => (await store.list(`claims/${id}/`)).length >= 24;
 /** The next shard nobody has (or whose claim lapsed): claimed for this worker, or null. */
 async function nextShard() {
   for (const o of await store.list("jobs/")) {

@@ -1,0 +1,9 @@
+{
+  "prefix": "sps",
+  "shards": 24,
+  "games": 120,
+  "seedBase": 5000000,
+  "timeoutMin": 240,
+  "args": "{shard} {shards} {out} 128 120 {seed} hardall-cut @aa-g8-s5-r#24",
+  "purpose": "Hard at 128 deals with value net S5 (the benchmark, 13 Nov) against itself, every legal move weighed, harder cutting (hardall-cut): filler games for the next value net"
+}
