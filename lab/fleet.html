@@ -1463,6 +1463,8 @@ function buildGraph(d, fable = false) {
       else if (/^engine:hard:/.test(k) && !KEEP_HARD.test(k)) N.delete(k);
     }
     // ----- round 2 of stage 0 and the 12 November items (Korbi, 12 Nov: "show all the items related to the fable plan") -----
+    // their links are kept through the journey's reset of links below (13 Nov, Korbi: the generation-2 sets showed as used by nothing)
+    const E0 = new Set(E);
     const jobsOf = (...ids) => ids.map(job).filter(Boolean);
     // what came of the first round's picks (12 Nov)
     Object.assign(N.get("match:gate:s1"), { what: "No gate: S1′'s best run scored 45.0% in the Quick screen, under the 50% a gate needs." });
@@ -1474,19 +1476,20 @@ function buildGraph(d, fable = false) {
     G2("match:gate:s4d", ["aa-g9-s4dv14b"], "Deep gate: S4 d vs v14", "Crowned (12 Nov): 57.7% ± 3.5 over all 600 pairs, 1.27× v14's thinking time. The lab's reference from now: new nets are screened and gated against S4 d. Korbi plays it by hand before it replaces v14 in the live game.", "Hard at Deep + S4 d", "Hard at Deep + v14");
     // generation 2 (Fable, 12 Nov): S4 d's own games, a net at 25,000 and at 50,000 to show whether more games still pay
     node("set:gen2", "set", { jobs: jobsOf("ab-g2-s4d-1", "ab-g2-s4d-2").length ? jobsOf("ab-g2-s4d-1", "ab-g2-s4d-2") : [pl("ab-g2-s4d-1")], title: "Generation 2: 50,000 games of S4 d", what: "Hard at 128 deals with S4 d in both seats, like for like with the ~56,000 games S4 d learned from. Two halves of 25,000." });
-    Object.assign(N.get("set:gen2"), { title: "Generation 2: 25,000 games of S4 d (shortlist)", what: "Hard at 128 deals with S4 d in both seats, weighing Medium's shortlist as self-play always has: the control. Its second half was dropped (12 Nov evening) for the every-move games beside it." });
+    Object.assign(N.get("set:gen2"), { jobs: jobsOf("ab-g2-s4d-1", "ab-g2-s4d-1c").length ? jobsOf("ab-g2-s4d-1", "ab-g2-s4d-1c") : N.get("set:gen2").jobs, title: "Generation 2: 15,000 games of S4 d (shortlist, the control)", what: "Hard at 128 deals with S4 d in both seats, weighing Medium's shortlist as self-play always has: the control beside the every-move games. Capped at 15,000 (13 Nov): ab-g2-s4d-1's first 5,550 games, then ab-g2-s4d-1c's 9,450." });
     node("set:gen2all", "set", { jobs: jobsOf("ab-g2-s4d-0all").length ? jobsOf("ab-g2-s4d-0all") : [pl("ab-g2-s4d-0all")], title: "Generation 2, every legal move weighed: 15,000 games", what: "The same, but Hard weighs every legal move as the live game does at Deep, with the moves off Medium's shortlist marked: the first training games that hold what the live search considers. Compared with the control's first 15,000." });
     edge("judge:job:aa-g8-s4#best", "set:gen2all");
-    P("judge:gen2-25", "judge", "Value net on generation 2", "S4 d's recipe on the generation-2 games (each kind, then both): do S4 d's own games, and games with every move weighed, still buy strength?", ["set:gen2", "set:gen2all"]);
+    P("judge:gen2-25", "judge", "Value nets on generations 1 + 2", "On S5's inputs and S4 d's, trained on NumPy (13 Nov): generation 1 plus the 15,000 every-move games, against generation 1 plus the 15,000 control games, three seeds each. Do games with every move weighed buy strength?", ["set:gen2", "set:gen2all"]);
     // how Hard searches (Fable, 12 Nov evening): the live search weighs moves no training game contains
-    P("match:i1", "match", "Move-list test: every legal move vs the shortlist", "S4 d at Deep weighing every legal move (today's live rule) against S4 d at Deep with Medium's shortlist only, 300 pairs on new seeds; time a decision, and how often each side's move was off the shortlist. Does weighing every move help or hurt at Deep?", ["match:gate:s4d"], "aa-i1");
+    P("match:i1", "match", "Move-list test: every legal move vs the shortlist", "S4 d at Deep weighing every legal move (today's live rule) against S4 d at Deep with Medium's shortlist only, 300 pairs on new seeds; time a decision, and how often each side's move was off the shortlist. Does weighing every move help or hurt at Deep?", ["match:gate:s4d"], "aa-i1"); if (job("ac-i1-600")) N.get("match:i1").jobs.push(job("ac-i1-600"));
     P("check:i2", "check", "Off-shortlist moves: which are blunders", "20,000 decisions from generation 2 and your kept games: where a Deep search with every move picks one off the shortlist (up to 1,000 cases), 8 games played on after it and 8 after the best shortlist move, same seeds. A table by kind of move: how often, the search's expected gain, the real one.", ["match:gate:s4d", "set:gen2"], "aa-i2d");
-    P("match:i3", "match", "Margin arm: off the shortlist only by a clear lead", "As the move-list test on the same seeds (rerun after a fix: its fallback skipped the usual protections), but a move off the shortlist replaces the best shortlist move only if it leads by 3 standard errors plus 2 points.", ["match:i1"], "aa-i3b");
+    P("match:i3", "match", "Margin arm: off the shortlist only by a clear lead", "As the move-list test on the same seeds (rerun after a fix: its fallback skipped the usual protections), but a move off the shortlist replaces the best shortlist move only if it leads by 3 standard errors plus 2 points.", ["match:i1"], "aa-i3b"); if (job("ac-i3b-600")) N.get("match:i3").jobs.push(job("ac-i3b-600"));
     P("match:s5-s4d", "match", "S5 vs S4 d at Quick, 2,000 pairs", "Settles the race inputs: kept only if S5 beats S4 d head to head (99% range above 50%).", ["judge:job:aa-g8-s5#best", "judge:job:aa-g8-s4#best"], "ab-g2-q-s5");
-    P("check:trainer", "check", "Trainer: early stopping, position cache, phase weight", "Keep the best epoch and stop after 2 without 0.0005 improvement; positions kept on disk; slow and late positions weighted. Before more nets are trained.", ["judge:job:aa-g8-s4#best"], "trainer");
+    node("check:trainer", "check", { jobs: jobsOf("aa-t1-s4d-js", "aa-t1-s5-js").length ? jobsOf("aa-t1-s4d-js", "aa-t1-s5-js") : [pl("trainer")], title: "Trainer: early stopping, position cache, NumPy", what: "Early stopping and the position cache are in (13 Nov). The trainer on NumPy runs on a GitHub runner from the cached rows: S4 d's recipe trained both ways on the same rows must agree within 0.001 in held-out loss, then a Quick screen of new against old, 1,000 pairs. aa-t1-s4d-js and aa-t1-s5-js write the rows." });
+    edge("judge:job:aa-g8-s4#best", "check:trainer");
     P("judge:phase", "judge", "Phase-weighted retrain (slow and late 3:1)", "S4 d's recipe on the same 56,283 games, slow and late positions drawn 3 to 1; a Quick screen against S4 d, 2,000 pairs.", ["check:trainer"], "phase");
     P("check:cardworth", "check", "Card-worth table", "For every card and a land lead: S4 d's value of holding it against the real difference in win rate, in self-play and in your kept games, by phase of the game.", ["judge:job:aa-g8-s4#best"], "cardworth");
-    node("match:gate:s5", "match", { jobs: [pl("aa-g9-s5v14b", { script: "hard-match.mjs" })], planned: true, title: "Next: race net screen, then Deep gate", what: "S5 at Quick against v14 (1,000 pairs); a Deep gate if it does better than S4 d." });
+    node("match:gate:s5", "match", { jobs: jobsOf("ab-g3-s5-gate").length ? jobsOf("ab-g3-s5-gate") : [pl("ab-g3-s5-gate", { script: "hard-match.mjs" })], planned: !jobsOf("ab-g3-s5-gate").length, title: "Deep gate: S5 vs S4 d", what: "S5 against S4 d at Deep, every legal move on both sides, 1,200 pairs, looks at 300/600/1,200 (13 Nov). Queued after the generation-2 control: S5 held at Quick by a hair (51.8% ± 1.8 at 2,000 pairs)." });
     node("check:rc1", "check", { jobs: jobsOf("aa-a0-rc1"), title: "Report card: every net on your kept games", what: "58 games, 1,375 positions. Every net underrates a land lead alike (+2 lands: about 52% said, 71% won) and over-punishes a card deficit (3+ behind: 20% said, 38% won). A held card lowering its holder's chance: S4 d 0.3%, v14 2.4%, jt130 3.0%. Best Brier: mean of jt130 and S3 c, 0.192." });
     node("check:gshape", "check", { jobs: jobsOf("aa-a0-gshape1"), title: "Game shape: how often games reach the late game", what: "Flat across every generation: about 54% of games reach a library of 30, 32% of 20, 18% of 12, 10% of 6; 3–4% end by decking. Stronger engines have not made games longer." });
     node("check:endgame", "check", { title: "Endgame calculator: stopped, referee only", what: "dandan-solve.js: the end of the game searched exactly. It solves 73% of positions with one card left in 10 s but 13% with four, so it will never be a live tool (Fable, 12 Nov): kept as a referee for the last card or two. Done instead: the end-of-game chart now rates each turn by Hard's look-ahead with both hands open." });
@@ -1525,7 +1528,9 @@ function buildGraph(d, fable = false) {
       "engine:rl": [13, 3, "s3"], "judge:belief": [14, 2, "s3"], "engine:search3": [15, 3, "s3"], "match:gate3": [16, 3, "s3"], "check:crown2": [17, 3, "crown"],
     };
     for (const [k, [c, r, st]] of Object.entries(GRID)) if (N.has(k)) Object.assign(N.get(k), { grid: [c, r], stage: st });
-    // the journey's own links: what each step needs from the one before, nothing more, so the lines don't cross the map
+    // the journey's own links: what each step needs from the one before, nothing more, so the lines don't cross the map; the
+    // links of the 12 November items on are put back after
+    const LATE = [...E].filter(e => !E0.has(e));
     E.clear();
     const J = (a, ...bs) => bs.forEach(b => edge(a, b));
     J(V14, H64, H1024); J("engine:medium", H64, "engine:model1", "match:vd-med");
@@ -1544,6 +1549,26 @@ function buildGraph(d, fable = false) {
     J("check:gshape", "check:endgame"); J("check:endgame", "judge:job:aa-g8-s5#best"); J("judge:job:aa-g8-s5#best", "match:gate:s5");
     for (const g of ["match:gate:jt130", "match:gate:s3d", "match:gate:s4d", "match:gate:s5"]) J(g, "check:crown");
     J("check:alt", "match:g2g"); J("match:g2", "match:turns");
+    LATE.forEach(e => E.add(e));
+    // what feeds what since 12 Nov (Korbi, 13 Nov: everything that uses something, or is used, marked as such)
+    const S4 = "judge:job:aa-g8-s4#best", S5 = "judge:job:aa-g8-s5#best";
+    J(S4, "set:gen2all", "match:i1", "match:s5-s4d", "check:trainer", "check:cardworth");
+    J(S5, "match:s5-s4d", "match:gate:s5", "judge:gen2-25");
+    J("set:spb", "judge:gen2-25"); J("set:spm", "judge:gen2-25"); J("set:gen2", "judge:gen2-25", "check:i2"); J("set:gen2all", "judge:gen2-25");
+    J("check:trainer", "judge:gen2-25", "judge:phase"); J("match:i1", "match:i3", "check:i2"); J("match:s5-s4d", "match:gate:s5");
+    J("check:rc1", "check:i2");
+    // the mining's checks (13 Nov, Fable 00:20Z) and Korbi's should-win test
+    const CK = (key, ids, title, what, ins, outs = []) => { node(key, "check", { jobs: jobsOf(...ids).length ? jobsOf(...ids) : [pl(ids[0])], title, what }); ins.forEach(k => edge(k, key)); outs.forEach(k => edge(key, k)); };
+    CK("check:k1", ["aa-k1-control"], "Control: on-shortlist picks vs Medium's move", "The same 8 + 8 play-outs for picks that are on the shortlist but not Medium's move: est 5.4, real +3.5 ± 1.6. Over-rated by about 2 points too, so it is the search's selection, not the move list.", ["check:i2", "set:gen2"]);
+    CK("check:k2", ["aa-k2-horizon"], "Horizon values of the mined cases", "Each mined play-out replayed to where the look-ahead stops: est 3.9, the judge's value there 2.0, the result 1.8. The look-ahead over-rates, the judge does not.", ["check:i2", S4]);
+    CK("check:k3", ["aa-k3-flagged"], "Flagged Mind Bends vs the best other move", "The 73 flagged Mind Bends of the move-list tests, 8 + 8 play-outs against the search's best other move: the flagged move did better, +6.5 ± 2.1.", ["match:i1", "match:i3"]);
+    CK("check:k4", ["aa-k4-win-shuffle", "aa-k4-win-real"], "Should-win position: Dave's game, turn 20", "Monte with Commit and two Memory Lapses against an empty hand, played on: 191 of 200 with the library re-dealt, 40 of 40 with the real draws.", [S4]);
+    J("check:k1", "judge:gen2-25"); J("check:k2", "judge:gen2-25");
+    J("judge:gen2-25", "check:crown");
+    // the first round's S1 and S2 learned from the Deep games; S1′ and S2′ are their second rounds
+    J("set:deep", "judge:job:aa-g3-s1#best", "judge:job:aa-g3-s2#best"); J("judge:job:aa-g3-s1#best", "judge:job:aa-g8-s1#best"); J("judge:job:aa-g3-s2#best", "judge:job:aa-g8-s2#best");
+    // an averaged judge (avg(@a,@b)) is made from the nets it averages
+    for (const k of N.keys()) { const m = k.match(/^judge:file:avg\((.*)\)$/); if (m) for (const part of m[1].split(",")) { const src = judgeKeyOf(part); if (N.has(src)) edge(src, k); } }
     for (const n of N.values()) { n.title ||= GNAMES[n.key] || n.key; n.what ||= GWHAT[n.key] || ""; }
     return { nodes: [...N.values()], edges: [...E].map(x => x.split("→")).filter(([a, b]) => N.has(a) && N.has(b)) };
   }
