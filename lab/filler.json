@@ -1,7 +1,7 @@
 {
   "prefix": "sps",
-  "shards": 24,
-  "games": 120,
+  "shards": 240,
+  "games": 1200,
   "seedBase": 5000000,
   "timeoutMin": 240,
   "args": "{shard} {shards} {out} 128 120 {seed} hardall-cut-explore @aa-g8-s5-r#24",

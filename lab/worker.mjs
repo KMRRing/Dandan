@@ -125,7 +125,7 @@ async function fillerSpec() {
   try { const t = await store.get("fleet/filler.json"); if (t) return { ...FILLER, ...JSON.parse(t) }; } catch (e) { log("fleet/filler.json:", e.message); }
   return FILLER;
 }
-/** The queue run dry, with LAB_FILL: the next batch of self-play, once the last one is finished or all taken. */
+/** The queue run dry, with LAB_FILL: the next batch of self-play, once the last one is finished or all taken. True when it queued one. */
 async function refill() {
   const F = await fillerSpec(), batch = n => `${F.prefix}${String(n).padStart(3, "0")}`, re = new RegExp(`^${F.prefix}\\d+$`);
   const ids = (await store.list("jobs/")).map(o => path.basename(o.name, ".json"));
@@ -135,7 +135,7 @@ async function refill() {
     ref: mainSha(), repo: REPO, id: batch(last + 1), script: F.script || "selfplay.mjs", args: F.args.replace("{seed}", String(F.seedBase + F.games * last)), shards: F.shards, timeoutMin: F.timeoutMin,
     purpose: F.purpose, made: { by: NAME, at: new Date().toISOString() },
   };
-  await store.put(`jobs/${spec.id}.json`, JSON.stringify(spec), { ifAbsent: true });
+  return store.put(`jobs/${spec.id}.json`, JSON.stringify(spec), { ifAbsent: true });
 }
 /** The next shard nobody has (or whose claim lapsed): claimed for this worker, or null. */
 // A job's spec, read once a version (the listing's generation changes when a spec is rewritten)
@@ -148,14 +148,18 @@ async function specOf(o) {
 // 13 Nov (Korbi: "not all cores busy?"): with shards of a minute, a slot spent a large share of its time looking for the next
 // one: every result file of every job listed (parts and logs too), each spec read again, and every slot racing for the same
 // lowest free shard. Now only the done marks are listed, specs are kept, and each slot starts its search at a random shard.
+// 13 Nov (fleet director: idle slots' listings cost more in bucket requests than the machines): a job whose every shard is
+// claimed is skipped for FULL_MS, as a claim can only lapse after LEASE_MS; a lapsed one is taken up at most FULL_MS late
+const fullUntil = new Map(), FULL_MS = 3 * 60000;
 async function nextShard() {
   for (const o of await store.list("jobs/")) {
     const id = path.basename(o.name, ".json");
-    if (finished.has(id)) continue;
+    if (finished.has(id) || fullUntil.get(id) > Date.now()) continue;
     const spec = await specOf(o);
     const [claims, results] = await Promise.all([store.list(`claims/${id}/`), store.list(`results/${id}/done-`)]);
     const done = new Set(results.map(r => path.basename(r.name)).filter(n => /^done-\d+$/.test(n)).map(n => Number(n.slice(5))));
     if (done.size >= spec.shards) { finished.add(id); continue; }
+    if (claims.length >= spec.shards && claims.every(c => Date.now() - c.t < LEASE_MS)) { fullUntil.set(id, Date.now() + FULL_MS); continue; }
     const claimed = new Map(claims.map(c => [Number(path.basename(c.name)), c]));
     const start = Math.floor(Math.random() * spec.shards);
     for (let k = 0; k < spec.shards; k++) {
@@ -218,23 +222,37 @@ async function checkNewer() {
   } catch { /* offline: try again next time */ }
 }
 setInterval(checkNewer, 10 * 60000).unref();
+/**
+ * One poller a machine while the queue has nothing for it (13 Nov 2026, fleet director): every idle slot listing the queue
+ * every 15 s cost about 30 bucket list requests a poll, dollars an hour at a few hundred idle slots. Now the first slot to find
+ * nothing becomes the machine's poller and closes the gate; it polls with a backoff from POLL_MS doubling to BACKOFF_MAX, and the
+ * other idle slots wait at the gate. When the poller finds a shard it opens the gate, and each waiting slot looks once itself.
+ */
+const BACKOFF_MAX = (Number(env.LAB_BACKOFF_SEC) || 120) * 1000;
+let gate = null, backoff = POLL_MS;
+const closeGate = () => { let open; gate = { p: new Promise(r => (open = r)), open: () => open() }; };
+const openGate = () => { const g = gate; gate = null; backoff = POLL_MS; g?.open(); };
 async function slotLoop(slot) {
   await sleep(slot * 700);
-  let idleSince = Date.now();
+  let idleSince = Date.now(), polling = false;
   while (Date.now() - T0 < MAX_MS && !DRAIN) {
+    if (gate && !polling) { await gate.p; continue; }
     let work = null;
     try { work = await nextShard(); } catch (e) { log("queue:", e.message); }
     if (work) {
+      if (polling) { polling = false; openGate(); } else backoff = POLL_MS;
       BUSY.set(slot, `${work.spec.id}/${work.shard}`); beatWorker();
       try { await runShard(slot, work.spec, work.shard); } catch (e) { log(`slot ${slot}: ${work.spec.id}/${work.shard} failed to run:`, e.message); await store.put(`results/${work.spec.id}/done-${work.shard}`, JSON.stringify({ code: "worker error", error: String(e.message), by: NAME })).catch(() => {}); }
       BUSY.delete(slot);
       idleSince = Date.now();
       continue;
     }
-    if (FILL) { try { await refill(); } catch (e) { log("refill:", e.message); } }
-    else if (Date.now() - idleSince > IDLE_MS) return;
-    await sleep(POLL_MS + Math.random() * 3000);
+    if (FILL) { try { if (await refill()) { backoff = POLL_MS; continue; } } catch (e) { log("refill:", e.message); } }
+    else if (Date.now() - idleSince > IDLE_MS) break;
+    if (!gate) { closeGate(); polling = true; }
+    if (polling) { await sleep(backoff + Math.random() * 3000); backoff = Math.min(backoff * 2, BACKOFF_MAX); }
   }
+  if (polling) openGate();
 }
 // ---------- saying what this machine is doing ----------
 // workers/<name>.json, every BEAT (11 November 2026, Korbi: the Fleet page shows whether every core on Google and AWS is
