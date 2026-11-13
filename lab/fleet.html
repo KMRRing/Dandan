@@ -27,6 +27,11 @@ html,body{margin:0;height:100%;overflow:hidden}
 body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);-webkit-font-smoothing:antialiased}
 #app{height:100vh;height:100dvh;display:grid;grid-template-rows:auto var(--wh,20vh) 7px minmax(0,1fr);grid-template-columns:minmax(0,1fr)}
 #app.nopanel{grid-template-rows:auto 0 7px minmax(0,1fr)}
+/* folded (13 Nov, Korbi: the up arrow back): the ribbon keeps only its clock and buttons, the workers' panel goes */
+#app.slim{grid-template-rows:auto 0 0 minmax(0,1fr)}#app.slim #workers,#app.slim #split,#app.slim #ribbon .tabs,#app.slim #mapTools,#app.slim #panelToggle{display:none}
+#app.slim #ribbon{padding:3px 10px}
+/* each part in its own row, so hiding the panel never moves the view into a row of no height */
+#ribbon{grid-row:1}#workers{grid-row:2}#split{grid-row:3}#view{grid-row:4}
 #ribbon{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;padding:7px 12px;border-bottom:1px solid var(--line);background:var(--panel);min-width:0}
 #ribbon .tabs{border:0;gap:2px}
 #ribbon .tabs a{padding:5px 10px;border-radius:7px;border-bottom:0;margin:0;font:600 12.5px var(--body)}
@@ -240,9 +245,15 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
 @keyframes glow{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 0 3px var(--band)}}
 @media (prefers-reduced-motion:no-preference){.bar i{transition:width .4s ease}}
-.sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));grid-auto-rows:minmax(var(--tileh,150px),auto);gap:8px;align-content:start}
-/* every tile the same size (12 Nov, Korbi); one opened to read its notes grows; tiles are dragged to new places along the row */
-.sources>[data-tile]{height:auto;min-height:0;overflow:hidden;cursor:grab}.sources>[data-tile="trk:now"]{grid-column:span 2}.sources>[data-tile].open{grid-row:span 2}
+.sources{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));grid-auto-rows:var(--tileh,72px);gap:6px;align-content:start}
+/* every tile the same size (12 Nov, Korbi); one opened to read its notes grows; tiles are dragged to new places along the row.
+   13 Nov (Korbi): much smaller, two where one stood: the title and the main number only; the rest is in the pop-up */
+.sources>[data-tile]{height:auto;min-height:0;overflow:hidden;cursor:grab;padding:5px 8px;gap:1px}.sources>[data-tile="trk:now"]{grid-column:span 2}.sources>[data-tile].open{grid-row:span 3}
+.sources>[data-tile].src:not(.open) dl,.sources>[data-tile].src:not(.open) .act{display:none}
+#fleetbar .src .sh b,#fleetbar .tcard .tgrip{font-size:10px;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#fleetbar .src .st{font-size:10.5px}
+#fleetbar .src .big2{font-size:15px}#fleetbar .tcard .big3{font-size:15px}#fleetbar .tcard .fat{font-size:24px;margin:1px 0 0}
+#fleetbar .tcard .bigbar{height:8px;margin:2px 0 0}#fleetbar .tcard .ctab{font-size:10.5px}#fleetbar .tcard .ctab td:nth-child(3){font-size:10px}
+#fleetbar .tcard .tk{font-size:11px;gap:0 6px}#fleetbar .tcard .nums{font-size:10.5px}
 .sources>[data-tile].dragging{opacity:.35}.sources>[data-tile].dropL{box-shadow:-3px 0 0 var(--accent)}.sources>[data-tile].dropR{box-shadow:3px 0 0 var(--accent)}
 .src{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:grid;gap:3px;align-content:start}
 .src .sh{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
@@ -307,6 +318,8 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
     <div id="mapTools" class="rb-tools"></div>
     <div class="rb-right"><span class="fresh" id="fresh" title="When the lab was read, and (in brackets) minutes to the next read">Connecting…</span>
       <button class="tiny" id="refreshNow" title="Read the lab now" aria-label="Refresh">↻</button>
+      <button class="tiny" id="reloadPage" title="Load the newest version of this page from GitHub" aria-label="Reload the page">⟳</button>
+      <button class="tiny" id="slimToggle" title="Fold the ribbon and the workers' panel away" aria-label="Fold away" aria-expanded="true">▲</button>
       <button class="tiny" id="panelToggle" title="Show or hide the workers' panel" aria-pressed="true">Workers</button></div>
   </header>
   <section id="workers" aria-label="The workers">
@@ -2376,6 +2389,17 @@ document.addEventListener("click", async ev => {
 });
 $("go").addEventListener("click", refresh);
 $("refreshNow").addEventListener("click", () => refresh());
+// the newest page from GitHub (13 Nov, Korbi): past the browser's cache and any service worker's copy
+$("reloadPage").addEventListener("click", async () => {
+  $("reloadPage").disabled = true;
+  try { for (const r of (await navigator.serviceWorker?.getRegistrations?.()) || []) await r.update(); } catch {}
+  try { for (const k of (await caches?.keys?.()) || []) await caches.delete(k); } catch {}
+  try { await fetch(location.pathname, { cache: "reload" }); } catch {}
+  const u = new URL(location.href); u.searchParams.set("v", Date.now()); location.replace(u);
+});
+const setSlim = on => { $("app").classList.toggle("slim", on); $("slimToggle").textContent = on ? "▼" : "▲"; $("slimToggle").setAttribute("aria-expanded", String(!on)); requestAnimationFrame(() => dispatchEvent(new Event("resize"))); };
+setSlim(!!store("fleet:slim"));
+$("slimToggle").addEventListener("click", () => { const on = !$("app").classList.contains("slim"); setSlim(on); store("fleet:slim", on ? 1 : 0); });
 $("pfx").addEventListener("keydown", e => { if (e.key === "Enter") refresh(); });
 
 (async () => {
