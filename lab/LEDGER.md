@@ -634,3 +634,5 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - 22:10Z ops (fleet check): 1,246/1,246 busy at 22:04Z on Deep filler sps051; requests $0.20/h. Market: Dallas 16-core compute (ch.vs1.2xlarge-dfw) up to $0.035 (was $0.01 when we went 6 → 9 at 17:53Z) — $0.0022/vCPU-h, 3.5x the other regions. Cut 0cfd35a6 9 → 6 to see whether our own demand set it. HK, US East, Sydney 16-core compute all $0.01.
 
 - 2026-11-13 22:27Z ops: fleet check 1197/1198 busy, req $0.174/h, sps052 308 left. Dallas ch.vs1.2xlarge-dfw still $0.035 but minBid is now $0.035 (class floor), so trimming won't lower it; kept 0cfd35a6 at 6 ($0.0022/vCPU-h, under line).
+
+- 2026-11-13 22:47Z ops: correction to 22:27Z. minBid $0.035 is the bid floor for ch.vs1.2xlarge in every region (HK/IAD/SYD trade at $0.01), so Dallas $0.035 is a thin market, not a floor. Cut 0cfd35a6 6 to 3. Fleet 1195/1198 busy, req $0.212/h, sps054 1181 left.
