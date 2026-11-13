@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["lab/queue/*.json", "lab/filler.json"]
+    paths: ["lab/queue/*.json", "lab/filler.json", "lab/fleet-sources.json"]
 permissions: { contents: read }
 concurrency: { group: lab-queue, cancel-in-progress: false }
 jobs:

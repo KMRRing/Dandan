@@ -1,0 +1,143 @@
+{
+ "at": "2026-11-13T15:10:00Z",
+ "rackspace": {
+  "price": 0.001,
+  "bid": 0.01,
+  "pool": 0,
+  "where": "Rackspace Spot: VM pools and Kubernetes clusters",
+  "pools": [
+   {
+    "where": "Hong Kong (VMs)",
+    "cores": 4,
+    "pool": 20,
+    "won": 17,
+    "price": 0.01,
+    "bid": 0.02,
+    "net": "119.9.118.",
+    "machines": [
+     "prod-instance-17945028497930184",
+     "prod-instance-17945030032480185",
+     "prod-instance-17945031530880186",
+     "prod-instance-17945033559440187",
+     "prod-instance-17945034943780188",
+     "prod-instance-17945036675570189",
+     "prod-instance-17945038337390190",
+     "prod-instance-17945040097990191",
+     "prod-instance-17945041749750192",
+     "prod-instance-17945043599220193",
+     "prod-instance-17945044946210194",
+     "prod-instance-17945046338540195",
+     "prod-instance-17945050086570198",
+     "prod-instance-17945051844230199"
+    ],
+    "note": "VMs, gp.vs1.large-hkg; SpeedBump at 17"
+   },
+   {
+    "where": "US East 2 (VMs)",
+    "cores": 2,
+    "pool": 30,
+    "won": 30,
+    "price": 0.01,
+    "bid": 0.01,
+    "net": "10.0.",
+    "note": "VMs, gp.vs2.medium-iad2 (newer generation), won at once 12:30Z; target 250 set, SpeedBump at 30"
+   },
+   {
+    "where": "Chicago (Kubernetes)",
+    "k8s": "kmr-ring1-71",
+    "cores": 2,
+    "pool": 20,
+    "won": 18,
+    "price": 0.02,
+    "bid": 0.02,
+    "machines": [
+     "dandan-lab-"
+    ],
+    "note": "18 x 2-core compute at $0.02 (to be replaced by cheaper vCPUs); 5 x 4-core bid at $0.02, SpeedBump"
+   },
+   {
+    "where": "Hong Kong (Kubernetes)",
+    "k8s": "kmr-ring1-25",
+    "cores": 4,
+    "pool": 33,
+    "won": 0,
+    "price": 0.001,
+    "bid": 0.01,
+    "machines": [],
+    "note": "30 x 4-core compute at $0.01; 1 each of 2-core compute, general, memory-heavy at $0.01; SpeedBump"
+   },
+   {
+    "where": "Dallas (Kubernetes)",
+    "k8s": "kmr-ring1-86",
+    "cores": 4,
+    "pool": 13,
+    "won": 0,
+    "price": 0.001,
+    "bid": 0.02,
+    "machines": [],
+    "note": "5 + 5 x 4-core (compute, general) at $0.02; 1 each of three 2-core at $0.01; SpeedBump"
+   },
+   {
+    "where": "London (Kubernetes)",
+    "k8s": "kmr-ring1-55",
+    "cores": 4,
+    "pool": 17,
+    "won": 0,
+    "price": 0.001,
+    "bid": 0.02,
+    "machines": [],
+    "note": "5 x 4-core compute at $0.02; 10 x 2-core compute and 1 each general, memory-heavy at $0.01; SpeedBump"
+   },
+   {
+    "where": "US East (Kubernetes)",
+    "k8s": "kmr-ring1-89",
+    "cores": 4,
+    "pool": 13,
+    "won": 0,
+    "price": 0.001,
+    "bid": 0.02,
+    "machines": [],
+    "note": "10 x 4-core compute at $0.02; 1 each of three 2-core at $0.01; SpeedBump"
+   },
+   {
+    "where": "Sydney (VMs)",
+    "cores": 4,
+    "pool": 5,
+    "won": 0,
+    "price": 0.001,
+    "bid": 0.02,
+    "net": "119.9.22.",
+    "machines": [],
+    "note": "VMs, gp.vs1.large-syd at $0.02; SpeedBump"
+   },
+   {
+    "where": "London (VMs)",
+    "cores": 4,
+    "pool": 5,
+    "won": 0,
+    "price": 0.001,
+    "bid": 0.02,
+    "machines": [],
+    "note": "VMs, gp.vs1.large-lon at $0.02; SpeedBump"
+   },
+   {
+    "where": "US East (VMs)",
+    "cores": 4,
+    "pool": 5,
+    "won": 0,
+    "price": 0.001,
+    "bid": 0.02,
+    "machines": [],
+    "note": "VMs, gp.vs1.large-iad at $0.02; SpeedBump"
+   }
+  ]
+ },
+ "gcp": {
+  "price": "free-trial credit"
+ },
+ "aws": {
+  "state": "Off",
+  "price": "none",
+  "note": "account verification pending"
+ }
+}

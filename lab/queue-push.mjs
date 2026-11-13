@@ -1,7 +1,8 @@
 // Queue by commit (13 Nov 2026, Fable: queueing no longer depends on a chat's connection): every job spec in lab/queue/
 // (<id>.json, its "id" the same) is copied to jobs/<id>.json in the bucket if no job or retired job of that id exists yet.
 // Create-only: never overwrites, never deletes. A spec without a full 40-character ref gets the commit being pushed.
-// lab/filler.json, the filler's spec the workers read at each refill, is the one file copied over its old self (fleet/filler.json).
+// lab/filler.json (the filler's spec the workers read at each refill) and lab/fleet-sources.json (the pools the Fleet page's
+// cards show) are copied over their old selves in fleet/.
 // usage (queue.yml): LAB_KEY=<writer key file> LAB_BUCKET=… node lab/queue-push.mjs <commit sha>
 import fs from "node:fs";
 import path from "node:path";
@@ -22,9 +23,11 @@ for (const f of files) {
   if (ok) queued++;
 }
 console.log(`${queued} queued of ${files.length} in lab/queue/`);
-const filler = new URL("./filler.json", import.meta.url);
-if (fs.existsSync(filler)) {
-  const text = JSON.stringify(JSON.parse(fs.readFileSync(filler, "utf8")));
-  if ((await store.get("fleet/filler.json")) !== text) { await store.put("fleet/filler.json", text); console.log("fleet/filler.json updated from lab/filler.json"); }
-  else console.log("fleet/filler.json unchanged");
+// the fleet's own files, copied over their old selves: the filler's spec, and the sources the Fleet page's cards read (13 Nov)
+for (const [local, remote] of [["./filler.json", "fleet/filler.json"], ["./fleet-sources.json", "fleet/sources.json"]]) {
+  const f = new URL(local, import.meta.url);
+  if (!fs.existsSync(f)) continue;
+  const text = JSON.stringify(JSON.parse(fs.readFileSync(f, "utf8")));
+  if ((await store.get(remote)) !== text) { await store.put(remote, text); console.log(`${remote} updated from lab/${local.slice(2)}`); }
+  else console.log(`${remote} unchanged`);
 }
