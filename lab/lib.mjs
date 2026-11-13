@@ -14,6 +14,7 @@ export async function labStore() {
     return {
       list: async prefix => walk(path.join(root, path.dirname(prefix + "x"))).map(f => path.relative(root, f)).filter(n => n.startsWith(prefix)).sort(),
       get: async name => (fs.existsSync(path.join(root, name)) ? fs.readFileSync(path.join(root, name), "utf8") : null),
+      put: async (name, text) => { fs.mkdirSync(path.dirname(path.join(root, name)), { recursive: true }); fs.writeFileSync(path.join(root, name), text); },
     };
   }
   const api = `https://storage.googleapis.com/storage/v1/b/${process.env.LAB_BUCKET}/o`;
@@ -33,6 +34,11 @@ export async function labStore() {
         try { const r = await call(`${api}/${encodeURIComponent(name)}?alt=media`); return r.ok ? await r.text() : null; }
         catch (e) { if (tries >= 5) throw e; await new Promise(res => setTimeout(res, 2000 * 2 ** tries)); }
       }
+    },
+    // (13 Nov: the trainer's position cache) a text object written whole
+    async put(name, text) {
+      const r = await call(`https://storage.googleapis.com/upload/storage/v1/b/${process.env.LAB_BUCKET}/o?uploadType=media&name=${encodeURIComponent(name)}`, { method: "POST", headers: { "content-type": "text/plain" }, body: text });
+      if (!r.ok) throw new Error(`put ${name}: ${r.status}`);
     },
   };
 }

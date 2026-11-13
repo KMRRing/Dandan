@@ -11,6 +11,7 @@
 //        [most games to read, else all] [positions a game, else all; or "turns": the first position of each turn] [learning rate]
 //        [judges to screen alongside, e.g. ag-v14.json,s4d.json]
 import fs from "node:fs";
+import zlib from "node:zlib";
 import { labStore } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove } from "../seats.js";
@@ -124,43 +125,97 @@ const lean = { ...rules, act: (s, seat, m, ctx) => { const r = engineAct(s, seat
 const store = await labStore();
 // "spb01-446" stands for spb01, spb02, … spb446 (digits padded to the first number's width; a batch with no results reads nothing)
 const expand = t => { const m = t.match(/^([a-z]+)(\d+)-(\d+)$/); if (!m) return [t]; const out = []; for (let n = Number(m[2]); n <= Number(m[3]); n++) out.push(m[1] + String(n).padStart(m[2].length, "0")); return out; };
-for (const id of ids.split(",").flatMap(expand)) for (const name of (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n))) for (const line of ((await store.get(name)) || "").split("\n")) {
-  if (!line || games >= cap) continue;
-  const rec = JSON.parse(line), at = new Map((rec.dec || []).map(d => [d.i, d]));
-  const hold = games++ % 5 === 0;
-  let G = newRecord(lean, { seats: 2, seed: rec.seed, now: 0 });
-  const marks = perGame ? Array.from({ length: perGame }, (_, j) => Math.floor(((j + 0.5) * rec.moves.length) / perGame)) : null;
-  let next = 0, lastTurn = -1;
-  for (let i = 0; i < rec.moves.length; i++) {
-    const [seat, move] = rec.moves[i], s = G.state;
-    // a game with no search kept (Medium against Medium, lab/selfplay.mjs medium:…): quiet decisions, labelled by the result
-    // (every third, unless taken a fixed number a game)
-    const newTurn = s.turn !== lastTurn;
-    lastTurn = s.turn;
-    const d = turnsOnly ? (newTurn && s.turn >= 2 ? at.get(i) || { seat } : null)
-      : at.get(i) || (!at.size && (marks || i % 3 === 0) ? { seat, pick: 0, list: [[0, 0, -1]], medium: true } : null);
-    const due = !marks || (next < marks.length && i >= marks[next]);
-    // valued: the search's value of the move it made is there to learn from (a turn's first position may have none)
-    const valued = !!d && d.pick >= 0 && Number.isFinite(d.list?.[d.pick]?.[2]);
-    if (due && d && (valued || turnsOnly) && !s.stack.length && !s.pending) {
-      if (marks) while (next < marks.length && marks[next] <= i) next++;
-      const me = d.seat, won = rec.winner === me ? 1 : rec.winner < 0 ? 0.5 : 0, search = d.medium || !valued ? won : d.list[d.pick][2];
-      const st = rules.restore(JSON.parse(JSON.stringify(s)));
-      const row = { a: featuresOf(st, me), y: V.blend * search + (1 - V.blend) * won, won, lib: s.lib.length, slow: slowOf(s), hold, decked: rec.why === "library", game: games };
-      if (V.floor || hold) {
+// The position cache (13 Nov, Fable): replaying a batch's games to inputs is most of a training's time (55,000 games over an hour),
+// and every training reads the same batches again. A batch's rows go to cache/rows/<batch>/<key> in the bucket the first time,
+// read back after: the inputs, both one-card-gone inputs (always, so the held-out rows have them whatever the variant), the
+// search's value and the result. Keyed by the inputs read (count M), the positions a game and the format; what a training does
+// with them (blend, floor, which game is held out, how many games) is decided after reading, so one cache serves every variant
+// of the same inputs. Gzipped base64 of Float32 numbers, a JSON header first.
+const KEY = `m${M}-${turnsOnly ? "turns" : "p" + perGame}-v1`, W = 3 * M + 6;
+/** Every usable row of one batch's games, by replaying them: { rows: [{ a, w, search, won, lib, slow, decked, g }], games }. */
+async function replayBatch(id) {
+  const rows = [];
+  let n = 0;
+  for (const name of (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n))) for (const line of ((await store.get(name)) || "").split("\n")) {
+    if (!line) continue;
+    const rec = JSON.parse(line), at = new Map((rec.dec || []).map(d => [d.i, d])), g = n++;
+    let G = newRecord(lean, { seats: 2, seed: rec.seed, now: 0 });
+    // the card taken out drawn from the game's own seed, not the training's stream: a training then runs the same from the cache
+    let r0 = (rec.seed * 2654435761) >>> 0;
+    const pickRand = () => ((r0 = (r0 * 1103515245 + 12345) >>> 0) / 2 ** 32);
+    const marks = perGame ? Array.from({ length: perGame }, (_, j) => Math.floor(((j + 0.5) * rec.moves.length) / perGame)) : null;
+    let next = 0, lastTurn = -1;
+    for (let i = 0; i < rec.moves.length; i++) {
+      const [seat, move] = rec.moves[i], s = G.state;
+      // a game with no search kept (Medium against Medium, lab/selfplay.mjs medium:…): quiet decisions, labelled by the result
+      // (every third, unless taken a fixed number a game)
+      const newTurn = s.turn !== lastTurn;
+      lastTurn = s.turn;
+      const d = turnsOnly ? (newTurn && s.turn >= 2 ? at.get(i) || { seat } : null)
+        : at.get(i) || (!at.size && (marks || i % 3 === 0) ? { seat, pick: 0, list: [[0, 0, -1]], medium: true } : null);
+      const due = !marks || (next < marks.length && i >= marks[next]);
+      // valued: the search's value of the move it made is there to learn from (a turn's first position may have none)
+      const valued = !!d && d.pick >= 0 && Number.isFinite(d.list?.[d.pick]?.[2]);
+      if (due && d && (valued || turnsOnly) && !s.stack.length && !s.pending) {
+        if (marks) while (next < marks.length && marks[next] <= i) next++;
+        const me = d.seat, won = rec.winner === me ? 1 : rec.winner < 0 ? 0.5 : 0, search = d.medium || !valued ? won : d.list[d.pick][2];
+        const st = rules.restore(JSON.parse(JSON.stringify(s)));
         // the position with one card gone from each hand, read afresh (the squeeze inputs move with the hand)
-        row.w = [me, other(me)].map(x => {
+        const w = [me, other(me)].map(x => {
           if (!st.hand[x].length) return null;
-          const t = rules.restore(JSON.parse(JSON.stringify(s))), k = Math.floor(rand() * t.hand[x].length);
+          const t = rules.restore(JSON.parse(JSON.stringify(s))), k = Math.floor(pickRand() * t.hand[x].length);
           t.lib.push(t.hand[x].splice(k, 1)[0]);
           return featuresOf(t, me);
         });
+        rows.push({ a: featuresOf(st, me), w, search, won, lib: s.lib.length, slow: slowOf(s), decked: rec.why === "library", g });
       }
-      data.push(row);
+      const r = applyMove(lean, G, seat, move, 0);
+      if (r.error) break;
+      G = r.G;
     }
-    const r = applyMove(lean, G, seat, move, 0);
-    if (r.error) break;
-    G = r.G;
+  }
+  return { rows, games: n };
+}
+const pack = ({ rows, games }) => {
+  const f = new Float32Array(rows.length * W).fill(NaN);
+  rows.forEach((r, k) => {
+    const o = k * W;
+    f.set(r.a, o); r.w.forEach((x, j) => x && f.set(x, o + M * (j + 1)));
+    f.set([r.search, r.won, r.lib, r.slow ? 1 : 0, r.decked ? 1 : 0, r.g], o + 3 * M);
+  });
+  return JSON.stringify({ key: KEY, rows: rows.length, games }) + "\n" + zlib.gzipSync(Buffer.from(f.buffer)).toString("base64");
+};
+const unpack = text => {
+  const nl = text.indexOf("\n"), head = JSON.parse(text.slice(0, nl)), b = zlib.gunzipSync(Buffer.from(text.slice(nl + 1), "base64"));
+  const f = new Float32Array(b.buffer, b.byteOffset, b.length / 4), rows = [];
+  for (let k = 0; k < head.rows; k++) {
+    const o = k * W, m = f.subarray(o + 3 * M, o + W);
+    rows.push({ a: f.slice(o, o + M), w: [1, 2].map(j => (Number.isNaN(f[o + M * j]) ? null : f.slice(o + M * j, o + M * (j + 1)))),
+      search: m[0], won: m[1], lib: m[2], slow: !!m[3], decked: !!m[4], g: m[5] });
+  }
+  return { rows, games: head.games };
+};
+async function batchRows(id) {
+  const name = `cache/rows/${id}/${KEY}`;
+  try { const t = await store.get(name); if (t) { const b = unpack(t); say(`${id}: ${b.games} games, ${b.rows.length} positions from the cache`); return b; } } catch (e) { say(`${id}: cache unreadable (${e.message}), replaying`); }
+  const b = await replayBatch(id);
+  // a batch still being played is not cached (its later games would be missing from every reading after)
+  const live = await store.get(`jobs/${id}.json`), done = (await store.list(`results/${id}/`)).filter(n => /\/done-\d+$/.test(n)).length;
+  const finished = live ? done >= JSON.parse(live).shards : done > 0;   // a retired batch is as finished as it will get
+  if (finished || process.env.CACHE_ANY === "1") { try { await store.put(name, pack(b)); } catch (e) { say(`${id}: not cached (${e.message})`); } }
+  say(`${id}: ${b.games} games, ${b.rows.length} positions replayed${finished ? ", cached" : ""}`);
+  return b;
+}
+for (const id of ids.split(",").flatMap(expand)) {
+  if (games >= cap) break;
+  const b = await batchRows(id);
+  const byGame = Array.from({ length: b.games }, () => []);
+  for (const r of b.rows) byGame[r.g].push(r);
+  // every fifth game held out, counted from the first read (a game with no usable row counts too, as before)
+  for (const rs of byGame) {
+    if (games >= cap) break;
+    const hold = games++ % 5 === 0;
+    for (const r of rs) data.push({ a: r.a, y: V.blend * r.search + (1 - V.blend) * r.won, won: r.won, lib: r.lib, slow: r.slow, hold, decked: r.decked, game: games, ...((V.floor || hold) && { w: r.w }) });
   }
 }
 say(`read ${games} games: ${data.length} positions`);
@@ -188,13 +243,16 @@ function screen(p) {
 // ---------- training ----------
 const zero = () => NET.map(L => ({ W: new Float64Array(L.W.length), b: new Float64Array(L.b.length) }));
 const m1 = zero(), m2 = zero(), lr = lrArg || (warm ? 3e-4 : 1e-3), pull = warm ? 1e-4 : 0, epochs = warm ? 4 : 10;
-let t = 0, best = { loss: Infinity, net: null, epoch: 0 };
+let t = 0, best = { loss: Infinity, net: null, epoch: 0 }, since = 0, stopped = null;
+// early stopping (13 Nov, Fable): a training stops once the held-out loss has gone a whole epoch (four checks) without a new best,
+// after its first epoch; the best point is kept as before, so this only saves the epochs that could not have been kept
+const PATIENCE = 4;
 const heldLoss = () => test.reduce((s, r) => { const p = Math.min(1 - 1e-6, Math.max(1e-6, chance(NET, r.a))); return s - (r.won * Math.log(p) + (1 - r.won) * Math.log(1 - p)); }, 0) / test.length;
-for (let e = 1; e <= epochs; e++) {
+for (let e = 1; e <= epochs && !stopped; e++) {
   const order = train.map((_, i) => i).sort(() => rand() - 0.5);
   const quarter = Math.max(64, Math.ceil(order.length / 4 / 64) * 64);
   for (let k = 0; k < order.length; k += 64) {
-    if (k && k % quarter === 0) check(e - 1 + k / order.length);
+    if (k && k % quarter === 0) { check(e - 1 + k / order.length); if (stopped) break; }
     const G = zero(), batch = order.slice(k, k + 64);
     for (const i of batch) {
       // cross-entropy on the label: d/dg(mine) is p − y; pGrad takes it per unit of p(1 − p)
@@ -220,13 +278,14 @@ for (let e = 1; e <= epochs; e++) {
       }
     });
   }
-  check(e);
+  if (!stopped) check(e);
 }
 // the held-out loss, four times an epoch: the best point so far is the one kept (training from scratch overfits within an epoch or two)
 function check(at) {
   const held = heldLoss();
   say(`epoch ${at.toFixed(2)}/${epochs}: held-out loss ${held.toFixed(4)}`);
-  if (held < best.loss) best = { loss: held, epoch: +at.toFixed(2), net: NET.map(L => ({ ...L, W: Float64Array.from(L.W), b: Float64Array.from(L.b) })) };
+  if (held < best.loss) { best = { loss: held, epoch: +at.toFixed(2), net: NET.map(L => ({ ...L, W: Float64Array.from(L.W), b: Float64Array.from(L.b) })) }; since = 0; }
+  else if (++since >= PATIENCE && at >= 1) { stopped = +at.toFixed(2); say(`stopped early at epoch ${stopped}: no better held-out loss since ${best.epoch}`); }
 }
 const layers = best.net.map((L, l) => quant(L, l === best.net.length - 1)), rounded = layers.map(dequant);
 const metrics = screen(r => chance(rounded, r.a));
@@ -251,6 +310,6 @@ for (const f of (process.argv[11] || process.env.COMPARE || "").split(",").filte
   if (m > M) { others[f] = `reads ${m} numbers, these rows ${M}`; continue; }
   others[f] = screen(r => { const a = r.a.subarray(0, m); return 1 / (1 + Math.exp(forward(net, swapW(a, m)).at(-1)[0] - forward(net, a).at(-1)[0])); });
 }
-const line = { variant: vNo, from: fromFile || "today", spec: V, perGame: turnsOnly ? "turns" : perGame, lr, games, positions: data.length, epoch: best.epoch, metrics, today: base, others, layers };
+const line = { variant: vNo, from: fromFile || "today", spec: V, perGame: turnsOnly ? "turns" : perGame, lr, games, positions: data.length, epoch: best.epoch, stopped, metrics, today: base, others, layers };
 console.log(JSON.stringify({ ...line, layers: undefined }));
 fs.writeFileSync(out, JSON.stringify(line) + "\n");
