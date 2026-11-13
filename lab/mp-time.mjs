@@ -1,5 +1,5 @@
 // Where a Medium-free move-picker's time goes (14 Nov 2026, Fable No. 9 point 2): Medium plays both seats over a few deals and,
-// at every priority decision with a legal move, the model's parts are timed apart: the view (viewOf), listing the legal
+// at every priority decision with a legal move, the model's parts are timed apart: the view (viewInto, as played), listing the legal
 // moves (choices), the marks of every move (marksOf), the first layer's position part (once a decision) and the net's
 // per-move part (the marks' rows, then the second layer); Medium's own move at the same decisions beside it.
 // The net's whole cost (freeScorer, either form: dandan-netpolicy.js) is timed too; for the head form only that is split out.
@@ -9,7 +9,7 @@ import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../seats.js";
 import { policyMove } from "../dandan-policy.js";
 import { moves } from "../dandan-engine.js";
-import { viewOf, choices, marksOf, freeScorer } from "../dandan-netpolicy.js";
+import { viewInto, choices, marksOf, freeScorer } from "../dandan-netpolicy.js";
 
 const file = process.argv[2] || "lab/policy/mpN.json", deals = Number(process.argv[3] || 6), first = Number(process.argv[4] || 700000);
 const model = JSON.parse(fs.readFileSync(file, "utf8").split("\n")[0]), n = model.net, { H1, H2, XN } = n, score = freeScorer(model), head = model.form === "head";
@@ -28,11 +28,11 @@ for (let d = 0; d < deals; d++) for (let first0 = 0; first0 < 2; first0++) {
     const tm = now() - t0;
     if (!s.pending && moves(s, who).length) {
       decisions++; t.medium += tm;
-      t0 = now(); const x = viewOf(s, who); t.view += now() - t0;
+      t0 = now(); const x = viewInto(s, who); t.view += now() - t0;
       t0 = now(); const list = choices(s, who); t.list += now() - t0;
       t0 = now(); const mk = list.map(c => marksOf(s, who, c)); t.marks += now() - t0;
       t0 = now(); score(x, mk); t.scorer += now() - t0;
-      if (head) { movesSeen += list.length; continue; }
+      if (!head) {
       t0 = now();
       base.set(b1);
       for (let k = 0; k < XN; k++) { const v = x[k]; if (v === 0) continue; const r = k * H1; for (let o = 0; o < H1; o++) base[o] += v * wx[r + o]; }
@@ -45,7 +45,9 @@ for (let d = 0; d < deals; d++) for (let first0 = 0; first0 < 2; first0++) {
         let out = 0;
         for (let o2 = 0; o2 < H2; o2++) { let v = b2[o2]; for (let o = 0; o < H1; o++) { const h = h1[o]; if (h > 0) v += h * w2[o * H2 + o2]; } if (v > 0) out += v * w3[o2]; }
       }
-      t.perMove += now() - t0; movesSeen += list.length;
+      t.perMove += now() - t0;
+      }
+      movesSeen += list.length;
     }
     const r = applyMove(rules, G, who, m, 0);
     if (r.error) throw new Error(`deal ${first + d} move ${i}: ${r.error}`);
@@ -53,7 +55,9 @@ for (let d = 0; d < deals; d++) for (let first0 = 0; first0 < 2; first0++) {
   }
 }
 const per = k => (t[k] / decisions * 1000).toFixed(1);
-const total = t.view + t.list + t.marks + (head ? t.scorer : t.layer1 + t.perMove);
+// the model's cost: the view, the list, the marks and the net as the engine runs it (freeScorer); layer1 and perMove split the
+// mlp net's part apart in a loop of their own, for where its time goes
+const total = t.view + t.list + t.marks + t.scorer;
 console.log(`${file}: ${decisions} decisions, ${(movesSeen / decisions).toFixed(1)} choices a decision (passing included), µs a decision:`);
 for (const k of ["view", "list", "marks", ...(head ? ["scorer"] : ["layer1", "perMove", "scorer"])]) console.log(`  ${k.padEnd(8)} ${per(k).padStart(7)}  (${Math.round(100 * t[k] / total)}%)`);
 console.log(`  model    ${(total / decisions * 1000).toFixed(1).padStart(7)}  against Medium's move ${per("medium")} (${(total / t.medium).toFixed(2)}×)`);

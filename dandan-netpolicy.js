@@ -109,13 +109,27 @@ export function makePolicy(net) {
 // ---------- stage 1: Medium plus a learned correction (monte-plan.md 3.3-3.4, 11 November 2026) ----------
 const r3 = v => Math.round(v * 1000) / 1000, PLUS_BUF = new Float32Array(FEATURES.length + 2 * PLUS);
 /** The mover's view for the model: stateOf, the mover's own squeeze inputs (its hand and public counts only), library ≤ 12. */
-export function viewOf(s, seat) {
-  const x = Array.from(stateOf(s, seat), r3);
+export const VIEW_N = STATE_N + PLUS + 1;
+const VIEW_BUF = new Float64Array(VIEW_N);
+/**
+ * viewOf for play (14 Nov 2026, Fable No. 10 point 2): the same numbers, rounded the same, written into one kept array (`out`,
+ * VIEW_BUF unless given) with no array made a decision, and the judge's inputs worked out once (featuresPlus holds them, so
+ * stateOf's own features() call is not repeated). The array is overwritten by the next call: read it before then.
+ */
+export function viewInto(s, seat, out = VIEW_BUF) {
   featuresPlus(s, seat, PLUS_BUF);
-  for (let k = 0; k < PLUS; k++) x.push(r3(PLUS_BUF[FEATURES.length + k]));
-  x.push(s.lib.length <= 12 ? 1 : 0);
-  return x;
+  for (let i = 0; i < BASE; i++) out[i] = r3(PLUS_BUF[i]);
+  for (let i = THEIR_NAMES; i < THEIR_NAMES + SPELLS.length + 7; i++) out[i] = 0;
+  for (let i = BASE; i < STATE_N; i++) out[i] = 0;
+  const step = STEPS.indexOf(s.step);
+  if (step >= 0) out[BASE + step] = 1;
+  out[BASE + STEPS.length + Math.min(3, s.stack.length)] = 1;
+  for (let k = 0; k < PLUS; k++) out[STATE_N + k] = r3(PLUS_BUF[FEATURES.length + k]);
+  out[STATE_N + PLUS] = s.lib.length <= 12 ? 1 : 0;
+  return out;
 }
+/** The view as a plain array (the exports write it), the same numbers as viewInto. */
+export const viewOf = (s, seat) => Array.from(viewInto(s, seat, new Float64Array(VIEW_N)));
 /** Medium's bar for a move over passing, and its own pick (as policyMove makes it), from one Player. */
 export function mediumView(s, seat, rng = Math.random) {
   const P = new Player(s, seat, { rng }), scored = P.scored(), bar = TUNE.pass + (s.stack.length ? 0 : ADJ.pass);
@@ -177,7 +191,7 @@ export function makePlus(model, { wide = 5, free = false } = {}) {
     const move = (s, seat, rng = Math.random) => {
       if (s.pending) return policyMove(s, seat, { rng });
       if (!moves(s, seat).length) return PASS;
-      const list = choices(s, seat), sc = score(viewOf(s, seat), list.map(m => marksOf(s, seat, m)));
+      const list = choices(s, seat), sc = score(viewInto(s, seat), list.map(m => marksOf(s, seat, m)));
       let best = 0;
       for (let k = 1; k < sc.length; k++) if (sc[k] > sc[best]) best = k;
       return list[best];
