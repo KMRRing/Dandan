@@ -27,8 +27,8 @@ html,body{margin:0;height:100%;overflow:hidden}
 body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);-webkit-font-smoothing:antialiased}
 #app{height:100vh;height:100dvh;display:grid;grid-template-rows:auto var(--wh,20vh) 7px minmax(0,1fr);grid-template-columns:minmax(0,1fr)}
 #app.nopanel{grid-template-rows:auto 0 7px minmax(0,1fr)}
-/* folded (13 Nov, Korbi: the up arrow back): the ribbon keeps only its clock and buttons, the workers' panel goes */
-#app.slim{grid-template-rows:auto 0 0 minmax(0,1fr)}#app.slim #workers,#app.slim #split,#app.slim #ribbon .tabs,#app.slim #mapTools,#app.slim #panelToggle{display:none}
+/* folded (13 Nov, Korbi: the up arrow back; it folds the ribbon only, the cards stay): the ribbon keeps its clock and buttons */
+#app.slim #ribbon .tabs,#app.slim #mapTools{display:none}
 #app.slim #ribbon{padding:3px 10px}
 /* each part in its own row, so hiding the panel never moves the view into a row of no height */
 #ribbon{grid-row:1}#workers{grid-row:2}#split{grid-row:3}#view{grid-row:4}
@@ -319,7 +319,7 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
     <div class="rb-right"><span class="fresh" id="fresh" title="When the lab was read, and (in brackets) minutes to the next read">Connecting…</span>
       <button class="tiny" id="refreshNow" title="Read the lab now" aria-label="Refresh">↻</button>
       <button class="tiny" id="reloadPage" title="Load the newest version of this page from GitHub" aria-label="Reload the page">⟳</button>
-      <button class="tiny" id="slimToggle" title="Fold the ribbon and the workers' panel away" aria-label="Fold away" aria-expanded="true">▲</button>
+      <button class="tiny" id="slimToggle" title="Fold the ribbon away (the tabs and the map's buttons)" aria-label="Fold away" aria-expanded="true">▲</button>
       <button class="tiny" id="panelToggle" title="Show or hide the workers' panel" aria-pressed="true">Workers</button></div>
   </header>
   <section id="workers" aria-label="The workers">
