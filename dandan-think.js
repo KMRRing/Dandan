@@ -21,7 +21,7 @@ import { readsOf, likelihood } from "./dandan-reads.js";
 import { winChance } from "./dandan-eval.js";
 import { moveName } from "./dandan-words.js";
 import { seeded, mix, shuffle } from "./seats.js";
-import { keepMove, KEEP_DEALS } from "./dandan-keep.js";
+import { keepMove, knetMove, KEEP_DEALS } from "./dandan-keep.js";
 
 const J = x => JSON.parse(JSON.stringify(x));
 /** How many times a deal is dealt again before the likeliest so far is taken (a hand their play makes unlikely). */
@@ -600,6 +600,8 @@ export const thinkMove = (s, seat, budget = BUDGET.move) => thinkMoveOff(s, seat
 /** thinkMove's move, and whether it was off Medium's shortlist (`off`, weighing every legal move only; the lab counts them). */
 export function thinkMoveOff(s, seat, budget = BUDGET.move) {
   const p = s.pending;
+  // the first seven by the keep net (budget.knet, judges/keep-net.json), Medium's throw-backs still going back (13 Nov 2026)
+  if (p && budget.knet && p.t === "mull") { const r = knetMove(s, seat, budget.knet, policyMove(s, seat)); if (r) return { move: r.move, off: false, keep: r.why }; }
   // the keep and the cards to the bottom by the value net (dandan-keep.js), when asked for and the net has a redraw table
   if (p && budget.keep && (p.t === "mull" || p.t === "bottom")) { const r = keepMove(s, seat, budget.judge, { deals: budget.keepDeals || KEEP_DEALS }); if (r) return { move: r.move, off: false, keep: r.why }; }
   if (p && ["mull", "bottom", "name"].includes(p.t)) return { move: policyMove(s, seat), off: false };

@@ -10,6 +10,7 @@
 import { restore, unplayable, bottomFor, MOST_MULLS } from "./dandan-engine.js";
 import { other } from "./dandan-core.js";
 import { seeded, mix, shuffle } from "./seats.js";
+import { DECK } from "./dandan-cards.js";
 
 const J = x => JSON.parse(JSON.stringify(x));
 /** Tries at a playable seven for the other player before the last deal is taken as it is. */
@@ -122,4 +123,35 @@ export function solveTable(judge, deal, { hands = 400, deals = 24, rng = Math.ra
     out[role + "Keep"] = +(rows.filter(r => !r.free && r.keep[0] >= W[1]).length / rows.filter(r => !r.free).length).toFixed(3);
   }
   return { ...out, hands, deals };
+}
+
+/**
+ * The keep net (lab/keep_net.py, judges/keep-net.json; 13 Nov 2026, Fable): a first seven's chance to win from its card counts
+ * and the seat, learned from results. 26 inputs (25 card names in `names`, then 1 on the play), standardised by mu/sd, a
+ * hidden layer of rectifiers, a logistic out.
+ */
+export function knetRate(net, hand, onPlay) {
+  const x = new Array(net.names.length + 1).fill(0), at = new Map(net.names.map((n, i) => [n, i]));
+  for (const id of hand) { const i = at.get(DECK[id]); if (i != null) x[i]++; }
+  x[net.names.length] = onPlay ? 1 : 0;
+  const z = x.map((v, i) => (v - net.mu[i]) / net.sd[i]);
+  let out = net.b2;
+  for (let j = 0; j < net.b1.length; j++) {
+    let h = net.b1[j];
+    for (let i = 0; i < z.length; i++) h += z[i] * net.W1[i][j];
+    if (h > 0) out += h * (Array.isArray(net.W2[j]) ? net.W2[j][0] : net.W2[j]);
+  }
+  return 1 / (1 + Math.exp(-out));
+}
+/**
+ * The keep net's first keep (Fable 17:10Z): only the first seven (no mulligan taken). A seven Medium throws back goes back (the
+ * net has no results for those yet); one Medium keeps is kept when the net rates it at or above the redraw value, else thrown
+ * back. Any other keep or bottom returns null (left to the caller). `mediumMove` is Medium's answer to the same question.
+ */
+export function knetMove(s, seat, net, mediumMove) {
+  const p = s.pending;
+  if (!p || p.t !== "mull" || p.taken !== 0 || p.free) return null;
+  if (mediumMove.t !== "keep") return { move: mediumMove, why: { knet: null, medium: "mull" } };
+  const onPlay = seat === s.first, rate = knetRate(net, s.hand[seat], onPlay), bar = onPlay ? net.redraw.play : net.redraw.draw;
+  return { move: { t: rate >= bar ? "keep" : "mull" }, why: { knet: +rate.toFixed(4), bar } };
 }

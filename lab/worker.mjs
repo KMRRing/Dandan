@@ -197,7 +197,9 @@ async function scan(ids, open) {
     const id = path.basename(o.name, ".json");
     if (finished.has(id)) { seen.set(id, false); continue; }
     if (fullUntil.get(id) > now) { seen.set(id, false); continue; }
-    if (found) continue;   // not looked at after the claim: left as the list has it
+    // not looked at after the claim: a targeted look leaves it as the list has it; a full look lists it, as it may have work
+    // (finished jobs were skipped above, by fleet/finished.json)
+    if (found) { if (!ids) seen.set(id, true); continue; }
     const spec = await specOf(o).catch(() => null);
     if (!spec?.shards) { seen.set(id, false); continue; }
     const [claims, results] = await Promise.all([store.list(`claims/${id}/`), store.list(`results/${id}/done-`)]);
@@ -252,7 +254,8 @@ async function loadFinished() {
 }
 async function findWork() {
   await loadFinished();
-  const open = await readOpen(store), now = Date.now(), ids = open ? Object.keys(open.jobs) : [];
+  // in name order, as a full look takes them, so a job named before the filler's (af-… before sps…) runs first
+  const open = await readOpen(store), now = Date.now(), ids = open ? Object.keys(open.jobs).sort() : [];
   if (open && !ids.length) emptySince ||= now; else emptySince = 0;
   if (!open || now - open.t > OPEN_STALE_MS || (emptySince && now - emptySince > OPEN_STALE_MS)) {
     emptySince = 0;
@@ -266,12 +269,25 @@ async function findWork() {
 
 // ---------- running one ----------
 const git = (cwd, ...a) => execFileSync("git", a, { cwd, stdio: ["ignore", "ignore", "inherit"] });
+const PINNED_REPO = "https://github.com/KMRRing/Dandan", ON_MAIN = new Set();
 async function runShard(slot, spec, shard) {
   const id = spec.id, t0 = Date.now(), dir = path.join(WORK, `slot${slot}`), repo = path.join(dir, "repo"), run = path.join(dir, "run");
   if (!/^[a-z0-9-]+\.mjs$/.test(spec.script)) throw new Error("bad script name " + spec.script);
   fs.mkdirSync(dir, { recursive: true });
+  // the repository is pinned and the commit must be on its main (13 Nov 2026, Fable and the fleet director): the bucket key
+  // lets anyone holding it queue a job, and GitHub serves a fork's commit under the parent's name, so neither the address
+  // nor the commit alone proves the code is Korbi's. A folder lab (LAB_DIR, a local test) may use any repository.
   const repoUrl = spec.repo || REPO;
+  if (!env.LAB_DIR && repoUrl.replace(/\.git$/, "") !== PINNED_REPO) throw new Error(`refused: repository ${repoUrl} is not ${PINNED_REPO}`);
+  if (!/^([0-9a-f]{40}|main)$/.test(spec.ref)) throw new Error(`refused: ref ${spec.ref} is neither a full commit nor main`);
   if (!fs.existsSync(path.join(repo, ".git"))) execFileSync("git", ["clone", "-q", "--depth=1", repoUrl, repo], { stdio: ["ignore", "ignore", "inherit"] });
+  if (spec.ref !== "main" && !ON_MAIN.has(spec.ref)) {
+    try { git(repo, "fetch", "-q", "--shallow-since=60.days.ago", "origin", "main"); } catch { git(repo, "fetch", "-q", "origin", "main"); }   // a full clone refuses --shallow-since
+    const main = execFileSync("git", ["rev-parse", "FETCH_HEAD"], { cwd: repo, encoding: "utf8" }).trim();
+    git(repo, "fetch", "-q", "--depth=1", "origin", spec.ref);
+    try { execFileSync("git", ["merge-base", "--is-ancestor", spec.ref, main], { cwd: repo, stdio: "ignore" }); } catch { throw new Error(`refused: commit ${spec.ref} is not on main`); }
+    ON_MAIN.add(spec.ref);
+  }
   git(repo, "fetch", "-q", "--depth=1", "origin", spec.ref);
   git(repo, "checkout", "-q", "--detach", "-f", "FETCH_HEAD");
   // the scripts keep their own builds beside the repo (../tune-fit, ../quick-champion…): each slot's are its own, begun afresh
