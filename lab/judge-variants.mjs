@@ -310,6 +310,6 @@ for (const f of (process.argv[11] || process.env.COMPARE || "").split(",").filte
   if (m > M) { others[f] = `reads ${m} numbers, these rows ${M}`; continue; }
   others[f] = screen(r => { const a = r.a.subarray(0, m); return 1 / (1 + Math.exp(forward(net, swapW(a, m)).at(-1)[0] - forward(net, a).at(-1)[0])); });
 }
-const line = { variant: vNo, from: fromFile || "today", spec: V, perGame: turnsOnly ? "turns" : perGame, lr, games, positions: data.length, epoch: best.epoch, stopped, metrics, today: base, others, layers };
+const line = { variant: vNo, from: fromFile || "today", spec: V, perGame: turnsOnly ? "turns" : perGame, lr, games, positions: data.length, epoch: best.epoch, stopped, heldLoss: +best.loss.toFixed(5), metrics, today: base, others, layers };
 console.log(JSON.stringify({ ...line, layers: undefined }));
 fs.writeFileSync(out, JSON.stringify(line) + "\n");

@@ -1,0 +1,65 @@
+# A value net trained on NumPy (lab/train_np.py) from the position cache judge-variants.mjs writes, on a GitHub runner: CPU
+# only, no lab machine taken (13 Nov 2026, Fable). Each seed trains in its own process; each judge is committed as
+# judges/np-<name>-s<seed>.json (the format dandan-eval.js reads) and its line, without the weights, appended to lab/np-runs.jsonl.
+# The cache must hold every batch first: a judge-variants.mjs run over the same batches and inputs writes it.
+name: Train (NumPy)
+on:
+  workflow_dispatch:
+    inputs:
+      batches: { description: "Batches, comma-separated (ranges as spb01-446)", required: true }
+      key: { description: "Cache key: m<inputs>-p<positions a game>-v1 (variant 23 m116, 24 m132)", required: true, default: "m116-p32-v1" }
+      variant: { description: "judge-variants.mjs variant", required: true, default: "23" }
+      seeds: { description: "Seeds, comma-separated (one process each)", required: true, default: "1" }
+      lr: { description: "Learning rate", required: true, default: "3e-4" }
+      name: { description: "Name for the judges (np-<name>-s<seed>.json)", required: true }
+permissions:
+  contents: write
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -q numpy
+      - name: The rows from the cache
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          LAB_KEY="$RUNNER_TEMP/key.json" node lab/fetch-rows.mjs "$RUNNER_TEMP/rows" "${{ inputs.batches }}" "${{ inputs.key }}" | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -f "$RUNNER_TEMP/key.json"
+          du -sh "$RUNNER_TEMP/rows"
+      - name: Train, a process a seed
+        env: { OMP_NUM_THREADS: "1", OPENBLAS_NUM_THREADS: "1" }
+        run: |
+          R="$RUNNER_TEMP/rows"
+          for s in $(echo "${{ inputs.seeds }}" | tr ',' ' '); do
+            python3 lab/train_np.py "$R" "$(cat $R/batches.txt)" "${{ inputs.variant }}" "$RUNNER_TEMP/out-$s.jsonl" --lr "${{ inputs.lr }}" --seed "$s" --consts "$(cat $R/consts.json)" > "$RUNNER_TEMP/log-$s.txt" 2>&1 &
+          done
+          wait || true
+          for s in $(echo "${{ inputs.seeds }}" | tr ',' ' '); do echo "### seed $s"; tail -5 "$RUNNER_TEMP/log-$s.txt"; done
+      - name: Keep the judges
+        run: |
+          python3 - <<'EOF'
+          import json, os, glob
+          name, runs = "${{ inputs.name }}", []
+          for f in sorted(glob.glob(os.environ["RUNNER_TEMP"] + "/out-*.jsonl")):
+              d = json.loads(open(f).read())
+              path = f"judges/np-{name}-s{d['seed']}.json"
+              json.dump({"source": f"train-np {name} seed {d['seed']}", "note": f"lab/train_np.py variant {d['variant']}, {d['games']:,} games, {d['positions']:,} positions; held-out loss {d['heldLoss']}", "layers": d["layers"]}, open(path, "w"))
+              d.pop("layers"); d["name"] = name; d["batches"] = "${{ inputs.batches }}"; runs.append(d)
+          with open("lab/np-runs.jsonl", "a") as o:
+              for d in runs: o.write(json.dumps(d) + "\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as o:
+              for d in runs: o.write(f"- seed {d['seed']}: held-out loss {d['heldLoss']} (8-bit {d['heldLossRounded']}), epoch {d['epoch']}, stopped {d['stopped']}, {d['seconds']} s, {d['metrics']}\n")
+          EOF
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add judges/np-*.json lab/np-runs.jsonl
+          git commit -q -m "Judges trained on NumPy: ${{ inputs.name }} (seeds ${{ inputs.seeds }})" || exit 0
+          for i in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q origin HEAD:main && break; sleep 5; done
