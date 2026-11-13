@@ -141,6 +141,19 @@
         "net": "162.209.124.",
         "cloudspace": "dandan-us",
         "vmPool": "335fb7c2-8a3f-4700-8471-bb7a1c1c6af5"
+      },
+      {
+        "where": "Hong Kong 2 (VMs)",
+        "cores": 16,
+        "pool": 3,
+        "won": 3,
+        "price": 0.04,
+        "bid": 0.04,
+        "net": "203.60.",
+        "machines": [],
+        "note": "VMs, ch.vs1.2xlarge-hkg (Compute - Double Extra Large), bid $0.04; created by Korbi in the console 18:22Z with the current start-up script, wanted 5 / won 3 (Partial) - cut to 3 at 18:32Z: our 13 Kubernetes + 5 VMs in this class lifted the market $0.01 to $0.04. Full pool ID from the console.",
+        "cloudspace": "kmr-ring1-49",
+        "vmPool": "0e83f5f1-8c88-4c1d-a389-289c4dae4237"
       }
     ]
   },
