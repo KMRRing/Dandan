@@ -171,13 +171,13 @@
       {
         "where": "US East 3 (VMs)",
         "cores": 16,
-        "pool": 3,
-        "won": 1,
+        "pool": 5,
+        "won": 3,
         "price": 0.01,
         "bid": 0.04,
         "net": "146.20.65.",
         "machines": [],
-        "note": "VMs, ch.vs1.2xlarge-iad (Compute - Double Extra Large), bid $0.04; created by Korbi 18:37Z, 0 won at 18:38Z (just created). Full pool ID from the console. First VM reporting 18:41Z on 146.20.65.x.",
+        "note": "VMs, ch.vs1.2xlarge-iad (Compute - Double Extra Large), bid $0.04; created by Korbi 18:37Z, 0 won at 18:38Z (just created). Full pool ID from the console. First VM reporting 18:41Z on 146.20.65.x. 3 of 3 reporting by 19:12Z (one on 104.130.29.x); grown to 5 at 19:19Z with the market at $0.01.",
         "cloudspace": "kmr-ring1-94",
         "vmPool": "a2b0e1bf-3c79-4ba7-9dcb-e59ebc74129f"
       },
