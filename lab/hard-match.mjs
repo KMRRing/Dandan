@@ -8,7 +8,9 @@
 // "hard-short" weighs Medium's shortlist only (`all: false`, also at Deep), "hard-margin" every legal move but a move off the shortlist
 // only if it leads the best shortlist move by 3 standard errors plus 2 points (12 November 2026, the planning chat: aa-i1, aa-i3);
 // each row also counts, per side, the decisions whose move was off the shortlist (`off`, of `n`; only a side weighing every move).
-// usage: node lab/hard-match.mjs <shard> <shards> <out> <side A> <side B> [deals 64] [pairs 200] [first seed 150000]
+// usage: node lab/hard-match.mjs <shard> <shards> <out> <side A> <side B> [deals 64] [pairs 200] [first seed 150000] [first pair 0]
+//   first pair (13 Nov, Fable: pairs 300-599 of a 300-pair set, for its 600 look): the shards play pairs from it to `pairs`, numbered
+//   as the set's own, so the two jobs read together with gate-sum's "+" (aa-i1+ac-i1-600)
 import fs from "node:fs";
 import { readParts } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
@@ -18,7 +20,7 @@ import { makeJudge } from "../dandan-eval.js";
 import { makePlus } from "../dandan-netpolicy.js";
 import { policyMove } from "../dandan-policy.js";
 const [shard, shards, out, specA, specB] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5], process.argv[6]];
-const deals = Number(process.argv[7] ?? 64), pairs = Number(process.argv[8] ?? 200), first = Number(process.argv[9] ?? 150000);
+const deals = Number(process.argv[7] ?? 64), pairs = Number(process.argv[8] ?? 200), first = Number(process.argv[9] ?? 150000), from = Number(process.argv[10] ?? 0);
 async function judgeOf(t) {
   if (!t || t === "-") return undefined;
   // "avg(<judge>,<judge>…)" (12 November 2026, plan item 5): the mean of several nets' chances, e.g. avg(@jt130,@aa-g8-s3-c#19)
@@ -75,7 +77,7 @@ function game(seed, aSeat) {
   console.log(JSON.stringify({ pair: seed - first, seed, aSeat, winner: w, moves: G.moves }));
   return w === aSeat ? 1 : w == null || w < 0 ? 0.5 : 0;
 }
-for (let p = shard; p < pairs; p += shards) {
+for (let p = from + shard; p < pairs; p += shards) {
   clock = [[0, 0], [0, 0]]; offs = [0, 0];
   const seed = first + p, g = [game(seed, 0), game(seed, 1)];
   const ms = clock.map(([t, n]) => (n ? Math.round(t / n) : 0)), n = clock.map(([, k]) => k);
