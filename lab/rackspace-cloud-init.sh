@@ -24,7 +24,7 @@ cat > /opt/lab-run.sh <<EOF
 #!/bin/bash
 while true; do
   cd / && rm -rf /opt/dandan && git clone -q --depth 1 https://github.com/KMRRing/Dandan.git /opt/dandan && cd /opt/dandan &&
-  LAB_BUCKET=dandan-lab-807207481983 LAB_KEY=/opt/lab-key.json LAB_CLOUD=$CLOUD LAB_FILL=1 LAB_POLL_SEC=30 LAB_MAX_HOURS=12 node lab/worker.mjs
+  LAB_BUCKET=dandan-lab-807207481983 LAB_KEY=/opt/lab-key.json LAB_CLOUD=$CLOUD LAB_FILL=1 LAB_MAX_HOURS=12 node lab/worker.mjs
   sleep 30
 done
 EOF
