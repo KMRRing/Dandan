@@ -40,13 +40,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
 // ---------- the bucket (or a folder that works like one) ----------
-/** A store: list(prefix) → [{ name, generation }], get(name) → text or null, put(name, text, { ifAbsent, ifGeneration }) → whether it was written. */
+/** A store: list(prefix) → [{ name, generation, t (ms, when last written) }], get(name) → text or null, put(name, text, { ifAbsent, ifGeneration }) → whether it was written. */
 function folderStore(root) {
   const file = n => path.join(root, n), gen = f => String(fs.statSync(f).mtimeMs);
   return {
     async list(prefix) {
       const out = [];
-      const walk = d => { for (const e of fs.existsSync(d) ? fs.readdirSync(d, { withFileTypes: true }) : []) { const f = path.join(d, e.name); if (e.isDirectory()) walk(f); else out.push({ name: path.relative(root, f), generation: gen(f) }); } };
+      const walk = d => { for (const e of fs.existsSync(d) ? fs.readdirSync(d, { withFileTypes: true }) : []) { const f = path.join(d, e.name); if (e.isDirectory()) walk(f); else out.push({ name: path.relative(root, f), generation: gen(f), t: fs.statSync(f).mtimeMs }); } };
       walk(root);
       return out.filter(o => o.name.startsWith(prefix));
     },
@@ -77,9 +77,9 @@ function bucketStore(bucket) {
     async list(prefix) {
       const out = []; let page;
       do {
-        const q = new URLSearchParams({ prefix, maxResults: "1000", fields: "items(name,generation),nextPageToken" }); if (page) q.set("pageToken", page);
+        const q = new URLSearchParams({ prefix, maxResults: "1000", fields: "items(name,generation,updated),nextPageToken" }); if (page) q.set("pageToken", page);
         const r = await call(`${api}?${q}`); if (!r.ok) throw new Error("list " + r.status + " " + await r.text());
-        const j = await r.json(); out.push(...(j.items || [])); page = j.nextPageToken;
+        const j = await r.json(); out.push(...(j.items || []).map(o => ({ ...o, t: Date.parse(o.updated) }))); page = j.nextPageToken;
       } while (page);
       return out;
     },
@@ -139,8 +139,9 @@ async function nextShard() {
       if (done.has(shard)) continue;
       const c = claimed.get(shard);
       if (!c) { if (await store.put(`claims/${id}/${shard}`, claimBody(), { ifAbsent: true })) return { spec, shard }; continue; }
-      const held = JSON.parse((await store.get(c.name)) || "{}");
-      if (Date.now() - (held.t || 0) > LEASE_MS && await store.put(c.name, claimBody(), { ifGeneration: c.generation })) { log(`took over ${id}/${shard} from ${held.by}`); return { spec, shard }; }
+      // the claim's age from the listing (13 Nov, Fable): its holder rewrites it every BEAT_MS, so its last write is its last beat;
+      // reading each claim's body cost a request a running shard on every poll (about $1 an hour at 1,000 slots)
+      if (Date.now() - c.t > LEASE_MS && await store.put(c.name, claimBody(), { ifGeneration: c.generation })) { log(`took over ${id}/${shard} (silent ${Math.round((Date.now() - c.t) / 60000)} min)`); return { spec, shard }; }
     }
   }
   return null;

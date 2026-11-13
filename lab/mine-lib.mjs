@@ -54,9 +54,11 @@ export function keptGames() {
     execSync(`git fetch -q --depth=1 origin game-records && git archive FETCH_HEAD games | tar -x -C ${tmp}`, { stdio: "ignore" });
     // `at`: the file's place among all the game files, kept or not (lab/departures.mjs shares them out by it)
     for (const [at, f] of fs.readdirSync(path.join(tmp, "games")).filter(f => f.endsWith(".json")).sort().entries()) {
-      const g = JSON.parse(fs.readFileSync(path.join(tmp, "games", f), "utf8")).game;
+      const file = JSON.parse(fs.readFileSync(path.join(tmp, "games", f), "utf8")), g = file.game;
+      // the person's seat (the players list holds only people), so Monte's is the other (13 Nov: the from-60 run)
+      const human = Object.values(file.players || {})[0]?.seat ?? null;
       let moves; try { moves = JSON.parse(g.moves); } catch { continue; }
-      if (moves?.length === g.n) games.push({ kept: true, at, file: f, src: `kept:${f}`, R: shownRules, opts: { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
+      if (moves?.length === g.n) games.push({ kept: true, at, file: f, src: `kept:${f}`, human, winner: file.result?.winner ?? g.state?.winner, R: shownRules, opts: { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
     }
   } catch { /* no game-records */ }
   return games;

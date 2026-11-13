@@ -20,6 +20,7 @@ import numpy as np
 ap = argparse.ArgumentParser()
 ap.add_argument("rows"); ap.add_argument("batches"); ap.add_argument("variant", type=int); ap.add_argument("out")
 ap.add_argument("--lr", type=float, default=0); ap.add_argument("--seed", type=int, default=1); ap.add_argument("--cap", type=int, default=0)
+ap.add_argument("--stride", type=int, default=1)  # every n-th batch only (13 Nov: a learning curve on a fair spread of the batches)
 ap.add_argument("--epochs", type=int, default=0); ap.add_argument("--consts", default='{"N":100,"PLUS":8,"RACE":8}')
 A = ap.parse_args()
 T0 = time.time()
@@ -54,7 +55,7 @@ def swap(X):
 
 # ---------- the rows ----------
 parts, games, cap = [], 0, A.cap or math.inf
-for batch in A.batches.split(","):
+for batch in A.batches.split(",")[::A.stride]:
     if games >= cap: break
     f = os.path.join(A.rows, batch.replace("/", "~"))   # a slice job/0-199 is saved as job~0-199
     if not os.path.exists(f): say(f"{batch}: no cached rows, skipped"); continue

@@ -12,6 +12,8 @@ on:
       seeds: { description: "Seeds, comma-separated (one process each)", required: true, default: "1" }
       lr: { description: "Learning rate", required: true, default: "3e-4" }
       name: { description: "Name for the judges (np-<name>-s<seed>.json)", required: true }
+      cap: { description: "Most games read, in batch order (0: all)", required: false, default: "0" }
+      stride: { description: "Every n-th batch only (1: all; 4: a quarter spread over the batches)", required: false, default: "1" }
 permissions:
   contents: write
 jobs:
@@ -39,7 +41,7 @@ jobs:
         run: |
           R="$RUNNER_TEMP/rows"
           for s in $(echo "${{ inputs.seeds }}" | tr ',' ' '); do
-            python3 lab/train_np.py "$R" "$(cat $R/batches.txt)" "${{ inputs.variant }}" "$RUNNER_TEMP/out-$s.jsonl" --lr "${{ inputs.lr }}" --seed "$s" --consts "$(cat $R/consts.json)" > "$RUNNER_TEMP/log-$s.txt" 2>&1 &
+            python3 lab/train_np.py "$R" "$(cat $R/batches.txt)" "${{ inputs.variant }}" "$RUNNER_TEMP/out-$s.jsonl" --lr "${{ inputs.lr }}" --seed "$s" --cap "${{ inputs.cap || 0 }}" --stride "${{ inputs.stride || 1 }}" --consts "$(cat $R/consts.json)" > "$RUNNER_TEMP/log-$s.txt" 2>&1 &
           done
           wait || true
           for s in $(echo "${{ inputs.seeds }}" | tr ',' ' '); do echo "### seed $s"; tail -5 "$RUNNER_TEMP/log-$s.txt"; done
