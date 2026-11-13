@@ -30,13 +30,16 @@ import { moves as legal } from "../dandan-engine.js";
 import { moveName } from "../dandan-words.js";
 import { DECK } from "../dandan-cards.js";
 import { J } from "./lib.mjs";
+import { knetMove } from "../dandan-keep.js";
 
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5] || 256), Number(process.argv[6] || 800), Number(process.argv[7] || 7000)];
 const mode0 = process.argv[8] || "hard", judgeFile = process.argv[9];
-// "-cut" after the mode (13 Nov 2026, Fable: self-play only, never gates or live play): the harder cutting lab/halving.mjs
+// "-cut" (13 Nov 2026, Fable: self-play only, never gates or live play): the harder cutting lab/halving.mjs
 // measured, a first look at 8 deals and moves dropped 2 standard errors behind (passing never dropped)
-const explore = mode0.endsWith("-explore"), mode1 = explore ? mode0.slice(0, -8) : mode0;
-const cut = mode1.endsWith("-cut"), mode = cut ? mode1.slice(0, -4) : mode1;
+// the mode's flags, any order after the search (13 Nov 2026): -cut, -explore, -knet (the first seven by the keep net,
+// judges/keep-net.json, as the benchmark keeps since 18:30Z; Medium's throw-backs still go back, later keeps Medium's)
+const [mode, ...flags] = mode0.split("-"), explore = flags.includes("explore"), cut = flags.includes("cut");
+const knet = flags.includes("knet") ? JSON.parse(fs.readFileSync(new URL("../judges/keep-net.json", import.meta.url), "utf8")) : null;
 const EXPLORE_SHARE = 0.1;
 // a judge file in judges/, or @<job>[#variant]: a lab/judge-variants.mjs run's (its first line, or the line of that variant)
 async function judgeFrom(t) {
@@ -56,7 +59,7 @@ const nm = id => DECK[id] ?? "token";
 const realRandom = Math.random;
 for (let g = first; g < first + n; g++) {
   let G = newRecord(rules, { seats: 2, seed: seed0 + g, now: 0 }), dec = [];
-  const explored = [];
+  const explored = [], explored2 = [];
   const log = [];
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state)), p = s.pending;
@@ -68,6 +71,19 @@ for (let g = first; g < first + n; g++) {
       move = { t: seeded(mix(seed0 + g, 9200003 + who))() < 0.5 ? "keep" : "mull" };
       explored.push({ seat: who, move: move.t });
     }
+    // (18:30Z, Fable) explore past the first seven too: each later keep by a coin 1 time in 10, and the bottom cards at random
+    // 1 time in 10, from the game's seed and the move's number; marked in explore2 (explore keeps the first sevens only)
+    else if (explore && p?.t === "mull" && p.taken > 0 && seeded(mix(seed0 + g, 9300003 + i))() < EXPLORE_SHARE) {
+      move = { t: seeded(mix(seed0 + g, 9400003 + i))() < 0.5 ? "keep" : "mull" };
+      explored2.push({ seat: who, i, kind: "keep", taken: p.taken, move: move.t });
+    }
+    else if (explore && p?.t === "bottom" && seeded(mix(seed0 + g, 9500003 + i))() < EXPLORE_SHARE) {
+      const r = seeded(mix(seed0 + g, 9600003 + i)), hand = s.hand[who].slice();
+      for (let k = hand.length - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [hand[k], hand[j]] = [hand[j], hand[k]]; }
+      move = { t: "bottom", cards: hand.slice(0, p.n) };
+      explored2.push({ seat: who, i, kind: "bottom", cards: move.cards.map(nm) });
+    }
+    else if (knet && p?.t === "mull" && p.taken === 0 && !p.free) move = knetMove(s, who, knet, policyMove(s, who)).move;
     else if (p && ["mull", "bottom", "name"].includes(p.t)) move = policyMove(s, who);
     else if (!p && !legal(s, who, true).length) move = PASS;
     else {
@@ -92,5 +108,5 @@ for (let g = first; g < first + n; g++) {
   Math.random = realRandom;
   const st = G.state;
   // a line each game as it ends, so a machine taken away mid-share loses only the game it was playing
-  fs.appendFileSync(out, JSON.stringify({ game: g, seed: seed0 + g, winner: st.winner, why: st.why, turns: st.turn, moves: log, dec, ...(explored.length ? { explore: explored } : {}) }) + "\n");
+  fs.appendFileSync(out, JSON.stringify({ game: g, seed: seed0 + g, winner: st.winner, why: st.why, turns: st.turn, moves: log, dec, ...(explored.length ? { explore: explored } : {}), ...(explored2.length ? { explore2: explored2 } : {}) }) + "\n");
 }

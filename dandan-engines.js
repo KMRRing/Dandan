@@ -12,7 +12,7 @@
 // lists it, seats it and runs it with no other change.
 import { policyMove, PASS, TUNE } from "./dandan-policy.js";
 import { think, thinkMove } from "./dandan-think.js";
-import { keepMove } from "./dandan-keep.js";
+import { keepMove, knetMove } from "./dandan-keep.js";
 import { moves } from "./dandan-engine.js";
 import { makeJudge } from "./dandan-eval.js";
 
@@ -86,9 +86,14 @@ export const ENGINES = [
     expect: "Against Hard with v14, both at Deep (1,024 deals): 57.6% ± 3.6 after 575 of 600 deals played both ways, and above 50% even if it lost every deal still to come: CROWNED (12 November). At Quick: 54.6% ± 2.6 over 1,000. Predicts results best of all (Brier 0.143 against v14's 0.155 on held-out games). About 1.3× v14's thinking time a decision. The live game's Hard since 12 November 2026.",
   },
   {
-    id: "hard-s5-keep", name: "Hard (S5 + value keep): the benchmark", short: "Bench", kind: "hard", judge: "s5", keep: true, available: true,
-    description: "The lab's benchmark since 13 November 2026: Hard with value net S5 (judges/s5.json: S4 d's recipe with the race inputs: who faces the empty library first, draws left, the cards that take or add to it) and the keep by the value net: each opening hand is rated at the start of turn 1 over 256 deals of what the other player may hold (dealt a hand he would keep), and thrown back when a redraw is worth more, by S5's own redraw table. Not the live game.",
-    expect: "S5 against S4 d at Quick: 51.8% ± 1.8 over 2,000 pairs (99% range from 50.01%). Its Deep gate against S4 d runs on as its test for going live. The keep by the value net alone scored 51.1% ± 1.7 against Medium's keep and was adopted as the general solution.",
+    id: "hard-s5-knet", name: "Hard (S5 + keep net): the benchmark", short: "Bench", kind: "hard", judge: "s5", knet: true, available: true,
+    description: "The lab's benchmark since 13 November 2026 (keep net from 18:30Z, Korbi): Hard with value net S5 (judges/s5.json: S4 d's recipe with the race inputs) and the keep net on the first seven (judges/keep-net.json: a small network trained on real results that rates a seven by its cards and the seat; a seven Medium throws back still goes back, one Medium keeps goes back when the net rates it under the redraw value, 49.9% on the play, 49.0% on the draw). Every later keep and the bottom cards are Medium's. Not the live game.",
+    expect: "With S5 on both sides at Quick: the keep net against Medium's keep 52.0% ± 1.2 over 3,660 pairs; against the value keep +1.1 ± 1.2 on the same deals; the value table after the first seven (the hybrid) costs 1.4 ± 0.8. S5 against S4 d at Quick: 51.8% ± 1.8; S5 + value keep against live 52.1% ± 1.2 over 5,000. Its Deep gate against live (S4 d, Medium's keep) is the test for going live.",
+  },
+  {
+    id: "hard-s5-keep", name: "Hard (S5 + value keep)", short: "S5 vkeep", kind: "hard", judge: "s5", keep: true, available: false,
+    description: "The benchmark until 13 November 2026, 18:30Z: Hard with value net S5 and the keep by the value net (each opening hand rated over 256 deals, thrown back when S5's redraw table says a redraw is worth more). Replaced by the keep net on the first seven, which matched it and needs no table re-solved for each net.",
+    expect: "With S5 on both sides at Quick: 51.0% ± 1.0 against Medium's keep over 6,235 pairs; 52.1% ± 1.2 against live over 5,000.",
   },
   {
     id: "hard-s3d", name: "Hard (judge S3 d)", short: "Hard S3d", kind: "hard", judge: "s3d", available: true,
@@ -114,7 +119,7 @@ export const seatable = () => ENGINES.filter(e => e.available);
 /** The engine Monte is at the start: what the live game plays. */
 export const DEFAULT_ENGINE = "hard-s4d";
 /** The lab's benchmark (13 Nov 2026, Korbi: the benchmark and the live game are two things): what new candidates must beat. */
-export const BENCHMARK_ENGINE = "hard-s5-keep";
+export const BENCHMARK_ENGINE = "hard-s5-knet";
 
 // ---------- the judges ----------
 const judges = new Map();
@@ -133,6 +138,10 @@ export async function judgeOf(engine, load = fetchJson) {
   }
   return judges.get(engine.judge);
 }
+
+/** The keep net (judges/keep-net.json, lab/keep_net.py), read once. */
+let keepNetP = null;
+export const keepNet = (load = fetchJson) => (keepNetP ||= load(new URL("./judges/keep-net.json", import.meta.url).href));
 
 // ---------- asking an engine ----------
 /** A question the look-ahead leaves to Medium (as thinkMove does): the mulligan, what to put on the bottom, a name. */
@@ -153,7 +162,10 @@ export function mediumMove(engine, s, seat, opts = {}) {
 export async function decide(engine, s, seat, { budget = {}, must = null, load } = {}) {
   if (engine.kind === "medium") return { move: mediumMove(engine, s, seat), chance: null, list: [] };
   const p = s.pending, judge = await judgeOf(engine, load);
-  // the keep by the value net (an engine with `keep`, its net carrying a redraw table); else Medium's, as before
+  // the keep net on the first seven (an engine with `knet`), the keep by the value net (`keep`, its net carrying a redraw
+  // table); else Medium's, as before
+  const knet = engine.knet && p?.t === "mull" ? knetMove(s, seat, await keepNet(load), policyMove(s, seat)) : null;
+  if (knet) return { move: knet.move, chance: knet.why?.knet ?? null, list: [] };
   const kept = engine.keep && p && (p.t === "mull" || p.t === "bottom") ? keepMove(s, seat, judge) : null;
   if (kept) return { move: kept.move, chance: kept.why?.keep ?? null, list: [] };
   if (p && MEDIUM_ONLY.includes(p.t)) return { move: policyMove(s, seat), chance: null, list: [] };
@@ -167,5 +179,5 @@ export async function decide(engine, s, seat, { budget = {}, must = null, load }
 export async function engineMove(engine, s, seat, budget, load) {
   if (engine.kind === "medium") return mediumMove(engine, s, seat);
   const judge = await judgeOf(engine, load);
-  return thinkMove(s, seat, { ...budget, ...(judge ? { judge } : {}), ...(engine.keep && judge?.mull ? { keep: true } : {}) });
+  return thinkMove(s, seat, { ...budget, ...(judge ? { judge } : {}), ...(engine.keep && judge?.mull ? { keep: true } : {}), ...(engine.knet ? { knet: await keepNet(load) } : {}) });
 }

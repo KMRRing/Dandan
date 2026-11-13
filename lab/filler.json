@@ -4,6 +4,6 @@
   "games": 1200,
   "seedBase": 5000000,
   "timeoutMin": 240,
-  "args": "{shard} {shards} {out} 128 1200 {seed} hardall-cut-explore @aa-g8-s5-r#24",
-  "purpose": "Hard at 128 deals with value net S5 (the benchmark) against itself, every legal move weighed, harder cutting; each seat's first seven kept or thrown back by a coin 1 time in 10, marked (explore: data for the keep net on results, Fable 13 Nov): filler games for the next nets"
+  "args": "{shard} {shards} {out} 128 1200 {seed} hardall-cut-explore-knet @aa-g8-s5-r#24",
+  "purpose": "Hard at 128 deals with value net S5 (the benchmark) against itself, every legal move weighed, harder cutting; the first seven by the keep net (the benchmark's keep since 18:30Z), each seat's first seven by a coin 1 time in 10, later keeps by a coin and the bottom cards at random 1 time in 10 each, marked (explore / explore2): filler games for the next nets"
 }
