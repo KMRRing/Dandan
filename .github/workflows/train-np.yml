@@ -67,5 +67,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add judges/np-*.json lab/np-runs/
           git commit -q -m "Judges trained on NumPy: ${{ inputs.name }} (seeds ${{ inputs.seeds }})" || exit 0
-          for i in 1 2 3 4 5 6 7 8; do git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0; git rebase --abort 2>/dev/null; sleep $((5 + RANDOM % 20)); done
+          for i in 1 2 3 4 5 6 7 8; do if git pull -q --rebase origin main && git push -q origin HEAD:main; then exit 0; fi; git rebase --abort 2>/dev/null || true; sleep $((5 + RANDOM % 20)); done
           echo "::error::the judges could not be pushed"; exit 1
