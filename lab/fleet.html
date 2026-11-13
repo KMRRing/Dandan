@@ -617,7 +617,7 @@ function repaint(v, now = false) {
   if (now || Date.now() - repaintAt > 1000) go(); else repaintTimer = setTimeout(go, 1000);
 }
 // the Fable plan's jobs: the new value nets (aa-g8), the Quick screen (aa-h2), stage 1 (aa-a1), read as one
-const FABLE_PFX = ["aa-g8", "aa-g9", "aa-h2", "aa-a0", "aa-a1", "aa-i", "ab-g2", "spm", "sps"];
+const FABLE_PFX = ["aa-g8", "aa-g9", "aa-h2", "aa-a0", "aa-a1", "aa-i", "aa-k", "aa-t", "ab-g2", "ab-g3", "ac-", "spm", "sps"];
 async function loadFable() {
   // all at once, and without the screen's match results (18 sets of files): those load when the screen's box is opened
   const parts = await Promise.all(FABLE_PFX.map(p => loadMain(p, { rows: false })));
@@ -671,7 +671,7 @@ function drawTracker(d) {
   // two cards (12 Nov, Korbi): pace and the next possible improvement, with a big bar; and what each job is, with its cores,
   // games and bar. The plain-words lines show only once a card is tapped open; a tap on a job still finds its box on the map.
   const open = new Set(store("fleet:openCards") || []), oc = k => (open.has(k) ? " open" : "");
-  TRK_TILES = [["trk:next", "Pace and next improvement", `<div class="tcard${oc("next")}" data-card="next">${healthHtml(d, busy || total) || `<div class="tgrip"><span>Pace</span><span>Reading…</span></div>`}</div>`],
+  TRK_TILES = [["trk:next", "Pace and next improvement", `<div class="tcard${oc("next")}" data-card="next">${healthHtml(d, total || busy) || `<div class="tgrip"><span>Pace</span><span>Reading…</span></div>`}</div>`],
     ["trk:now", "What the cores are on", `<div class="tcard${oc("now")}" data-card="now"><div class="tgrip"><span></span><span>${busy} busy${total > busy ? ` · ${total - busy} idle` : ""}</span></div>` +
     (rows.length ? "" : `<div class="tk"><b>Nothing running</b></div>`) + rows.slice(0, 8).map(r => `<div class="tk" role="button" tabindex="0" data-goto="${esc(r.ids.join(" "))}" title="Show ${esc(r.name)} on the map"><span class="dot live"></span><b>${esc(r.name)}</b><span>${r.running} cores${!r.shards ? "" : ` · ${r.per ? `${fmtN(r.done * r.per)}/${fmtN(r.shards * r.per)} games` : r.shards === 1 ? "training" : `${r.done}/${r.shards}`}`}</span>${r.shards > 1 ? `<div class="bar"><i style="width:${((100 * r.done) / r.shards).toFixed(1)}%"></i></div>` : ""}${r.what ? `<em>${esc(r.what)}</em>` : ""}</div>`).join("")
     + (rows.length > 8 ? `<div class="fresh">and ${rows.length - 8} more</div>` : "") + `</div>`]];
@@ -681,39 +681,56 @@ function drawTracker(d) {
 // A shard's work, relative (core-hours by today's run times; only the ratios matter): the last hour's finished work against the
 // three hours before it is the pace (about 1: steady, above it quicker, below it slower); what is left, at the last hour's rate,
 // is the time to each job's end. A job not listed is not counted. Training a net is wall-clock time (one core).
-const COST = { "aa-i1": 0.26, "aa-i3b": 0.26, "aa-i2d": 0.63, "ab-g2-q-s5": 0.11, "ab-g2-s4d-0all": 0.4, "ab-g2-s4d-1": 0.4 };
-const H = 3600000, TRAIN_H = 4, SCREEN = 45, GATE = 155;   // a net's training (hours), a Quick screen and a Deep gate (work)
+// a shard's work in core-hours where a job has no finished shards to measure yet (its own measured median replaces it)
+const COST = { "aa-i1": 0.26, "aa-i3b": 0.26, "aa-i2d": 0.63, "ab-g2-q-s5": 0.11, "ab-g2-s4d-0all": 0.8, "ab-g2-s4d-1": 0.6, "ab-g2-s4d-1c": 0.6,
+  "ab-g3-s5-gate": 0.3, "ac-i1-600": 0.26, "ac-i3b-600": 0.26 };
+const H = 3600000, TRAIN_H = 2, SCREEN_PAIRS = 1000, GATE_LOOK = 300;   // a NumPy training (hours), a Quick screen (pairs), a gate's first look (pairs)
 function healthHtml(d, cores) {
   if (!d?.jobs?.length) return "";
-  const now = Date.now(), left = id => { const j = d.jobs.find(x => x.id === id); return j ? Math.max(0, j.shards - (d.done[id] || []).length) : 0; };
-  // each job against its own history: shards an hour in the last hour against its average from its first finished shard up to
-  // an hour ago (a job with under half an hour of history before the last hour is left out), summed by the work they stand for
-  let nowW = 0, thenW = 0, rate = 0;
-  for (const [id, c] of Object.entries(COST)) {
-    const ts = d.done[id] || []; if (!ts.length) continue;
-    const recent = ts.filter(x => now - x < H).length; rate += c * recent;
-    const first = Math.min(...ts), span = (now - H - first) / H;
-    if (span < 0.5) continue;
-    nowW += c * recent; thenW += c * ts.filter(x => now - x >= H).length / span;
+  const now = Date.now(), left = j => Math.max(0, j.shards - (d.done[j.id] || []).length);
+  // 13 Nov (Korbi: "194 hours to go"): every job's shard measured from the workers' own finished shards (their median), not a
+  // fixed table of six jobs; the rate is the fleet's cores, so the estimate no longer falls to nothing when the work moves on
+  // to jobs the table didn't know
+  const fin = {};
+  for (const w of FLEET?.workers || []) for (const [job, sec] of w.fin || []) if (sec > 0) (fin[job] ||= []).push(sec / 3600);
+  const med = xs => { const v = [...xs].sort((x, y) => x - y); return v[v.length >> 1]; };
+  const cost = j => (fin[j.id]?.length >= 3 ? med(fin[j.id]) : COST[j.id] ?? (/^aa-t\d/.test(j.id) ? 6 : j.shards === 1 ? 0.2 : 0.3));
+  // pace: the whole fleet's finished work in the last hour against its hourly average over the three before (a job finishing,
+  // and the next one starting, no longer reads as a slowdown)
+  let nowW = 0, thenW = 0;
+  for (const j of d.jobs) {
+    const c = cost(j);
+    for (const x of d.done[j.id] || []) { const age = now - x; if (age < H) nowW += c; else if (age < 4 * H) thenW += c / 3; }
   }
   const pace = thenW ? nowW / thenW : null;
   const word = pace == null ? ["yellow", "Measuring"] : pace >= 1.1 ? ["green", "Quick"] : pace >= 0.85 ? ["green", "Steady"] : pace >= 0.6 ? ["yellow", "A bit slow"] : ["orange", "Slow"];
-  const hrs = w => (rate ? w / rate : Infinity), h = x => (!isFinite(x) ? "?" : x < 1 ? `${Math.max(1, Math.round(x * 60))} min` : `${x < 10 ? x.toFixed(1) : Math.round(x)} h`);
-  // the queue, in the order the workers take it (by name): hours until each job is done, at the last hour's rate
-  // done is the same queue's finished work, so the bar is how far along the road to that improvement the lab is
-  let w = 0, doneW = 0; const at = {}, sofar = {};
-  for (const id of Object.keys(COST).filter(id => d.jobs.some(j => j.id === id)).sort()) {
-    w += COST[id] * left(id); doneW += COST[id] * (d.done[id] || []).length; at[id] = hrs(w); sofar[id] = [doneW, w];
+  const rate = Math.max(1, cores || Object.values(d.busyNow || {}).reduce((x, y) => x + y, 0));   // core-hours an hour
+  const hrs = w => w / rate, h = x => (!isFinite(x) ? "?" : x < 1 ? `${Math.max(1, Math.round(x * 60))} min` : `${x < 10 ? x.toFixed(1) : Math.round(x)} h`);
+  // the queue in the order the workers take it (by name): the work ahead of and in each job; a one-shard job takes at least its own length
+  let w = 0, doneW = 0; const at = {}, sofar = {}, job = id => d.jobs.find(j => j.id === id);
+  for (const j of [...d.jobs].filter(j => left(j)).sort((x, y) => (x.id < y.id ? -1 : 1))) {
+    const c = cost(j); w += c * left(j); doneW += c * (d.done[j.id] || []).length;
+    at[j.id] = Math.max(hrs(w), j.shards === 1 ? c : 0); sofar[j.id] = [doneW, w];
   }
-  const gate = hrs(GATE), screen = hrs(SCREEN), next = [], work = x => (isFinite(x) ? x * rate : 0);
-  if (at["ab-g2-q-s5"] != null) next.push({ h: at["ab-g2-q-s5"] + gate, name: "S5 race net, gated", done: sofar["ab-g2-q-s5"][0], left: sofar["ab-g2-q-s5"][1] + GATE,
-    why: `S5 (race inputs): its head-to-head with S4 d ends in ${h(at["ab-g2-q-s5"])}; if it wins, a Deep gate adds ${h(gate)}` });
-  if (at["ab-g2-s4d-0all"] != null) next.push({ h: at["ab-g2-s4d-0all"] + TRAIN_H + screen + gate, name: "Generation-2 net, gated", done: sofar["ab-g2-s4d-0all"][0], left: sofar["ab-g2-s4d-0all"][1] + work(TRAIN_H) + SCREEN + GATE,
-    why: `a net on generation 2: the every-move games done in ${h(at["ab-g2-s4d-0all"])}, then training ${TRAIN_H} h, a screen ${h(screen)} and a Deep gate ${h(gate)}` });
+  const doneAll = d.jobs.reduce((x, j) => x + cost(j) * (d.done[j.id] || []).length, 0), next = [];
+  // S5 gated: the Deep gate's first look (300 pairs) in the queue
+  const g5 = job("ab-g3-s5-gate");
+  if (g5 && left(g5)) {
+    const c = cost(g5), ahead = sofar[g5.id][1] - c * left(g5), look = Math.max(0, GATE_LOOK - (d.done[g5.id] || []).length) * c;
+    next.push({ h: hrs(ahead + look), name: "S5 race net, gated", done: doneAll, left: ahead + look,
+      why: `S5 (race inputs) against S4 d at Deep: its gate's first look at ${GATE_LOOK} pairs, behind ${h(hrs(ahead))} of work queued ahead of it` });
+  }
+  // a generation-2 net: both game sets done, a NumPy training, a Quick screen and a Deep gate's first look
+  const ctl = job("ab-g2-s4d-1c"), all0 = job("ab-g2-s4d-0all");
+  if (ctl || all0) {
+    const setsAt = Math.max(at[ctl?.id] ?? 0, at[all0?.id] ?? 0), after = SCREEN_PAIRS * (COST["ab-g2-q-s5"] / 5) + GATE_LOOK * COST["ab-g3-s5-gate"];
+    next.push({ h: setsAt + TRAIN_H + hrs(after), name: "Generation-2 net, gated", done: doneAll, left: setsAt * rate + after,
+      why: `a net on generations 1 + 2: the games done in ${h(setsAt)}, then a NumPy training (~${TRAIN_H} h), a Quick screen and a Deep gate's first look (${h(hrs(after))})` });
+  }
   next.sort((a, b) => a.h - b.h);
   const n0 = next[0], pct = n0 && n0.done + n0.left ? (100 * n0.done) / (n0.done + n0.left) : 0;
   return `<div class="health"><div class="tgrip"><span class="st ${word[0]}">${word[1]}${pace == null ? "" : ` · ${pace.toFixed(2)}×`}</span></div>
-    <div class="why">${pace == null ? "Not enough finished work yet to compare." : `${pace.toFixed(2)}× its usual rate: each job's work finished in the last hour against its own hourly average before that.`}</div>
+    <div class="why">${pace == null ? "Not enough finished work yet to compare." : `${pace.toFixed(2)}× its usual rate: the fleet's work finished in the last hour against its hourly average over the three hours before.`}</div>
     ${n0 ? `<div class="tgrip" style="margin-top:4px"><span>Next possible improvement</span><span>${esc(n0.name)}</span></div>
     <div class="big3">~${h(n0.h)}<small> to go</small></div>
     <div class="bar bigbar" title="Work done on the way to it"><i style="width:${pct.toFixed(1)}%"></i></div>
