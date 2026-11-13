@@ -190,7 +190,7 @@ const fullUntil = new Map(), FULL_MS = 3 * 60000;
  * its time says when the queue was last seen whole.
  */
 async function scan(ids, open) {
-  const objs = ids ? ids.map(id => ({ name: `jobs/${id}.json`, generation: "open" })) : await store.list("jobs/");
+  const objs = ids ? ids.map(id => ({ name: `jobs/${id}.json`, generation: "open" })) : await (async () => { const all = await store.list("jobs/"), by = new Map(all.map(o => [path.basename(o.name, ".json"), o])); return tierOrder([...by.keys()]).map(id => by.get(id)); })();
   const now = Date.now(), seen = new Map();   // id → true (may have work) / false (nothing to take)
   let found = null;
   for (const o of objs) {
@@ -246,6 +246,17 @@ async function scan(ids, open) {
  * jobs it names. A full look instead when the file is missing, unreadable or older than OPEN_STALE_MS, or has said "nothing"
  * for OPEN_STALE_MS on end, so a lost or stale update can't leave slots asleep. Returns { work, empty }.
  */
+/**
+ * The order jobs are looked at (17:30Z, the fleet director: in plain name order af-k2 started only once every shard of af-k1 was
+ * claimed, so each match's first look waited for the whole match ahead of it). Jobs go by tier, the id's first part (ad, af, ag;
+ * the filler's sps<n> last), tiers in name order; within a tier the order is shuffled each look, so a tier's matches advance
+ * together and their looks at 2,000 pairs arrive together.
+ */
+function tierOrder(ids) {
+  const tier = id => (/^sps\d+$/.test(id) ? "~filler" : id.split("-")[0]);
+  const shuffled = ids.map(id => [tier(id), Math.random(), id]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] - b[1]));
+  return shuffled.map(x => x[2]);
+}
 let emptySince = 0, finishedAt = 0;
 // the jobs the fleet snapshot found finished (fleet/finished.json, every 10 min): a full look skips them instead of listing
 // each one's claims and done marks (16:47Z, the fleet director: restarted workers' first full looks listed hundreds of old jobs)
@@ -256,8 +267,7 @@ async function loadFinished() {
 }
 async function findWork() {
   await loadFinished();
-  // in name order, as a full look takes them, so a job named before the filler's (af-… before sps…) runs first
-  const open = await readOpen(store), now = Date.now(), ids = open ? Object.keys(open.jobs).sort() : [];
+  const open = await readOpen(store), now = Date.now(), ids = open ? tierOrder(Object.keys(open.jobs)) : [];
   if (open && !ids.length) emptySince ||= now; else emptySince = 0;
   if (!open || now - open.t > OPEN_STALE_MS || (emptySince && now - emptySince > OPEN_STALE_MS)) {
     emptySince = 0;
