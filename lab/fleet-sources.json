@@ -158,13 +158,13 @@
       {
         "where": "Sydney 2 (VMs)",
         "cores": 16,
-        "pool": 9,
-        "won": 5,
+        "pool": 7,
+        "won": 9,
         "price": 0.01,
         "bid": 0.04,
         "net": "119.9.134.",
         "machines": [],
-        "note": "VMs, ch.vs1.2xlarge-syd (Compute - Double Extra Large), bid $0.04; created by Korbi 18:36Z, 0 won at 18:38Z (just created). Full pool ID from the console. First VM reporting 18:43Z on 119.9.134.x. 5 of 5 reporting at 19:32Z, market $0.01 — grown to 7 at 19:36Z. Grown to 9 at 19:54Z (price held $0.01 at 7).",
+        "note": "VMs, ch.vs1.2xlarge-syd (Compute - Double Extra Large), bid $0.04; created by Korbi 18:36Z, 0 won at 18:38Z (just created). Full pool ID from the console. First VM reporting 18:43Z on 119.9.134.x. 5 of 5 reporting at 19:32Z, market $0.01 — grown to 7 at 19:36Z. Grown to 9 at 19:54Z (price held $0.01 at 7). At 9 the price rose to $0.04 (= our bid, 20:11Z): cut back to 7 — Sydney 16-core compute supply is about 7-8 machines.",
         "cloudspace": "kmr-ring1-27",
         "vmPool": "78c626c3-537f-4c9b-ac22-79bcaa544d71"
       },
