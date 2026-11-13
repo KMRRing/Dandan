@@ -11,6 +11,10 @@ on:
       hosts:
         description: "Addresses, comma-separated (e.g. 119.9.22.63,119.9.22.70)"
         required: true
+      restart:
+        description: "Restart the lab service on each (it starts main's worker); shards in hand lapse and are taken up elsewhere"
+        type: boolean
+        default: false
 permissions: { contents: write }
 concurrency: { group: vm-check, cancel-in-progress: false }
 jobs:
@@ -23,11 +27,13 @@ jobs:
         env:
           LAB_SSH_KEY: "${{ secrets.LAB_SSH_KEY }}"
           HOSTS: "${{ inputs.hosts }}"
+          RESTART: "${{ inputs.restart }}"
         run: |
           if [ -z "$LAB_SSH_KEY" ]; then echo "::error::The LAB_SSH_KEY secret is missing"; exit 1; fi
           key="$RUNNER_TEMP/k"; printf '%s\n' "$LAB_SSH_KEY" > "$key"; chmod 600 "$key"
           mkdir -p out
-          checks='echo "== cores"; nproc; grep -c ^processor /proc/cpuinfo; cat /sys/devices/system/cpu/online /sys/devices/system/cpu/offline 2>/dev/null
+          pre=; [ "$RESTART" = "true" ] && pre='echo "== restart"; systemctl restart dandan-lab; sleep 5; '
+          checks="$pre"'echo "== cores"; nproc; grep -c ^processor /proc/cpuinfo; cat /sys/devices/system/cpu/online /sys/devices/system/cpu/offline 2>/dev/null
             echo "== memory"; free -g | head -2
             echo "== uptime"; uptime
             echo "== lab service"; systemctl status dandan-lab --no-pager 2>&1 | head -20

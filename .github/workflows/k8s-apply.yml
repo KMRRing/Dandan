@@ -6,6 +6,11 @@
 name: Load the lab into Kubernetes
 on:
   workflow_dispatch:
+    inputs:
+      restart:
+        description: "Also restart every lab pod (rollout restart), so each picks up main's worker"
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: [lab/k8s/apply]
@@ -45,6 +50,8 @@ jobs:
             # each worker is told which cluster it runs in (LAB_POOL), for the Fleet page's cost tiles (13 Nov)
             sed "s#^\( *\)image: \(.*node:22-bookworm\)#\1image: \2\n\1env: [{ name: LAB_POOL, value: \"$cluster\" }]#" "$RUNNER_TEMP/m.yaml" > "$RUNNER_TEMP/m1.yaml"
             kubectl apply -f "$RUNNER_TEMP/m1.yaml" 2>&1 | sed -E 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g'
+            # 13 Nov: workers started before the drain-on-new-version change never restart by themselves
+            if [ "${{ inputs.restart }}" = "true" ]; then kubectl rollout restart daemonset/dandan-lab 2>&1; fi
             rm -f "$RUNNER_TEMP/m1.yaml"
             sleep 15
             { echo "### Machines: $(kubectl get nodes --no-headers 2>/dev/null | awk '$2=="Ready"' | wc -l) ready of $(kubectl get nodes --no-headers 2>/dev/null | wc -l)"
