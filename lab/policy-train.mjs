@@ -25,16 +25,25 @@ const ACT = process.argv[12] === "1";
 // [target q|pick] (12 November 2026, plan item 10): "pick" teaches the move the search played (one-hot), not the softmax of its
 // values: the search breaks a near-tie by acting (Medium's move stands unless clearly beaten), the values don't
 const PICK = process.argv[13] === "pick";
+// [most games 0 = all] (13 Nov, Fable's learning curve): the export's games read in order until this many (by seed)
+const CAP = Number(process.argv[14]) || Infinity;
+// [export ids measured only] (13 Nov): their held-out decisions are scored each epoch but neither trained on nor used to pick
+// the epoch (aa-a1-ex1's Deep decisions, for a training on the every-move games alone)
+const EVAL = process.argv[15] && process.argv[15] !== "-" ? process.argv[15].split(",") : [];
 const say = (...a) => console.log(`[${new Date().toISOString().slice(11, 19)}]`, ...a, `(memory ${Math.round(process.memoryUsage().rss / 1e6)} MB)`);
 
 // ---------- the decisions, packed ----------
 const train = [], held = [];
 let XN = 0;
 const store = await labStore();
-for (const id of ids.split(",")) for (const name of (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n))) {
+const seen = new Set(), sources = [...ids.split(",").map(id => [id, false]), ...EVAL.map(id => [id, true])];
+for (const [id, evalOnly] of sources) for (const name of (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n))) {
+  if (!evalOnly && seen.size >= CAP) break;
   for (const line of ((await store.get(name)) || "").split("\n")) {
     if (!line) continue;
     const d = JSON.parse(line);
+    if (evalOnly && !d.hold) continue;
+    if (!evalOnly && !seen.has(d.g)) { if (seen.size >= CAP) continue; seen.add(d.g); }
     XN = d.x.length;
     const q = d.c.map(c => c.q), qt = q.slice();
     if (ACT) {
@@ -48,14 +57,14 @@ for (const id of ids.split(",")) for (const name of (await store.list(`results/$
     const qmax = Math.max(...qt);
     const D = {
       x: Float32Array.from(d.x), m: d.c.map(c => Int16Array.from(c.m)), s: Float32Array.from(d.c.map(c => c.s)), q: Float32Array.from(q),
-      med: d.med, pick: d.pick, deep: d.deep, w: d.deep ? 1 : LIGHT,
+      med: d.med, pick: d.pick, deep: d.deep, every: !!d.every, off: !!d.off, evalOnly, w: d.deep ? 1 : LIGHT,
       // the target: softmax of the search's means at temperature T
       p: PICK && d.pick != null && d.pick >= 0 && d.pick < d.c.length ? Float32Array.from(d.c, (_, k) => (k === d.pick ? 1 : 0)) : (() => { const e = qt.map(v => Math.exp((v - qmax) / T)), z = e.reduce((a, b) => a + b, 0); return Float32Array.from(e, v => v / z); })(),
     };
     (d.hold ? held : train).push(D);
   }
 }
-say(`read ${train.length} training and ${held.length} held-out decisions, ${XN} position inputs`);
+say(`read ${seen.size} games: ${train.length} training and ${held.length} held-out decisions, ${XN} position inputs`);
 
 // ---------- the model ----------
 const rnd = (() => { let a = 12345 + shard; return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 2 ** 32 - 0.5; }; })();
@@ -132,11 +141,14 @@ function adam(G, n) {
   }
 }
 
-// ---------- G0: value given up against the search's best, on held-out Deep decisions ----------
-function measure(set) {
-  let n = 0, med = 0, mod = 0, agreeMed = 0, agreeMod = 0, loss = 0;
+// ---------- G0: value given up against the search's best, on held-out decisions ----------
+// By kind (13 Nov): Deep (the old Deep games), every (generation 2's every-legal-move games; offFirst: of the decisions where
+// the search played a move off Medium's shortlist, the share the model ranks first), and all held-out decisions, whose loss
+// picks the best epoch (a set with no Deep decision would otherwise never move from Medium).
+function group(set, keep) {
+  let n = 0, med = 0, mod = 0, agreeMed = 0, agreeMod = 0, loss = 0, offN = 0, offFirst = 0;
   for (const D of set) {
-    if (!D.deep) continue;
+    if (!keep(D)) continue;
     const { sc } = forward(D), qmax = Math.max(...D.q);
     let best = 0;
     for (let k = 1; k < sc.length; k++) if (sc[k] > sc[best]) best = k;
@@ -144,8 +156,14 @@ function measure(set) {
     for (let k = 0; k < sc.length; k++) if (D.p[k] > 0) loss -= D.p[k] * Math.log(pr[k] + 1e-12);
     n++; med += qmax - D.q[D.med]; mod += qmax - D.q[best];
     agreeMed += D.med === D.pick ? 1 : 0; agreeMod += best === D.pick ? 1 : 0;
+    if (D.off) { offN++; offFirst += best === D.pick ? 1 : 0; }
   }
-  return n ? { decisions: n, loss: +(loss / n).toFixed(4), mediumGivesUp: +((100 * med) / n).toFixed(3), modelGivesUp: +((100 * mod) / n).toFixed(3), mediumAgrees: +(agreeMed / n).toFixed(4), modelAgrees: +(agreeMod / n).toFixed(4) } : { decisions: 0 };
+  return n ? { decisions: n, loss: +(loss / n).toFixed(4), mediumGivesUp: +((100 * med) / n).toFixed(3), modelGivesUp: +((100 * mod) / n).toFixed(3), mediumAgrees: +(agreeMed / n).toFixed(4), modelAgrees: +(agreeMod / n).toFixed(4), ...(offN ? { offPicks: offN, offFirst: +(offFirst / offN).toFixed(4) } : {}) } : { decisions: 0 };
+}
+function measure(set) {
+  const all = group(set, D => !D.evalOnly), deep = group(set, D => D.deep), every = group(set, D => D.every);
+  // the Deep figures stay at the top level as before (pt1–pt3 reported those)
+  return { ...(deep.decisions ? deep : all), allLoss: all.loss, deep, every };
 }
 
 let best = { ...measure(held), epoch: 0 }, bestP = JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(P).map(([k, v]) => [k, Array.from(v)]))));
@@ -160,11 +178,11 @@ for (let e = 1; e <= EPOCHS; e++) {
   }
   const h = measure(held);
   say(`epoch ${e}: training loss ${(tl / order.length).toFixed(4)}, held out ${JSON.stringify(h)}, alpha ${P.alpha[0].toFixed(3)}, beta ${P.beta[0].toFixed(3)}`);
-  if (h.loss < best.loss) { best = { ...h, epoch: e }; bestP = JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(P).map(([k, v]) => [k, Array.from(v)])))); }
+  if (h.allLoss < best.allLoss) { best = { ...h, epoch: e }; bestP = JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(P).map(([k, v]) => [k, Array.from(v)])))); }
 }
 const r5 = a => a.map(v => Math.round(v * 1e5) / 1e5);
 const net = { XN, H1, H2, wx: r5(bestP.wx), wm: r5(bestP.wm), ws: r5(bestP.ws), b1: r5(bestP.b1), w2: r5(bestP.w2), b2: r5(bestP.b2), w3: r5(bestP.w3) };
 const g0 = best.mediumGivesUp > 0 ? +(1 - best.modelGivesUp / best.mediumGivesUp).toFixed(4) : 0;
-const metrics = { ...best, train: train.length, held: held.length, g0Reduction: g0, g0Pass: g0 >= 0.25 };
+const metrics = { ...best, games: seen.size, train: train.length, held: held.length, g0Reduction: g0, g0Pass: g0 >= 0.25 };
 console.log(JSON.stringify({ metrics, alpha: bestP.alpha[0], beta: bestP.beta[0], epochs: EPOCHS, lr: LR, T, light: LIGHT }));
 fs.writeFileSync(out, JSON.stringify({ alpha: bestP.alpha[0], beta: bestP.beta[0], net, metrics }) + "\n");

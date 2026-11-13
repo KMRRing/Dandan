@@ -1,6 +1,6 @@
 // Stage 1's gate G1 (monte-plan.md 3.5, 11 November 2026): the trained model (Medium plus a learned correction,
 // dandan-netpolicy.js makePlus) against Medium, no search on either side, every deal twice with the seats swapped.
-// A side is "medium" or "plus@<policy-train job>". Rows { pair, a, games } as lab/hard-match.mjs.
+// A side is "medium" or "plus@<policy-train job>" (or plus@policy/<file>.json, a model kept in lab/policy/). Rows { pair, a, games } as lab/hard-match.mjs.
 // usage: node lab/plus-match.mjs <shard> <shards> <out> <side A> <side B> [pairs 20000] [first seed 300000]
 import fs from "node:fs";
 import { readParts } from "./lib.mjs";
@@ -14,7 +14,9 @@ const pairs = Number(process.argv[7] ?? 20000), first = Number(process.argv[8] ?
 async function side(spec) {
   if (spec === "medium") return (s, seat, rng) => policyMove(s, seat, { rng });
   // "plusfree@<job>": the model decides passing and lands too (no Medium guard), for a model trained with act=1
-  const free = spec.startsWith("plusfree@"), job = spec.replace(/^plus(free)?@/, ""), line = (await readParts(job)).flatMap(x => x.split("\n").filter(Boolean))[0];
+  // the model from a policy-train job's results, or (13 Nov) a file in lab/policy/ (a training on GitHub)
+  const free = spec.startsWith("plusfree@"), job = spec.replace(/^plus(free)?@/, "");
+  const line = job.startsWith("policy/") ? fs.readFileSync(new URL(`./${job}`, import.meta.url), "utf8").split("\n")[0] : (await readParts(job)).flatMap(x => x.split("\n").filter(Boolean))[0];
   return makePlus(JSON.parse(line), { free }).move;
 }
 const A = await side(specA), B = await side(specB), J = x => JSON.parse(JSON.stringify(x));

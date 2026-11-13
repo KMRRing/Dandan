@@ -1,0 +1,48 @@
+# The learned move-picker (lab/policy-train.mjs) trained on a GitHub runner, 16 GB, no lab machine taken (13 Nov 2026, Fable's
+# learning curve). Reads export jobs (lab/export.mjs) from the bucket with the read-only key; the model is committed as
+# lab/policy/<name>.json, which lab/plus-match.mjs plays as plusfree@policy/<name>.json, and its metrics are appended to
+# lab/policy-runs.jsonl. One training a run: dispatch it once per training so each gets its own runner.
+name: Train (move-picker)
+on:
+  workflow_dispatch:
+    inputs:
+      exports: { description: "Export jobs to train on, comma-separated", required: true }
+      measure: { description: "Export jobs measured only (held-out), or -", required: true, default: "aa-a1-ex1" }
+      games: { description: "Most games to train on (0: all)", required: true, default: "0" }
+      h1: { description: "First hidden layer", required: true, default: "64" }
+      h2: { description: "Second hidden layer", required: true, default: "32" }
+      name: { description: "Name (lab/policy/<name>.json)", required: true }
+permissions:
+  contents: write
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Train (pt3's settings, every decision at full weight)
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          # epochs 6, lr 1e-3, T 0.02, light 1, act 0, target pick
+          LAB_KEY="$RUNNER_TEMP/key.json" node --max-old-space-size=14000 lab/policy-train.mjs 0 1 "$RUNNER_TEMP/model.json" \
+            "${{ inputs.exports }}" 6 1e-3 "${{ inputs.h1 }}" "${{ inputs.h2 }}" 0.02 1 0 pick "${{ inputs.games }}" "${{ inputs.measure }}" | tee "$RUNNER_TEMP/log.txt"
+          rm -f "$RUNNER_TEMP/key.json"
+          { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the model
+        run: |
+          mkdir -p lab/policy
+          cp "$RUNNER_TEMP/model.json" "lab/policy/${{ inputs.name }}.json"
+          node -e '
+            const fs = require("fs"), m = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            fs.appendFileSync("lab/policy-runs.jsonl", JSON.stringify({ name: process.argv[2], exports: process.argv[3], measure: process.argv[4], games: process.argv[5], h1: process.argv[6], h2: process.argv[7], at: new Date().toISOString(), metrics: m.metrics }) + "\n");
+          ' "$RUNNER_TEMP/model.json" "${{ inputs.name }}" "${{ inputs.exports }}" "${{ inputs.measure }}" "${{ inputs.games }}" "${{ inputs.h1 }}" "${{ inputs.h2 }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lab/policy/*.json lab/policy-runs.jsonl
+          git commit -q -m "Move-picker trained on GitHub: ${{ inputs.name }}" || exit 0
+          for i in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q origin HEAD:main && break; sleep 5; done
