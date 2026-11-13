@@ -14,7 +14,13 @@ export async function labStore() {
     return {
       list: async prefix => walk(path.join(root, path.dirname(prefix + "x"))).map(f => path.relative(root, f)).filter(n => n.startsWith(prefix)).sort(),
       get: async name => (fs.existsSync(path.join(root, name)) ? fs.readFileSync(path.join(root, name), "utf8") : null),
-      put: async (name, text) => { fs.mkdirSync(path.dirname(path.join(root, name)), { recursive: true }); fs.writeFileSync(path.join(root, name), text); },
+      put: async (name, text, { ifAbsent, ifGeneration } = {}) => {
+        const f = path.join(root, name);
+        if (ifAbsent && fs.existsSync(f)) return false;
+        if (ifGeneration && (!fs.existsSync(f) || String(fs.statSync(f).mtimeMs) !== String(ifGeneration))) return false;
+        fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, text); return true;
+      },
+      getG: async name => { const f = path.join(root, name); return fs.existsSync(f) ? { text: fs.readFileSync(f, "utf8"), generation: String(fs.statSync(f).mtimeMs) } : null; },
       create: async (name, text) => { const f = path.join(root, name); if (fs.existsSync(f)) return false; fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, text); return true; },
     };
   }
@@ -44,9 +50,20 @@ export async function labStore() {
       return true;
     },
     // (13 Nov: the trainer's position cache) a text object written whole
-    async put(name, text) {
-      const r = await call(`https://storage.googleapis.com/upload/storage/v1/b/${process.env.LAB_BUCKET}/o?uploadType=media&name=${encodeURIComponent(name)}`, { method: "POST", headers: { "content-type": "text/plain" }, body: text });
+    // (13 Nov: fleet/open.json) with ifAbsent or ifGeneration it writes only on a match: false when the object was changed meanwhile
+    async put(name, text, { ifAbsent, ifGeneration } = {}) {
+      const match = ifAbsent ? "&ifGenerationMatch=0" : ifGeneration ? `&ifGenerationMatch=${ifGeneration}` : "";
+      const r = await call(`https://storage.googleapis.com/upload/storage/v1/b/${process.env.LAB_BUCKET}/o?uploadType=media${match}&name=${encodeURIComponent(name)}`, { method: "POST", headers: { "content-type": "text/plain" }, body: text });
+      if (r.status === 412) return false;
       if (!r.ok) throw new Error(`put ${name}: ${r.status}`);
+      return true;
+    },
+    // the text and its generation (from the download's x-goog-generation header), or null
+    async getG(name) {
+      const r = await call(`${api}/${encodeURIComponent(name)}?alt=media`);
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error(`get ${name}: ${r.status}`);
+      return { text: await r.text(), generation: r.headers.get("x-goog-generation") };
     },
   };
 }

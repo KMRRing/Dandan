@@ -34,22 +34,27 @@ for (const w of ws) {
   if (now - w.t > 5 * M) { stale++; continue; }
   const [where, kind] = region(w), cores = w.hw?.present || w.slots;
   if (where.startsWith("unmapped")) unmapped.add(where.slice(9));
-  const g = (groups[`${where}|${kind}|${cores}`] ||= { where, kind, cores, machines: 0, slots: 0, busy: 0, fin10: 0, fin60: 0, oldest: now });
+  const g = (groups[`${where}|${kind}|${cores}`] ||= { where, kind, cores, machines: 0, slots: 0, busy: 0, fin10: 0, fin60: 0, oldest: now, listH: 0, writeH: 0, readH: 0 });
   g.machines++; g.slots += w.slots; g.busy += (w.busy || []).length; g.oldest = Math.min(g.oldest, w.started || now);
+  // bucket requests per hour, from each report's counts since the one before (13 Nov, the fleet director)
+  if (w.req?.ms > 0) { const k = 3600000 / w.req.ms; g.listH += w.req.list * k; g.writeH += w.req.write * k; g.readH += w.req.read * k; }
   for (const [job, sec, at] of w.fin || []) {
     if (now - at < 10 * M) g.fin10++;
     if (now - at < 60 * M) { g.fin60++; const s = (shardMin[job] ||= { n: 0, sec: 0 }); s.n++; s.sec += sec; }
   }
 }
-const workers = Object.values(groups).map(g => ({ ...g, upMin: Math.round((now - g.oldest) / M), oldest: undefined }))
+// Google's prices for the bucket's class: lists and writes are class A, reads class B (dollars a request)
+const CLASS_A = 0.005 / 1000, CLASS_B = 0.0004 / 1000;
+const workers = Object.values(groups).map(g => ({ ...g, listH: Math.round(g.listH), writeH: Math.round(g.writeH), readH: Math.round(g.readH), reqCostH: Math.round(((g.listH + g.writeH) * CLASS_A + g.readH * CLASS_B) * 1000) / 1000, upMin: Math.round((now - g.oldest) / M), oldest: undefined }))
   .sort((a, b) => a.where.localeCompare(b.where) || a.kind.localeCompare(b.kind) || a.cores - b.cores);
 
 // the queue, from the listing: claims and done marks per job, shards from each spec
-const claims = {}, done = {};
-for (const [name] of list.objects) {
-  let m = name.match(/^claims\/([^/]+)\//); if (m) { claims[m[1]] = (claims[m[1]] || 0) + 1; continue; }
-  m = name.match(/^results\/([^/]+)\/done-\d+$/); if (m) done[m[1]] = (done[m[1]] || 0) + 1;
+const claims = {}, done = {}, claimAt = {}, doneSet = {};
+for (const [name, updated] of list.objects) {
+  let m = name.match(/^claims\/([^/]+)\/(\d+)$/); if (m) { claims[m[1]] = (claims[m[1]] || 0) + 1; (claimAt[m[1]] ||= {})[m[2]] = updated * 1000; continue; }
+  m = name.match(/^results\/([^/]+)\/done-(\d+)$/); if (m) { done[m[1]] = (done[m[1]] || 0) + 1; (doneSet[m[1]] ||= new Set()).add(m[2]); }
 }
+const LEASE_MS = 15 * M;
 const jobs = [], jdir = path.join(snap, "o/jobs");
 for (const f of fs.existsSync(jdir) ? fs.readdirSync(jdir) : []) {
   const spec = (() => { try { return JSON.parse(fs.readFileSync(path.join(jdir, f), "utf8")); } catch { return null; } })();
@@ -57,11 +62,15 @@ for (const f of fs.existsSync(jdir) ? fs.readdirSync(jdir) : []) {
   const id = f.replace(/\.json$/, ""), d = done[id] || 0;
   if (d >= spec.shards) continue;
   const c = claims[id] || 0, s = shardMin[id], perHour = s?.n || 0;
-  jobs.push({ id, purpose: (spec.purpose || "").slice(0, 160), shards: spec.shards, done: d, running: Math.max(0, c - d), unclaimed: Math.max(0, spec.shards - c),
+  const lapsed = Object.entries(claimAt[id] || {}).filter(([k, t]) => now - t > LEASE_MS && !doneSet[id]?.has(k)).length;
+  jobs.push({ id, purpose: (spec.purpose || "").slice(0, 160), shards: spec.shards, done: d, running: Math.max(0, c - d), unclaimed: Math.max(0, spec.shards - c), lapsed,
     shardMin: s ? Math.round(s.sec / s.n / 6) / 10 : null, perHour, etaMin: perHour ? Math.round(60 * (spec.shards - d) / perHour) : null });
 }
 jobs.sort((a, b) => a.id.localeCompare(b.id));
 
 const k8s = (() => { try { return JSON.parse(fs.readFileSync(process.argv[3], "utf8")).map(k => ({ ...k, where: CLUSTERS[k.cluster] || k.cluster })); } catch { return []; } })();
-const tot = workers.reduce((a, g) => ({ machines: a.machines + g.machines, slots: a.slots + g.slots, busy: a.busy + g.busy, fin10: a.fin10 + g.fin10 }), { machines: 0, slots: 0, busy: 0, fin10: 0 });
-process.stdout.write(JSON.stringify({ at: new Date(now).toISOString(), total: { ...tot, stale }, workers, unmapped: [...unmapped], jobs, k8s }));
+const tot = workers.reduce((a, g) => ({ machines: a.machines + g.machines, slots: a.slots + g.slots, busy: a.busy + g.busy, fin10: a.fin10 + g.fin10, listH: a.listH + g.listH, writeH: a.writeH + g.writeH, readH: a.readH + g.readH, reqCostH: a.reqCostH + g.reqCostH }), { machines: 0, slots: 0, busy: 0, fin10: 0, listH: 0, writeH: 0, readH: 0, reqCostH: 0 });
+tot.reqCostH = Math.round(tot.reqCostH * 1000) / 1000;
+// open: the jobs with a free or lapsed shard, which fleet.yml adds to fleet/open.json (a backstop that only adds)
+const open = jobs.filter(j => j.unclaimed > 0 || j.lapsed > 0).map(j => j.id);
+process.stdout.write(JSON.stringify({ at: new Date(now).toISOString(), total: { ...tot, stale }, workers, unmapped: [...unmapped], jobs, k8s, open }));

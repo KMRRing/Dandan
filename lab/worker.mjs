@@ -30,6 +30,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn, execFileSync } from "node:child_process";
 import { googleToken } from "./lib.mjs";
+import { readOpen, editOpen, OPEN_STALE_MS } from "./open-list.mjs";
 
 const env = process.env;
 const SLOTS = Number(env.LAB_SLOTS) || os.cpus().length, WORK = env.LAB_WORK || "/tmp/lab-work";
@@ -51,6 +52,7 @@ function folderStore(root) {
       return out.filter(o => o.name.startsWith(prefix));
     },
     async get(name) { return fs.existsSync(file(name)) ? fs.readFileSync(file(name), "utf8") : null; },
+    async getG(name) { return fs.existsSync(file(name)) ? { text: fs.readFileSync(file(name), "utf8"), generation: gen(file(name)) } : null; },
     async put(name, body, { ifAbsent, ifGeneration } = {}) {
       const f = file(name);
       fs.mkdirSync(path.dirname(f), { recursive: true });
@@ -77,6 +79,7 @@ function bucketStore(bucket) {
     async list(prefix) {
       const out = []; let page;
       do {
+        REQ.list++;
         const q = new URLSearchParams({ prefix, maxResults: "1000", fields: "items(name,generation,updated),nextPageToken" }); if (page) q.set("pageToken", page);
         const r = await call(`${api}?${q}`); if (!r.ok) throw new Error("list " + r.status + " " + await r.text());
         const j = await r.json(); out.push(...(j.items || []).map(o => ({ ...o, t: Date.parse(o.updated) }))); page = j.nextPageToken;
@@ -84,19 +87,30 @@ function bucketStore(bucket) {
       return out;
     },
     async get(name) {
+      REQ.read++;
       const r = await call(`${api}/${encodeURIComponent(name)}?alt=media`);
       if (r.status === 404) return null;
       if (!r.ok) throw new Error("get " + r.status); return r.text();
     },
+    async getG(name) {
+      REQ.read++;
+      const r = await call(`${api}/${encodeURIComponent(name)}?alt=media`);
+      if (r.status === 404) return null;
+      if (!r.ok) throw new Error("get " + r.status); return { text: await r.text(), generation: r.headers.get("x-goog-generation") };
+    },
     async put(name, body, { ifAbsent, ifGeneration } = {}) {
+      REQ.write++;
       const q = new URLSearchParams({ uploadType: "media", name }); if (ifAbsent) q.set("ifGenerationMatch", "0"); else if (ifGeneration) q.set("ifGenerationMatch", ifGeneration);
       const r = await call(`${up}?${q}`, { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body });
       if (r.status === 412) return false;
       if (!r.ok) throw new Error("put " + r.status + " " + await r.text()); return true;
     },
-    async del(name) { await call(`${api}/${encodeURIComponent(name)}`, { method: "DELETE" }); },
+    async del(name) { REQ.write++; await call(`${api}/${encodeURIComponent(name)}`, { method: "DELETE" }); },
   };
 }
+// the bucket requests this worker made (13 Nov, the fleet director): lists and writes are Google's class A (about $0.005 a
+// thousand), reads class B (about $0.0004); each report carries the counts since the one before
+const REQ = { list: 0, write: 0, read: 0 };
 const store = env.LAB_DIR ? folderStore(path.resolve(env.LAB_DIR)) : bucketStore(env.LAB_BUCKET || (() => { throw new Error("set LAB_BUCKET (or LAB_DIR to try it in a folder)"); })());
 
 // ---------- finding a shard to run ----------
@@ -130,18 +144,23 @@ async function refill() {
   const F = await fillerSpec(), batch = n => `${F.prefix}${String(n).padStart(3, "0")}`, re = new RegExp(`^${F.prefix}\\d+$`);
   const ids = (await store.list("jobs/")).map(o => path.basename(o.name, ".json"));
   const last = Math.max(0, ...ids.filter(i => re.test(i)).map(i => Number(i.slice(F.prefix.length))));
-  if (last && (await doneCount(batch(last))) < F.shards && (await store.list(`claims/${batch(last)}/`)).length < F.shards) return;
+  if (last && (await doneCount(batch(last))) < F.shards && (await store.list(`claims/${batch(last)}/`)).length < F.shards) {
+    // the last batch still has free shards, yet the open list (which sent us here) didn't name it: an update was lost
+    await editOpen(store, jobs => (jobs[batch(last)] ? false : ((jobs[batch(last)] = 1), true)), { by: NAME }).catch(e => log("open list:", e.message));
+    return false;
+  }
   const spec = {
     ref: mainSha(), repo: REPO, id: batch(last + 1), script: F.script || "selfplay.mjs", args: F.args.replace("{seed}", String(F.seedBase + F.games * last)), shards: F.shards, timeoutMin: F.timeoutMin,
     purpose: F.purpose, made: { by: NAME, at: new Date().toISOString() },
   };
-  return store.put(`jobs/${spec.id}.json`, JSON.stringify(spec), { ifAbsent: true });
+  if (!(await store.put(`jobs/${spec.id}.json`, JSON.stringify(spec), { ifAbsent: true }))) return false;
+  await editOpen(store, jobs => ((jobs[spec.id] = 1), true), { by: NAME }).catch(e => log("open list:", e.message));
+  return true;
 }
-/** The next shard nobody has (or whose claim lapsed): claimed for this worker, or null. */
 // A job's spec, read once a version (the listing's generation changes when a spec is rewritten)
 const specs = new Map();
 async function specOf(o) {
-  const k = `${o.name}#${o.generation}`;
+  const k = o.generation === "open" ? `${o.name}#open${Math.floor(Date.now() / 600000)}` : `${o.name}#${o.generation}`;
   if (!specs.has(k)) specs.set(k, JSON.parse(await store.get(o.name)));
   return specs.get(k);
 }
@@ -151,28 +170,77 @@ async function specOf(o) {
 // 13 Nov (fleet director: idle slots' listings cost more in bucket requests than the machines): a job whose every shard is
 // claimed is skipped for FULL_MS, as a claim can only lapse after LEASE_MS; a lapsed one is taken up at most FULL_MS late
 const fullUntil = new Map(), FULL_MS = 3 * 60000;
-async function nextShard() {
-  for (const o of await store.list("jobs/")) {
+/**
+ * Look at the queue for a shard: claimed for this worker and returned, or null. With ids, only those jobs (the open list's);
+ * without, every job in jobs/ (a full look). What it learns goes back to fleet/open.json: a job finished, fully claimed or gone
+ * is taken out, one with a free or lapsed shard put in. A full look rewrites the whole list, and writes it even unchanged, so
+ * its time says when the queue was last seen whole.
+ */
+async function scan(ids, open) {
+  const objs = ids ? ids.map(id => ({ name: `jobs/${id}.json`, generation: "open" })) : await store.list("jobs/");
+  const now = Date.now(), seen = new Map();   // id → true (may have work) / false (nothing to take)
+  let found = null;
+  for (const o of objs) {
     const id = path.basename(o.name, ".json");
-    if (finished.has(id) || fullUntil.get(id) > Date.now()) continue;
-    const spec = await specOf(o);
+    if (finished.has(id)) { seen.set(id, false); continue; }
+    if (fullUntil.get(id) > now) { seen.set(id, false); continue; }
+    if (found) continue;   // not looked at after the claim: left as the list has it
+    const spec = await specOf(o).catch(() => null);
+    if (!spec?.shards) { seen.set(id, false); continue; }
     const [claims, results] = await Promise.all([store.list(`claims/${id}/`), store.list(`results/${id}/done-`)]);
     const done = new Set(results.map(r => path.basename(r.name)).filter(n => /^done-\d+$/.test(n)).map(n => Number(n.slice(5))));
-    if (done.size >= spec.shards) { finished.add(id); continue; }
-    if (claims.length >= spec.shards && claims.every(c => Date.now() - c.t < LEASE_MS)) { fullUntil.set(id, Date.now() + FULL_MS); continue; }
+    if (done.size >= spec.shards) { finished.add(id); seen.set(id, false); continue; }
     const claimed = new Map(claims.map(c => [Number(path.basename(c.name)), c]));
-    const start = Math.floor(Math.random() * spec.shards);
+    const free = [], lapsed = [];
     for (let k = 0; k < spec.shards; k++) {
-      const shard = (start + k) % spec.shards;
-      if (done.has(shard)) continue;
-      const c = claimed.get(shard);
-      if (!c) { if (await store.put(`claims/${id}/${shard}`, claimBody(), { ifAbsent: true })) return { spec, shard }; continue; }
-      // the claim's age from the listing (13 Nov, Fable): its holder rewrites it every BEAT_MS, so its last write is its last beat;
-      // reading each claim's body cost a request a running shard on every poll (about $1 an hour at 1,000 slots)
-      if (Date.now() - c.t > LEASE_MS && await store.put(c.name, claimBody(), { ifGeneration: c.generation })) { log(`took over ${id}/${shard} (silent ${Math.round((Date.now() - c.t) / 60000)} min)`); return { spec, shard }; }
+      if (done.has(k)) continue;
+      const c = claimed.get(k);
+      if (!c) free.push(k); else if (now - c.t > LEASE_MS) lapsed.push(c);
     }
+    if (!free.length && !lapsed.length) { fullUntil.set(id, now + FULL_MS); seen.set(id, false); continue; }
+    // each slot starts at a random free shard, so slots don't all race for the same one
+    const start = Math.floor(Math.random() * free.length);
+    for (let k = 0; k < free.length && !found; k++) {
+      const shard = free[(start + k) % free.length];
+      if (await store.put(`claims/${id}/${shard}`, claimBody(), { ifAbsent: true })) found = { spec, shard, left: free.length - 1 + lapsed.length };
+    }
+    // the claim's age from the listing (13 Nov, Fable): its holder rewrites it every BEAT_MS, so its last write is its last beat
+    for (const c of lapsed) {
+      if (found) break;
+      if (await store.put(c.name, claimBody(), { ifGeneration: c.generation })) { log(`took over ${c.name} (silent ${Math.round((now - c.t) / 60000)} min)`); found = { spec, shard: Number(path.basename(c.name)), left: lapsed.length - 1 }; }
+    }
+    seen.set(id, found ? found.left > 0 : false);
+    if (!found) fullUntil.set(id, now + FULL_MS);   // every free shard was taken by others while this worker tried
   }
-  return null;
+  const listed = new Set(objs.map(o => path.basename(o.name, ".json")));
+  const differs = jobs => [...seen].some(([id, may]) => may !== Boolean(jobs[id]));
+  if (!ids || differs(open?.jobs || {})) {
+    await editOpen(store, jobs => {
+      if (!ids) for (const id of Object.keys(jobs)) if (!listed.has(id)) delete jobs[id];   // no longer in jobs/
+      let changed = false;
+      for (const [id, may] of seen) { if (may && !jobs[id]) { jobs[id] = 1; changed = true; } else if (!may && jobs[id]) { delete jobs[id]; changed = true; } }
+      return changed;
+    }, { by: NAME, touch: !ids }).catch(e => log("open list:", e.message));
+  }
+  return found;
+}
+/**
+ * The machine's poller looks for work (13 Nov 2026, the fleet director's rules): it reads fleet/open.json, and looks only at the
+ * jobs it names. A full look instead when the file is missing, unreadable or older than OPEN_STALE_MS, or has said "nothing"
+ * for OPEN_STALE_MS on end, so a lost or stale update can't leave slots asleep. Returns { work, empty }.
+ */
+let emptySince = 0;
+async function findWork() {
+  const open = await readOpen(store), now = Date.now(), ids = open ? Object.keys(open.jobs) : [];
+  if (open && !ids.length) emptySince ||= now; else emptySince = 0;
+  if (!open || now - open.t > OPEN_STALE_MS || (emptySince && now - emptySince > OPEN_STALE_MS)) {
+    emptySince = 0;
+    const work = await scan(null, open);
+    return { work, empty: !work };
+  }
+  if (!ids.length) return { work: null, empty: true };
+  const work = await scan(ids, open);
+  return { work, empty: false };
 }
 
 // ---------- running one ----------
@@ -238,8 +306,8 @@ async function slotLoop(slot) {
   let idleSince = Date.now(), polling = false;
   while (Date.now() - T0 < MAX_MS && !DRAIN) {
     if (gate && !polling) { await gate.p; continue; }
-    let work = null;
-    try { work = await nextShard(); } catch (e) { log("queue:", e.message); }
+    let work = null, empty = true;
+    try { ({ work, empty } = await findWork()); } catch (e) { log("queue:", e.message); }
     if (work) {
       if (polling) { polling = false; openGate(); } else backoff = POLL_MS;
       BUSY.set(slot, `${work.spec.id}/${work.shard}`); beatWorker();
@@ -248,7 +316,8 @@ async function slotLoop(slot) {
       idleSince = Date.now();
       continue;
     }
-    if (FILL) { try { if (await refill()) { backoff = POLL_MS; continue; } } catch (e) { log("refill:", e.message); } }
+    // a filler batch only when the open list had nothing: with work listed, the refill's own listings would be wasted
+    if (FILL && empty) { try { if (await refill()) { backoff = POLL_MS; continue; } } catch (e) { log("refill:", e.message); } }
     else if (Date.now() - idleSince > IDLE_MS) break;
     if (!gate) { closeGate(); polling = true; }
     // with LAB_FILL the queue is only ever empty until someone makes the next batch, so the poller keeps POLL_MS (16:28Z, the
@@ -281,7 +350,13 @@ const grow = () => { wakeCores(); const n = env.LAB_SLOTS ? SLOTS : Math.max(SLO
 // range (12 Nov: two Rackspace pools of 4-core machines, Hong Kong and Sydney)
 const ipv4 = () => Object.values(os.networkInterfaces()).flat().filter(a => a && a.family === "IPv4" && !a.internal).map(a => a.address);
 const hw = () => ({ cpus: os.cpus().length, avail: os.availableParallelism?.(), present: cpuList("present").length, possible: cpuList("possible").length, offline: cpuList("offline").length, memGB: Math.round(os.totalmem() / 2 ** 30), ips: ipv4() });
-const beatWorker = () => { grow(); return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, pool: POOL, fin: FIN, slots: loops.length, hw: hw(), busy: [...BUSY.values()], started: T0, t: Date.now() })).catch(() => {}); };
+let lastBeat = T0;
+const beatWorker = () => {
+  grow();
+  // the bucket requests since the last report, over `ms` (13 Nov, the fleet director); this report's own write counts in the next
+  const now = Date.now(), req = { ...REQ, ms: now - lastBeat }; REQ.list = REQ.write = REQ.read = 0; lastBeat = now;
+  return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, pool: POOL, fin: FIN, slots: loops.length, hw: hw(), busy: [...BUSY.values()], req, started: T0, t: now })).catch(() => {});
+};
 const workerBeat = setInterval(beatWorker, BEAT_MS);
 beatWorker();
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { store.del(`workers/${NAME}.json`).catch(() => {}); });

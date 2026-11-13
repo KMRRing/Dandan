@@ -7,10 +7,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { labStore } from "./lib.mjs";
+import { editOpen } from "./open-list.mjs";
 
 const sha = process.argv[2], dir = new URL("./queue/", import.meta.url), store = await labStore();
 const files = fs.readdirSync(dir).filter(f => f.endsWith(".json")).sort();
-let queued = 0;
+let queued = 0; const added = [];
 for (const f of files) {
   const id = path.basename(f, ".json"), spec = JSON.parse(fs.readFileSync(new URL(f, dir), "utf8"));
   if (spec.id !== id) { console.log(`${f}: its id is ${spec.id}, skipped`); continue; }
@@ -20,8 +21,10 @@ for (const f of files) {
   if ((await store.get(`jobs/${id}.json`)) || (await store.get(`retired/${id}.json`))) { console.log(`${id}: already in the bucket, left`); continue; }
   const ok = await store.create(`jobs/${id}.json`, JSON.stringify(spec));
   console.log(ok ? `${id}: queued (${spec.shards} shards, ref ${spec.ref.slice(0, 7)})` : `${id}: written meanwhile by someone else, left`);
-  if (ok) queued++;
+  if (ok) { queued++; added.push(id); }
 }
+// the workers' open list (fleet/open.json): new jobs go on it, or idle machines would find them only at their next full look
+if (added.length) console.log((await editOpen(store, jobs => { for (const id of added) jobs[id] = 1; return true; }, { by: "queue-push" })) ? `open list: ${added.join(", ")} added` : "open list: not written (the workers' next full look finds them)");
 console.log(`${queued} queued of ${files.length} in lab/queue/`);
 // the fleet's own files, copied over their old selves: the filler's spec, and the sources the Fleet page's cards read (13 Nov)
 for (const [local, remote] of [["./filler.json", "fleet/filler.json"], ["./fleet-sources.json", "fleet/sources.json"]]) {
