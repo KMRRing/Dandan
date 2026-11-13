@@ -142,7 +142,7 @@ function reviewHtml() {
         <p class="lab-note">${esc(i.why)}.</p>
         <p class="lab-note">${esc(st.step)}${stack ? ` · stack: ${esc(stack)}` : ""} · life Monte ${st.life[1]}, you ${st.life[0]} · library ${st.lib.length}</p>
         <p class="lab-note"><b>Monte's hand:</b> ${esc(names(st.hand[1]))}<br><b>Your hand:</b> ${esc(names(st.hand[0]))}<br><b>Monte's side:</b> ${esc(bf(st, 1))}<br><b>Your side:</b> ${esc(bf(st, 0))}</p>
-        <p class="lab-note"><b>Engines at 256 deals:</b> ${Object.entries(i.engines).map(([n, m]) => `${esc(n)} ${esc(m)}`).join(" · ")}</p>
+        <p class="lab-note"><b>Engines at ${i.deals || 256} deals:</b> ${Object.entries(i.engines).map(([n, m]) => `${esc(n)} ${esc(m)}`).join(" · ")}</p>
         ${sim ? `<p class="lab-note"><b>Simulated now:</b> ${Object.entries(sim).map(([id, r]) => `${esc(engineOf(id)?.short || id)}: ${r.status === "done" ? `${esc(r.text)}${r.chance != null ? ` (${Math.round(100 * r.chance)}%)` : ""}${r.same ? " ✓ same as Monte" : ""}` : r.status === "thinking" ? "thinking…" : esc(r.text)}`).join(" · ")}</p>` : ""}
         <div class="lab-row"><button type="button" class="btn primary" data-replay="${esc(i.game)}" data-m="${i.move}">Replay to here</button><button type="button" class="btn" data-sim="${esc(i.id)}">Simulate</button>
           <a class="btn" href="games.html?k=${encodeURIComponent(k)}&g=${esc(i.game)}&m=${i.move}" target="_blank" rel="noopener">Game viewer</a></div>

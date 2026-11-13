@@ -507,3 +507,10 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   - aa-k3-flagged (37 shards): the 73 Mind Bend flaws of aa-i1/aa-i3b, flagged move vs the best other move of the same side's search (margin not applied), 8 + 8.
   - departures-sum: pooled source, Piracy Charm discard and Mind Bend own splits, realised gain kept at est >= 0/1/2/3/5, --ends <job> for median cards left at self-play ends, horizon column.
   - Not yet built: the kept-game continuations data set and the trainer's mined-case source (held for Fable after Korbi's coach note).
+- 13 Nov 03:30 local, Fable 00:50Z + Korbi:
+  - game-records were 4 h stale (the hourly games.yml schedule last ran 20:56Z); dispatched by hand, 115 games. Dave vs Monte 22:27Z = key 1794522476654 (Dave seat 0 won, Hard Deepest).
+  - lab/positions.mjs (aa-a0-pos1): S4 d and S5 static values and Deepest searches (2,048 deals, every legal move) at #126 (t20 Commit on Dave's Dandan), #144 (t23 Memory on the stack, Monte holds Lapse with 4 open: Medium counters, both nets pass 0.99 vs 0.95/0.96), #154 (t24 Metamorphose on Boilerworks, Dave holds two Dandans), #227 (t33 Metamorphose on Island), and 1794217058805 #210/#219. S5 reads none of them 20 points below S4 d (statics within 7 points; same best move at all four of Dave's).
+  - Four error-review markers added (error-review.json, deals 2048; the lab page now shows each marker's deals).
+  - Korbi: from t20 Monte should win nearly always with patient control (three counters against an empty hand). lab/from-position.mjs; aa-k4-win-shuffle (200 games from #126, library re-dealt, both seats hardall*128 S4 d) and aa-k4-win-real (40, the real library order).
+  - S5 Deep gate ab-g3-s5-gate queued after the control (S5 not 20 points lower at the markers): S5 vs S4 d at Deep 1024, every legal move both sides, 1,200 pairs, seeds 290000, looks 300/600/1,200 via gate-sum. Only if ab-g2-q-s5 holds at 2,000 pairs: retire it otherwise.
+  - Tomorrow's two trainings on S5's inputs (variant 24), not S4 d's.
