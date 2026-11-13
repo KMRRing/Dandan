@@ -514,3 +514,10 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   - Korbi: from t20 Monte should win nearly always with patient control (three counters against an empty hand). lab/from-position.mjs; aa-k4-win-shuffle (200 games from #126, library re-dealt, both seats hardall*128 S4 d) and aa-k4-win-real (40, the real library order).
   - S5 Deep gate ab-g3-s5-gate queued after the control (S5 not 20 points lower at the markers): S5 vs S4 d at Deep 1024, every legal move both sides, 1,200 pairs, seeds 290000, looks 300/600/1,200 via gate-sum. Only if ab-g2-q-s5 holds at 2,000 pairs: retire it otherwise.
   - Tomorrow's two trainings on S5's inputs (variant 24), not S4 d's.
+- 13 Nov 07:45 local (05:45Z) morning report:
+  - aa-i1 final 300: 54.5% +- 4.2 (50.3-58.7), stays live. aa-i3b 300: 53.8% +- 3.6; paired i1-i3b +0.7 +- 4.3. ab-g2-q-s5 2,000: 51.8% +- 1.8, bottom 50.01% (held; 1,000-look bottom 51.1) -> ab-g3-s5-gate stays queued.
+  - aa-i2d full (aa-a1-dep): 1,074 cases, pooled est 3.9 real +1.8 +- 0.8; est<2: -1.3 +- 1.1 (444); keep only est>=2: 630 cases, summed realised 2,500 vs 1,925 for all. Piracy discard est<2: -7.4 +- 2.1 (85). Self-play games end with median 32 cards left (109/400 at <=20) vs kept 37.
+  - control (aa-a1-ctl, on-shortlist non-Medium picks): est 5.4 real +3.5 +- 1.6: over-rated by ~2 points too, so selection, not the move list. horizon (aa-a1-hor, 780 cases): est 3.9, horizon 2.0, result 1.8: the over-rating is the look-ahead's (est above horizon), not the judge's. flagged Mind Bends (aa-a1-flg, 73): flagged move beats the best other by +6.5 +- 2.1 in play-outs.
+  - should-win from Dave #126: 191/200 re-dealt (95.5%), 40/40 with the real library (hardall*128 both seats).
+  - ab-g2-s4d-0all 289/600, all exit 0, ~2,900 s a 25-game shard (~116 s a game); done ~08:15Z, then ab-g2-s4d-1c (~11Z), then S5 gate. The two trainings (S5 inputs) wait for both.
+  - Fleet: 32 workers, 92 cores (HK VMs 14x4, Chicago 18x2, Google lab-fill also running shards). Rackspace unchanged: every pool since 22:00Z SpeedBump Hit; Chicago 2-core 18 at $0.02.
