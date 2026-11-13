@@ -180,6 +180,19 @@
         "note": "VMs, ch.vs1.2xlarge-iad (Compute - Double Extra Large), bid $0.04; created by Korbi 18:37Z, 0 won at 18:38Z (just created). Full pool ID from the console. First VM reporting 18:41Z on 146.20.65.x.",
         "cloudspace": "kmr-ring1-94",
         "vmPool": "a2b0e1bf-3c79-4ba7-9dcb-e59ebc74129f"
+      },
+      {
+        "where": "Sydney 3 (VMs)",
+        "cores": 4,
+        "pool": 3,
+        "won": 6,
+        "price": 0.01,
+        "bid": 0.01,
+        "net": "119.9.134.",
+        "machines": [],
+        "note": "VMs, ch.vs1.large-syd (Compute - Large), bid $0.01; created by Korbi 18:35Z wanted 10, won 6 (Partial) with the market at our bid — cut to 3 at 19:17Z to let the price fall from $0.01 back toward $0.001. Shares the 119.9.134. net with Sydney 2. Full pool ID from the console.",
+        "cloudspace": "kmr-ring1-9",
+        "vmPool": "e086d81d-66e8-40d2-a5e6-9b4e33eabaf4"
       }
     ]
   },
