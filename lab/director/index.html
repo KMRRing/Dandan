@@ -1,0 +1,279 @@
+<meta name="dash-one-writer">
+<style>
+.fl { font-family: var(--font-anthropic-sans); color: var(--color-fg); display: grid; gap: var(--cds-gap-lg); }
+.fl h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; }
+.fl h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0 0 var(--cds-gap-xs); }
+.fl .lede { margin: var(--cds-gap-xs) 0 0; color: var(--color-fg-muted); }
+.fl .note { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); margin: 0 0 var(--cds-gap-sm); }
+.fl .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--cds-gap-md); }
+.fl .tile { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-md) var(--cds-pad-lg); }
+.fl .tile .k { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.fl .tile .v { font-family: var(--font-anthropic-serif); font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; min-height: 1.2em; }
+.fl .tile .s { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.fl .card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); }
+.fl .wrap { overflow-x: auto; }
+.fl table { border-collapse: collapse; width: 100%; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+.fl th, .fl td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+.fl th:first-child, .fl td:first-child, .fl th.l, .fl td.l { text-align: left; }
+.fl td.w { white-space: normal; min-width: 220px; color: var(--color-fg-muted); }
+.fl th { color: var(--color-fg-muted); font-weight: var(--cds-font-weight-medium); }
+.fl .bad { color: var(--color-bad); } .fl .warn { color: var(--color-warn); } .fl .ok { color: var(--color-ok); }
+.fl .chart { position: relative; min-height: 220px; }
+.fl .chart text { fill: var(--cds-text-secondary); font-size: var(--cds-font-size-caption); }
+.fl .tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); box-shadow: var(--cds-shadow-popover); border-radius: var(--cds-radius); padding: 6px 8px; font-size: var(--cds-font-size-caption); white-space: nowrap; }
+.fl .legend { display: flex; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); margin-top: var(--cds-gap-xs); flex-wrap: wrap; }
+.fl .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.fl .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: var(--cds-gap-lg); }
+[data-dash-source-state=refreshing] { opacity: .5; }
+</style>
+
+<div class="fl">
+  <header id="top">
+    <h1>Dandan Lab Fleet</h1>
+    <p class="lede"><span data-draw="busyNow" data-source="totals" data-field="busy" data-row="0">—</span> of <span data-draw="slotsNow" data-source="totals" data-field="slots" data-row="0">—</span> working cores are busy, across <span data-draw="machNow" data-source="totals" data-field="machines" data-row="0">—</span> reporting machines. <span data-draw="wonNow" data-source="totals" data-field="vcpuWon" data-row="0">—</span> vCPUs are won on Rackspace for <span data-draw="costNow" data-source="totals" data-field="costH" data-row="0">—</span> an hour at market. Worker summary from <span data-draw="at" data-source="totals" data-field="at" data-row="0">—</span>.</p>
+  </header>
+
+  <section class="tiles" id="kpis">
+    <div class="tile" id="t-won"><div class="k">vCPUs won (Rackspace)</div><div class="v" data-draw="t" data-k="vcpuWon" data-source="totals" data-field="vcpuWon" data-row="0">—</div><div class="s">machines Rackspace says are ours</div></div>
+    <div class="tile" id="t-work"><div class="k">Working cores</div><div class="v" data-draw="t" data-k="slots" data-source="totals" data-field="slots" data-row="0">—</div><div class="s">worker slots reporting, last 5 min</div></div>
+    <div class="tile" id="t-busy"><div class="k">Busy</div><div class="v" data-draw="t" data-k="busyPct" data-source="totals" data-field="busyPct" data-row="0">—</div><div class="s">share of working cores running a shard</div></div>
+    <div class="tile" id="t-gap"><div class="k">Won, not working</div><div class="v" data-draw="t" data-k="notWorking" data-source="totals" data-field="notWorking" data-row="0">—</div><div class="s">vCPUs won minus working cores</div></div>
+    <div class="tile" id="t-cost"><div class="k">Cost per hour</div><div class="v" data-draw="t" data-k="costH" data-source="totals" data-field="costH" data-row="0">—</div><div class="s">won machines at market price</div></div>
+    <div class="tile" id="t-unit"><div class="k">$ per busy core-hour</div><div class="v" data-draw="t" data-k="perBusy" data-source="totals" data-field="perBusy" data-row="0">—</div><div class="s">cost per hour ÷ busy cores</div></div>
+    <div class="tile" id="t-fin"><div class="k">Shards finished</div><div class="v" data-draw="t" data-k="fin10" data-source="totals" data-field="fin10" data-row="0">—</div><div class="s">last 10 minutes</div></div>
+    <div class="tile" id="t-queue"><div class="k">Shards unclaimed</div><div class="v" data-draw="t" data-k="unclaimed" data-source="totals" data-field="unclaimed" data-row="0">—</div><div class="s">waiting in the queue</div></div>
+  </section>
+
+  <section class="card" id="regions">
+    <h2>Regions</h2>
+    <p class="note">Busy and idle are working cores; "not working" is won vCPUs with no worker reporting (still joining, starting, or broken).</p>
+    <div class="chart" data-draw="regionChart" data-source="regions"></div>
+    <div class="legend"><span><i data-draw="sw" data-i="0"></i>Busy</span><span><i data-draw="sw" data-i="1"></i>Idle</span><span><i data-draw="sw" data-i="2"></i>Not working</span></div>
+    <div class="wrap">
+      <table data-source="regions" data-row-key="region">
+        <thead><tr><th data-field="region">Region</th><th data-field="vcpuWon">vCPUs won</th><th data-field="slots">Working</th><th data-field="busy">Busy</th><th data-field="busyPct">Busy %</th><th data-field="machines">Machines reporting</th><th data-field="machinesWon">Machines won</th><th data-field="nodesReady">k8s nodes ready</th><th data-field="fin10">Shards / 10 min</th><th data-field="costH">$ / h</th><th data-field="perVcpu">$ / vCPU-h</th></tr></thead>
+        <tbody data-draw="regionRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="bidding">
+    <h2>Bidding</h2>
+    <p class="note">Every pool we bid on, Kubernetes and VMs apart, with the bid and the market per vCPU-hour. We pay the market price; the bid is the cap.</p>
+    <div class="wrap">
+      <table data-source="allpools" data-row-key="pool">
+        <thead><tr><th data-field="region">Region</th><th class="l" data-field="kind">Kind</th><th class="l" data-field="class">Class</th><th data-field="vcpu">vCPU</th><th data-field="won">Won</th><th data-field="desired">Wanted</th><th data-field="bidPerVcpu">Bid / vCPU-h</th><th data-field="marketPerVcpu">Market / vCPU-h</th><th data-field="minBid">Min bid</th><th data-field="costH">$ / h</th><th class="l" data-field="status">Status</th></tr></thead>
+        <tbody data-draw="poolRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="two">
+    <section class="card" id="kubernetes">
+      <h2>Kubernetes clusters</h2>
+      <p class="note">Nodes that have joined each cluster, and lab worker pods running on them.</p>
+      <div class="wrap">
+        <table data-source="k8s" data-row-key="cluster">
+          <thead><tr><th data-field="where">Region</th><th class="l" data-field="cluster">Cloudspace</th><th data-field="ready">Nodes ready</th><th data-field="nodes">Nodes</th><th data-field="running">Pods running</th><th data-field="pods">Pods</th></tr></thead>
+          <tbody data-draw="k8sRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" id="ladder">
+      <h2>Cheapest compute on the market</h2>
+      <p class="note">Compute-heavy and general-purpose classes, cheapest per vCPU-hour first; "ours" is how many we want there.</p>
+      <div class="wrap">
+        <table data-source="ladder" data-row-key="class">
+          <thead><tr><th class="l" data-field="class">Class</th><th data-field="region">Region</th><th data-field="vcpu">vCPU</th><th data-field="market">Market / h</th><th data-field="perVcpu">$ / vCPU-h</th><th data-field="minBid">Min bid</th><th data-field="ours">Ours</th></tr></thead>
+          <tbody data-draw="ladderRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section class="card" id="queue">
+    <h2>Queue</h2>
+    <p class="note">Jobs with shards left. ETA is at the last hour's pace; blank when no shard of the job finished in the last hour.</p>
+    <div class="wrap">
+      <table data-source="jobs" data-row-key="id">
+        <thead><tr><th data-field="id">Job</th><th data-field="done">Done</th><th data-field="shards">Shards</th><th data-field="running">Running</th><th data-field="unclaimed">Unclaimed</th><th data-field="shardMin">Min / shard</th><th data-field="etaMin">ETA (min)</th><th class="l" data-field="purpose">What it is</th></tr></thead>
+        <tbody data-draw="jobRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="workers">
+    <h2>Workers by region, kind and size</h2>
+    <p class="note">From the workers' own reports in the last 5 minutes. "Up" is how long the oldest machine in the group has run its worker.</p>
+    <div class="wrap">
+      <table data-source="workers" data-row-key="group">
+        <thead><tr><th data-field="where">Region</th><th class="l" data-field="kind">Kind</th><th data-field="cores">Cores</th><th data-field="machines">Machines</th><th data-field="slots">Slots</th><th data-field="busy">Busy</th><th data-field="fin10">Shards / 10 min</th><th data-field="fin60">Shards / hour</th><th data-field="upMin">Up (min)</th></tr></thead>
+        <tbody data-draw="workerRows"></tbody>
+      </table>
+    </div>
+    <p class="note" data-draw="unmapped" data-source="workers">—</p>
+  </section>
+
+  <details id="about">
+    <summary>How this page is put together</summary>
+    <p class="note">Rackspace pools and market prices are read live through the Rackspace Spot connector. Workers, the queue and Kubernetes node counts come from fleet/summary.json in the lab bucket, which the Fleet status workflow writes every 10 minutes, read through the Google Cloud CLI connector. VM pool counts come from fleet/sources.json, which the lab chat keeps; Rackspace's VM pool listing is not read here because it carries machine setup data. Regions follow the class suffix: ord Chicago, hkg Hong Kong, iad US East, iad2 US East 2, dfw Dallas, lon London, syd Sydney.</p>
+  </details>
+</div>
+
+<script>
+// ---- loaders: the bucket summary (one file, three tables), the VM pool list, Rackspace pools and markets
+dash.loader("workers", { description: "The workers table of fleet/summary.json, one row per region, kind and core count", fn: ({ answer }) => {
+  const out = answer && answer.response && answer.response.stdout;
+  if (!out) throw new Error((answer && answer.response && answer.response.stderr) || "No output from gcloud storage cat");
+  const s = JSON.parse(out);
+  return { data: (s.workers || []).map(w => ({ group: `${w.where}|${w.kind}|${w.cores}`, where: w.where, kind: w.kind, cores: w.cores, machines: w.machines, slots: w.slots, busy: w.busy, fin10: w.fin10, fin60: w.fin60, upMin: w.upMin, at: s.at, unmapped: (s.unmapped || []).join(" "), stale: s.total ? s.total.stale : null })), meta: [{ label: "Written", value: s.at }] };
+} });
+dash.loader("jobs", { description: "The jobs table of fleet/summary.json: jobs with shards left", fn: ({ answer }) => {
+  const out = answer && answer.response && answer.response.stdout;
+  if (!out) throw new Error((answer && answer.response && answer.response.stderr) || "No output from gcloud storage cat");
+  const s = JSON.parse(out);
+  return { data: (s.jobs || []).map(j => ({ id: j.id, done: j.done, shards: j.shards, running: j.running, unclaimed: j.unclaimed, shardMin: j.shardMin, etaMin: j.etaMin, perHour: j.perHour, purpose: j.purpose })), meta: [{ label: "Written", value: s.at }] };
+} });
+dash.loader("k8s", { description: "The Kubernetes table of fleet/summary.json: nodes and lab pods per cluster", fn: ({ answer }) => {
+  const out = answer && answer.response && answer.response.stdout;
+  if (!out) throw new Error((answer && answer.response && answer.response.stderr) || "No output from gcloud storage cat");
+  const s = JSON.parse(out);
+  return { data: (s.k8s || []).map(k => ({ cluster: k.cluster, where: k.where, nodes: k.nodes, ready: k.ready, pods: k.pods, running: k.running })), meta: [{ label: "Written", value: s.at }] };
+} });
+dash.loader("vmpools", { description: "The VM pools in fleet/sources.json (kept by the lab chat): wanted, won, bid and server class", fn: ({ answer }) => {
+  const out = answer && answer.response && answer.response.stdout;
+  if (!out) throw new Error((answer && answer.response && answer.response.stderr) || "No output from gcloud storage cat");
+  const s = JSON.parse(out);
+  const pools = ((s.rackspace && s.rackspace.pools) || []).filter(p => /\(VMs\)/.test(p.where));
+  return { data: pools.map(p => { const m = String(p.note || "").match(/\b([a-z]{2}\.vs\d\.[a-z0-9]+-[a-z0-9]+)\b/); return { where: p.where.replace(/ \(VMs\)$/, ""), class: m ? m[1] : null, vcpu: p.cores, desired: p.pool, won: p.won, bid: p.bid, note: p.note, at: s.at }; }), meta: [{ label: "Written", value: String(s.at) }] };
+} });
+for (const id of ["pools_chi", "pools_hkg", "pools_iad", "pools_dfw", "pools_lon"]) dash.loader(id, { description: "Rackspace Spot node pools in this cloudspace", fn: ({ answer }) => {
+  const list = Array.isArray(answer) ? answer : (answer && (answer.items || answer.nodePools)) || [];
+  if (!Array.isArray(list)) throw new Error("Unexpected answer from listSpotNodePools");
+  const n = s => (s == null ? null : Number(String(s).replace(/[^0-9.]/g, "")));
+  return list.map(p => ({ pool: String(p.name).slice(0, 8), cloudspace: p.cloudspace, class: p.serverClass, desired: p.desired, won: p.wonCount, bid: n(p.bidPrice), status: p.status }));
+} });
+dash.loader("market", { description: "Every Rackspace Spot server class with its market price, minimum bid and vCPU count", fn: ({ answer }) => {
+  const list = (answer && answer.serverClasses) || [];
+  const n = s => (s == null ? null : Number(String(s).replace(/[^0-9.]/g, "")));
+  return list.map(c => ({ class: c.name, region: c.region, category: c.category, availability: c.availability, vcpu: Number(c.resources && c.resources.cpu), market: n(c.currentMarketPricePerHour), minBid: n(c.minBidPricePerHour), onDemand: n(c.onDemandPricePerHour) }));
+} });
+
+// ---- calcs
+dash.calc("allpools", {
+  title: "Every pool we bid on", description: "Kubernetes pools from Rackspace and VM pools from fleet/sources.json, priced at today's market",
+  inputs: ["pools_chi", "pools_hkg", "pools_iad", "pools_dfw", "pools_lon", "vmpools", "market"],
+  fn: (chi, hkg, iad, dfw, lon, vms, market) => {
+    const REG = { ord: "Chicago", hkg: "Hong Kong", iad: "US East", iad2: "US East 2", dfw: "Dallas", lon: "London", syd: "Sydney" };
+    const regionOf = c => REG[String(c || "").split("-").pop()] || "?";
+    const mk = Object.fromEntries(market.map(m => [m.class, m]));
+    const row = (pool, kind, cls, vcpu, desired, won, bid, status, region) => {
+      const m = mk[cls] || {}, v = vcpu || m.vcpu || null, mp = m.market ?? null;
+      return { pool, region: region || regionOf(cls), kind, class: cls, vcpu: v, desired, won, bid, bidPerVcpu: bid != null && v ? bid / v : null, market: mp, marketPerVcpu: mp != null && v ? mp / v : null, minBid: m.minBid ?? null, costH: mp != null ? mp * (won || 0) : null, status };
+    };
+    const k = [...chi, ...hkg, ...iad, ...dfw, ...lon].map(p => row(p.pool, "Kubernetes", p.class, null, p.desired, p.won, p.bid, p.status));
+    const v = vms.map(p => row("vm-" + p.where, "VMs", p.class, p.vcpu, p.desired, p.won, p.bid, p.won >= p.desired ? "Fulfilled" : "Partial", p.where));
+    return [...k, ...v].sort((a, b) => a.region.localeCompare(b.region) || a.kind.localeCompare(b.kind) || (a.vcpu || 0) - (b.vcpu || 0));
+  },
+});
+dash.calc("regions", {
+  title: "Regions", description: "Per region: vCPUs won and their cost at market, working and busy cores, Kubernetes nodes ready",
+  inputs: ["allpools", "workers", "k8s"],
+  fn: (pools, workers, k8s) => {
+    const by = {};
+    const r = name => (by[name] ||= { region: name, vcpuWon: 0, machinesWon: 0, costH: 0, slots: 0, busy: 0, machines: 0, fin10: 0, nodesReady: null });
+    for (const p of pools) { const g = r(p.region); g.vcpuWon += (p.won || 0) * (p.vcpu || 0); g.machinesWon += p.won || 0; g.costH += p.costH || 0; }
+    for (const w of workers) { const g = r(w.where); g.slots += w.slots; g.busy += w.busy; g.machines += w.machines; g.fin10 += w.fin10; }
+    for (const k of k8s) { const g = r(k.where); g.nodesReady = (g.nodesReady || 0) + k.ready; }
+    return Object.values(by).map(g => ({ ...g, busyPct: g.slots ? g.busy / g.slots : null, idle: Math.max(0, g.slots - g.busy), notWorking: Math.max(0, g.vcpuWon - g.slots), perVcpu: g.vcpuWon ? g.costH / g.vcpuWon : null })).sort((a, b) => b.vcpuWon - a.vcpuWon);
+  },
+});
+dash.calc("totals", {
+  title: "Whole fleet", description: "Sums over all regions, the queue's unclaimed shards, and cost per busy core",
+  inputs: ["regions", "jobs", "workers"],
+  fn: (regions, jobs, workers) => {
+    const s = f => regions.reduce((a, g) => a + (g[f] || 0), 0);
+    const slots = s("slots"), busy = s("busy"), costH = s("costH"), vcpuWon = s("vcpuWon");
+    return [{ vcpuWon, slots, busy, busyPct: slots ? busy / slots : null, notWorking: Math.max(0, vcpuWon - slots), machines: s("machines"), costH, perBusy: busy ? costH / busy : null, fin10: s("fin10"), unclaimed: jobs.reduce((a, j) => a + (j.unclaimed || 0), 0), at: workers.length ? workers[0].at : null }];
+  },
+});
+dash.calc("ladder", {
+  title: "Cheapest compute", description: "Compute-heavy and general-purpose classes that are available, cheapest per vCPU-hour first, with how many we want there",
+  inputs: ["market", "allpools"],
+  fn: (market, pools) => {
+    const REG = { ord: "Chicago", hkg: "Hong Kong", iad: "US East", iad2: "US East 2", dfw: "Dallas", lon: "London", syd: "Sydney" };
+    const ours = {}; for (const p of pools) ours[p.class] = (ours[p.class] || 0) + (p.desired || 0);
+    return market.filter(m => /^(ch|gp)\./.test(m.class) && m.availability === "available" && m.vcpu && m.market != null)
+      .map(m => ({ class: m.class, region: REG[m.class.split("-").pop()] || m.region, vcpu: m.vcpu, market: m.market, perVcpu: m.market / m.vcpu, minBid: m.minBid, ours: ours[m.class] || 0 }))
+      .sort((a, b) => a.perVcpu - b.perVcpu || b.vcpu - a.vcpu).slice(0, 30);
+  },
+});
+
+// ---- formatting and drawing helpers
+window.FL = {
+  int: v => (v == null ? "" : d3.format(",")(Math.round(v))),
+  pct: v => (v == null ? "" : d3.format(".0%")(v)),
+  usd: v => (v == null ? "" : "$" + d3.format(",.2f")(v)),
+  rate: v => (v == null ? "" : "$" + (v < 0.01 ? d3.format(".5f")(v) : d3.format(".4f")(v))),
+  min: v => (v == null ? "" : d3.format(",.1f")(v)),
+  when: v => (v ? d3.utcFormat("%H:%M UTC")(new Date(v)) : "—"),
+  rows(tbody, id, key, cols) {
+    const d = dash.data(id);
+    if (d.status !== "ok") { tbody.replaceChildren(); return; }
+    tbody.replaceChildren(...d.data.map(r => {
+      const tr = document.createElement("tr");
+      tr.dataset.key = encodeURIComponent(String(r[key]));
+      for (const [f, fmt, cls] of cols) { const td = document.createElement("td"); td.textContent = fmt ? fmt(r[f], r) : (r[f] ?? ""); const c = typeof cls === "function" ? cls(r[f], r) : cls; if (c) td.className = c; tr.append(td); }
+      return tr;
+    }));
+  },
+};
+
+const T = { vcpuWon: FL.int, slots: FL.int, busyPct: FL.pct, notWorking: FL.int, costH: FL.usd, perBusy: FL.rate, fin10: FL.int, unclaimed: FL.int };
+dash.draw("t", el => { const d = dash.data("totals"); const r = d.status === "ok" && d.data && d.data[0]; el.textContent = r ? T[el.dataset.k](r[el.dataset.k]) : "—"; });
+const lede = (f, fmt) => el => { const d = dash.data("totals"); const r = d.status === "ok" && d.data && d.data[0]; el.textContent = r ? fmt(r[f]) : "—"; };
+dash.draw("busyNow", lede("busy", FL.int)); dash.draw("slotsNow", lede("slots", FL.int)); dash.draw("machNow", lede("machines", FL.int));
+dash.draw("wonNow", lede("vcpuWon", FL.int)); dash.draw("costNow", lede("costH", FL.usd)); dash.draw("at", lede("at", FL.when));
+
+const COLORS = () => [dash.colors[0], "var(--cds-chart-muted)", "var(--cds-chart-status-critical)"];
+dash.draw("sw", el => { el.style.background = COLORS()[Number(el.dataset.i)]; });
+
+dash.draw("regionChart", el => {
+  const d = dash.data("regions");
+  if (d.status !== "ok") { el.replaceChildren(); if (d.status === "error") el.textContent = "Failed to load"; return; }
+  const rows = d.data, W = Math.max(280, el.clientWidth), bar = 22, gap = 8, top = 4;
+  el.replaceChildren();
+  const svg = d3.select(el).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${top + rows.length * (bar + gap) + 24}`).attr("role", "img")
+    .attr("aria-label", "Busy, idle and not-working vCPUs by region");
+  const labels = svg.append("g"); let left = 0;
+  labels.selectAll("text").data(rows).join("text").attr("x", 0).attr("y", (r, i) => top + i * (bar + gap) + bar / 2 + 4).text(r => r.region).each(function () { left = Math.max(left, this.getComputedTextLength()); });
+  left += 10;
+  const max = d3.max(rows, r => Math.max(r.vcpuWon, r.slots)) || 1, x = d3.scaleLinear([0, max], [left, W - 50]);
+  const tip = d3.select(el).append("div").attr("class", "tip").style("display", "none");
+  const parts = r => [["Busy", r.busy], ["Idle", r.idle], ["Not working", r.notWorking]];
+  rows.forEach((r, i) => {
+    let x0 = 0; const y = top + i * (bar + gap);
+    parts(r).forEach(([name, v], k) => {
+      svg.append("rect").attr("x", x(x0)).attr("y", y).attr("height", bar).attr("width", Math.max(0, x(x0 + v) - x(x0))).style("fill", COLORS()[k])
+        .on("pointermove", ev => { const [mx, my] = d3.pointer(ev, el); tip.style("display", null).style("left", Math.min(mx + 12, el.clientWidth - 160) + "px").style("top", my + 12 + "px").text(`${r.region} · ${name}: ${FL.int(v)} vCPUs (${FL.int(r.vcpuWon)} won, ${FL.int(r.slots)} working)`); })
+        .on("pointerleave", () => tip.style("display", "none"));
+      x0 += v;
+    });
+    svg.append("text").attr("x", x(Math.max(r.vcpuWon, r.slots)) + 6).attr("y", y + bar / 2 + 4).text(FL.int(r.vcpuWon));
+  });
+  svg.append("g").attr("transform", `translate(0,${top + rows.length * (bar + gap)})`).call(d3.axisBottom(x).ticks(Math.max(2, Math.floor((W - left) / 90))).tickSize(3)).call(g => g.select(".domain").style("stroke", "var(--cds-chart-axis)"));
+});
+
+const pctCls = v => (v == null ? "" : v < 0.5 ? "bad" : v < 0.85 ? "warn" : "ok");
+dash.draw("regionRows", tb => FL.rows(tb, "regions", "region", [["region"], ["vcpuWon", FL.int], ["slots", FL.int], ["busy", FL.int], ["busyPct", FL.pct, pctCls], ["machines", FL.int], ["machinesWon", FL.int], ["nodesReady", FL.int], ["fin10", FL.int], ["costH", FL.usd], ["perVcpu", FL.rate]]));
+dash.draw("poolRows", tb => FL.rows(tb, "allpools", "pool", [["region"], ["kind", null, "l"], ["class", null, "l"], ["vcpu", FL.int], ["won", FL.int, (v, r) => (v < r.desired ? "warn" : "")], ["desired", FL.int], ["bidPerVcpu", FL.rate], ["marketPerVcpu", FL.rate, v => (v != null && v >= 0.005 ? "bad" : "")], ["minBid", FL.rate], ["costH", FL.usd], ["status", null, "l"]]));
+dash.draw("k8sRows", tb => FL.rows(tb, "k8s", "cluster", [["where"], ["cluster", null, "l"], ["ready", FL.int, (v, r) => (v < r.nodes ? "warn" : "")], ["nodes", FL.int], ["running", FL.int, (v, r) => (v < r.pods ? "warn" : "")], ["pods", FL.int]]));
+dash.draw("ladderRows", tb => FL.rows(tb, "ladder", "class", [["class", null, "l"], ["region"], ["vcpu", FL.int], ["market", FL.rate], ["perVcpu", FL.rate], ["minBid", FL.rate], ["ours", FL.int, v => (v ? "ok" : "")]]));
+dash.draw("jobRows", tb => FL.rows(tb, "jobs", "id", [["id"], ["done", FL.int], ["shards", FL.int], ["running", FL.int], ["unclaimed", FL.int, v => (v ? "warn" : "")], ["shardMin", FL.min], ["etaMin", FL.int], ["purpose", null, "w"]]));
+dash.draw("workerRows", tb => FL.rows(tb, "workers", "group", [["where"], ["kind", null, "l"], ["cores", FL.int], ["machines", FL.int], ["slots", FL.int], ["busy", FL.int, (v, r) => (v < r.slots / 2 ? "bad" : "")], ["fin10", FL.int], ["fin60", FL.int], ["upMin", FL.int]]));
+dash.draw("unmapped", el => {
+  const d = dash.data("workers"); const r = d.status === "ok" && d.data[0];
+  el.textContent = !r ? "—" : (r.unmapped ? `VM address prefixes no pool claims yet: ${r.unmapped}. ` : "Every VM maps to a pool. ") + (r.stale ? `${r.stale} worker reports older than 5 minutes left out.` : "");
+});
+</script>
