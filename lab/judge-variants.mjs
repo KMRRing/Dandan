@@ -10,6 +10,8 @@
 //        the n-th listed; else shard n trains variant n)] [warm start: a file in judges/ of the variant's width (else today's weights), or -]
 //        [most games to read, else all] [positions a game, else all; or "turns": the first position of each turn] [learning rate]
 //        [judges to screen alongside, e.g. ag-v14.json,s4d.json]
+//        variants "cache<n>" (13 Nov): no training; shard k replays the k-th batch of the list with variant n's inputs and writes
+//        its position cache (one small process a batch, so the caches of many batches are written side by side)
 import fs from "node:fs";
 import zlib from "node:zlib";
 import { labStore } from "./lib.mjs";
@@ -34,8 +36,9 @@ const cap = Number(process.argv[8]) || Infinity;
 const turnsOnly = process.argv[9] === "turns";
 const perGame = turnsOnly ? 0 : Number(process.argv[9]) || 0;
 const lrArg = Number(process.argv[10]) || 0; // learning rate, else 1e-3 (3e-4 started from a judge) // at most this many games read (11 Nov: replaying 30,000 Medium games alone takes over an hour)
-const only = process.argv[6] && process.argv[6] !== "-" ? process.argv[6].split(",").map(Number) : null, fromFile = process.argv[7] && process.argv[7] !== "-" ? process.argv[7] : undefined;
-const vNo = only ? only[shard] : shard, V = VARIANTS[vNo];
+const cacheOnly = /^cache(\d+)$/.exec(process.argv[6] || "");
+const only = cacheOnly ? [Number(cacheOnly[1])] : process.argv[6] && process.argv[6] !== "-" ? process.argv[6].split(",").map(Number) : null, fromFile = process.argv[7] && process.argv[7] !== "-" ? process.argv[7] : undefined;
+const vNo = cacheOnly ? only[0] : only ? only[shard] : shard, V = VARIANTS[vNo];
 if (!V) { console.log(`no variant ${shard} (there are ${VARIANTS.length})`); process.exit(0); }
 const N = FEATURES.length, HALF = (N - 3 - 17) / 2, M = V.race ? N + 2 * PLUS + 2 * RACE : V.plus ? N + 2 * PLUS : N;
 // inputs kept as 32-bit floats: half the memory of 64-bit, and far finer than the judge's 8-bit weights (11 Nov: two runs on
@@ -138,8 +141,10 @@ async function replayBatch(id) {
   let n = 0;
   // "match:<job>" (13 Nov, Fable): a match set's games, from its shards' printed lines ({ pair, seed, aSeat, winner, moves }),
   // each game once; they keep no search, so their positions are labelled by the result alone
-  const match = id.startsWith("match:"), job = match ? id.slice(6) : id, seen = new Set();
-  const files = (await store.list(`results/${job}/`)).filter(n => (match ? /\/stdout-\d+\.txt$/ : /\/part-\d+\.jsonl$/).test(n));
+  // "<job>/<from>-<to>" (13 Nov): only the shards from..to of a big job, so one batch's rows fit a small machine
+  const match = id.startsWith("match:"), [job, slice] = (match ? id.slice(6) : id).split("/"), seen = new Set();
+  const [lo, hi] = slice ? slice.split("-").map(Number) : [0, Infinity], shardOf = n => Number(n.match(/-(\d+)\.\w+$/)[1]);
+  const files = (await store.list(`results/${job}/`)).filter(n => (match ? /\/stdout-\d+\.txt$/ : /\/part-\d+\.jsonl$/).test(n) && shardOf(n) >= lo && shardOf(n) <= hi);
   for (const name of files) for (const line of ((await store.get(name)) || "").split("\n")) {
     if (!line || (match && !line.startsWith('{"pair"'))) continue;
     const rec = JSON.parse(line);
@@ -206,11 +211,16 @@ async function batchRows(id) {
   try { const t = await store.get(name); if (t) { const b = unpack(t); say(`${id}: ${b.games} games, ${b.rows.length} positions from the cache`); return b; } } catch (e) { say(`${id}: cache unreadable (${e.message}), replaying`); }
   const b = await replayBatch(id);
   // a batch still being played is not cached (its later games would be missing from every reading after)
-  const jid = id.replace(/^match:/, ""), live = await store.get(`jobs/${jid}.json`), done = (await store.list(`results/${jid}/`)).filter(n => /\/done-\d+$/.test(n)).length;
+  const jid = id.replace(/^match:/, "").split("/")[0], live = await store.get(`jobs/${jid}.json`), done = (await store.list(`results/${jid}/`)).filter(n => /\/done-\d+$/.test(n)).length;
   const finished = live ? done >= JSON.parse(live).shards : done > 0;   // a retired batch is as finished as it will get
   if (finished || process.env.CACHE_ANY === "1") { try { await store.put(name, pack(b)); } catch (e) { say(`${id}: not cached (${e.message})`); } }
   say(`${id}: ${b.games} games, ${b.rows.length} positions replayed${finished ? ", cached" : ""}`);
   return b;
+}
+if (cacheOnly) {
+  const id = ids.split(",").flatMap(expand)[shard];
+  if (id) await batchRows(id); else say(`no batch ${shard}`);
+  process.exit(0);
 }
 for (const id of ids.split(",").flatMap(expand)) {
   if (games >= cap) break;

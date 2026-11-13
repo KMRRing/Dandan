@@ -5,11 +5,17 @@
 // see), and kept if it beats the worth of a redraw. That worth, for a seat (on the play or the draw) and the mulligans
 // counted so far, is a constant of the net: solved backwards over many sample hands by lab/keep-table.mjs and stored with
 // the net as `mull` ({ play: [W0…W7], draw: [W0…W7] }). The cards to the bottom: those whose going the net minds least.
+// The other seven is dealt as a hand he would keep (13 November, Fable): one short of lands or spells is redealt, as he would
+// throw it back free. Dealing him any seven rated a fresh hand at 55% on both seats, which can't both be over a half.
 import { restore, unplayable, bottomFor, MOST_MULLS } from "./dandan-engine.js";
 import { other } from "./dandan-core.js";
 import { seeded, mix, shuffle } from "./seats.js";
 
 const J = x => JSON.parse(JSON.stringify(x));
+/** Tries at a playable seven for the other player before the last deal is taken as it is. */
+export const REDEALS = 20;
+/** Rating deals of a hand in Hard's keep (Fable, 13 November: 256, not 32). */
+export const KEEP_DEALS = 256;
 /** Every way of choosing k of the items. */
 export function combos(items, k) {
   if (k === 0) return [[]];
@@ -22,7 +28,8 @@ export function combos(items, k) {
 /**
  * The seat's chance with `hand` at the start of turn 1, by `judge`, averaged over `deals` deals of the other hand and the
  * library from the cards the seat can't see; `bottom` (cards put on the bottom) stay at the library's bottom. The other hand
- * is the size it has if that player has kept, else seven.
+ * is the size it has if that player has kept, else seven; a seven of his is redealt while it is short of lands or spells
+ * (his free mulligan), at most REDEALS times.
  */
 export function handWorth(s, seat, hand, judge, { deals = 32, bottom = [], seed = 1 } = {}) {
   const opp = other(seat), theirs = s.mull?.done?.[opp] ? s.hand[opp].length : 7;
@@ -33,7 +40,9 @@ export function handWorth(s, seat, hand, judge, { deals = 32, bottom = [], seed 
   const rng = seeded(seed);
   let sum = 0;
   for (let k = 0; k < deals; k++) {
-    const c = J(base), deck = shuffle(pool.slice(), rng);
+    let deck = shuffle(pool.slice(), rng);
+    for (let r = 0; theirs === 7 && r < REDEALS && unplayable({ hand: { [opp]: deck.slice(0, 7) } }, opp); r++) deck = shuffle(deck, rng);
+    const c = J(base);
     c.hand[seat] = hand.slice(); c.hand[opp] = deck.slice(0, theirs); c.lib = [...deck.slice(theirs), ...bottom];
     sum += judge(restore(c), seat);
   }
@@ -62,7 +71,7 @@ export function redrawWorth(s, seat, n, judge) {
  * Hard's answer to the keep and to the cards to the bottom, by the net: null if the net has no redraw table (the caller then
  * asks Medium, as before). The worth of each keep is in `why` for the log and the lab.
  */
-export function keepMove(s, seat, judge, { deals = 32 } = {}) {
+export function keepMove(s, seat, judge, { deals = KEEP_DEALS } = {}) {
   const p = s.pending;
   if (!p || !judge?.mull) return null;
   const seed = seedOf(s, seat), hand = s.hand[seat];

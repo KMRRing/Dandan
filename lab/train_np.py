@@ -56,7 +56,7 @@ def swap(X):
 parts, games, cap = [], 0, A.cap or math.inf
 for batch in A.batches.split(","):
     if games >= cap: break
-    f = os.path.join(A.rows, batch)
+    f = os.path.join(A.rows, batch.replace("/", "~"))   # a slice job/0-199 is saved as job~0-199
     if not os.path.exists(f): say(f"{batch}: no cached rows, skipped"); continue
     text = open(f, "rb").read()
     nl = text.index(b"\n"); head = json.loads(text[:nl])

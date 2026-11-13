@@ -617,7 +617,7 @@ function repaint(v, now = false) {
   if (now || Date.now() - repaintAt > 1000) go(); else repaintTimer = setTimeout(go, 1000);
 }
 // the Fable plan's jobs: the new value nets (aa-g8), the Quick screen (aa-h2), stage 1 (aa-a1), read as one
-const FABLE_PFX = ["aa-g8", "aa-g9", "aa-h2", "aa-a0", "aa-a1", "aa-i", "aa-k", "aa-t", "ab-g2", "ab-g3", "ac-", "spm", "sps"];
+const FABLE_PFX = ["aa-g8", "aa-g9", "aa-h2", "aa-a0", "aa-a1", "aa-i", "aa-k", "aa-t", "ab-g2", "ab-g3", "ab-c", "aa-m", "ac-", "spm", "sps"];
 async function loadFable() {
   // all at once, and without the screen's match results (18 sets of files): those load when the screen's box is opened
   const parts = await Promise.all(FABLE_PFX.map(p => loadMain(p, { rows: false })));
@@ -1582,6 +1582,16 @@ function buildGraph(d, fable = false) {
     CK("check:k4", ["aa-k4-win-shuffle", "aa-k4-win-real"], "Should-win position: Dave's game, turn 20", "Monte with Commit and two Memory Lapses against an empty hand, played on: 191 of 200 with the library re-dealt, 40 of 40 with the real draws.", [S4]);
     J("check:k1", "judge:gen2-25"); J("check:k2", "judge:gen2-25");
     J("judge:gen2-25", "check:crown");
+    // the keep by the value net and its checks (13 Nov, Korbi: the mulligan is the most important decision; Fable's design)
+    node("match:keep", "match", { jobs: jobsOf("aa-m1-keep").length ? jobsOf("aa-m1-keep") : [pl("aa-m1-keep")], title: "Mulligan by the value net", what: "Hard with S4 d deciding the keep and the bottoms by the net's rating of turn 1 against its redraw table, against Hard keeping by Medium's rule. Quick, 2,000 pairs. The version for a Deep gate deals the other player a playable seven and rates with 256 deals." });
+    edge(S4, "match:keep"); edge("match:keep", "check:crown");
+    CK("check:open", ["lab-read:opening-hands"], "Kept opening hands against the result", "Generation 2's self-play: each seat's hand at the start of turn 1, by lands and good spells, on the play and the draw: games, the real win rate and S4 d's rating. Does the net read turn 1 right? Read on GitHub, no fleet.", ["set:gen2all", "set:gen2", S4], ["match:keep"]);
+    // the position caches of generation 2 and the Deep match games, then the third training (13 Nov, Fable)
+    node("set:rows2", "set", { jobs: jobsOf("ab-c2-rows23", "ab-c2-rows24").length ? jobsOf("ab-c2-rows23", "ab-c2-rows24") : [pl("ab-c2-rows23")], title: "Position caches: generation 2 and the Deep matches", what: "Each batch replayed once to the inputs the trainings read, S4 d's and S5's, written to the bucket: the big sets in slices so they fit a small machine. The NumPy trainings then start from these." });
+    for (const k of ["set:gen2", "set:gen2all", "match:gate:s3d", "match:gate:s4d", "match:gate:jt130", "match:i1", "match:i3"]) edge(k, "set:rows2");
+    edge("set:rows2", "judge:gen2-25");
+    P("judge:gen2-match", "judge", "Value nets on generations 1 + 2 + the Deep match games", "The third training beside the two of generation 2: generation 1, the 15,000 every-move games and every Deep match game (labelled by the result alone, as they keep no search). Do the gates' games teach what self-play doesn't?", ["set:rows2", "set:gen2all", "check:trainer"]);
+    J("judge:gen2-match", "check:crown");
     // the first round's S1 and S2 learned from the Deep games; S1′ and S2′ are their second rounds
     J("set:deep", "judge:job:aa-g3-s1#best", "judge:job:aa-g3-s2#best"); J("judge:job:aa-g3-s1#best", "judge:job:aa-g8-s1#best"); J("judge:job:aa-g3-s2#best", "judge:job:aa-g8-s2#best");
     // an averaged judge (avg(@a,@b)) is made from the nets it averages
