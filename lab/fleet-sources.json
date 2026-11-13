@@ -118,7 +118,8 @@
     "price": 0.001,
     "bid": 0.02,
     "machines": [],
-    "note": "VMs, gp.vs1.large-lon at $0.02; SpeedBump"
+    "note": "VMs, gp.vs1.large-lon at $0.02; SpeedBump",
+    "net": "134.213.133."
    },
    {
     "where": "US East (VMs)",
@@ -128,7 +129,8 @@
     "price": 0.001,
     "bid": 0.02,
     "machines": [],
-    "note": "VMs, gp.vs1.large-iad at $0.02; SpeedBump"
+    "note": "VMs, gp.vs1.large-iad at $0.02; SpeedBump",
+    "net": "162.209.124."
    }
   ]
  },

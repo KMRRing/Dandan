@@ -27,21 +27,53 @@ jobs:
       - name: The match part files kept from the last run
         uses: actions/cache@v4
         with: { path: fleet-cache, key: "fleet-${{ github.run_id }}", restore-keys: fleet- }
+      # kubectl for the summary's Kubernetes rows (nodes ready of joined, lab pods running, per cluster)
+      - uses: azure/setup-kubectl@v4
       - name: Copy from the bucket, every 10 minutes
         env:
           LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          # the writer key, only for fleet/summary.json (the director's dashboard reads it through the Google connector)
+          LAB_QUEUE_KEY: "${{ secrets.LAB_QUEUE_KEY }}"
+          RS_KUBECONFIG: "${{ secrets.RS_KUBECONFIG }}"
+          RS_KUBECONFIG_2: "${{ secrets.RS_KUBECONFIG_2 }}"
+          RS_KUBECONFIG_3: "${{ secrets.RS_KUBECONFIG_3 }}"
+          RS_KUBECONFIG_4: "${{ secrets.RS_KUBECONFIG_4 }}"
+          RS_KUBECONFIG_5: "${{ secrets.RS_KUBECONFIG_5 }}"
+          RS_KUBECONFIG_6: "${{ secrets.RS_KUBECONFIG_6 }}"
+          RS_KUBECONFIG_7: "${{ secrets.RS_KUBECONFIG_7 }}"
+          RS_KUBECONFIG_8: "${{ secrets.RS_KUBECONFIG_8 }}"
+          RS_KUBECONFIG_9: "${{ secrets.RS_KUBECONFIG_9 }}"
           LOOP: "330"
           GH_TOKEN: "${{ github.token }}"
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          printf '%s' "$LAB_QUEUE_KEY" > "$RUNNER_TEMP/wkey.json"; chmod 600 "$RUNNER_TEMP/key.json" "$RUNNER_TEMP/wkey.json"
+          # one {cluster, nodes, ready, pods, running} per kubeconfig secret; nothing from the clusters is printed
+          k8s() {
+            echo '['; sep=
+            for name in RS_KUBECONFIG RS_KUBECONFIG_2 RS_KUBECONFIG_3 RS_KUBECONFIG_4 RS_KUBECONFIG_5 RS_KUBECONFIG_6 RS_KUBECONFIG_7 RS_KUBECONFIG_8 RS_KUBECONFIG_9; do
+              kc="${!name}"; [ -n "$kc" ] || continue
+              printf '%s\n' "$kc" > "$RUNNER_TEMP/kc"; chmod 600 "$RUNNER_TEMP/kc"; export KUBECONFIG="$RUNNER_TEMP/kc"
+              c=$(kubectl config view --minify -o jsonpath='{.clusters[0].name}' 2>/dev/null)
+              n=$(timeout 20 kubectl get nodes --no-headers 2>/dev/null); p=$(timeout 20 kubectl get pods -l app=dandan-lab --no-headers 2>/dev/null)
+              printf '%s{"cluster":"%s","nodes":%d,"ready":%d,"pods":%d,"running":%d}' "$sep" "$c" \
+                "$(grep -c . <<<"$n")" "$(awk '$2=="Ready"' <<<"$n" | grep -c .)" "$(grep -c . <<<"$p")" "$(grep -c ' Running ' <<<"$p")"; sep=,
+            done; echo ']'; rm -f "$RUNNER_TEMP/kc"; unset KUBECONFIG
+          }
           end=$(( $(date +%s) + LOOP * 60 ))
           while :; do
             t0=$(date +%s)
             rm -rf snap; git worktree prune
             if git fetch -q --depth 1 origin fleet-status; then git worktree add -q --detach snap FETCH_HEAD; else git worktree add -q --detach snap; git -C snap rm -rf -q . || true; fi
             if LAB_KEY="$RUNNER_TEMP/key.json" node tools/fleet-snapshot.mjs snap fleet-cache; then
+              # the director's summary (tools/fleet-summary.mjs), on the branch and in the bucket
+              k8s > "$RUNNER_TEMP/k8s.json" 2>/dev/null || echo '[]' > "$RUNNER_TEMP/k8s.json"
+              if node tools/fleet-summary.mjs snap "$RUNNER_TEMP/k8s.json" > "$RUNNER_TEMP/summary.json"; then
+                cp "$RUNNER_TEMP/summary.json" snap/summary.json
+                [ -n "$LAB_QUEUE_KEY" ] && LAB_KEY="$RUNNER_TEMP/wkey.json" LAB_BUCKET=dandan-lab-807207481983 node -e 'const fs=require("fs"); import("./lab/lib.mjs").then(async m => { const s = await m.labStore(); await s.put("fleet/summary.json", fs.readFileSync(process.argv[1], "utf8")); })' "$RUNNER_TEMP/summary.json" || echo "::warning::summary upload failed"
+              else echo "::warning::summary failed"; fi
               # the Actions runs going on now, but this one (the page's GitHub card)
               gh run list -R "$GITHUB_REPOSITORY" --status in_progress -L 50 --json workflowName,displayTitle \
                 --jq "{at: (now * 1000 | floor), running: ([.[] | select(.workflowName != \"Fleet status\")] | length), names: [.[] | select(.workflowName != \"Fleet status\") | .workflowName] | unique}" > snap/github.json || true
@@ -50,7 +82,7 @@ jobs:
             [ $(( $(date +%s) + 600 )) -lt "$end" ] || break
             left=$(( 600 - ($(date +%s) - t0) )); if [ "$left" -gt 0 ]; then sleep "$left"; fi
           done
-          rm -f "$RUNNER_TEMP/key.json"
+          rm -f "$RUNNER_TEMP/key.json" "$RUNNER_TEMP/wkey.json"
       # every run, however it started, keeps going 5½ hours and then starts the next (12 Nov: a scheduled run waiting in the queue
       # made the loop end without a successor, and the scheduled run itself took one snapshot and stopped)
       - name: The next run
