@@ -1,5 +1,5 @@
 {
- "at": "2026-11-13T16:22:00Z",
+ "at": "2026-11-13T16:38:00Z",
  "rackspace": {
   "price": 0.001,
   "bid": 0.01,
@@ -106,15 +106,15 @@
    {
     "where": "Sydney (VMs)",
     "cores": 4,
-    "pool": 5,
-    "won": 13,
+    "pool": 17,
+    "won": 17,
     "price": 0.01,
-    "bid": 0.02,
+    "bid": 0.01,
     "net": "119.9.22.",
     "machines": [],
-    "note": "VMs, gp.vs1.large-syd at $0.02; 13 reporting (Ops 16:15Z; wanted count not confirmed)",
+    "note": "VMs, gp.vs1.large-syd (General - Large), bid $0.01; wanted 30 -> 17 (= won) at 16:38Z so open demand stops holding the price at our bid (Ops). Full pool ID from the console.",
     "cloudspace": "kmr-ring1-88",
-    "vmPool": "09546bc6"
+    "vmPool": "09546bc6-56c5-4823-a346-d4062c476dcb"
    },
    {
     "where": "London (VMs)",
