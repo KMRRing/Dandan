@@ -227,6 +227,7 @@ setInterval(checkNewer, 10 * 60000).unref();
  * every 15 s cost about 30 bucket list requests a poll, dollars an hour at a few hundred idle slots. Now the first slot to find
  * nothing becomes the machine's poller and closes the gate; it polls with a backoff from POLL_MS doubling to BACKOFF_MAX, and the
  * other idle slots wait at the gate. When the poller finds a shard it opens the gate, and each waiting slot looks once itself.
+ * With LAB_FILL (every lab machine) there is no backoff: the poller makes the next filler batch as soon as the last is taken.
  */
 const BACKOFF_MAX = (Number(env.LAB_BACKOFF_SEC) || 120) * 1000;
 let gate = null, backoff = POLL_MS;
@@ -250,7 +251,9 @@ async function slotLoop(slot) {
     if (FILL) { try { if (await refill()) { backoff = POLL_MS; continue; } } catch (e) { log("refill:", e.message); } }
     else if (Date.now() - idleSince > IDLE_MS) break;
     if (!gate) { closeGate(); polling = true; }
-    if (polling) { await sleep(backoff + Math.random() * 3000); backoff = Math.min(backoff * 2, BACKOFF_MAX); }
+    // with LAB_FILL the queue is only ever empty until someone makes the next batch, so the poller keeps POLL_MS (16:28Z, the
+    // fleet director: backed-off pollers left batch-making to old workers, which made small batches on the old spec)
+    if (polling) { await sleep(backoff + Math.random() * 3000); if (!FILL) backoff = Math.min(backoff * 2, BACKOFF_MAX); }
   }
   if (polling) openGate();
 }
