@@ -129,7 +129,61 @@ export function mediumView(s, seat, rng = Math.random) {
  * Medium's score); the best is played. Questions (attack, block, a mulligan…) stay with Medium. move(s, seat, rng) fits
  * dandan-think.js think's `rollout`.
  */
+/**
+ * A Medium-free model's scores (13-14 Nov 2026, Fable No. 4 and No. 9): (x, marks of each move) → a score a move. Form "mlp"
+ * (lab/policy-train.mjs nomedium, lab/policy_np.py --form mlp): the position's part of the first layer once, each move's marks'
+ * rows added, ReLU, the second layer and w3, once a move. Form "head" (lab/policy_np.py --form head): a trunk reads the position
+ * once (XN → H1 → H2, ReLU both); a move scores trunk · (the sum of its marks' vectors E) + the sum of its marks' biases eb, so
+ * its cost hardly grows with the moves.
+ */
+export function freeScorer(model) {
+  const n = model.net, H1 = n.H1, H2 = n.H2, XN = n.XN;
+  if (model.form === "head") {
+    const W1 = Float32Array.from(n.W1), c1 = Float32Array.from(n.c1), W2 = Float32Array.from(n.W2), c2 = Float32Array.from(n.c2);
+    const E = Float32Array.from(n.E), eb = Float32Array.from(n.eb), a1 = new Float32Array(H1), z = new Float32Array(H2);
+    return (x, marks) => {
+      a1.set(c1);
+      for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H1; for (let o = 0; o < H1; o++) a1[o] += v * W1[r + o]; }
+      z.set(c2);
+      for (let o = 0; o < H1; o++) { const h = a1[o]; if (h <= 0) continue; const r = o * H2; for (let o2 = 0; o2 < H2; o2++) z[o2] += h * W2[r + o2]; }
+      for (let o2 = 0; o2 < H2; o2++) if (z[o2] < 0) z[o2] = 0;
+      return marks.map(ms => { let v = 0; for (const i of ms) { v += eb[i]; const r = i * H2; for (let o2 = 0; o2 < H2; o2++) v += z[o2] * E[r + o2]; } return v; });
+    };
+  }
+  const wx = Float32Array.from(n.wx), wm = Float32Array.from(n.wm), b1 = Float32Array.from(n.b1);
+  const w2 = Float32Array.from(n.w2), b2 = Float32Array.from(n.b2), w3 = Float32Array.from(n.w3);
+  const base = new Float32Array(H1), h1 = new Float32Array(H1);
+  return (x, marks) => {
+    base.set(b1);
+    for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H1; for (let o = 0; o < H1; o++) base[o] += v * wx[r + o]; }
+    return marks.map(ms => {
+      h1.set(base);
+      for (const i of ms) { const r = i * H1; for (let o = 0; o < H1; o++) h1[o] += wm[r + o]; }
+      let out = 0;
+      for (let o2 = 0; o2 < H2; o2++) {
+        let v = b2[o2];
+        for (let o = 0; o < H1; o++) { const h = h1[o]; if (h > 0) v += h * w2[o * H2 + o2]; }
+        if (v > 0) out += v * w3[o2];
+      }
+      return out;
+    });
+  };
+}
 export function makePlus(model, { wide = 5, free = false } = {}) {
+  // the Medium-free model (13 Nov 2026, Fable No. 4; `medium: false`): passing and every legal move, each scored by the model
+  // alone; Medium neither scores nor shortlists. Questions (attack, block, a mulligan…) stay with Medium for now.
+  if (model.medium === false) {
+    const score = freeScorer(model);
+    const move = (s, seat, rng = Math.random) => {
+      if (s.pending) return policyMove(s, seat, { rng });
+      if (!moves(s, seat).length) return PASS;
+      const list = choices(s, seat), sc = score(viewOf(s, seat), list.map(m => marksOf(s, seat, m)));
+      let best = 0;
+      for (let k = 1; k < sc.length; k++) if (sc[k] > sc[best]) best = k;
+      return list[best];
+    };
+    return { move, rank: (s, seat) => { const list = choices(s, seat), sc = score(viewOf(s, seat), list.map(m => marksOf(s, seat, m))); return list.map((m, k) => [m, sc[k]]).sort((a, b) => b[1] - a[1]).map(c => c[0]); } };
+  }
   const { alpha, beta } = model, n = model.net, H1 = n.H1, H2 = n.H2, XN = n.XN;
   const wx = Float32Array.from(n.wx), wm = Float32Array.from(n.wm), ws = Float32Array.from(n.ws), b1 = Float32Array.from(n.b1);
   const w2 = Float32Array.from(n.w2), b2 = Float32Array.from(n.b2), w3 = Float32Array.from(n.w3);
@@ -146,21 +200,9 @@ export function makePlus(model, { wide = 5, free = false } = {}) {
     }
     return out;
   };
-  // the Medium-free model (13 Nov 2026, Fable No. 4; lab/policy-train.mjs nomedium, `medium: false`): passing and every legal
-  // move, each scored by f(position, move) alone; Medium neither scores nor shortlists. Questions (attack, block, a mulligan…)
-  // stay with Medium for now.
-  const noMedium = model.medium === false;
   const move = (s, seat, rng = Math.random) => {
     if (s.pending) return policyMove(s, seat, { rng });
     if (!moves(s, seat).length) return PASS;
-    if (noMedium) {
-      const x = viewOf(s, seat);
-      base.set(b1);
-      for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H1; for (let o = 0; o < H1; o++) base[o] += v * wx[r + o]; }
-      let best = PASS, top = -Infinity;
-      for (const m of choices(s, seat)) { const v = f(s, seat, x, m, 0); if (v > top) { top = v; best = m; } }
-      return best;
-    }
     const { scored, bar, pick } = mediumView(s, seat, rng);
     // Lands stay Medium's (11 November 2026, G1 lost 16% to Medium): in the search a land played now or later is worth about the
     // same, so the model learned passing ≈ a land and, playing, kept putting its land off. When Medium plays a land, so does it.
