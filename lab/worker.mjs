@@ -117,7 +117,15 @@ const store = env.LAB_DIR ? folderStore(path.resolve(env.LAB_DIR)) : bucketStore
 const claimBody = () => JSON.stringify({ by: NAME, t: Date.now() });
 const finished = new Set(), FILL = env.LAB_FILL === "1";
 let STOPPING = false;
-for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { STOPPING = true; log(`${sig}: stopping, shards in hand left unfinished`); setTimeout(() => process.exit(0), 5000); });
+// a stop (a spot reclaim, a pod restart) hands its shards back at once: their claims are deleted, so another worker takes them
+// now rather than after LEASE_MS (16:38Z: a rolling restart left ~500 shards held by gone pods for 15 minutes)
+for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => {
+  STOPPING = true; log(`${sig}: stopping, shards in hand handed back`);
+  const back = [...BUSY.values()];
+  for (const w of back) store.del(`claims/${w}`).catch(() => {});
+  if (back.length) editOpen(store, jobs => { for (const w of back) jobs[w.split("/")[0]] = 1; return true; }, { by: NAME }).catch(() => {});
+  setTimeout(() => process.exit(0), 5000);
+});
 const doneCount = async id => (await store.list(`results/${id}/done-`)).length;
 // sps<n> (12 November 2026, Fable: S4 d crowned, so the games it learns from next are its own): flat 128 deals with value net
 // S4 d in both seats; spf<n> before it played v14 the same way, spm<n> before that mixed depths
@@ -144,7 +152,10 @@ async function refill() {
   const F = await fillerSpec(), batch = n => `${F.prefix}${String(n).padStart(3, "0")}`, re = new RegExp(`^${F.prefix}\\d+$`);
   const ids = (await store.list("jobs/")).map(o => path.basename(o.name, ".json"));
   const last = Math.max(0, ...ids.filter(i => re.test(i)).map(i => Number(i.slice(F.prefix.length))));
-  if (last && (await doneCount(batch(last))) < F.shards && (await store.list(`claims/${batch(last)}/`)).length < F.shards) {
+  // the last batch's own size, not the spec's now (16:40Z, the fleet director: after shards went 24 → 240, 24-shard batches
+  // never looked fully taken, so the chain stalled)
+  const lastShards = last ? (await specOf({ name: `jobs/${batch(last)}.json`, generation: "open" }).catch(() => null))?.shards || F.shards : F.shards;
+  if (last && (await doneCount(batch(last))) < lastShards && (await store.list(`claims/${batch(last)}/`)).length < lastShards) {
     // the last batch still has free shards, yet the open list (which sent us here) didn't name it: an update was lost
     await editOpen(store, jobs => (jobs[batch(last)] ? false : ((jobs[batch(last)] = 1), true)), { by: NAME }).catch(e => log("open list:", e.message));
     return false;
