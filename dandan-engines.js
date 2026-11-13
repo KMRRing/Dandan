@@ -29,9 +29,12 @@ export const JUDGES = {
   "avg-jt130-s3c": ["./judges/jt130.json", "./judges/s3c.json"],
   "avg-jt130-s4d": ["./judges/jt130.json", "./judges/s4d.json"],
 };
-/** The judge the live game's Hard plays with (dandan-worker.js, a request with no engine): the one that won its match.
- *  S4 d since 12 November 2026 (Korbi, after playing it, and the planning chat: 57.7% ± 3.5 against v14 at Deep, 600 pairs). */
-export const LIVE_JUDGE = "s4d";
+/** The engine the live game's Hard plays (dandan-worker.js, a request with no engine), and its judge.
+ *  S5 + the keep net since 13 November 2026, 21:30Z (Korbi: deploy the current best; its Deep gate against S4 d with Medium's
+ *  keep, 54.3% ± 2.5 over 1,195 of 1,200 pairs, 99% range 51.8 to 56.8). S4 d from 12 November (57.7% ± 3.5 against v14 at
+ *  Deep), v14 before it. */
+export const LIVE_ENGINE = "hard-s5-knet";
+export const LIVE_JUDGE = "s5";
 
 export const ENGINES = [
   {
@@ -83,12 +86,12 @@ export const ENGINES = [
   {
     id: "hard-s4d", name: "Hard (judge S4 d)", short: "Hard S4d", kind: "hard", judge: "s4d", available: true,
     description: "Hard with judge S4 d (judges/s4d.json): a larger network (128·64·32, about six times v14's weights) trained on all ~56,000 of the lab's quick self-play games, with the squeeze inputs and the rule that a card in hand may not lower its holder's chance.",
-    expect: "Against Hard with v14, both at Deep (1,024 deals): 57.6% ± 3.6 after 575 of 600 deals played both ways, and above 50% even if it lost every deal still to come: CROWNED (12 November). At Quick: 54.6% ± 2.6 over 1,000. Predicts results best of all (Brier 0.143 against v14's 0.155 on held-out games). About 1.3× v14's thinking time a decision. The live game's Hard since 12 November 2026.",
+    expect: "Against Hard with v14, both at Deep (1,024 deals): 57.6% ± 3.6 after 575 of 600 deals played both ways, and above 50% even if it lost every deal still to come: CROWNED (12 November). At Quick: 54.6% ± 2.6 over 1,000. Predicts results best of all (Brier 0.143 against v14's 0.155 on held-out games). About 1.3× v14's thinking time a decision. The live game's Hard from 12 to 13 November 2026.",
   },
   {
-    id: "hard-s5-knet", name: "Hard (S5 + keep net): the benchmark", short: "Bench", kind: "hard", judge: "s5", knet: true, available: true,
-    description: "The lab's benchmark since 13 November 2026 (keep net from 18:30Z, Korbi): Hard with value net S5 (judges/s5.json: S4 d's recipe with the race inputs) and the keep net on the first seven (judges/keep-net.json: a small network trained on real results that rates a seven by its cards and the seat; a seven Medium throws back still goes back, one Medium keeps goes back when the net rates it under the redraw value, 49.9% on the play, 49.0% on the draw). Every later keep and the bottom cards are Medium's. Not the live game.",
-    expect: "With S5 on both sides at Quick: the keep net against Medium's keep 52.0% ± 1.2 over 3,660 pairs; against the value keep +1.1 ± 1.2 on the same deals; the value table after the first seven (the hybrid) costs 1.4 ± 0.8. S5 against S4 d at Quick: 51.8% ± 1.8; S5 + value keep against live 52.1% ± 1.2 over 5,000. Its Deep gate against live (S4 d, Medium's keep) is the test for going live.",
+    id: "hard-s5-knet", name: "Hard (S5 + keep net): live and the benchmark", short: "Bench", kind: "hard", judge: "s5", knet: true, available: true,
+    description: "The lab's benchmark since 13 November 2026 (keep net from 18:30Z, Korbi): Hard with value net S5 (judges/s5.json: S4 d's recipe with the race inputs) and the keep net on the first seven (judges/keep-net.json: a small network trained on real results that rates a seven by its cards and the seat; a seven Medium throws back still goes back, one Medium keeps goes back when the net rates it under the redraw value, 49.9% on the play, 49.0% on the draw). Every later keep and the bottom cards are Medium's. The live game's Hard since 13 November 2026, 21:30Z (Korbi).",
+    expect: "With S5 on both sides at Quick: the keep net against Medium's keep 52.0% ± 1.2 over 3,660 pairs; against the value keep +1.1 ± 1.2 on the same deals; the value table after the first seven (the hybrid) costs 1.4 ± 0.8. S5 against S4 d at Quick: 51.8% ± 1.8; S5 + value keep against live 52.1% ± 1.2 over 5,000. Its Deep gate against S4 d with Medium's keep, both at Deep (1,024 deals, every legal move): 54.3% ± 2.5 over 1,195 of 1,200 pairs (99%: 51.8 to 56.8), the same thinking time: it went live on that.",
   },
   {
     id: "hard-s5-keep", name: "Hard (S5 + value keep)", short: "S5 vkeep", kind: "hard", judge: "s5", keep: true, available: false,
@@ -117,7 +120,7 @@ export const engineOf = id => ENGINES.find(e => e.id === id);
 /** The engines that can be seated (planned ones are listed but not here). */
 export const seatable = () => ENGINES.filter(e => e.available);
 /** The engine Monte is at the start: what the live game plays. */
-export const DEFAULT_ENGINE = "hard-s4d";
+export const DEFAULT_ENGINE = LIVE_ENGINE;
 /** The lab's benchmark (13 Nov 2026, Korbi: the benchmark and the live game are two things): what new candidates must beat. */
 export const BENCHMARK_ENGINE = "hard-s5-knet";
 

@@ -6,10 +6,10 @@
 // is only a backstop for a slow one).
 // The game lab (lab.html) adds one field, `engine` (an id of dandan-engines.js): "move" then plays that engine's move (a Hard with
 // the retrained judge, say) and "think" is that engine's weighing, answered as { id, result: { move, chance, list } }. A request
-// with no engine (the live game) is answered by Hard with the live judge (LIVE_JUDGE: S4 d since 12 November 2026, v14 before it: each beat
-// the one before it in its match).
+// with no engine (the live game) is answered by the live engine: Hard with the live judge and the keep net on the first seven
+// (LIVE_ENGINE: S5 + keep net since 13 November 2026, S4 d before it, v14 before that: each beat the one before it in its match).
 import { think, thinkMove, coachBudget, BUDGET, DEPTH } from "./dandan-think.js";
-import { engineOf, engineMove, decide, judgeOf, LIVE_JUDGE } from "./dandan-engines.js";
+import { engineOf, engineMove, decide, judgeOf, keepNet, LIVE_JUDGE } from "./dandan-engines.js";
 import { shownRules } from "./dandan-rules.js";
 import { newRecord, applyMove } from "./seats.js";
 import { flawAt } from "./dandan-flaws.js";
@@ -61,7 +61,8 @@ onmessage = async e => {
       return;
     }
     const judge = await judgeOf({ judge: LIVE_JUDGE }).catch(() => undefined);   // no file (offline, a fetch failed): the game's own
-    const j = judge ? { judge } : {};
+    const knet = kind === "move" ? await keepNet().catch(() => undefined) : undefined;   // no file: Medium's keep, as before
+    const j = { ...(judge ? { judge } : {}), ...(knet ? { knet } : {}) };          // the computer's first seven; the coach as before
     if (kind === "move") postMessage({ id, move: thinkMove(state, seat, { ...(DEPTH[depth] || BUDGET.move), ...j }) });
     else postMessage({ id, result: think(state, seat, { ...coachBudget(kind, depth), must: kind === "check" ? move : null, ...j }) });
   } catch (err) {
