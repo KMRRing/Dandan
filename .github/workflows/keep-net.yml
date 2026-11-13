@@ -1,0 +1,42 @@
+# The keep net on results (13 Nov 2026, Fable): lab/keep-data.mjs reads every first seven of the given self-play jobs with its
+# result (read-only key), lab/keep_net.py trains it and checks it against the yardstick by hand type; the model is committed as
+# judges/keep-net.json and the report goes to the run's summary.
+name: Train (keep net)
+on:
+  workflow_dispatch:
+    inputs:
+      jobs: { description: "Self-play jobs (ranges as spb01-446)", required: true, default: "spb01-446,spm001-030,ab-g2-s4d-0all,ab-g2-s4d-1,ab-g2-s4d-1c" }
+      hidden: { description: "Hidden units", required: true, default: "32" }
+permissions:
+  contents: write
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -q numpy
+      - name: The first sevens
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          LAB_KEY="$RUNNER_TEMP/key.json" node lab/keep-data.mjs "${{ inputs.jobs }}" > "$RUNNER_TEMP/rows.tsv"
+          rm -f "$RUNNER_TEMP/key.json"
+          wc -l "$RUNNER_TEMP/rows.tsv"
+      - name: Train and check
+        run: |
+          python3 lab/keep_net.py "$RUNNER_TEMP/rows.tsv" judges/keep-net.json --hidden "${{ inputs.hidden }}" | tee "$RUNNER_TEMP/report.txt"
+          { echo '```'; cat "$RUNNER_TEMP/report.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add judges/keep-net.json
+          git commit -q -m "Keep net trained on results" || exit 0
+          for i in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q origin HEAD:main && break; sleep 5; done
