@@ -14,6 +14,9 @@
 //   is searched at the deep deals (1,024 and more weigh every legal move) and marked `deep: 1`: the lessons for a learned policy; the
 //   rest at <deals>, which keeps the games cheap and many: the lessons for a value net. Each decision says which it was.
 //   any mode + "-cut" (13 Nov 2026): the harder cutting of lab/halving.mjs (first look at 8 deals, 2 standard errors); self-play only
+//   any mode + "-explore" (13 Nov 2026, Fable: data for a keep net trained on results): each seat's decision on its first seven is,
+//   1 time in 10, a fair coin (keep or throw back) instead of Medium's rule, marked in the line as explore: [{ seat, move }]
+//   ("hardall-cut-explore": both)
 //   hardall (12 November 2026, the planning chat: ab-g2-s4d-2all): Hard weighing every legal move, as the live game does at Deep,
 //   at <deals>; each decision marks with `off: 1` a move played that Medium's shortlist would not have weighed.
 import fs from "node:fs";
@@ -32,7 +35,9 @@ const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Numb
 const mode0 = process.argv[8] || "hard", judgeFile = process.argv[9];
 // "-cut" after the mode (13 Nov 2026, Fable: self-play only, never gates or live play): the harder cutting lab/halving.mjs
 // measured, a first look at 8 deals and moves dropped 2 standard errors behind (passing never dropped)
-const cut = mode0.endsWith("-cut"), mode = cut ? mode0.slice(0, -4) : mode0;
+const explore = mode0.endsWith("-explore"), mode1 = explore ? mode0.slice(0, -8) : mode0;
+const cut = mode1.endsWith("-cut"), mode = cut ? mode1.slice(0, -4) : mode1;
+const EXPLORE_SHARE = 0.1;
 // a judge file in judges/, or @<job>[#variant]: a lab/judge-variants.mjs run's (its first line, or the line of that variant)
 async function judgeFrom(t) {
   if (!t || t === "-") return undefined;
@@ -51,12 +56,18 @@ const nm = id => DECK[id] ?? "token";
 const realRandom = Math.random;
 for (let g = first; g < first + n; g++) {
   let G = newRecord(rules, { seats: 2, seed: seed0 + g, now: 0 }), dec = [];
+  const explored = [];
   const log = [];
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state)), p = s.pending;
     Math.random = seeded(mix(seed0 + g, i + 1));
     let move;
     if (plans) move = policyMove(s, who, { style: plans[who] });
+    else if (explore && p?.t === "mull" && p.taken === 0 && !explored.some(x => x.seat === who) && seeded(mix(seed0 + g, 9100003 + who))() < EXPLORE_SHARE) {
+      // the first seven's decision by a coin, from the game's seed (the same wherever it is played)
+      move = { t: seeded(mix(seed0 + g, 9200003 + who))() < 0.5 ? "keep" : "mull" };
+      explored.push({ seat: who, move: move.t });
+    }
     else if (p && ["mull", "bottom", "name"].includes(p.t)) move = policyMove(s, who);
     else if (!p && !legal(s, who, true).length) move = PASS;
     else {
@@ -81,5 +92,5 @@ for (let g = first; g < first + n; g++) {
   Math.random = realRandom;
   const st = G.state;
   // a line each game as it ends, so a machine taken away mid-share loses only the game it was playing
-  fs.appendFileSync(out, JSON.stringify({ game: g, seed: seed0 + g, winner: st.winner, why: st.why, turns: st.turn, moves: log, dec }) + "\n");
+  fs.appendFileSync(out, JSON.stringify({ game: g, seed: seed0 + g, winner: st.winner, why: st.why, turns: st.turn, moves: log, dec, ...(explored.length ? { explore: explored } : {}) }) + "\n");
 }
