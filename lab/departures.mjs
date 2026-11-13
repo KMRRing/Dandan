@@ -10,18 +10,12 @@
 // usage: node lab/departures.mjs <shard> <shards> <out> <self-play job> <decisions in all> [judge s4d.json] [cases cap 1000]
 //        [play-outs 8] [deals 128] [search deals 1024]
 import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { execSync } from "node:child_process";
 import { labStore, J } from "./lib.mjs";
-import { rules, shownRules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../seats.js";
-import { think, thinkMove, candidates } from "../dandan-think.js";
+import { think, candidates } from "../dandan-think.js";
 import { makeJudge } from "../dandan-eval.js";
-import { policyMove } from "../dandan-policy.js";
 import { moves as legal } from "../dandan-engine.js";
-import { perm } from "../dandan-core.js";
-import { DECK } from "../dandan-cards.js";
+import { kindOf, playOn, keptGames, selfPlayGame } from "./mine-lib.mjs";
 
 const [shard, shards, out, job] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5]];
 const want = Math.ceil(Number(process.argv[6] || 20000) / shards), judgeFile = process.argv[7] || "s4d.json";
@@ -32,46 +26,13 @@ fs.writeFileSync(out, "");
 
 // ---------- the games: this shard's share of the kept games first (where Korbi saw the misplays: every eligible decision is
 // searched), then of the self-play parts, which fill the shard's quota (Fable, 16:45Z) ----------
-const games = [];
-try {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "games-"));
-  execSync(`git fetch -q --depth=1 origin game-records && git archive FETCH_HEAD games | tar -x -C ${tmp}`, { stdio: "ignore" });
-  const files = fs.readdirSync(path.join(tmp, "games")).filter(f => f.endsWith(".json")).sort();
-  for (let k = shard; k < files.length; k += shards) {
-    const rec = JSON.parse(fs.readFileSync(path.join(tmp, "games", files[k]), "utf8")), g = rec.game;
-    let moves; try { moves = JSON.parse(g.moves); } catch { continue; }
-    if (moves?.length === g.n) games.push({ kept: true, src: `kept:${files[k]}`, R: shownRules, opts: { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } }, moves, now: g.started });
-  }
-} catch { /* no game-records: self-play only */ }
+const games = keptGames().filter(g => g.at % shards === shard);
 
-// ---------- the kind of a move: card, mode, whose target ----------
-function kindOf(s, seat, m) {
-  const t = m.targets?.[0], p = t?.id != null ? perm(s, t.id) : null;
-  return { t: m.t, card: m.card != null ? DECK[m.card] ?? "token" : null, mode: m.mode ?? null, target: !t ? null : t.k === "p" ? (t.seat === seat ? "own player" : "their player") : t.sid != null ? "spell" : p ? (p.ctl === seat ? "own" : "theirs") : t.k };
-}
-// (restored 12 Nov 19:10Z: cf4d293 dropped these two, and every shard of aa-i2c stopped at its first case)
-/** The real game played on from record `G` (before its next move) after `m` by `seat`, the engines salted by `salt`: 1 if `seat` won, 0 lost, ½ both. */
-function playOn(R, G, seat, m, salt) {
-  let r = applyMove(R, G, seat, m, 0);
-  if (r.error) return null;
-  G = r.G;
-  for (let i = 0; i < 4000 && !R.over(G.state); i++) {
-    const who = R.toMove(G.state), x = R.restore(J(G.state));
-    Math.random = seeded(mix(salt, i + 1));
-    const mv = thinkMove(x, who, { deals, ms: 1e9, judge, all: false, salt });
-    Math.random = realRandom;
-    r = applyMove(R, G, who, mv, 0);
-    if (r.error) return null;
-    G = r.G;
-  }
-  const w = G.state.winner;
-  return w === seat ? 1 : w == null || w < 0 ? 0.5 : 0;
-}
 const store = await labStore();
 const parts = (await store.list(`results/${job}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)).sort();
 for (let k = shard; k < parts.length; k += shards) {
   for (const l of ((await store.get(parts[k])) || "").split("\n").filter(Boolean)) {
-    try { const g = JSON.parse(l); games.push({ src: `${job}:${g.game}`, R: rules, opts: { seats: 2, seed: g.seed, now: 0 }, moves: g.moves, now: 0 }); } catch {}
+    try { games.push(selfPlayGame(job, JSON.parse(l))); } catch {}
   }
 }
 
@@ -98,7 +59,7 @@ for (const game of games) {
           if (sb && key(sp) !== key(r.best)) {
             cases++;
             const a = [], b = [];
-            for (let k = 0; k < plays; k++) { const salt = mix(game.opts.seed, 1000 * i + k + 1); a.push(playOn(game.R, G, who, r.best, salt)); b.push(playOn(game.R, G, who, sp, salt)); }
+            for (let k = 0; k < plays; k++) { const salt = mix(game.opts.seed, 1000 * i + k + 1); a.push(playOn(game.R, G, who, r.best, salt, { deals, judge }).result); b.push(playOn(game.R, G, who, sp, salt, { deals, judge }).result); }
             const ok = a.map((x, k) => (x == null || b[k] == null ? null : x - b[k])).filter(x => x != null);
             const mean = ok.length ? ok.reduce((x, y) => x + y, 0) / ok.length : null;
             const sd = ok.length > 1 ? Math.sqrt(ok.reduce((x, y) => x + (y - mean) ** 2, 0) / (ok.length - 1)) : null;
