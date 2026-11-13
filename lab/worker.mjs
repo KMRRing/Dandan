@@ -164,7 +164,8 @@ async function runShard(slot, spec, shard) {
   const argv = spec.args.replaceAll("{shard}", shard).replaceAll("{shards}", spec.shards).replaceAll("{out}", out).split(/\s+/).filter(Boolean);
   log(`slot ${slot}: ${id}/${shard} ${spec.script} ${argv.join(" ")}`);
   const fd = fs.openSync(printed, "w");
-  const child = spawn(process.execPath, [`lab/${spec.script}`, ...argv], { cwd: repo, stdio: ["ignore", fd, fd] });
+  // a larger young generation (13 Nov, Fable): fewer collections of the look-ahead's short-lived states; the same moves (lab/bench.mjs hashes)
+  const child = spawn(process.execPath, ["--max-semi-space-size=32", `lab/${spec.script}`, ...argv], { cwd: repo, stdio: ["ignore", fd, fd] });
   const beat = setInterval(() => store.put(`claims/${id}/${shard}`, claimBody()).catch(() => {}), BEAT_MS);
   const limit = setTimeout(() => child.kill("SIGKILL"), (spec.timeoutMin || 120) * 60000);
   const code = await new Promise(res => child.on("exit", (c, sig) => res(c ?? sig)));

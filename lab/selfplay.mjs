@@ -13,6 +13,7 @@
 //   mix:<share>[:<deep deals 1024>] (11 November 2026): the search at mixed depth. That share of the decisions, drawn by the game's seed,
 //   is searched at the deep deals (1,024 and more weigh every legal move) and marked `deep: 1`: the lessons for a learned policy; the
 //   rest at <deals>, which keeps the games cheap and many: the lessons for a value net. Each decision says which it was.
+//   any mode + "-cut" (13 Nov 2026): the harder cutting of lab/halving.mjs (first look at 8 deals, 2 standard errors); self-play only
 //   hardall (12 November 2026, the planning chat: ab-g2-s4d-2all): Hard weighing every legal move, as the live game does at Deep,
 //   at <deals>; each decision marks with `off: 1` a move played that Medium's shortlist would not have weighed.
 import fs from "node:fs";
@@ -28,7 +29,10 @@ import { DECK } from "../dandan-cards.js";
 import { J } from "./lib.mjs";
 
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5] || 256), Number(process.argv[6] || 800), Number(process.argv[7] || 7000)];
-const mode = process.argv[8] || "hard", judgeFile = process.argv[9];
+const mode0 = process.argv[8] || "hard", judgeFile = process.argv[9];
+// "-cut" after the mode (13 Nov 2026, Fable: self-play only, never gates or live play): the harder cutting lab/halving.mjs
+// measured, a first look at 8 deals and moves dropped 2 standard errors behind (passing never dropped)
+const cut = mode0.endsWith("-cut"), mode = cut ? mode0.slice(0, -4) : mode0;
 // a judge file in judges/, or @<job>[#variant]: a lab/judge-variants.mjs run's (its first line, or the line of that variant)
 async function judgeFrom(t) {
   if (!t || t === "-") return undefined;
@@ -58,7 +62,7 @@ for (let g = first; g < first + n; g++) {
     else {
       // mix: this decision's depth, by the game's seed and the move's number (the same wherever the game is played)
       const deep = mixed ? seeded(mix(seed0 + g, 1000003 + i))() < mixed[0] : false;
-      const res = (mode === "paths" ? thinkPaths : think)(s, who, { deals: deep ? mixed[1] || 1024 : deals, ms: 1e9, ...(every ? { all: true, offCheck: true } : {}), ...(judge ? { judge } : {}) });
+      const res = (mode === "paths" ? thinkPaths : think)(s, who, { deals: deep ? mixed[1] || 1024 : deals, ms: 1e9, ...(every ? { all: true, offCheck: true } : {}), ...(cut ? { first: 8, z: 2, hold: true } : {}), ...(judge ? { judge } : {}) });
       move = res.best;
       if (!res.only) {
         const key = m => JSON.stringify(m);

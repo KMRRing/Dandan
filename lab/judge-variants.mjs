@@ -136,9 +136,15 @@ const KEY = `m${M}-${turnsOnly ? "turns" : "p" + perGame}-v1`, W = 3 * M + 6;
 async function replayBatch(id) {
   const rows = [];
   let n = 0;
-  for (const name of (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n))) for (const line of ((await store.get(name)) || "").split("\n")) {
-    if (!line) continue;
-    const rec = JSON.parse(line), at = new Map((rec.dec || []).map(d => [d.i, d])), g = n++;
+  // "match:<job>" (13 Nov, Fable): a match set's games, from its shards' printed lines ({ pair, seed, aSeat, winner, moves }),
+  // each game once; they keep no search, so their positions are labelled by the result alone
+  const match = id.startsWith("match:"), job = match ? id.slice(6) : id, seen = new Set();
+  const files = (await store.list(`results/${job}/`)).filter(n => (match ? /\/stdout-\d+\.txt$/ : /\/part-\d+\.jsonl$/).test(n));
+  for (const name of files) for (const line of ((await store.get(name)) || "").split("\n")) {
+    if (!line || (match && !line.startsWith('{"pair"'))) continue;
+    const rec = JSON.parse(line);
+    if (match) { const k = `${rec.seed}:${rec.aSeat}`; if (seen.has(k)) continue; seen.add(k); }
+    const at = new Map((rec.dec || []).map(d => [d.i, d])), g = n++;
     let G = newRecord(lean, { seats: 2, seed: rec.seed, now: 0 });
     // the card taken out drawn from the game's own seed, not the training's stream: a training then runs the same from the cache
     let r0 = (rec.seed * 2654435761) >>> 0;
@@ -200,7 +206,7 @@ async function batchRows(id) {
   try { const t = await store.get(name); if (t) { const b = unpack(t); say(`${id}: ${b.games} games, ${b.rows.length} positions from the cache`); return b; } } catch (e) { say(`${id}: cache unreadable (${e.message}), replaying`); }
   const b = await replayBatch(id);
   // a batch still being played is not cached (its later games would be missing from every reading after)
-  const live = await store.get(`jobs/${id}.json`), done = (await store.list(`results/${id}/`)).filter(n => /\/done-\d+$/.test(n)).length;
+  const jid = id.replace(/^match:/, ""), live = await store.get(`jobs/${jid}.json`), done = (await store.list(`results/${jid}/`)).filter(n => /\/done-\d+$/.test(n)).length;
   const finished = live ? done >= JSON.parse(live).shards : done > 0;   // a retired batch is as finished as it will get
   if (finished || process.env.CACHE_ANY === "1") { try { await store.put(name, pack(b)); } catch (e) { say(`${id}: not cached (${e.message})`); } }
   say(`${id}: ${b.games} games, ${b.rows.length} positions replayed${finished ? ", cached" : ""}`);
