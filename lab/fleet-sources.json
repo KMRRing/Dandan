@@ -108,11 +108,11 @@
         "cores": 4,
         "pool": 5,
         "won": 17,
-        "price": 0.01,
+        "price": 0.001,
         "bid": 0.01,
         "net": "119.9.22.",
         "machines": [],
-        "note": "VMs, gp.vs1.large-syd (General - Large), bid $0.01 ($0.0025/vCPU-h); wanted 17 to 5 at 18:53Z as the Sydney 16-core compute VMs (kmr-ring1-27) start; to 1 once they all report (Ops). Full pool ID from the console.",
+        "note": "VMs, gp.vs1.large-syd (General - Large), bid $0.01; wanted 17 to 5 at 18:53Z — the market then fell $0.01 to $0.001 ($0.00025/vCPU-h): 17 of ours had been holding it up. Keep at about 5 (Ops). Full pool ID from the console.",
         "cloudspace": "kmr-ring1-88",
         "vmPool": "09546bc6-56c5-4823-a346-d4062c476dcb"
       },
