@@ -104,7 +104,7 @@ const claimBody = () => JSON.stringify({ by: NAME, t: Date.now() });
 const finished = new Set(), FILL = env.LAB_FILL === "1";
 let STOPPING = false;
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { STOPPING = true; log(`${sig}: stopping, shards in hand left unfinished`); setTimeout(() => process.exit(0), 5000); });
-const doneCount = async id => (await store.list(`results/${id}/`)).filter(r => /\/done-\d+$/.test(r.name)).length;
+const doneCount = async id => (await store.list(`results/${id}/done-`)).length;
 // sps<n> (12 November 2026, Fable: S4 d crowned, so the games it learns from next are its own): flat 128 deals with value net
 // S4 d in both seats; spf<n> before it played v14 the same way, spm<n> before that mixed depths
 /**
@@ -138,16 +138,28 @@ async function refill() {
   await store.put(`jobs/${spec.id}.json`, JSON.stringify(spec), { ifAbsent: true });
 }
 /** The next shard nobody has (or whose claim lapsed): claimed for this worker, or null. */
+// A job's spec, read once a version (the listing's generation changes when a spec is rewritten)
+const specs = new Map();
+async function specOf(o) {
+  const k = `${o.name}#${o.generation}`;
+  if (!specs.has(k)) specs.set(k, JSON.parse(await store.get(o.name)));
+  return specs.get(k);
+}
+// 13 Nov (Korbi: "not all cores busy?"): with shards of a minute, a slot spent a large share of its time looking for the next
+// one: every result file of every job listed (parts and logs too), each spec read again, and every slot racing for the same
+// lowest free shard. Now only the done marks are listed, specs are kept, and each slot starts its search at a random shard.
 async function nextShard() {
   for (const o of await store.list("jobs/")) {
     const id = path.basename(o.name, ".json");
     if (finished.has(id)) continue;
-    const spec = JSON.parse(await store.get(o.name));
-    const [claims, results] = await Promise.all([store.list(`claims/${id}/`), store.list(`results/${id}/`)]);
+    const spec = await specOf(o);
+    const [claims, results] = await Promise.all([store.list(`claims/${id}/`), store.list(`results/${id}/done-`)]);
     const done = new Set(results.map(r => path.basename(r.name)).filter(n => /^done-\d+$/.test(n)).map(n => Number(n.slice(5))));
     if (done.size >= spec.shards) { finished.add(id); continue; }
     const claimed = new Map(claims.map(c => [Number(path.basename(c.name)), c]));
-    for (let shard = 0; shard < spec.shards; shard++) {
+    const start = Math.floor(Math.random() * spec.shards);
+    for (let k = 0; k < spec.shards; k++) {
+      const shard = (start + k) % spec.shards;
       if (done.has(shard)) continue;
       const c = claimed.get(shard);
       if (!c) { if (await store.put(`claims/${id}/${shard}`, claimBody(), { ifAbsent: true })) return { spec, shard }; continue; }
@@ -193,10 +205,23 @@ async function runShard(slot, spec, shard) {
   log(`slot ${slot}: ${id}/${shard} ended with ${code} after ${Math.round((Date.now() - t0) / 1000)} s`);
 }
 
+// A newer worker on main (13 Nov 2026): every 10 minutes the worker compares its own file with main's; when they differ it
+// takes no new shard, and once its slots have finished it exits, so the machine's loop (VM service, Kubernetes restart) starts
+// the new one. Shards in hand are never cut short for it.
+let DRAIN = false;
+const OWN = fs.readFileSync(new URL(import.meta.url), "utf8");
+async function checkNewer() {
+  if (env.LAB_DIR || DRAIN) return;
+  try {
+    const r = await fetch(`${REPO.replace(/\.git$/, "").replace("https://github.com/", "https://raw.githubusercontent.com/")}/main/lab/worker.mjs`);
+    if (r.ok && (await r.text()) !== OWN) { DRAIN = true; log("a newer worker is on main: finishing the shards in hand, then restarting"); }
+  } catch { /* offline: try again next time */ }
+}
+setInterval(checkNewer, 10 * 60000).unref();
 async function slotLoop(slot) {
   await sleep(slot * 700);
   let idleSince = Date.now();
-  while (Date.now() - T0 < MAX_MS) {
+  while (Date.now() - T0 < MAX_MS && !DRAIN) {
     let work = null;
     try { work = await nextShard(); } catch (e) { log("queue:", e.message); }
     if (work) {
@@ -244,4 +269,5 @@ grow();
 for (let n = 0; n < loops.length; ) { n = loops.length; await Promise.all(loops); }   // a slot added while waiting is waited for too
 clearInterval(workerBeat);
 await store.del(`workers/${NAME}.json`).catch(() => {});
-log("no more work: stopping");
+log(DRAIN ? "restarting for the newer worker" : "no more work: stopping");
+process.exit(0);
