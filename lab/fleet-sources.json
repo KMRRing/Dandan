@@ -1,5 +1,5 @@
 {
- "at": "2026-11-13T15:10:00Z",
+ "at": "2026-11-13T15:35:00Z",
  "rackspace": {
   "price": 0.001,
   "bid": 0.01,
@@ -9,8 +9,8 @@
    {
     "where": "Hong Kong (VMs)",
     "cores": 4,
-    "pool": 20,
-    "won": 17,
+    "pool": 50,
+    "won": 20,
     "price": 0.01,
     "bid": 0.02,
     "net": "119.9.118.",
@@ -30,7 +30,7 @@
      "prod-instance-17945050086570198",
      "prod-instance-17945051844230199"
     ],
-    "note": "VMs, gp.vs1.large-hkg; SpeedBump at 17"
+    "note": "VMs, gp.vs1.large-hkg, bid $0.02; 20 of 20 won (Fulfilled 15:33Z), target raised to 50"
    },
    {
     "where": "US East 2 (VMs)",
@@ -40,20 +40,20 @@
     "price": 0.01,
     "bid": 0.01,
     "net": "10.0.",
-    "note": "VMs, gp.vs2.medium-iad2 (newer generation), won at once 12:30Z; target 250 set, SpeedBump at 30"
+    "note": "VMs, gp.vs2.medium-iad2 (newer generation); target back to 30 for the speed-bump test"
    },
    {
     "where": "Chicago (Kubernetes)",
     "k8s": "kmr-ring1-71",
     "cores": 2,
-    "pool": 20,
+    "pool": 18,
     "won": 18,
     "price": 0.02,
     "bid": 0.02,
     "machines": [
      "dandan-lab-"
     ],
-    "note": "18 x 2-core compute at $0.02 (to be replaced by cheaper vCPUs); 5 x 4-core bid at $0.02, SpeedBump"
+    "note": "12 x 2-core compute at $0.02 (cut from 18 for the speed-bump test); 6 x 16-core general bid at $0.04; 5 x 4-core at $0.02, SpeedBump"
    },
    {
     "where": "Hong Kong (Kubernetes)",
