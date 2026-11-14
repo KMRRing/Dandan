@@ -1,0 +1,1 @@
+{"id": "az-y4-c-e", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g4-C-value~g4-C-policy hard-knet+free~mpN6416:s5.json 64 200 970000", "shards": 100, "timeoutMin": 90, "purpose": "Zero yardstick, feedback only: generation 4's engine of approach C against the benchmark at Quick, 200 pairs on seeds 970000"}
