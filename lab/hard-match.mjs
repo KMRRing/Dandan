@@ -15,7 +15,7 @@ import fs from "node:fs";
 import { readParts } from "./lib.mjs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../seats.js";
-import { thinkMoveOff, thinkPathsMove } from "../dandan-think.js";
+import { thinkMoveOff, thinkPathsMove, think } from "../dandan-think.js";
 import { makeJudge } from "../dandan-eval.js";
 import { makePlus } from "../dandan-netpolicy.js";
 import { policyMove } from "../dandan-policy.js";
@@ -43,6 +43,16 @@ async function modelOf(name) {
   return JSON.parse((await readParts(name)).flatMap(x => x.split("\n").filter(Boolean))[0]);
 }
 async function side(spec) {
+  // "zero~<value net>~<policy net|->" (14 Nov 2026, Zero, Fable No. 12's yardstick): Zero's engine, no Medium anywhere: every
+  // option weighed by the search with Zero's nets (lab/zero/nets/<name>.json), at the match's deals
+  if (spec.startsWith("zero~")) {
+    const [, v, pol] = spec.split("~"), Z = await import("./zero/zero-lib.mjs"), judge = Z.judgeOf(v), pl = Z.zeroPlayer(Z.netOf(pol));
+    return (s, seat) => {
+      const ms = Z.zeroOptions(s, seat);
+      if (ms.length <= 1) return { move: ms[0] ?? Z.PASS, off: false };
+      return { move: think(s, seat, { deals, ms: 1e9, all: true, options: Z.zeroOptions, weigh: false, rollout: pl.rollout, judge, ...(pl.focus ? { focus: pl.focus } : {}) }).best, off: false };
+    };
+  }
   // "plus@<policy-train job>" or "medium": no search at all, the stage-1 model or Medium alone (to see where the model stands)
   if (spec === "medium") return (s, seat) => ({ move: policyMove(s, seat, { rng: Math.random }), off: false });
   if (/^plus(free)?@/.test(spec)) { const free = spec.startsWith("plusfree@"), mv = makePlus(JSON.parse((await readParts(spec.replace(/^plus(free)?@/, ""))).flatMap(x => x.split("\n").filter(Boolean))[0]), { free }).move; return (s, seat) => ({ move: mv(s, seat, Math.random), off: false }); }

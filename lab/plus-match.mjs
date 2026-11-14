@@ -13,6 +13,8 @@ const [shard, shards, out, specA, specB] = [Number(process.argv[2]), Number(proc
 const pairs = Number(process.argv[7] ?? 20000), first = Number(process.argv[8] ?? 300000);
 async function side(spec) {
   if (spec === "medium") return (s, seat, rng) => policyMove(s, seat, { rng });
+  // "zero@<policy net>" (14 Nov 2026): Zero's policy alone (lab/zero/nets/<name>.json), questions at random, no Medium anywhere
+  if (spec.startsWith("zero@")) { const Z = await import("./zero/zero-lib.mjs"); return Z.zeroPlayer(Z.netOf(spec.slice(5))).rollout; }
   // "plusfree@<job>": the model decides passing and lands too (no Medium guard), for a model trained with act=1
   // the model from a policy-train job's results, or (13 Nov) a file in lab/policy/ (a training on GitHub)
   const free = spec.startsWith("plusfree@"), job = spec.replace(/^plus(free)?@/, "");

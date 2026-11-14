@@ -1,0 +1,1 @@
+{"id": "az-g1-c", "script": "zero-play.mjs", "args": "{shard} {shards} {out} 256 4800 53000000 - g0-v64-value 400", "shards": 1200, "timeoutMin": 240, "purpose": "Zero generation 1 for approach C (256 deals, four times the games: 4,800, four a shard; value net 64x32 from generation 0), explore3 1 in 400, no Medium anywhere"}
