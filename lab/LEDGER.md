@@ -657,3 +657,5 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - 2026-11-14 01:30Z ops: HK gp.2xl a9260c35 7->9, held $0.01. Requests over $0.30 two snapshots running ($0.341 at 01:15Z, $0.40 at 01:25Z): shards got short - af-m6/m7/r1 7-8 min, sps062 7.7 min (was 30-40). Block sent to exec via Korbi: lengthen shards to ~30 min. Fleet 1214/1214 busy, 976 waiting.
 
 - 2026-11-14 01:47Z ops: HK gp.2xl a9260c35 9->11, held $0.01. Requests $0.456/h at 01:35Z (third snapshot > $0.30); sps062 shards 7.7 min, sps063 started; no exec fix yet - reminded Korbi. Fleet 1240/1246 busy, 1120 waiting.
+
+- 2026-11-14 02:06Z ops: CORRECTION to 01:30Z block. shardMin in summary.json is the mean of shards finished so far, so a young batch reads short (early finishers): sps060 13.6 min at 01:15Z -> 29.8 at 01:55Z, sps061 9.8 -> 17.2. Filler shards are NOT short; the 01:30Z request to exec is withdrawn for the filler. Request peak ($0.34-0.46) matched the af-m6/m7/r1 burst (genuinely ~8-10 min); $0.374 at 01:55Z after they finished. HK gp.2xl a9260c35 11->13, held $0.01. Fleet 1278/1278 busy, 647 waiting.
