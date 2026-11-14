@@ -225,8 +225,11 @@ export class HandFilter {
 const LOG_K = 8;
 export class SlotFilter {
   // tau: the policy's temperature (under 1 sharpens: Korbi 15:50, the engine against itself should be read as playing its best)
-  constructor(me, { policy = null, qpolicy = null, options, qMarks, n = 300, eps = 0.5, tau = 0.1, rng = Math.random } = {}) {
-    Object.assign(this, { me, opp: other(me), options, qMarks, N: n, eps, tau, rng });
+  // kappa (Korbi 16:22: the floor should follow how big the gap is): when set, a hand's factor is exp(−regret / kappa), regret
+  // the policy's score of its best move less that of the move made in that hand's world: two plays about as good keep both
+  // hands near 1, a clear blunder in a hand's world drops it toward eps (then a small floor for a real misplay)
+  constructor(me, { policy = null, qpolicy = null, options, qMarks, n = 1000, eps = 0.005, tau = 0.1, kappa = 1, rng = Math.random } = {}) {
+    Object.assign(this, { me, opp: other(me), options, qMarks, N: n, eps, tau, kappa, rng });
     this.score = policy ? freeScorer(policy) : null; this.qscore = qpolicy ? freeScorer(qpolicy) : null;
     this.wide = !!(policy && policy.net.XN > VIEW_N);
     this.XB = new Float32Array(VIEW_N + EXT_N); this.EB = new Float32Array(EXT_N);
@@ -259,6 +262,7 @@ export class SlotFilter {
     const marks = ms.map(x => (q ? this.qMarks(w, this.opp, x) : marksOf(w, this.opp, x))), k = marks.findIndex(x => JSON.stringify(x) === target);
     if (k < 0) return 0;
     const v = (q ? this.qscore : this.score)(this.viewIn(w), marks), top = Math.max(...v), T = this.tau;
+    if (this.kappa) return Math.exp(-(top - v[k]) / this.kappa);
     let z = 0; for (const y of v) z += Math.exp((y - top) / T);
     return Math.exp((v[k] - top) / T) / z;
   }

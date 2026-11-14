@@ -18,3 +18,4 @@ az-g6-a  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008) r
 az-y5-a-e  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008) replaces g4x-A-value (0.5215) in generation 6 A; requeued as az-y5-a-ev
 az-o5-a  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008) replaces g4x-A-value (0.5215) in generation 6 A; requeued as az-o5-av
 az-x5-a  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008) replaces g4x-A-value (0.5215) in generation 6 A; requeued as az-x5-av
+az-s2d  # 16:40Z: Scry 2d's flat 0.5 floor replaced by the gap rule (Korbi 16:22); requeued as az-s2e
