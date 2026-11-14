@@ -12,3 +12,4 @@ ag-g2-ctl2  # Fable No. 3
 ag-g2-match1  # Fable No. 3
 ag-g2-match2  # Fable No. 3
 ag-g2-match3  # Fable No. 3
+az-g2-b  # Zero approach B dropped after generation 1's yardsticks (weakest on both)
