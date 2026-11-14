@@ -109,7 +109,7 @@ export function qMarksOf(s, seat, m) {
 export function zeroPlayer(policy, qpolicy = null, ctx = null) {
   const score = policy ? freeScorer(policy) : null, qscore = qpolicy ? freeScorer(qpolicy) : null;
   const wide = !!(policy && policy.net.XN > VIEW_N), XB = new Float32Array(VIEW_N + EXT_N), EB = new Float32Array(EXT_N), none = new Float32Array(NN);
-  const view = wide ? (s, seat) => { XB.set(viewInto(s, seat), 0); XB.set(ext(s, seat, ctx?.counts[seat] ?? none, EB), VIEW_N); return XB; } : (s, seat) => viewInto(s, seat);
+  const view = wide ? (s, seat) => { XB.set(viewInto(s, seat), 0); XB.set(ext(s, seat, ctx?.counts[seat] ?? none, EB, null, ctx?.any?.[seat] ?? none), VIEW_N); return XB; } : (s, seat) => viewInto(s, seat);
   const rollout = (s, seat, rng) => {
     const ms = zeroOptions(s, seat);
     if (ms.length <= 1) return ms[0] ?? PASS;
@@ -142,7 +142,7 @@ export function zeroPlayer(policy, qpolicy = null, ctx = null) {
  *  think's extra options, the deal by the belief). reset() at a new game. */
 export function zeroBrain(policyName, valueName) {
   const policy = netOf(policyName), qpolicy = qnetOf(policyName), bnet = beliefNetOf(policyName);
-  const ctx = { counts: [new Float32Array(NN), new Float32Array(NN)] }, player = zeroPlayer(policy, qpolicy, ctx);
+  const ctx = { counts: [new Float32Array(NN), new Float32Array(NN)], any: [null, null] }, player = zeroPlayer(policy, qpolicy, ctx);
   const belief = bnet || player.wide ? beliefOf(bnet) : null, judge = valueJudgeOf(valueName);
   let tracker = new Tracker();
   return {
@@ -152,8 +152,8 @@ export function zeroBrain(policyName, valueName) {
     root(s, seat) {
       if (!belief) return {};
       const b = [belief(s, 0, tracker), belief(s, 1, tracker)];
-      ctx.counts[0] = b[0].counts; ctx.counts[1] = b[1].counts;
-      return bnet ? { deal: dealBy(b[seat].p) } : {};
+      ctx.counts[0] = b[0].counts; ctx.counts[1] = b[1].counts; ctx.any[0] = b[0].any; ctx.any[1] = b[1].any;
+      return bnet ? { deal: dealBy(b[seat].slots) } : {};
     },
     think(s, seat, deals, extra = {}) {
       return think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge, ...(player.focus ? { focus: player.focus } : {}), ...this.root(s, seat), ...extra });

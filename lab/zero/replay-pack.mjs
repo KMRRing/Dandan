@@ -1,9 +1,9 @@
 // Zero's games read again on the extended view (14 Nov 2026, Korbi 10:04): every game of the given zero-play jobs replayed
 // from its seed and moves (the play sets Math.random the same way, so each position comes back exactly), the Tracker kept
 // up to date as in play, and packed for the trainers.
-//   belief  <dir>/b: the belief net's rows (lab/zero/belief_np.py): x.f32 (BX), the other hand's unknown cards by name as
-//           they really were (y.f32, NN), the unseen pool (u.f32, NN), the unknown slots (n.f32), hold.u8; one position in
-//           EVERY, both seats.
+//   belief  <dir>/b: the belief net's rows (lab/zero/belief_np.py): a position's x.f32 (BX), its unseen pool (u.f32, NN),
+//           hold.u8; and every unknown card of the other hand: its history (sf.f32, SLOT_N), what it really was (sy.i16, a
+//           name) and its position's row (srow.i32); one position in EVERY, both seats.
 //   train   (with a belief net) <dir>/p and <dir>/q: the searched decisions (priority, every legal move weighed) and the
 //           questions in lab/fetch-ex.mjs's format with x = viewOf + ext(the belief's counts), for lab/policy_np.py; <dir>/v:
 //           value rows face up (lab/zero/fetch-values.mjs's format, FEATURES + EXT_N a seat), after any random move only.
@@ -14,7 +14,8 @@ import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
 import { features, FEATURES } from "../../dandan-eval.js";
 import { viewOf } from "../../dandan-netpolicy.js";
-import { NN, Tracker, beliefInput, beliefOf, seenBy, ext, handCounts, extValueRow, BX } from "./zero-view.mjs";
+import { NN, Tracker, beliefInput, beliefOf, seenBy, ext, handCounts, extValueRow, BX, SLOT_N, unknownSlots } from "./zero-view.mjs";
+import { DECK, NAMES } from "../../dandan-cards.js";
 
 const [dir, ids, mode, bfile] = process.argv.slice(2), EVERY = 6, N = FEATURES.length;
 const belief = mode === "train" ? beliefOf(bfile ? JSON.parse(fs.readFileSync(bfile, "utf8").split("\n")[0]) : null) : null;
@@ -24,7 +25,8 @@ function sink(sub, names) {
   const fd = Object.fromEntries(names.map(n => [n, fs.openSync(`${dir}/${sub}/${n}`, "w")]));
   return { put: (n, a) => fs.writeSync(fd[n], Buffer.from(a.buffer, a.byteOffset, a.byteLength)), close: () => Object.values(fd).forEach(f => fs.closeSync(f)) };
 }
-const B = mode === "belief" ? sink("b", ["x.f32", "y.f32", "u.f32", "n.f32", "hold.u8"]) : null;
+const B = mode === "belief" ? sink("b", ["x.f32", "u.f32", "hold.u8", "sf.f32", "sy.i16", "srow.i32"]) : null, NAME_AT = new Map(NAMES.map((n, k) => [n, k]));
+let ns = 0;
 const EX = ["x.f32", "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8"];
 const P = mode === "train" ? { p: sink("p", EX), q: sink("q", EX) } : null, PC = { p: { D: 0, C: 0, K: 0, XN: 0 }, q: { D: 0, C: 0, K: 0, XN: 0 } };
 const V = mode === "train" ? sink("v", ["mine.f32", "theirs.f32", "won.f32", "hold.u8"]) : null;
@@ -51,10 +53,10 @@ function replay(game, decisions) {
     if (B && seeded(mix(seed, 31337 + i))() < 1 / EVERY) for (const me of [0, 1]) {
       const seen = seenBy(s, me);
       if (seen.unknown <= 0) continue;
-      const y = handCounts(s, 1 - me);
-      for (let k = 0; k < NN; k++) y[k] -= seen.known[k];
-      B.put("x.f32", Float32Array.from(beliefInput(s, me, T, seen))); B.put("y.f32", y); B.put("u.f32", seen.unseen);
-      B.put("n.f32", Float32Array.of(seen.unknown)); B.put("hold.u8", Uint8Array.of(hold ? 1 : 0)); nb++;
+      B.put("x.f32", Float32Array.from(beliefInput(s, me, T, seen))); B.put("u.f32", seen.unseen); B.put("hold.u8", Uint8Array.of(hold ? 1 : 0));
+      // every unknown card of the other hand: its history and what it really was
+      for (const id of unknownSlots(s, me)) { B.put("sf.f32", T.slotOf(me, s, id, new Float32Array(SLOT_N))); B.put("sy.i16", Int16Array.of(NAME_AT.get(DECK[id]))); B.put("srow.i32", Int32Array.of(nb)); ns++; }
+      nb++;
     }
     if (V && s.turn !== lastTurn && !s.pending) {
       lastTurn = s.turn;
@@ -67,7 +69,7 @@ function replay(game, decisions) {
     }
     for (const d of decisions.get(i) || []) {
       if (d.seat !== who) continue;
-      const b = belief(s, who, T), x = [...viewOf(s, who), ...ext(s, who, b.counts)];
+      const b = belief(s, who, T), x = [...viewOf(s, who), ...ext(s, who, b.counts, undefined, null, b.any)];
       if (d.qd) putDecision("q", d, x); else if (d.every) putDecision("p", d, x);
     }
     Math.random = seeded(mix(seed, i + 1));
@@ -98,7 +100,7 @@ for (const id of local ? [ids] : ids.split(",")) {
   }
   console.log(`${id}: ${parts.length} parts; ${games} games replayed so far (${broken} not the same)`);
 }
-if (B) { B.close(); fs.writeFileSync(`${dir}/b/meta.json`, JSON.stringify({ BX, NN, rows: nb, every: EVERY, ids })); }
+if (B) { B.close(); fs.writeFileSync(`${dir}/b/meta.json`, JSON.stringify({ BX, NN, SLOT_N, rows: nb, slots: ns, every: EVERY, ids })); }
 if (P) for (const w of ["p", "q"]) {
   P[w].put("cand.i32", Int32Array.of(PC[w].C)); P[w].put("mark.i32", Int32Array.of(PC[w].K)); P[w].close();
   fs.writeFileSync(`${dir}/${w}/meta.json`, JSON.stringify({ XN: PC[w].XN, decisions: PC[w].D, candidates: PC[w].C, marks: PC[w].K, exports: ids, every: true }));
