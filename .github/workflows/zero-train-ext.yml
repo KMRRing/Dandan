@@ -43,7 +43,7 @@ jobs:
           rm -rf "$D"?/
           LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "$D" "${{ inputs.games }}" train "lab/zero/nets/$N-scry.json" | tee -a "$GITHUB_STEP_SUMMARY"
           rm -f "$RUNNER_TEMP/key.json"
-          python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$N-value.json" --shape "${{ inputs.value }}" | tee -a "$RUNNER_TEMP/log.txt"
+          python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$N-value.json" --shape "${{ inputs.value }}" --lr 3e-4 --wd 0.1 | tee -a "$RUNNER_TEMP/log.txt"
           python3 lab/policy_np.py "$D/p" "lab/zero/nets/$N-policy.json" --form head --h1 "${{ inputs.h1 }}" --h2 "${{ inputs.h2 }}" --epochs "${{ inputs.epochs }}" --decay 0.9 | tee -a "$RUNNER_TEMP/log.txt"
           python3 lab/policy_np.py "$D/q" "lab/zero/nets/$N-qpolicy.json" --form head --h1 "${{ inputs.h1 }}" --h2 "${{ inputs.h2 }}" --epochs "${{ inputs.epochs }}" --decay 0.9 | tee -a "$RUNNER_TEMP/log.txt"
           { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

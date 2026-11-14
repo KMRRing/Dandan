@@ -3,7 +3,7 @@ g an MLP with ReLU hidden layers and a linear last layer, mine and theirs the po
 (dandan-eval.js makeJudge's form), cross-entropy on the result. Adam, batches of 256, the held-out rows (every fifth game) measured
 after each epoch, the best epoch kept. Written in dandan-eval.js's layer format (8-bit weights, a scale per output, biases), so
 makeJudge reads it.
-usage: python3 lab/zero/value_np.py <packed folder> <out> [--shape 64x32] [--epochs 8] [--lr 1e-3] [--seed 1] [--init net.json]
+usage: python3 lab/zero/value_np.py <packed folder> <out> [--shape 64x32] [--epochs 8] [--lr 1e-3] [--seed 1] [--wd 0]
 """
 import argparse, base64, json, os, time
 import numpy as np
@@ -12,6 +12,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("dir"); ap.add_argument("out")
 ap.add_argument("--shape", default="64x32"); ap.add_argument("--epochs", type=int, default=8)
 ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--seed", type=int, default=1); ap.add_argument("--batch", type=int, default=256)
+ap.add_argument("--wd", type=float, default=0.0)  # decoupled weight decay a step (14 Nov: the face-up net overfits from epoch 2)
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 meta = json.load(open(os.path.join(A.dir, "meta.json"))); N, R = meta["N"], meta["rows"]
@@ -62,6 +63,7 @@ for e in range(1, A.epochs + 1):
             for P_, G_, m_, v_ in ((W, aW[l] + bW[l], mW, vW), (B, aB[l] + bB[l], mB, vB)):
                 m_[l] = 0.9 * m_[l] + 0.1 * G_; v_[l] = 0.999 * v_[l] + 0.001 * G_ ** 2
                 P_[l] -= A.lr * (m_[l] / (1 - 0.9 ** t)) / (np.sqrt(v_[l] / (1 - 0.999 ** t)) + 1e-8)
+            if A.wd: W[l] *= 1 - A.lr * A.wd
     h = loss_of(he)
     say(f"epoch {e}: held-out loss {h:.4f}")
     if h < best: best, bestW = h, ([w.copy() for w in W], [b.copy() for b in B])
