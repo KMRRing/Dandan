@@ -205,3 +205,170 @@ export class HandFilter {
   marginals(s) { if (!this.ready) this.reset(s); const p = new Float64Array(NN); let u = 0; for (let i = 0; i < this.N; i++) { const h = this.P[i]; let s = 0; for (let n = 0; n < NN; n++) { p[n] += this.w[i] * h[n]; s += h[n]; } u += this.w[i] * s; } return { p, u }; }
   landsAtLeast(k, lands, s) { if (!this.ready) this.reset(s); let pr = 0; for (let i = 0; i < this.N; i++) { let c = 0; for (let n = 0; n < NN; n++) if (lands[n]) c += this.P[i][n]; if (c >= k) pr += this.w[i]; } return pr; }
 }
+
+// ---------- Scry 2d (14 Nov 2026, Korbi 16:00): the hands they COULD STILL hold ----------
+// Korbi: "The 1000 hands should be a thousand hands that the player could still have. If they play a Memory Lapse all it tells
+// is that the previous hand contained a Memory Lapse, it says very little about the cards still left. If the player doesn't
+// play a card, hands containing it should be ruled out unless the policy thinks keeping it is the play; struck means REPLACED
+// with randomly chosen hands that are fully compliant with the previous plays thus far."
+// Each hand names every unknown card of the other hand by its slot (a physical card, followed from when it came in; its name
+// never read). After every move:
+//   - the other player's decision: each hand's weight × (ε + the chance Zero's policy, holding it, makes that move); a telling
+//     decision (the hands disagree: the best explains it at least twice as well as the worst) goes into the log, with the
+//     slots in hand then;
+//   - a slot seen leaving (cast, discarded, revealed) as card X: a hand naming it X keeps its other cards; a hand naming X on
+//     another slot of theirs swaps the two; a hand with no X can't be right and is struck;
+//   - a slot leaving unseen is dropped from every hand; a new unseen slot (a draw) gets a card from what each hand leaves unseen;
+//   - struck hands, and hands under a thousandth of the best's weight, are REPLACED: a copy of a hand still standing (by
+//     weight), then one of its cards changed to another the pool allows, kept by the log's verdict (Metropolis: the ratio of how
+//     well the two explain every logged decision), so the set stays full and every hand in it fits all plays so far.
+const LOG_K = 8;
+export class SlotFilter {
+  // tau: the policy's temperature (under 1 sharpens: Korbi 15:50, the engine against itself should be read as playing its best)
+  constructor(me, { policy = null, qpolicy = null, options, qMarks, n = 300, eps = 0.5, tau = 0.1, rng = Math.random } = {}) {
+    Object.assign(this, { me, opp: other(me), options, qMarks, N: n, eps, tau, rng });
+    this.score = policy ? freeScorer(policy) : null; this.qscore = qpolicy ? freeScorer(qpolicy) : null;
+    this.wide = !!(policy && policy.net.XN > VIEW_N);
+    this.XB = new Float32Array(VIEW_N + EXT_N); this.EB = new Float32Array(EXT_N);
+    this.slots = []; this.H = []; this.w = new Float64Array(n); this.log = []; this.gone = new Map(); this.ready = false;
+  }
+  reset(s) {
+    const { unseen } = seenBy(s, this.me);
+    this.slots = unknownSlots(s, this.me);
+    this.H = Array.from({ length: this.N }, () => this.fresh(Float64Array.from(unseen), this.slots.length));
+    this.w.fill(1 / this.N); this.log = []; this.gone = new Map(); this.ready = true;
+  }
+  fresh(pool, k) { const h = new Int8Array(k), cnt = new Int8Array(NN); drawFrom(pool, k, this.rng, cnt); let j = 0; for (let n = 0; n < NN; n++) for (let c = 0; c < cnt[n]; c++) h[j++] = n; for (let i = k - 1; i > 0; i--) { const r = Math.floor(this.rng() * (i + 1)); [h[i], h[r]] = [h[r], h[i]]; } return h; }
+  /** The world of position s with the other hand's unknown slots named as `names` (slot id → name). */
+  world(s, names, pool) {
+    const w = { ...s, hand: s.hand.map(x => x.slice()) }, take = pool.map(a => a.slice()), hand = w.hand[this.opp];
+    for (let i = 0; i < hand.length; i++) { const n = names.get(hand[i]); if (n != null) { const id = take[n].pop(); if (id != null) hand[i] = id; } }
+    return w;
+  }
+  poolIds(s) {
+    const out = Array.from({ length: NN }, () => []), bit = 1 << this.me;
+    for (const id of unknownSlots(s, this.me)) { const n = nameAt(id); if (n >= 0) out[n].push(id); }
+    for (const id of s.lib) if (!(s.kn?.find(e => e[0] === id)?.[1] & bit)) { const n = nameAt(id); if (n >= 0) out[n].push(id); }
+    return out;
+  }
+  viewIn(w) { return HandFilter.prototype.viewIn.call(this, w); }
+  /** The chance Zero, its hand named `names` in position s, makes move m (target marks). */
+  chance(s, names, pool, target, q) {
+    const w = this.world(s, names, pool), ms = this.options(w, this.opp);
+    if (ms.length < 2) return 1;
+    const marks = ms.map(x => (q ? this.qMarks(w, this.opp, x) : marksOf(w, this.opp, x))), k = marks.findIndex(x => JSON.stringify(x) === target);
+    if (k < 0) return 0;
+    const v = (q ? this.qscore : this.score)(this.viewIn(w), marks), top = Math.max(...v), T = this.tau;
+    let z = 0; for (const y of v) z += Math.exp((y - top) / T);
+    return Math.exp((v[k] - top) / T) / z;
+  }
+  namesOf(h, slots = this.slots) { const m = new Map(); slots.forEach((id, j) => m.set(id, h[j])); return m; }
+  /** How well hand h explains every logged decision (product of ε + chance); the slots gone since keep their seen names. */
+  logLik(h) {
+    let l = 0;
+    const cur = this.namesOf(h);
+    for (const e of this.log) {
+      const names = new Map();
+      for (const id of e.slots) { const n = cur.has(id) ? cur.get(id) : this.gone.get(id); if (n != null) names.set(id, n); }
+      l += Math.log(this.eps + (1 - this.eps) * this.chance(e.s, names, e.pool, e.target, e.q));
+    }
+    return l;
+  }
+  weigh(s, m) {
+    const q = !!s.pending, sc = q ? this.qscore : this.score;
+    if (!sc || (q && !PUBLIC_Q.has(s.pending.t))) return;
+    const target = JSON.stringify(q ? this.qMarks(s, this.opp, m) : marksOf(s, this.opp, m)), pool = this.poolIds(s), memo = new Map();
+    let lo = 1, hi = 0;
+    for (let i = 0; i < this.N; i++) {
+      const key = this.H[i].join(",");
+      let p = memo.get(key);
+      if (p == null) { p = this.chance(s, this.namesOf(this.H[i]), pool, target, q); memo.set(key, p); }
+      lo = Math.min(lo, p); hi = Math.max(hi, p);
+      this.w[i] *= this.eps + (1 - this.eps) * p;
+    }
+    // a telling decision: the hands disagree about it
+    if (this.eps + hi >= 2 * (this.eps + lo)) { this.log.push({ s, slots: this.slots.slice(), pool, target, q }); if (this.log.length > LOG_K) this.log.shift(); }
+  }
+  reconcile(s, after) {
+    const me = this.me, o = this.opp, nowUnknown = unknownSlots(after, me), nowSet = new Set(nowUnknown);
+    const seenNow = new Set([...after.yard, ...after.exile, ...after.bf.map(p => p.id), ...after.stack.map(it => it.card)]), knownAfter = new Set(knownIn(after, o, me));
+    const struck = new Uint8Array(this.N);
+    // slots leaving the unknown hand
+    this.slots.forEach((id, j) => {
+      if (nowSet.has(id)) return;
+      const n = nameAt(id);
+      if ((seenNow.has(id) || knownAfter.has(id)) && n >= 0) {
+        this.gone.set(id, n);
+        for (let i = 0; i < this.N; i++) {
+          const h = this.H[i];
+          if (h[j] === n) continue;
+          const k = h.findIndex((x, t) => x === n && t !== j && nowSet.has(this.slots[t]));
+          if (k >= 0) { h[k] = h[j]; h[j] = n; } else struck[i] = 1;
+        }
+      }
+    });
+    // the new slot list: the slots that stay, then the new unseen ones (draws), named from what each hand leaves unseen
+    const keep = this.slots.map((id, j) => [id, j]).filter(([id]) => nowSet.has(id)), keepSet = new Set(keep.map(([id]) => id)), added = nowUnknown.filter(id => !keepSet.has(id));
+    const { unseen } = seenBy(after, me);
+    for (let i = 0; i < this.N; i++) {
+      const old = this.H[i], h = new Int8Array(keep.length + added.length);
+      keep.forEach(([, j], t) => { h[t] = old[j]; });
+      const pool = Float64Array.from(unseen);
+      for (let t = 0; t < keep.length; t++) pool[h[t]]--;
+      if (pool.some(v => v < 0)) struck[i] = 1;                     // more of a name than `me` hasn't seen: can't be right
+      const extra = new Int8Array(NN); drawFrom(pool.map(v => Math.max(0, v)), added.length, this.rng, extra);
+      let t = keep.length; for (let n = 0; n < NN; n++) for (let c = 0; c < extra[n]; c++) h[t++] = n;
+      this.H[i] = t === h.length ? h : h.slice(0, t);
+      if (t !== h.length) struck[i] = 1;
+    }
+    this.slots = [...keep.map(([id]) => id), ...added];
+    // struck and spent hands replaced by copies of standing ones, moved by the log
+    let top = 0;
+    for (let i = 0; i < this.N; i++) if (struck[i]) this.w[i] = 0; else top = Math.max(top, this.w[i]);
+    if (top <= 0) { const log = this.log, gone = this.gone; this.reset(after); this.log = log; this.gone = gone; return; }
+    const alive = [], cum = []; let c = 0;
+    for (let i = 0; i < this.N; i++) if (this.w[i] >= top * 1e-3) { alive.push(i); c += this.w[i]; cum.push(c); }
+    const total = c, replaced = [];
+    for (let i = 0; i < this.N; i++) if (this.w[i] < top * 1e-3) {
+      let r = this.rng() * total, a = 0; while (a < cum.length - 1 && cum[a] < r) a++;
+      this.H[i] = Int8Array.from(this.H[alive[a]]); this.w[i] = this.w[alive[a]]; replaced.push(i);
+    }
+    for (const i of replaced) this.move(i, unseen);
+    let z = 0; for (let i = 0; i < this.N; i++) z += this.w[i];
+    for (let i = 0; i < this.N; i++) this.w[i] /= z;
+  }
+  /** One Metropolis step on hand i: a card renamed to one the pool allows, kept by the log's verdict. */
+  move(i, unseen) {
+    const h = this.H[i];
+    if (!h.length) return;
+    const pool = Float64Array.from(unseen); for (const n of h) pool[n]--;
+    const j = Math.floor(this.rng() * h.length), cand = []; for (let n = 0; n < NN; n++) if (pool[n] > 0 && n !== h[j]) for (let c = 0; c < pool[n]; c++) cand.push(n);
+    if (!cand.length) return;
+    const g = Int8Array.from(h); g[j] = cand[Math.floor(this.rng() * cand.length)];
+    // proposal symmetric enough (a uniform card of the pool); accept by the logged decisions
+    const a = this.log.length ? Math.exp(Math.min(0, this.logLik(g) - this.logLik(h))) : 1;
+    if (this.rng() < a) this.H[i] = g;
+  }
+  update(s, who, m, after) {
+    if (!this.ready) this.reset(s);
+    if (who === this.opp && this.options(s, who).length >= 2) this.weigh(s, m);
+    this.reconcile(s, after);
+  }
+  counts() { const c = new Float64Array(NN); let u = 0; for (let i = 0; i < this.N; i++) { for (const n of this.H[i]) c[n] += this.w[i]; u += this.w[i] * this.H[i].length; } return { c, u }; }
+  belief(s) {
+    if (!this.ready) this.reset(s);
+    const known = seenBy(s, this.me).known, counts = Float32Array.from(known), any = new Float32Array(NN);
+    for (let i = 0; i < this.N; i++) { const seen = new Set(); for (const n of this.H[i]) { counts[n] += this.w[i]; seen.add(n); } for (const n of seen) any[n] += this.w[i]; }
+    for (let n = 0; n < NN; n++) if (known[n] > 0) any[n] = 1;
+    return { counts, any };
+  }
+  deal() {
+    return (pool, slots, rng) => {
+      let r = rng(), i = 0; while (i < this.N - 1 && (r -= this.w[i]) > 0) i++;
+      const want = new Int8Array(NN); for (const n of this.H[i]) want[n]++;
+      return HandFilter.prototype.deal.call({ N: 1, w: [1], P: [want] })(pool, slots, rng);
+    };
+  }
+  marginals(s) { if (!this.ready) this.reset(s); const { c, u } = this.counts(); return { p: c, u }; }
+  landsAtLeast(k, lands, s) { if (!this.ready) this.reset(s); let pr = 0; for (let i = 0; i < this.N; i++) { let c = 0; for (const n of this.H[i]) if (lands[n]) c++; if (c >= k) pr += this.w[i]; } return pr; }
+}

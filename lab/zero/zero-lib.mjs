@@ -12,7 +12,7 @@ import { DECK, NAMES } from "../../dandan-cards.js";
 import { makeJudge, features, featuresRace, FEATURES, PLUS, RACE } from "../../dandan-eval.js";
 import { freeScorer, viewInto, viewOf, marksOf, VIEW_N } from "../../dandan-netpolicy.js";
 import { ext, EXT_N, NN, Tracker, scryOf, dealBy, extJudge } from "./zero-view.mjs";
-import { HandFilter } from "./scry2.mjs";
+import { HandFilter, SlotFilter } from "./scry2.mjs";
 
 export const PASS = { t: "pass" };
 const key = m => JSON.stringify(m);
@@ -144,13 +144,14 @@ export function zeroPlayer(policy, qpolicy = null, ctx = null) {
 export function zeroBrain(policyName, valueName, scryName = null) {
   // scryName (the swap matches): a Scry other than the policy's own, "-" for none, "pf" for Scry 2 (the particle filter,
   // scry2.mjs: no net, Zero's own policy and question head as the model of the other player)
-  // "pf[:n=256][:eps=0.03]" Scry 2a; "pfs[...]" Scry 2b: the same filter with the policy's own Scry 1 dealing its fresh hands and draws
-  const policy = netOf(policyName), qpolicy = qnetOf(policyName), pf = /^pfs?(:|$)/.test(scryName || ""), pfs = /^pfs(:|$)/.test(scryName || "");
+  // "pf[:n=..][:eps=..]" Scry 2a; "pfs[...]" Scry 2b: the same filter with the policy's own Scry 1 dealing its fresh hands and
+  // draws; "pfd[...]" Scry 2d: the hands they could still hold, struck hands replaced (Korbi 16:00)
+  const policy = netOf(policyName), qpolicy = qnetOf(policyName), pf = /^pf[sd]?(:|$)/.test(scryName || ""), pfs = /^pfs(:|$)/.test(scryName || ""), pfd = /^pfd(:|$)/.test(scryName || "");
   const opt = Object.fromEntries((scryName || "").split(":").slice(1).map(x => x.split("=")).map(([k, v]) => [k, Number(v)]));
   const bnet = pf ? (pfs ? scryNetOf(policyName) : null) : scryName ? netOf(scryName) : scryNetOf(policyName);
   const ctx = { counts: [new Float32Array(NN), new Float32Array(NN)], any: [null, null] }, player = zeroPlayer(policy, qpolicy, ctx);
   const scry = (!pf || pfs) && (bnet || player.wide) ? scryOf(bnet) : null, judge = valueJudgeOf(valueName);
-  const filterOf = me => new HandFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt, ...(pfs && scry ? { prior: (s, x) => scry(s, x, tracker).slots } : {}) });
+  const filterOf = me => pfd ? new SlotFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt }) : new HandFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt, ...(pfs && scry ? { prior: (s, x) => scry(s, x, tracker).slots } : {}) });
   let tracker = new Tracker(), filters = pf ? [filterOf(0), filterOf(1)] : null;
   return {
     player, judge, scry, wide: player.wide, dealing: !!bnet || pf, filters: () => filters,
