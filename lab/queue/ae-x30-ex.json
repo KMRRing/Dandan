@@ -1,0 +1,1 @@
+{"id": "ae-x30-ex", "script": "export.mjs", "args": "{shard} {shards} {out} sps075", "shards": 60, "timeoutMin": 180, "purpose": "Fable No. 7 point 6: Deep batch sps075 (mpN6416 in the look-aheads, explore3 1 in 400), exported once at 98% or more done"}
