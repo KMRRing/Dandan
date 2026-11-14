@@ -1,0 +1,1 @@
+{"id": "az-sw2", "script": "scry-sweep.mjs", "args": "{shard} {shards} {out} 24 100,300,1000,2000,4000,8000,16000 real:az-g4-a", "shards": 168, "timeoutMin": 240, "purpose": "Scry 2d hand count, real games: 24 held-out games of generation 4 A (played by the search) replayed × hand counts 100,300,1000,2000,4000,8000,16000"}
