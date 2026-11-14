@@ -16,7 +16,7 @@ Fable No. 8 point 1's: agreement by the kind of the search's move, and passing w
 The model is written as one JSON line that dandan-netpolicy.js makePlus plays (medium: false; form "head" for the head).
 
 usage: python3 lab/policy_np.py <packed folder> <out> [--form mlp|head] [--h1 128] [--h2 64] [--epochs 6] [--lr 1e-3]
-       [--batch 64] [--seed 1] [--light 1]
+       [--batch 64] [--seed 1] [--light 1] [--decay 1]
 """
 import argparse, json, os, time
 
@@ -28,6 +28,7 @@ ap.add_argument("--form", default="mlp", choices=["mlp", "head"])
 ap.add_argument("--h1", type=int, default=128); ap.add_argument("--h2", type=int, default=64)
 ap.add_argument("--epochs", type=int, default=6); ap.add_argument("--lr", type=float, default=1e-3)
 ap.add_argument("--batch", type=int, default=64); ap.add_argument("--seed", type=int, default=1)
+ap.add_argument("--decay", type=float, default=1.0)  # the learning rate times this after each epoch (14 Nov: longer trainings)
 ap.add_argument("--light", type=float, default=1.0)  # the weight of a decision that is not Deep (No. 7 point 7: 0.3); Deep ones 1
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
@@ -129,7 +130,7 @@ def step(g, t):
     b1, b2 = 0.9, 0.999
     for k in P:
         M[k] = b1 * M[k] + (1 - b1) * G[k]; V[k] = b2 * V[k] + (1 - b2) * G[k] ** 2
-        P[k] -= A.lr * (M[k] / (1 - b1 ** t)) / (np.sqrt(V[k] / (1 - b2 ** t)) + 1e-8)
+        P[k] -= LR[0] * (M[k] / (1 - b1 ** t)) / (np.sqrt(V[k] / (1 - b2 ** t)) + 1e-8)
     return loss
 
 
@@ -176,6 +177,7 @@ def measure(idx):
 best = dict(measure(held_idx), epoch=0); bestP = {k: v.copy() for k, v in P.items()}
 say(f"before training: {json.dumps(best)}")
 t = 0
+LR = [A.lr]
 for e in range(1, A.epochs + 1):
     order = rng.permutation(train_idx)
     tl = 0.0
@@ -184,6 +186,7 @@ for e in range(1, A.epochs + 1):
         tl += step(gather(order[s:s + A.batch]), t)
     h = measure(held_idx)
     say(f"epoch {e}: training loss {tl / len(order):.4f}, held out {json.dumps(h)}")
+    LR[0] *= A.decay
     if h["loss"] < best["loss"]:
         best = dict(h, epoch=e); bestP = {k: v.copy() for k, v in P.items()}
 
