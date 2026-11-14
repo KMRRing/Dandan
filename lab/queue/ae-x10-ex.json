@@ -1,0 +1,1 @@
+{"id": "ae-x10-ex", "script": "export.mjs", "args": "{shard} {shards} {out} sps055", "shards": 60, "timeoutMin": 180, "purpose": "Fable No. 7 point 6: Deep batch sps055 (the benchmark against itself at 1,024 deals, every legal move, keep net; 1 game a shard, exploration 1 in 4), exported once at 98% or more done, for the Medium-free move-picker's Deep retrains"}

@@ -13,6 +13,7 @@
 //   mix:<share>[:<deep deals 1024>] (11 November 2026): the search at mixed depth. That share of the decisions, drawn by the game's seed,
 //   is searched at the deep deals (1,024 and more weigh every legal move) and marked `deep: 1`: the lessons for a learned policy; the
 //   rest at <deals>, which keeps the games cheap and many: the lessons for a value net. Each decision says which it was.
+//   any mode + "-free~<model>" (14 Nov 2026): the look-aheads played by that Medium-free move-picker (lab/policy/<model>.json)
 //   any mode + "-cut" (13 Nov 2026): the harder cutting of lab/halving.mjs (first look at 8 deals, 2 standard errors); self-play only
 //   any mode + "-explore" (13 Nov 2026, Fable: data for a keep net trained on results): each seat's decision on its first seven is,
 //   1 time in 4 (1 in 10 until 13 Nov 21:30Z), a fair coin (keep or throw back) instead of Medium's rule, marked in the line as explore: [{ seat, move }]
@@ -31,6 +32,7 @@ import { moveName } from "../dandan-words.js";
 import { DECK } from "../dandan-cards.js";
 import { J } from "./lib.mjs";
 import { knetMove } from "../dandan-keep.js";
+import { makePlus } from "../dandan-netpolicy.js";
 
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5] || 256), Number(process.argv[6] || 800), Number(process.argv[7] || 7000)];
 const mode0 = process.argv[8] || "hard", judgeFile = process.argv[9];
@@ -40,6 +42,10 @@ const mode0 = process.argv[8] || "hard", judgeFile = process.argv[9];
 // judges/keep-net.json, as the benchmark keeps since 18:30Z; Medium's throw-backs still go back, later keeps Medium's)
 const [mode, ...flags] = mode0.split("-"), explore = flags.includes("explore"), cut = flags.includes("cut");
 const knet = flags.includes("knet") ? JSON.parse(fs.readFileSync(new URL("../judges/keep-net.json", import.meta.url), "utf8")) : null;
+// "-free~<model>" (14 Nov 2026, Fable No. 7 point 10 / No. 11 point 3: the swap): the look-aheads are played past the tree by a
+// Medium-free move-picker (lab/policy/<model>.json, unguarded) instead of Medium, as hard-match's "+free~" arm plays them
+const lookFlag = flags.find(f => f.startsWith("free~"));
+const rollout = lookFlag ? makePlus(JSON.parse(fs.readFileSync(new URL(`./policy/${lookFlag.slice(5)}.json`, import.meta.url), "utf8").split("\n")[0]), { free: true }).move : null;
 const EXPLORE_SHARE = 0.25; // 1 in 4 (Fable No. 7 point 3, Korbi 23:30 local); was 1 in 10
 // a judge file in judges/, or @<job>[#variant]: a lab/judge-variants.mjs run's (its first line, or the line of that variant)
 async function judgeFrom(t) {
@@ -89,7 +95,7 @@ for (let g = first; g < first + n; g++) {
     else {
       // mix: this decision's depth, by the game's seed and the move's number (the same wherever the game is played)
       const deep = mixed ? seeded(mix(seed0 + g, 1000003 + i))() < mixed[0] : false;
-      const res = (mode === "paths" ? thinkPaths : think)(s, who, { deals: deep ? mixed[1] || 1024 : deals, ms: 1e9, ...(every ? { all: true, offCheck: true } : {}), ...(cut ? { first: 8, z: 2, hold: true } : {}), ...(judge ? { judge } : {}) });
+      const res = (mode === "paths" ? thinkPaths : think)(s, who, { deals: deep ? mixed[1] || 1024 : deals, ms: 1e9, ...(every ? { all: true, offCheck: true } : {}), ...(cut ? { first: 8, z: 2, hold: true } : {}), ...(judge ? { judge } : {}), ...(rollout ? { rollout } : {}) });
       move = res.best;
       if (!res.only) {
         const key = m => JSON.stringify(m);
