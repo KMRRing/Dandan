@@ -149,6 +149,7 @@ export function zeroBrain(policyName, valueName, scryName = null) {
   return {
     player, judge, scry, wide: player.wide, dealing: !!bnet,
     reset() { tracker = new Tracker(); },
+    tracker: () => tracker,
     seen(s, who, m, after) { tracker.update(s, who, m, after); },
     root(s, seat) {
       if (!scry) return {};
