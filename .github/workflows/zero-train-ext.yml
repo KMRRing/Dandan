@@ -14,6 +14,9 @@ on:
       epochs: { description: "Policy epochs", required: true, default: "8" }
       sh: { description: "Scry hidden layer", required: true, default: "64" }
       scry_games: { description: "Games for Scry (default: the same games)", required: false, default: "" }
+      parts: { description: "all, or value (the value net only, with the Scry already in lab/zero/nets/<name>-scry.json)", required: false, default: "all" }
+      value_out: { description: "The value net's file name (default <name>-value)", required: false, default: "" }
+      value_args: { description: "More value_np.py arguments", required: false, default: "--lr 3e-4 --wd 0.1" }
 permissions:
   contents: write
 jobs:
@@ -35,15 +38,19 @@ jobs:
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
           mkdir -p lab/zero/nets
           N="${{ inputs.name }}"; D="$RUNNER_TEMP/r"
+          P="${{ inputs.parts }}"; VO="${{ inputs.value_out }}"; VO="${VO:-$N-value}"
           SG="${{ inputs.scry_games }}"; SG="${SG:-${{ inputs.games }}}"
           # four replays side by side (the runner's cores), each over a quarter of the parts
+          if [ "$P" = all ]; then
           for k in 0 1 2 3; do LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "$D$k" "$SG" scry - $k 4 > "$RUNNER_TEMP/s$k.txt" & done; wait
           tail -n 1 "$RUNNER_TEMP"/s?.txt | tee -a "$GITHUB_STEP_SUMMARY"
           python3 lab/zero/scry_np.py "${D}0/b,${D}1/b,${D}2/b,${D}3/b" "lab/zero/nets/$N-scry.json" --h "${{ inputs.sh }}" | tee -a "$RUNNER_TEMP/log.txt"
           rm -rf "$D"?/
+          fi
           LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "$D" "${{ inputs.games }}" train "lab/zero/nets/$N-scry.json" | tee -a "$GITHUB_STEP_SUMMARY"
           rm -f "$RUNNER_TEMP/key.json"
-          python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$N-value.json" --shape "${{ inputs.value }}" --lr 3e-4 --wd 0.1 | tee -a "$RUNNER_TEMP/log.txt"
+          python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$VO.json" --shape "${{ inputs.value }}" ${{ inputs.value_args }} | tee -a "$RUNNER_TEMP/log.txt"
+          [ "$P" = all ] || { { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; exit 0; }
           python3 lab/policy_np.py "$D/p" "lab/zero/nets/$N-policy.json" --form head --h1 "${{ inputs.h1 }}" --h2 "${{ inputs.h2 }}" --epochs "${{ inputs.epochs }}" --decay 0.9 | tee -a "$RUNNER_TEMP/log.txt"
           python3 lab/policy_np.py "$D/q" "lab/zero/nets/$N-qpolicy.json" --form head --h1 "${{ inputs.h1 }}" --h2 "${{ inputs.h2 }}" --epochs "${{ inputs.epochs }}" --decay 0.9 | tee -a "$RUNNER_TEMP/log.txt"
           { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
