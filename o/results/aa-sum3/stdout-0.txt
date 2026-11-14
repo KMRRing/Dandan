@@ -1,0 +1,9 @@
+{"job":"ab-rn64","decisions":1490,"same":0.8644,"lostPerDecision":0.00325,"over2points":96,"over5points":27,"time":{"today":247254,"net":355770}}
+{"seed":7423,"i":241,"step":"end","n":3,"today":"pass","net":"cast Commit on your Dandân","gap":0.4076}
+{"seed":7466,"i":243,"step":"main2","n":7,"today":"pass","net":"cast Dandân","gap":0.2617}
+{"seed":7413,"i":271,"step":"main1","n":4,"today":"cast Dandân","net":"pass","gap":0.1759}
+{"seed":7396,"i":217,"step":"main1","n":5,"today":"cycle Remote Isle","net":"pass","gap":0.1621}
+{"seed":7440,"i":159,"step":"main2","n":5,"today":"pass","net":"cast Chart a Course","gap":0.129}
+{"seed":7447,"i":82,"step":"main1","n":2,"today":"pass","net":"play Island","gap":0.1278}
+{"seed":7413,"i":283,"step":"attackers","n":4,"today":"pass","net":"cast Commit on their Dandân","gap":0.0989}
+{"seed":7440,"i":183,"step":"main1","n":12,"today":"let it resolve","net":"cast Memory Lapse on their Chart a Course","gap":0.0962}

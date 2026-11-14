@@ -1,0 +1,1 @@
+{"id":"aa-b0-f2","script":"hard-match.mjs","args":"{shard} {shards} {out} hard:@aa-b0-j4 hard:ag-v14.json 64 400 170000","shards":200,"ref":"044d5b813896e050e6753d78ca4129a9053173d8","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":180,"purpose":"overnight final (the judge alone): Hard with J4 against Hard v14, Quick, 400 deals both ways","made":"2026-11-11"}

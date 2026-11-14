@@ -1,0 +1,9 @@
+[19:28:30] read 332991 training and 85734 held-out decisions, 121 position inputs (memory 1516 MB)
+[19:28:34] before training (Medium exactly): {"decisions":85734,"loss":7.0929,"mediumGivesUp":1.47,"modelGivesUp":1.47,"mediumAgrees":0.7632,"modelAgrees":0.7632,"epoch":0} (memory 1533 MB)
+[19:29:26] epoch 1: training loss 2.0365, held out {"decisions":85734,"loss":1.47,"mediumGivesUp":1.47,"modelGivesUp":1.33,"mediumAgrees":0.7632,"modelAgrees":0.6874}, alpha 3.313, beta 5.774 (memory 1553 MB)
+[19:30:15] epoch 2: training loss 1.2581, held out {"decisions":85734,"loss":1.0742,"mediumGivesUp":1.47,"modelGivesUp":0.986,"mediumAgrees":0.7632,"modelAgrees":0.7222}, alpha 3.222, beta 1.709 (memory 1557 MB)
+[19:31:00] epoch 3: training loss 1.0497, held out {"decisions":85734,"loss":1.0195,"mediumGivesUp":1.47,"modelGivesUp":0.827,"mediumAgrees":0.7632,"modelAgrees":0.7058}, alpha 3.138, beta 0.155 (memory 1557 MB)
+[19:31:42] epoch 4: training loss 1.0298, held out {"decisions":85734,"loss":1.0122,"mediumGivesUp":1.47,"modelGivesUp":0.787,"mediumAgrees":0.7632,"modelAgrees":0.6893}, alpha 3.091, beta 0.050 (memory 1557 MB)
+[19:32:28] epoch 5: training loss 1.0238, held out {"decisions":85734,"loss":1.0096,"mediumGivesUp":1.47,"modelGivesUp":0.816,"mediumAgrees":0.7632,"modelAgrees":0.6442}, alpha 3.055, beta 0.025 (memory 1557 MB)
+[19:33:15] epoch 6: training loss 1.0197, held out {"decisions":85734,"loss":1.0058,"mediumGivesUp":1.47,"modelGivesUp":0.759,"mediumAgrees":0.7632,"modelAgrees":0.704}, alpha 3.028, beta 0.014 (memory 1506 MB)
+{"metrics":{"decisions":85734,"loss":1.0058,"mediumGivesUp":1.47,"modelGivesUp":0.759,"mediumAgrees":0.7632,"modelAgrees":0.704,"epoch":6,"train":332991,"held":85734,"g0Reduction":0.4837,"g0Pass":true},"alpha":3.028421193799343,"beta":0.014324970717347655,"epochs":6,"lr":0.001,"T":0.02,"light":0.3}

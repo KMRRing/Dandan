@@ -1,0 +1,1 @@
+{"id":"trial1","script":"bench.mjs","args":"2 0 8 .","shards":4,"ref":"main","repo":"https://github.com/KMRRing/Dandan.git","purpose":"first trial of the worker on a Spot VM","outcome":"worked: VM up in a minute, all shards back in the bucket"}

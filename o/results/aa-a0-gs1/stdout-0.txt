@@ -1,0 +1,18 @@
+aa-h2-q-jt130: 53.0% ± 2.6 (99%: 50.4 to 55.6) over 995 pairs, 234 swept, 175 lost, 586 split
+aa-h2-q-s3c: 52.2% ± 2.7 (99%: 49.5 to 54.9) over 1000 pairs, 237 swept, 193 lost, 570 split; -0.8 ± 3.6 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s3a: 51.0% ± 2.7 (99%: 48.4 to 53.7) over 1000 pairs, 225 swept, 204 lost, 571 split; -1.9 ± 3.6 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s3b: 50.0% ± 2.6 (99%: 47.3 to 52.6) over 1000 pairs, 207 swept, 208 lost, 585 split; -3.0 ± 3.6 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s2a: 46.6% ± 2.7 (99%: 43.9 to 49.2) over 1000 pairs, 181 swept, 250 lost, 569 split; -6.4 ± 3.7 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s2b: 46.5% ± 2.7 (99%: 43.8 to 49.2) over 1000 pairs, 184 swept, 254 lost, 562 split; -6.5 ± 3.8 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s2f: 45.5% ± 2.6 (99%: 42.8 to 48.1) over 1000 pairs, 165 swept, 256 lost, 579 split; -7.5 ± 3.6 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s2c: 45.3% ± 2.7 (99%: 42.5 to 48.0) over 1000 pairs, 178 swept, 273 lost, 549 split; -7.7 ± 3.7 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s1c: 45.0% ± 2.6 (99%: 42.3 to 47.6) over 1000 pairs, 166 swept, 267 lost, 567 split; -8.1 ± 3.6 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s1b: 44.9% ± 2.7 (99%: 42.2 to 47.5) over 1000 pairs, 169 swept, 272 lost, 559 split; -8.2 ± 3.7 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s2e: 44.7% ± 2.7 (99%: 42.0 to 47.4) over 1000 pairs, 165 swept, 271 lost, 564 split; -8.3 ± 3.6 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s1g: 44.6% ± 2.7 (99%: 42.0 to 47.3) over 1000 pairs, 168 swept, 275 lost, 557 split; -8.3 ± 3.7 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s2d: 44.5% ± 2.6 (99%: 42.0 to 47.1) over 1000 pairs, 154 swept, 263 lost, 583 split; -8.4 ± 3.6 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s1d: 44.4% ± 2.6 (99%: 41.7 to 47.0) over 1000 pairs, 155 swept, 268 lost, 577 split; -8.7 ± 3.6 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s2g: 43.8% ± 2.7 (99%: 41.1 to 46.4) over 1000 pairs, 161 swept, 286 lost, 553 split; -9.2 ± 3.7 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s1a: 42.8% ± 2.7 (99%: 40.1 to 45.5) over 1000 pairs, 166 swept, 310 lost, 524 split; -10.2 ± 3.5 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s1e: 42.8% ± 2.6 (99%: 40.1 to 45.4) over 1000 pairs, 144 swept, 289 lost, 567 split; -10.4 ± 3.6 against aa-h2-q-jt130 on 995 shared pairs
+aa-h2-q-s1f: 40.8% ± 2.7 (99%: 38.1 to 43.6) over 1000 pairs, 145 swept, 328 lost, 527 split; -12.2 ± 3.8 against aa-h2-q-jt130 on 995 shared pairs

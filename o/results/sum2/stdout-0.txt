@@ -1,0 +1,17 @@
+candidates 87, pairs per candidate 512; base pass 0: 0.4609
+cand  name                                   mean   se     vs base  z
+ 44 land:Island +0.5                     0.5010 0.0140 +0.0400 2.91
+ 43 land:Halimar Depths -0.5             0.4873 0.0132 +0.0264 2.76
+ 74 tune:counterOnCounter +0.5           0.4961 0.0116 +0.0352 2.68
+ 31 cast:Lórien Revealed -0.5            0.4766 0.0133 +0.0156 2.68
+  8 cast:Memory Lapse +0.5               0.4961 0.0118 +0.0352 2.52
+ 73 tune:counter -0.5                    0.4951 0.0121 +0.0342 2.43
+ 20 cast:Quicken +0.5                    0.4902 0.0137 +0.0293 2.40
+ 78 tune:cycleLand +0.5                  0.4893 0.0123 +0.0283 2.35
+ 53 land:Remote Isle -0.5                0.4795 0.0133 +0.0186 2.15
+ 37 cast:Dandân -0.5                     0.4814 0.0130 +0.0205 2.00
+ 81 tuneCast:Dandân -0.5                 0.4814 0.0130 +0.0205 2.00
+ 24 cast:Chart a Course +0.5             0.4775 0.0131 +0.0166 1.87
+ 26 cast:Deem Inferior +0.5              0.4727 0.0128 +0.0117 1.86
+ 71 tune:pass -0.5                       0.4863 0.0123 +0.0254 1.76
+all candidates: mean z 0.30, share with z>2: 9 of 86; worst z -6.54

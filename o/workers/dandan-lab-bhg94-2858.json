@@ -1,0 +1,1 @@
+{"by":"dandan-lab-bhg94-2858","cloud":"rackspace","pool":"kmr-ring1-25","fin":[],"slots":4,"hw":{"cpus":4,"avail":4,"present":4,"possible":15,"offline":11,"memGB":7,"ips":["10.20.52.194"]},"busy":["az-g6-c/339","az-g6-av/335","az-g6-c/377","az-g6-av/332"],"req":{"list":0,"write":5,"read":0,"ms":120098},"started":1794664987540,"t":1794665948293}

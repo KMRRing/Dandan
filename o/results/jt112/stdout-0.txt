@@ -1,0 +1,5 @@
+games 13366, positions 1196734 (959874 to learn from, 236860 held out), blend 0.5
+judge now    all n236860 vs search 0.0121 vs result 0.1748 | lib 41-80 n146654 vs search 0.0118 vs result 0.1958 | lib 21-40 n72797 vs search 0.0096 vs result 0.1379 | lib 9-20 n13147 vs search 0.0082 vs result 0.1383 | lib 0-8 n4262 vs search 0.0797 vs result 0.1941
+hand flaws now 0.0354
+epoch 10: held-out loss 0.5247 (learnt 0.5171)
+epoch 20: held-out loss 0.5252 (learnt 0.5165)

@@ -1,0 +1,11 @@
+games 3085, positions 275797 (223038 to learn from, 52759 held out), blend 0.5
+judge now    all n52759 vs search 0.0116 vs result 0.1671 | lib 41-80 n33862 vs search 0.0118 vs result 0.1911 | lib 21-40 n15567 vs search 0.0088 vs result 0.1234 | lib 9-20 n2638 vs search 0.0071 vs result 0.1156 | lib 0-8 n692 vs search 0.0836 vs result 0.1773
+hand flaws now 0.0323
+epoch 10: held-out loss 0.5219 (learnt 0.5082)
+epoch 20: held-out loss 0.5254 (learnt 0.5041)
+epoch 30: held-out loss 0.5279 (learnt 0.5018)
+epoch 40: held-out loss 0.5296 (learnt 0.5003)
+best epoch 1, held-out loss 0.5156
+judge new    all n52759 vs search 0.0096 vs result 0.1607 | lib 41-80 n33862 vs search 0.0092 vs result 0.1868 | lib 21-40 n15567 vs search 0.0081 vs result 0.1145 | lib 9-20 n2638 vs search 0.0082 vs result 0.1041 | lib 0-8 n692 vs search 0.0713 vs result 0.1401
+hand flaws new 0.009
+as rounded   all n52759 vs search 0.0096 vs result 0.1609 | lib 41-80 n33862 vs search 0.0092 vs result 0.1869 | lib 21-40 n15567 vs search 0.0080 vs result 0.1147 | lib 9-20 n2638 vs search 0.0081 vs result 0.1043 | lib 0-8 n692 vs search 0.0711 vs result 0.1402

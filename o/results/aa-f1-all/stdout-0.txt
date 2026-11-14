@@ -1,0 +1,1 @@
+{"sw":"goneSel=1,retrSafe=1,commitWhen=1,tiNeed=1","pairs":30,"score":0.3}

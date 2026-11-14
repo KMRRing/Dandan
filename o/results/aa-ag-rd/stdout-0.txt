@@ -1,0 +1,1 @@
+{"sw":"redraw=1","pairs":30,"score":0.5}

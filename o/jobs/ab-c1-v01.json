@@ -1,0 +1,1 @@
+{"id": "ab-c1-v01", "script": "selfplay.mjs", "args": "{shard} {shards} {out} 128 120 600000 hard ag-v14.json", "shards": 24, "timeoutMin": 180, "purpose": "Hard v14 (128 deals) against itself, batch 1: data for the next judge (behind the overnight finals)", "ref": "044d5b813896e050e6753d78ca4129a9053173d8", "repo": "https://github.com/KMRRing/Dandan.git", "made": "2026-11-11"}

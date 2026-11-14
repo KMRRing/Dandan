@@ -1,0 +1,1 @@
+{"by":"dandan-lab-rjzlr-3130","cloud":"rackspace","pool":"kmr-ring1-25","fin":[],"slots":4,"hw":{"cpus":4,"avail":4,"present":4,"possible":15,"offline":11,"memGB":7,"ips":["10.20.183.130"]},"busy":["az-g6-av/336","az-g6-c/322","az-g6-c/353","az-g6-c/351"],"req":{"list":0,"write":5,"read":0,"ms":120128},"started":1794664935617,"t":1794665896347}

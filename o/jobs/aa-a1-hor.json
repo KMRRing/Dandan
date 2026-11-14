@@ -1,0 +1,1 @@
+{"id":"aa-a1-hor","script":"departures-sum.mjs","args":"aa-k2-horizon","shards":1,"timeoutMin":15,"purpose":"summary (morning 13 Nov): aa-i2d's cases with the judge's value at the look-ahead's horizon","ref":"6297ada65d1d4bdc04d6fcb542b1a417013a1b76","repo":"https://github.com/KMRRing/Dandan.git","made":"2026-11-13"}

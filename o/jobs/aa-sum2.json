@@ -1,0 +1,1 @@
+{"id":"aa-sum2","script":"halving-sum.mjs","args":"ab-hva64,ab-hva256","shards":1,"ref":"main","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":10,"purpose":"sum up the harder-cutting agreement runs (stdout is the result)","made":"2026-11-11"}

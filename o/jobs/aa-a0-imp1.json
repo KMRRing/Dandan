@@ -1,0 +1,1 @@
+{"id":"aa-a0-imp1","script":"importance.mjs","args":"ag-v14.json 300","shards":1,"ref":"34f9da3eeee94f23ecdd4f44b98c4fb8fde651f7","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":20,"purpose":"input importance: v14 (baseline on the same positions as imp2-4)","made":"2026-11-11"}

@@ -1,0 +1,21 @@
+games 39, positions 907 (library 15+: 892); the player to move, start of the turn; judge the game's, Brier 0.2038
+by lands, theirs subtracted:
+  3+ fewer                  69 positions  judge  34%  won  25%  won - judge -9.6 ± 3.9
+  2 fewer                   85 positions  judge  36%  won  29%  won - judge -6.5 ± 4.8
+  1 fewer                  251 positions  judge  44%  won  49%  won - judge +5.1 ± 3.0
+  even                     286 positions  judge  47%  won  49%  won - judge +2.4 ± 2.8
+  1 more                    97 positions  judge  53%  won  63%  won - judge +10.0 ± 4.7
+  2 more                    51 positions  judge  52%  won  73%  won - judge +20.1 ± 5.8
+  3+ more                   53 positions  judge  68%  won  85%  won - judge +16.9 ± 3.6
+by cards in hand, theirs subtracted:
+  3+ fewer                  57 positions  judge  30%  won  44%  won - judge +14.0 ± 5.7
+  1-2 fewer                241 positions  judge  46%  won  47%  won - judge +1.3 ± 2.9
+  even                     205 positions  judge  48%  won  53%  won - judge +5.5 ± 3.2
+  1-2 more                 324 positions  judge  47%  won  51%  won - judge +4.6 ± 2.5
+  3+ more                   65 positions  judge  57%  won  55%  won - judge -1.5 ± 5.4
+a Dandân of theirs on the table:
+  life 13+                 191 positions  judge  40%  won  48%  won - judge +7.9 ± 3.3
+  life 5-12                 89 positions  judge  30%  won  35%  won - judge +4.5 ± 4.0
+  life 4 or less            24 positions  judge  20%  won  13%  won - judge -7.1 ± 6.4
+a land lead of 2+ and their Dandân on the table, life 9+:
+                            31 positions  judge  50%  won  68%  won - judge +18.0 ± 7.4

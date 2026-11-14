@@ -1,0 +1,4 @@
+{"job":"aa-i1","games":600,"broken":0,"moves":[52116,52728]}
+{"job":"aa-i1","kind":"flaw · Mind Bend","A":23,"B":13,"Aper1000":0.44,"Bper1000":0.25}
+{"job":"aa-i3b","games":598,"broken":0,"moves":[54789,53996]}
+{"job":"aa-i3b","kind":"flaw · Mind Bend","A":17,"B":20,"Aper1000":0.31,"Bper1000":0.37}

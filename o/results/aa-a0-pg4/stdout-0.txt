@@ -1,0 +1,196 @@
+ab-c1-v01 24/24  {shard} {shards} {out} 128 120 600000 hard ag-v14.json  044d5b8
+ab-c1-v02 24/24  {shard} {shards} {out} 128 120 600120 hard ag-v14.json  044d5b8
+ab-c1-v03 24/24  {shard} {shards} {out} 128 120 600240 hard ag-v14.json  044d5b8
+ab-c1-v04 24/24  {shard} {shards} {out} 128 120 600360 hard ag-v14.json  044d5b8
+ab-c1-v05 24/24  {shard} {shards} {out} 128 120 600480 hard ag-v14.json  044d5b8
+ab-c1-v06 24/24  {shard} {shards} {out} 128 120 600600 hard ag-v14.json  044d5b8
+ab-c1-v07 24/24  {shard} {shards} {out} 128 120 600720 hard ag-v14.json  044d5b8
+ab-c1-v08 24/24  {shard} {shards} {out} 128 120 600840 hard ag-v14.json  044d5b8
+spb01 24/24  {shard} {shards} {out} 256 120 7000  main
+spb02 24/24  {shard} {shards} {out} 256 120 7120  main
+spb03 24/24  {shard} {shards} {out} 256 120 7240  main
+spb04 24/24  {shard} {shards} {out} 256 120 7360  main
+spb05 24/24  {shard} {shards} {out} 256 120 7480  main
+spb06 24/24  {shard} {shards} {out} 256 120 7600  main
+spb07 24/24  {shard} {shards} {out} 256 120 7720  main
+spb08 24/24  {shard} {shards} {out} 256 120 7840  main
+spb09 24/24  {shard} {shards} {out} 256 120 7960  main
+spb10 24/24  {shard} {shards} {out} 256 120 8080  main
+spb100 24/24  {shard} {shards} {out} 256 120 18880  main
+spb101 24/24  {shard} {shards} {out} 256 120 19000  main
+spb102 24/24  {shard} {shards} {out} 256 120 19120  main
+spb103 24/24  {shard} {shards} {out} 256 120 19240  main
+spb104 24/24  {shard} {shards} {out} 256 120 19360  main
+spb105 24/24  {shard} {shards} {out} 256 120 19480  main
+spb106 24/24  {shard} {shards} {out} 256 120 19600  main
+spb107 24/24  {shard} {shards} {out} 256 120 19720  main
+spb108 24/24  {shard} {shards} {out} 256 120 19840  main
+spb109 24/24  {shard} {shards} {out} 256 120 19960  main
+spb11 24/24  {shard} {shards} {out} 256 120 8200  main
+spb110 24/24  {shard} {shards} {out} 256 120 20080  main
+spb111 24/24  {shard} {shards} {out} 256 120 20200  main
+spb112 24/24  {shard} {shards} {out} 256 120 20320  main
+spb113 24/24  {shard} {shards} {out} 256 120 20440  main
+spb114 24/24  {shard} {shards} {out} 256 120 20560  main
+spb115 24/24  {shard} {shards} {out} 256 120 20680  main
+spb116 24/24  {shard} {shards} {out} 256 120 20800  main
+spb117 24/24  {shard} {shards} {out} 256 120 20920  main
+spb118 24/24  {shard} {shards} {out} 256 120 21040  main
+spb119 24/24  {shard} {shards} {out} 256 120 21160  main
+spb12 24/24  {shard} {shards} {out} 256 120 8320  main
+spb120 24/24  {shard} {shards} {out} 256 120 21280  main
+spb121 24/24  {shard} {shards} {out} 256 120 21400  main
+spb122 24/24  {shard} {shards} {out} 256 120 21520  main
+spb123 24/24  {shard} {shards} {out} 256 120 21640  main
+spb124 24/24  {shard} {shards} {out} 256 120 21760  main
+spb125 24/24  {shard} {shards} {out} 256 120 21880  main
+spb126 24/24  {shard} {shards} {out} 256 120 22000  main
+spb127 24/24  {shard} {shards} {out} 256 120 22120  main
+spb128 24/24  {shard} {shards} {out} 256 120 22240  main
+spb129 24/24  {shard} {shards} {out} 256 120 22360  main
+spb13 24/24  {shard} {shards} {out} 256 120 8440  main
+spb130 24/24  {shard} {shards} {out} 256 120 22480  main
+spb131 24/24  {shard} {shards} {out} 256 120 22600  main
+spb132 24/24  {shard} {shards} {out} 256 120 22720  main
+spb133 24/24  {shard} {shards} {out} 256 120 22840  main
+spb134 24/24  {shard} {shards} {out} 256 120 22960  main
+spb135 24/24  {shard} {shards} {out} 256 120 23080  main
+spb136 24/24  {shard} {shards} {out} 256 120 23200  main
+spb137 24/24  {shard} {shards} {out} 256 120 23320  main
+spb138 24/24  {shard} {shards} {out} 256 120 23440  main
+spb139 24/24  {shard} {shards} {out} 256 120 23560  main
+spb14 24/24  {shard} {shards} {out} 256 120 8560  main
+spb140 24/24  {shard} {shards} {out} 256 120 23680  main
+spb141 24/24  {shard} {shards} {out} 256 120 23800  main
+spb142 24/24  {shard} {shards} {out} 256 120 23920  main
+spb143 24/24  {shard} {shards} {out} 256 120 24040  main
+spb144 24/24  {shard} {shards} {out} 128 120 24160 hard ag-v14.json  main
+spb145 24/24  {shard} {shards} {out} 128 120 24280 hard ag-v14.json  main
+spb146 24/24  {shard} {shards} {out} 128 120 24400 hard ag-v14.json  main
+spb147 24/24  {shard} {shards} {out} 128 120 24520 hard ag-v14.json  main
+spb148 24/24  {shard} {shards} {out} 128 120 24640 hard ag-v14.json  main
+spb149 24/24  {shard} {shards} {out} 128 120 24760 hard ag-v14.json  main
+spb15 24/24  {shard} {shards} {out} 256 120 8680  main
+spb150 24/24  {shard} {shards} {out} 256 120 24880  main
+spb151 24/24  {shard} {shards} {out} 128 120 25000 hard ag-v14.json  main
+spb152 24/24  {shard} {shards} {out} 128 120 25120 hard ag-v14.json  main
+spb153 24/24  {shard} {shards} {out} 128 120 25240 hard ag-v14.json  main
+spb154 24/24  {shard} {shards} {out} 128 120 25360 hard ag-v14.json  main
+spb155 24/24  {shard} {shards} {out} 128 120 25480 hard ag-v14.json  main
+spb156 24/24  {shard} {shards} {out} 128 120 25600 hard ag-v14.json  main
+spb157 24/24  {shard} {shards} {out} 128 120 25720 hard ag-v14.json  main
+spb158 24/24  {shard} {shards} {out} 128 120 25840 hard ag-v14.json  main
+spb159 24/24  {shard} {shards} {out} 256 120 25960  main
+spb16 24/24  {shard} {shards} {out} 256 120 8800  main
+spb160 24/24  {shard} {shards} {out} 128 120 26080 hard ag-v14.json  main
+spb161 24/24  {shard} {shards} {out} 128 120 26200 hard ag-v14.json  main
+spb162 24/24  {shard} {shards} {out} 128 120 26320 hard ag-v14.json  main
+spb163 24/24  {shard} {shards} {out} 128 120 26440 hard ag-v14.json  main
+spb164 24/24  {shard} {shards} {out} 128 120 26560 hard ag-v14.json  main
+spb165 24/24  {shard} {shards} {out} 256 120 26680  main
+spb166 24/24  {shard} {shards} {out} 128 120 26800 hard ag-v14.json  main
+spb167 24/24  {shard} {shards} {out} 128 120 26920 hard ag-v14.json  main
+spb168 24/24  {shard} {shards} {out} 128 120 27040 hard ag-v14.json  main
+spb169 24/24  {shard} {shards} {out} 128 120 27160 hard ag-v14.json  main
+spb17 24/24  {shard} {shards} {out} 256 120 8920  main
+spb170 24/24  {shard} {shards} {out} 128 120 27280 hard ag-v14.json  main
+spb171 24/24  {shard} {shards} {out} 128 120 27400 hard ag-v14.json  main
+spb172 24/24  {shard} {shards} {out} 128 120 27520 hard ag-v14.json  main
+spb173 24/24  {shard} {shards} {out} 128 120 27640 hard ag-v14.json  main
+spb174 24/24  {shard} {shards} {out} 128 120 27760 hard ag-v14.json  main
+spb175 24/24  {shard} {shards} {out} 128 120 27880 hard ag-v14.json  main
+spb176 24/24  {shard} {shards} {out} 128 120 28000 hard ag-v14.json  main
+spb177 24/24  {shard} {shards} {out} 128 120 28120 hard ag-v14.json  main
+spb178 24/24  {shard} {shards} {out} 256 120 28240  main
+spb179 24/24  {shard} {shards} {out} 128 120 28360 hard ag-v14.json  main
+spb18 24/24  {shard} {shards} {out} 256 120 9040  main
+spb180 24/24  {shard} {shards} {out} 128 120 28480 hard ag-v14.json  main
+spb181 24/24  {shard} {shards} {out} 128 120 28600 hard ag-v14.json  main
+spb182 22/24  {shard} {shards} {out} 256 120 28720  main
+spb183 24/24  {shard} {shards} {out} 128 120 28840 hard ag-v14.json  main
+spb184 24/24  {shard} {shards} {out} 128 120 28960 hard ag-v14.json  main
+spb185 9/24  {shard} {shards} {out} 256 120 29080  main
+spb186 19/24  {shard} {shards} {out} 128 120 29200 hard ag-v14.json  main
+spb187 6/24  {shard} {shards} {out} 128 120 29320 hard ag-v14.json  main
+spb188 1/24  {shard} {shards} {out} 128 120 29440 hard ag-v14.json  main
+spb19 24/24  {shard} {shards} {out} 256 120 9160  main
+spb20 24/24  {shard} {shards} {out} 256 120 9280  main
+spb21 24/24  {shard} {shards} {out} 256 120 9400  main
+spb22 24/24  {shard} {shards} {out} 256 120 9520  main
+spb23 24/24  {shard} {shards} {out} 256 120 9640  main
+spb24 24/24  {shard} {shards} {out} 256 120 9760  main
+spb25 24/24  {shard} {shards} {out} 256 120 9880  main
+spb26 24/24  {shard} {shards} {out} 256 120 10000  main
+spb27 24/24  {shard} {shards} {out} 256 120 10120  main
+spb28 24/24  {shard} {shards} {out} 256 120 10240  main
+spb29 24/24  {shard} {shards} {out} 256 120 10360  main
+spb30 24/24  {shard} {shards} {out} 256 120 10480  main
+spb31 24/24  {shard} {shards} {out} 256 120 10600  main
+spb32 24/24  {shard} {shards} {out} 256 120 10720  main
+spb33 24/24  {shard} {shards} {out} 256 120 10840  main
+spb34 24/24  {shard} {shards} {out} 256 120 10960  main
+spb35 24/24  {shard} {shards} {out} 256 120 11080  main
+spb36 24/24  {shard} {shards} {out} 256 120 11200  main
+spb37 24/24  {shard} {shards} {out} 256 120 11320  main
+spb38 24/24  {shard} {shards} {out} 256 120 11440  main
+spb39 24/24  {shard} {shards} {out} 256 120 11560  main
+spb40 24/24  {shard} {shards} {out} 256 120 11680  main
+spb41 24/24  {shard} {shards} {out} 256 120 11800  main
+spb42 24/24  {shard} {shards} {out} 256 120 11920  main
+spb43 24/24  {shard} {shards} {out} 256 120 12040  main
+spb44 24/24  {shard} {shards} {out} 256 120 12160  main
+spb45 24/24  {shard} {shards} {out} 256 120 12280  main
+spb46 24/24  {shard} {shards} {out} 256 120 12400  main
+spb47 24/24  {shard} {shards} {out} 256 120 12520  main
+spb48 24/24  {shard} {shards} {out} 256 120 12640  main
+spb49 24/24  {shard} {shards} {out} 256 120 12760  main
+spb50 24/24  {shard} {shards} {out} 256 120 12880  main
+spb51 24/24  {shard} {shards} {out} 256 120 13000  main
+spb52 24/24  {shard} {shards} {out} 256 120 13120  main
+spb53 24/24  {shard} {shards} {out} 256 120 13240  main
+spb54 24/24  {shard} {shards} {out} 256 120 13360  main
+spb55 24/24  {shard} {shards} {out} 256 120 13480  main
+spb56 24/24  {shard} {shards} {out} 256 120 13600  main
+spb57 24/24  {shard} {shards} {out} 256 120 13720  main
+spb58 24/24  {shard} {shards} {out} 256 120 13840  main
+spb59 24/24  {shard} {shards} {out} 256 120 13960  main
+spb60 24/24  {shard} {shards} {out} 256 120 14080  main
+spb61 24/24  {shard} {shards} {out} 256 120 14200  main
+spb62 24/24  {shard} {shards} {out} 256 120 14320  main
+spb63 24/24  {shard} {shards} {out} 256 120 14440  main
+spb64 24/24  {shard} {shards} {out} 256 120 14560  main
+spb65 24/24  {shard} {shards} {out} 256 120 14680  main
+spb66 24/24  {shard} {shards} {out} 256 120 14800  main
+spb67 24/24  {shard} {shards} {out} 256 120 14920  main
+spb68 24/24  {shard} {shards} {out} 256 120 15040  main
+spb69 24/24  {shard} {shards} {out} 256 120 15160  main
+spb70 24/24  {shard} {shards} {out} 256 120 15280  main
+spb71 24/24  {shard} {shards} {out} 256 120 15400  main
+spb72 24/24  {shard} {shards} {out} 256 120 15520  main
+spb73 24/24  {shard} {shards} {out} 256 120 15640  main
+spb74 24/24  {shard} {shards} {out} 256 120 15760  main
+spb75 24/24  {shard} {shards} {out} 256 120 15880  main
+spb76 24/24  {shard} {shards} {out} 256 120 16000  main
+spb77 24/24  {shard} {shards} {out} 256 120 16120  main
+spb78 24/24  {shard} {shards} {out} 256 120 16240  main
+spb79 24/24  {shard} {shards} {out} 256 120 16360  main
+spb80 24/24  {shard} {shards} {out} 256 120 16480  main
+spb81 24/24  {shard} {shards} {out} 256 120 16600  main
+spb82 24/24  {shard} {shards} {out} 256 120 16720  main
+spb83 24/24  {shard} {shards} {out} 256 120 16840  main
+spb84 24/24  {shard} {shards} {out} 256 120 16960  main
+spb85 24/24  {shard} {shards} {out} 256 120 17080  main
+spb86 24/24  {shard} {shards} {out} 256 120 17200  main
+spb87 24/24  {shard} {shards} {out} 256 120 17320  main
+spb88 24/24  {shard} {shards} {out} 256 120 17440  main
+spb89 24/24  {shard} {shards} {out} 256 120 17560  main
+spb90 24/24  {shard} {shards} {out} 256 120 17680  main
+spb91 24/24  {shard} {shards} {out} 256 120 17800  main
+spb92 24/24  {shard} {shards} {out} 256 120 17920  main
+spb93 24/24  {shard} {shards} {out} 256 120 18040  main
+spb94 24/24  {shard} {shards} {out} 256 120 18160  main
+spb95 24/24  {shard} {shards} {out} 256 120 18280  main
+spb96 24/24  {shard} {shards} {out} 256 120 18400  main
+spb97 24/24  {shard} {shards} {out} 256 120 18520  main
+spb98 24/24  {shard} {shards} {out} 256 120 18640  main
+spb99 24/24  {shard} {shards} {out} 256 120 18760  main

@@ -1,0 +1,37 @@
+node:internal/deps/undici/undici:11581
+            fetchParams.controller.controller.error(new TypeError("terminated", {
+                                                    ^
+
+TypeError: terminated
+    at Fetch.onAborted (node:internal/deps/undici/undici:11581:53)
+    at Fetch.emit (node:events:519:28)
+    at Fetch.terminate (node:internal/deps/undici/undici:10738:14)
+    at Object.onError (node:internal/deps/undici/undici:11701:38)
+    at Request.onError (node:internal/deps/undici/undici:2304:31)
+    at Object.errorRequest (node:internal/deps/undici/undici:1742:17)
+    at TLSSocket.<anonymous> (node:internal/deps/undici/undici:6595:16)
+    at TLSSocket.emit (node:events:531:35)
+    at node:net:347:12
+    at TCP.done (node:internal/tls/wrap:748:7) {
+  [cause]: SocketError: other side closed
+      at TLSSocket.<anonymous> (node:internal/deps/undici/undici:6569:28)
+      at TLSSocket.emit (node:events:531:35)
+      at endReadableNT (node:internal/streams/readable:1698:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+    code: 'UND_ERR_SOCKET',
+    socket: {
+      localAddress: '172.31.19.56',
+      localPort: 57412,
+      remoteAddress: '108.177.14.207',
+      remotePort: 443,
+      remoteFamily: 'IPv4',
+      timeout: undefined,
+      bytesWritten: 2616,
+      bytesRead: 1053466
+    },
+    [Symbol(undici.error.UND_ERR)]: true,
+    [Symbol(undici.error.UND_ERR_SOCKET)]: true
+  }
+}
+
+Node.js v22.23.4

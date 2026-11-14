@@ -1,0 +1,1 @@
+{"id":"aa-a0-fl1","script":"match-flaws.mjs","args":"aa-i1 aa-i3b","shards":1,"ref":"a11e3252d795d7507dd0c336b339baa44046018c","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":30,"purpose":"summary (Fable 23:55Z): flaws per side and kind per 1,000 moves in aa-i1's and aa-i3b's kept games (side A: every legal move / margin; B: shortlist only)","made":"2026-11-13"}

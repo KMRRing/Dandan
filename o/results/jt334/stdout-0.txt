@@ -1,0 +1,2 @@
+games 39460, positions 3432577 (2750070 to learn from, 682507 held out), blend 0.5
+judge now    all n682507 vs search 0.0147 vs result 0.1723 | lib 41-80 n421699 vs search 0.0144 vs result 0.1959 | lib 21-40 n209041 vs search 0.0121 vs result 0.1334 | lib 9-20 n38813 vs search 0.0117 vs result 0.1227 | lib 0-8 n12954 vs search 0.0756 vs result 0.1781

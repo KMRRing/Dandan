@@ -1,0 +1,124 @@
+{"lines":1074,"withPlayOuts":1074,"noPlayOuts":0}
+{"source":"kept games","cases":345,"est":4.1,"real":2,"se":1.5,"games":65}
+{"source":"kept games","gain":"under 2","cases":135,"est":1.1,"real":-2.3,"se":1.9}
+{"source":"kept games","gain":"2-5","cases":126,"est":3.3,"real":4.1,"se":2.5}
+{"source":"kept games","gain":"5-10","cases":54,"est":6.8,"real":2.5,"se":4.3}
+{"source":"kept games","gain":"over 10","cases":30,"est":16.6,"real":11.7,"se":5.2}
+{"source":"kept games","library":"library over 20","cases":342,"est":4.1,"real":1.7,"se":1.4}
+{"source":"kept games","library":"library 20 or fewer","cases":3,"est":6.5,"real":37.5,"se":31.5}
+{"source":"kept games","kind":"cast · Piracy Charm · 2 · their player","cases":62,"est":2.9,"real":5.8,"se":3.5,"games":20}
+{"source":"kept games","kind":"cast · Piracy Charm · 2 · their player","gain":"under 2","cases":26,"est":1.2,"real":-3.8,"se":4}
+{"source":"kept games","kind":"cast · Piracy Charm · 2 · their player","gain":"2-5","cases":27,"est":3.3,"real":16.2,"se":5.5}
+{"source":"kept games","kind":"cast · Piracy Charm · 2 · their player","gain":"5-10","cases":9,"est":6.4,"real":2.8,"se":10.6}
+{"source":"kept games","kind":"cast · Piracy Charm · 2 · their player","library":"library over 20","cases":62,"est":2.9,"real":5.8,"se":3.5}
+{"source":"kept games","kind":"cast · Mind Bend · own","cases":6,"est":3.4,"real":10.4,"se":18.9,"games":6}
+{"source":"kept games","kind":"cast · Mind Bend · own","gain":"under 2","cases":4,"est":0.9,"real":-9.4,"se":9.4}
+{"source":"kept games","kind":"cast · Mind Bend · own","gain":"2-5","cases":1,"est":3,"real":0,"se":null}
+{"source":"kept games","kind":"cast · Mind Bend · own","gain":"over 10","cases":1,"est":14.1,"real":100,"se":null}
+{"source":"kept games","kind":"cast · Mind Bend · own","library":"library over 20","cases":5,"est":1.3,"real":-7.5,"se":7.5}
+{"source":"kept games","kind":"cast · Mind Bend · own","library":"library 20 or fewer","cases":1,"est":14.1,"real":100,"se":null}
+{"source":"kept games","estAtLeast":0,"cases":345,"realSummed":687.5,"realMean":2}
+{"source":"kept games","estAtLeast":1,"cases":297,"realSummed":762.5,"realMean":2.6}
+{"source":"kept games","estAtLeast":2,"cases":210,"realSummed":1000,"realMean":4.8}
+{"source":"kept games","estAtLeast":3,"cases":159,"realSummed":750,"realMean":4.7}
+{"source":"kept games","estAtLeast":5,"cases":84,"realSummed":487.5,"realMean":5.8}
+{"source":"kept games","keptGamesWithACaseAtLibrary20OrFewer":2,"of":65}
+{"source":"kept games","kind":"cast · Gone Missing · own","cases":1,"est":5.5,"real":-62.5,"se":null}
+{"source":"kept games","kind":"ability","cases":4,"est":2.6,"real":-15.6,"se":13.9}
+{"source":"kept games","kind":"cast · Commit // Memory · theirs","cases":16,"est":6,"real":-12.5,"se":9.5}
+{"source":"kept games","kind":"cast · Metamorphose · theirs","cases":29,"est":2.9,"real":-3.4,"se":4.2}
+{"source":"kept games","kind":"cast · Predict","cases":17,"est":3,"real":-1.5,"se":7.8}
+{"source":"kept games","kind":"cast · Piracy Charm · 0 · own","cases":2,"est":1.7,"real":0,"se":0}
+{"source":"kept games","kind":"cast · Deem Inferior · theirs","cases":5,"est":5.2,"real":0,"se":11.2}
+{"source":"kept games","kind":"cast · Chart a Course","cases":1,"est":1.7,"real":0,"se":null}
+{"source":"kept games","kind":"cast · Mind Bend · theirs","cases":11,"est":3.2,"real":0,"se":9.5}
+{"source":"kept games","kind":"cast · Quicken","cases":41,"est":2.5,"real":0.6,"se":3.7}
+{"source":"kept games","kind":"cast · Dandân","cases":41,"est":6,"real":1.2,"se":3.5}
+{"source":"kept games","kind":"cast · Mystic Retrieval · g","cases":70,"est":3.8,"real":1.8,"se":3.1}
+{"source":"kept games","kind":"cast · Lórien Revealed","cases":3,"est":3.8,"real":4.2,"se":18.2}
+{"source":"kept games","kind":"cast · Brainstorm","cases":15,"est":3.7,"real":5.8,"se":6.2}
+{"source":"kept games","kind":"cast · Piracy Charm · 2 · their player","cases":62,"est":2.9,"real":5.8,"se":3.5}
+{"source":"kept games","kind":"cast · Gone Missing · theirs","cases":9,"est":6.6,"real":9.7,"se":6.8}
+{"source":"kept games","kind":"cast · Mind Bend · own","cases":6,"est":3.4,"real":10.4,"se":18.9}
+{"source":"kept games","kind":"land · Remote Isle","cases":1,"est":1,"real":12.5,"se":null}
+{"source":"kept games","kind":"cast · Piracy Charm · 2 · own player","cases":2,"est":19.2,"real":12.5,"se":25}
+{"source":"kept games","kind":"cycle · Lonely Sandbar","cases":3,"est":2.8,"real":25,"se":7.2}
+{"source":"kept games","kind":"cast · Repulse · own","cases":6,"est":21.8,"real":35.4,"se":3.8}
+{"source":"self-play","cases":729,"est":3.8,"real":1.7,"se":0.9,"games":378}
+{"source":"self-play","gain":"under 2","cases":309,"est":1.2,"real":-0.9,"se":1.3}
+{"source":"self-play","gain":"2-5","cases":226,"est":3.3,"real":1,"se":1.8}
+{"source":"self-play","gain":"5-10","cases":154,"est":6.8,"real":7.4,"se":2.2}
+{"source":"self-play","gain":"over 10","cases":40,"est":15.1,"real":3.4,"se":4.8}
+{"source":"self-play","library":"library over 20","cases":673,"est":3.7,"real":1.3,"se":1}
+{"source":"self-play","library":"library 20 or fewer","cases":56,"est":4.9,"real":6.7,"se":3.2}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","cases":125,"est":2.8,"real":-2.5,"se":1.9,"games":88}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","gain":"under 2","cases":59,"est":1.3,"real":-8.9,"se":2.5}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","gain":"2-5","cases":48,"est":3.1,"real":2.1,"se":3}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","gain":"5-10","cases":17,"est":6.8,"real":8.8,"se":5.8}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","gain":"over 10","cases":1,"est":14.7,"real":-37.5,"se":null}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","library":"library over 20","cases":123,"est":2.9,"real":-2.5,"se":2}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","library":"library 20 or fewer","cases":2,"est":0.8,"real":0,"se":0}
+{"source":"self-play","kind":"cast · Mind Bend · own","cases":35,"est":3.3,"real":-2.5,"se":4.3,"games":24}
+{"source":"self-play","kind":"cast · Mind Bend · own","gain":"under 2","cases":19,"est":0.9,"real":-5.3,"se":5.8}
+{"source":"self-play","kind":"cast · Mind Bend · own","gain":"2-5","cases":10,"est":3.5,"real":-3.8,"se":6.5}
+{"source":"self-play","kind":"cast · Mind Bend · own","gain":"5-10","cases":3,"est":6.5,"real":25,"se":0}
+{"source":"self-play","kind":"cast · Mind Bend · own","gain":"over 10","cases":3,"est":15.2,"real":-8.3,"se":25.3}
+{"source":"self-play","kind":"cast · Mind Bend · own","library":"library over 20","cases":29,"est":3.6,"real":-4.3,"se":5.1}
+{"source":"self-play","kind":"cast · Mind Bend · own","library":"library 20 or fewer","cases":6,"est":2,"real":6.3,"se":4.3}
+{"source":"self-play","estAtLeast":0,"cases":726,"realSummed":1237.5,"realMean":1.7}
+{"source":"self-play","estAtLeast":1,"cases":628,"realSummed":1200,"realMean":1.9}
+{"source":"self-play","estAtLeast":2,"cases":420,"realSummed":1500,"realMean":3.6}
+{"source":"self-play","estAtLeast":3,"cases":324,"realSummed":1312.5,"realMean":4.1}
+{"source":"self-play","estAtLeast":5,"cases":194,"realSummed":1275,"realMean":6.6}
+{"source":"self-play","kind":"cast · Gone Missing · own","cases":1,"est":7.5,"real":-37.5,"se":null}
+{"source":"self-play","kind":"cast · Commit // Memory · own","cases":1,"est":6.2,"real":-25,"se":null}
+{"source":"self-play","kind":"cast · Repulse · theirs","cases":1,"est":5.6,"real":-25,"se":null}
+{"source":"self-play","kind":"cast · Deem Inferior · theirs","cases":3,"est":7.1,"real":-16.7,"se":8.3}
+{"source":"self-play","kind":"ability","cases":7,"est":3.2,"real":-14.3,"se":7.4}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · own player","cases":2,"est":6.9,"real":-12.5,"se":25}
+{"source":"self-play","kind":"cast · Commit // Memory","cases":4,"est":3.5,"real":-9.4,"se":9.4}
+{"source":"self-play","kind":"cast · Mind Bend · theirs","cases":27,"est":3.4,"real":-5.1,"se":4.8}
+{"source":"self-play","kind":"cast · Predict","cases":23,"est":2.5,"real":-3.8,"se":7.2}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","cases":125,"est":2.8,"real":-2.5,"se":1.9}
+{"source":"self-play","kind":"cast · Mind Bend · own","cases":35,"est":3.3,"real":-2.5,"se":4.3}
+{"source":"self-play","kind":"cast · Quicken","cases":67,"est":2.2,"real":-1.3,"se":3.9}
+{"source":"self-play","kind":"cast · Chart a Course","cases":6,"est":1.9,"real":0,"se":7.2}
+{"source":"self-play","kind":"cast · Piracy Charm · 0 · own","cases":2,"est":2.2,"real":0,"se":0}
+{"source":"self-play","kind":"cast · Lórien Revealed","cases":2,"est":3.1,"real":0,"se":0}
+{"source":"self-play","kind":"cycle · Lórien Revealed","cases":3,"est":1,"real":0,"se":0}
+{"source":"self-play","kind":"cast · Commit // Memory · spell","cases":1,"est":1.4,"real":0,"se":null}
+{"source":"self-play","kind":"cast · Take Inventory","cases":9,"est":4.3,"real":2.8,"se":8.3}
+{"source":"self-play","kind":"cast · Commit // Memory · theirs","cases":27,"est":4,"real":3.7,"se":4.2}
+{"source":"self-play","kind":"cast · Mystic Retrieval · g","cases":152,"est":5.2,"real":4.4,"se":1.9}
+{"source":"self-play","kind":"cast · Dandân","cases":138,"est":4.7,"real":5.1,"se":2.4}
+{"source":"self-play","kind":"cast · Gone Missing · theirs","cases":21,"est":3.5,"real":5.4,"se":5.7}
+{"source":"self-play","kind":"cast · Brainstorm","cases":33,"est":2.3,"real":8,"se":4.5}
+{"source":"self-play","kind":"cast · Metamorphose · theirs","cases":36,"est":3.5,"real":9.4,"se":3.6}
+{"source":"self-play","kind":"cast · Repulse · own","cases":3,"est":3.4,"real":12.5,"se":7.2}
+{"source":"pooled","cases":1074,"est":3.9,"real":1.8,"se":0.8,"games":443}
+{"source":"pooled","gain":"under 2","cases":444,"est":1.2,"real":-1.3,"se":1.1}
+{"source":"pooled","gain":"2-5","cases":352,"est":3.3,"real":2.1,"se":1.5}
+{"source":"pooled","gain":"5-10","cases":208,"est":6.8,"real":6.1,"se":2}
+{"source":"pooled","gain":"over 10","cases":70,"est":15.8,"real":7,"se":3.5}
+{"source":"pooled","library":"library over 20","cases":1015,"est":3.8,"real":1.4,"se":0.8}
+{"source":"pooled","library":"library 20 or fewer","cases":59,"est":5,"real":8.3,"se":3.4}
+{"source":"pooled","kind":"cast · Piracy Charm · 2 · their player","cases":187,"est":2.8,"real":0.3,"se":1.7,"games":108}
+{"source":"pooled","kind":"cast · Piracy Charm · 2 · their player","gain":"under 2","cases":85,"est":1.2,"real":-7.4,"se":2.1}
+{"source":"pooled","kind":"cast · Piracy Charm · 2 · their player","gain":"2-5","cases":75,"est":3.2,"real":7.2,"se":2.9}
+{"source":"pooled","kind":"cast · Piracy Charm · 2 · their player","gain":"5-10","cases":26,"est":6.7,"real":6.7,"se":5.2}
+{"source":"pooled","kind":"cast · Piracy Charm · 2 · their player","gain":"over 10","cases":1,"est":14.7,"real":-37.5,"se":null}
+{"source":"pooled","kind":"cast · Piracy Charm · 2 · their player","library":"library over 20","cases":185,"est":2.9,"real":0.3,"se":1.8}
+{"source":"pooled","kind":"cast · Piracy Charm · 2 · their player","library":"library 20 or fewer","cases":2,"est":0.8,"real":0,"se":0}
+{"source":"pooled","kind":"cast · Mind Bend · own","cases":41,"est":3.3,"real":-0.6,"se":4.5,"games":30}
+{"source":"pooled","kind":"cast · Mind Bend · own","gain":"under 2","cases":23,"est":0.9,"real":-6,"se":5}
+{"source":"pooled","kind":"cast · Mind Bend · own","gain":"2-5","cases":11,"est":3.4,"real":-3.4,"se":5.9}
+{"source":"pooled","kind":"cast · Mind Bend · own","gain":"5-10","cases":3,"est":6.5,"real":25,"se":0}
+{"source":"pooled","kind":"cast · Mind Bend · own","gain":"over 10","cases":4,"est":14.9,"real":18.8,"se":32.5}
+{"source":"pooled","kind":"cast · Mind Bend · own","library":"library over 20","cases":34,"est":3.2,"real":-4.8,"se":4.4}
+{"source":"pooled","kind":"cast · Mind Bend · own","library":"library 20 or fewer","cases":7,"est":3.7,"real":19.6,"se":13.9}
+{"source":"pooled","estAtLeast":0,"cases":1071,"realSummed":1925,"realMean":1.8}
+{"source":"pooled","estAtLeast":1,"cases":925,"realSummed":1962.5,"realMean":2.1}
+{"source":"pooled","estAtLeast":2,"cases":630,"realSummed":2500,"realMean":4}
+{"source":"pooled","estAtLeast":3,"cases":483,"realSummed":2062.5,"realMean":4.3}
+{"source":"pooled","estAtLeast":5,"cases":278,"realSummed":1762.5,"realMean":6.3}
+{"selfPlayEnds":"ab-g2-s4d-1","games":400,"medianCardsLeft":32,"at20OrFewer":109}

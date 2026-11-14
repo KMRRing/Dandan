@@ -1,0 +1,1 @@
+{"sw":"tiWeak=1,redraw=1,reversal=1","pairs":30,"score":0.4833}

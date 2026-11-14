@@ -1,0 +1,27 @@
+node:internal/deps/undici/undici:13392
+      Error.captureStackTrace(err);
+            ^
+
+TypeError: fetch failed
+    at node:internal/deps/undici/undici:13392:13
+    at async Object.list (file:///tmp/lab-work/slot1/repo/lab/lib.mjs:26:26)
+    at async readParts (file:///tmp/lab-work/slot1/repo/lab/lib.mjs:38:18)
+    at async file:///tmp/lab-work/slot1/repo/lab/locks.mjs:49:53 {
+  [cause]: Error: write EPIPE
+      at WriteWrap.onWriteComplete [as oncomplete] (node:internal/stream_base_commons:87:19)
+      at handleWriteReq (node:internal/stream_base_commons:59:21)
+      at writeGeneric (node:internal/stream_base_commons:148:15)
+      at Socket._writeGeneric (node:net:957:11)
+      at Socket._write (node:net:969:8)
+      at writeOrBuffer (node:internal/streams/writable:572:12)
+      at _write (node:internal/streams/writable:501:10)
+      at Writable.write (node:internal/streams/writable:510:10)
+      at writeBuffer (node:internal/deps/undici/undici:6544:20)
+      at writeH1 (node:internal/deps/undici/undici:6446:9) {
+    errno: -32,
+    code: 'EPIPE',
+    syscall: 'write'
+  }
+}
+
+Node.js v22.11.0

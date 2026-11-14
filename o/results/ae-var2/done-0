@@ -1,0 +1,1 @@
+{"code":"worker error","error":"Command failed: git fetch -q --depth=1 origin d77e778","by":"ip-172-31-30-26.eu-north-1.compute.internal-1"}

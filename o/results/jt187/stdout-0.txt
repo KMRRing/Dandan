@@ -1,0 +1,3 @@
+games 22084, positions 1959620 (1570737 to learn from, 388883 held out), blend 0.5
+judge now    all n388883 vs search 0.0131 vs result 0.1745 | lib 41-80 n240744 vs search 0.0128 vs result 0.1961 | lib 21-40 n119353 vs search 0.0106 vs result 0.1373 | lib 9-20 n21686 vs search 0.0093 vs result 0.1341 | lib 0-8 n7100 vs search 0.0793 vs result 0.1901
+hand flaws now 0.0357

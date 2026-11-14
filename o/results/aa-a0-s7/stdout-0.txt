@@ -1,0 +1,5 @@
+aa-f1-gm: 1500 deals (3000 games): 47.7% ± 1.0
+aa-f1-rs: 1500 deals (3000 games): 49.5% ± 0.5
+aa-f1-cw: 1500 deals (3000 games): 51.9% ± 0.9
+aa-f1-ti: 1500 deals (3000 games): 37.5% ± 1.4
+aa-f1-all: 1500 deals (3000 games): 33.5% ± 1.4

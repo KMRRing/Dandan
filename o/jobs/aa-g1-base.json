@@ -1,0 +1,1 @@
+{"id": "aa-g1-base", "script": "judge-variants.mjs", "args": "{shard} {shards} {out} aa-g0-m 16", "shards": 1, "timeoutMin": 90, "purpose": "deep loop step A: fresh 64x32 base judge (variant 16) trained only on today's Medium self-play, no v14 history", "ref": "14e7425a52d2c2e346a9c58689c5d36ce99f753a", "repo": "https://github.com/KMRRing/Dandan.git", "made": "2026-11-11"}

@@ -1,0 +1,1 @@
+{"id":"spb02","script":"selfplay.mjs","args":"{shard} {shards} {out} 256 120 7120","shards":24,"ref":"main","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":120,"purpose":"Hard (256 deals) against itself, every decision with the search's value of each move: data to teach the judge and Medium"}

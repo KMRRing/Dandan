@@ -1,0 +1,1 @@
+{"id": "aa-b0-js", "script": "judge-variants.mjs", "args": "{shard} {shards} {out} aa-b1-mss 12 ag-v14.json", "shards": 1, "timeoutMin": 300, "purpose": "overnight stage 2: squeeze judge, from v14 (variant 12) on 8,000 squeeze-vs-squeeze Medium games", "ref": "0dfc9115f9f419a9853129db3e07a4ce84778556", "repo": "https://github.com/KMRRing/Dandan.git", "made": "2026-11-11"}

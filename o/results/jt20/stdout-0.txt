@@ -1,0 +1,9 @@
+games 2365, positions 211723 (171398 to learn from, 40325 held out), blend 0.5
+judge now    all n40325 vs search 0.0114 vs result 0.1663 | lib 41-80 n26081 vs search 0.0117 vs result 0.1929 | lib 21-40 n11761 vs search 0.0087 vs result 0.1162 | lib 9-20 n2000 vs search 0.0073 vs result 0.1110 | lib 0-8 n483 vs search 0.0760 vs result 0.1782
+epoch 10: held-out loss 0.5228 (learnt 0.5058)
+epoch 20: held-out loss 0.5279 (learnt 0.4997)
+epoch 30: held-out loss 0.5327 (learnt 0.4963)
+epoch 40: held-out loss 0.5330 (learnt 0.4940)
+best epoch 2, held-out loss 0.5163
+judge new    all n40325 vs search 0.0101 vs result 0.1603 | lib 41-80 n26081 vs search 0.0100 vs result 0.1888 | lib 21-40 n11761 vs search 0.0086 vs result 0.1080 | lib 9-20 n2000 vs search 0.0094 vs result 0.0976 | lib 0-8 n483 vs search 0.0610 vs result 0.1568
+as rounded   all n40325 vs search 0.0102 vs result 0.1603 | lib 41-80 n26081 vs search 0.0100 vs result 0.1888 | lib 21-40 n11761 vs search 0.0087 vs result 0.1079 | lib 9-20 n2000 vs search 0.0094 vs result 0.0975 | lib 0-8 n483 vs search 0.0609 vs result 0.1562

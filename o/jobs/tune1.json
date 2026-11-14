@@ -1,0 +1,1 @@
+{"id":"tune1","script":"tune-round.mjs","args":"{shard} {shards} {out} 512 0 all","shards":24,"ref":"main","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":150,"purpose":"Medium constant search, 87 candidates at +-0.5, 512 pairs each","outcome":"void: compared against an old build (base 0.461), all z inflated"}

@@ -1,0 +1,36 @@
+{"positions":7042,"cardsTried":61909,"betterWithout":1520,"share":0.0246}
+{"card":"Mystic Retrieval","held":2926,"betterWithout":0.097,"meanWhenSo":0.033,"worst":0.108}
+{"card":"Gone Missing","held":2144,"betterWithout":0.068,"meanWhenSo":0.029,"worst":0.095}
+{"card":"Commit // Memory","held":2455,"betterWithout":0.056,"meanWhenSo":0.035,"worst":0.111}
+{"card":"Take Inventory","held":3764,"betterWithout":0.054,"meanWhenSo":0.029,"worst":0.096}
+{"card":"Lórien Revealed","held":957,"betterWithout":0.044,"meanWhenSo":0.03,"worst":0.068}
+{"card":"Deem Inferior","held":2646,"betterWithout":0.038,"meanWhenSo":0.023,"worst":0.063}
+{"card":"Predict","held":1128,"betterWithout":0.035,"meanWhenSo":0.033,"worst":0.091}
+{"card":"Chart a Course","held":1807,"betterWithout":0.03,"meanWhenSo":0.032,"worst":0.083}
+{"card":"Memory Lapse","held":11014,"betterWithout":0.025,"meanWhenSo":0.026,"worst":0.096}
+{"card":"Narset's Reversal","held":2796,"betterWithout":0.019,"meanWhenSo":0.024,"worst":0.05}
+{"card":"Quicken","held":882,"betterWithout":0.017,"meanWhenSo":0.019,"worst":0.033}
+{"card":"Flood Plain","held":1685,"betterWithout":0.013,"meanWhenSo":0.026,"worst":0.067}
+{"card":"Dandân","held":7254,"betterWithout":0.01,"meanWhenSo":0.02,"worst":0.054}
+{"card":"Izzet Boilerworks","held":1457,"betterWithout":0.009,"meanWhenSo":0.051,"worst":0.134}
+{"card":"Metamorphose","held":1135,"betterWithout":0.009,"meanWhenSo":0.022,"worst":0.047}
+{"card":"Mind Bend","held":1793,"betterWithout":0.008,"meanWhenSo":0.025,"worst":0.052}
+{"card":"Repulse","held":2522,"betterWithout":0.008,"meanWhenSo":0.032,"worst":0.072}
+{"card":"Lonely Sandbar","held":423,"betterWithout":0.005,"meanWhenSo":0.016,"worst":0.019}
+{"card":"Mystic Sanctuary","held":893,"betterWithout":0.004,"meanWhenSo":0.012,"worst":0.013}
+{"card":"Island","held":7579,"betterWithout":0.002,"meanWhenSo":0.021,"worst":0.034}
+{"card":"Remote Isle","held":521,"betterWithout":0.002,"meanWhenSo":0.014,"worst":0.014}
+{"card":"Piracy Charm","held":1446,"betterWithout":0.001,"meanWhenSo":0.012,"worst":0.012}
+{"card":"Halimar Depths","held":977,"betterWithout":0,"meanWhenSo":0,"worst":0}
+{"card":"Thundering Falls","held":835,"betterWithout":0,"meanWhenSo":0,"worst":0}
+{"card":"Brainstorm","held":870,"betterWithout":0,"meanWhenSo":0,"worst":0}
+{"d":0.134,"card":"Izzet Boilerworks","seed":600036,"i":93,"seat":1,"turn":15,"life":[20,12],"hand":7,"base":0.374}
+{"d":0.134,"card":"Izzet Boilerworks","seed":600036,"i":93,"seat":1,"turn":15,"life":[20,12],"hand":7,"base":0.374}
+{"d":0.111,"card":"Commit // Memory","seed":600108,"i":77,"seat":0,"turn":17,"life":[20,20],"hand":7,"base":0.305}
+{"d":0.111,"card":"Commit // Memory","seed":600108,"i":77,"seat":0,"turn":17,"life":[20,20],"hand":7,"base":0.305}
+{"d":0.108,"card":"Mystic Retrieval","seed":600139,"i":4,"seat":0,"turn":2,"life":[20,20],"hand":8,"base":0.518}
+{"d":0.107,"card":"Izzet Boilerworks","seed":600036,"i":101,"seat":1,"turn":16,"life":[20,8],"hand":8,"base":0.277}
+{"d":0.107,"card":"Izzet Boilerworks","seed":600036,"i":101,"seat":1,"turn":16,"life":[20,8],"hand":8,"base":0.277}
+{"d":0.106,"card":"Mystic Retrieval","seed":600195,"i":2,"seat":0,"turn":1,"life":[20,20],"hand":7,"base":0.399}
+{"d":0.104,"card":"Mystic Retrieval","seed":600133,"i":25,"seat":1,"turn":5,"life":[20,20],"hand":7,"base":0.374}
+{"d":0.096,"card":"Take Inventory","seed":600004,"i":46,"seat":1,"turn":10,"life":[12,20],"hand":4,"base":0.478}

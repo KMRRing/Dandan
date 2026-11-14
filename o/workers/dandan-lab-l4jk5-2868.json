@@ -1,0 +1,1 @@
+{"by":"dandan-lab-l4jk5-2868","cloud":"rackspace","pool":"kmr-ring1-25","fin":[],"slots":4,"hw":{"cpus":4,"avail":4,"present":4,"possible":15,"offline":11,"memGB":7,"ips":["10.20.20.66"]},"busy":["az-g6-c/422","az-g6-av/384","az-g6-av/410","az-g6-av/392"],"req":{"list":0,"write":5,"read":0,"ms":120133},"started":1794665110893,"t":1794665831442}

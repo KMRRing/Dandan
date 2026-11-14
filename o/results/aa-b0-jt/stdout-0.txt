@@ -1,0 +1,1 @@
+{"variant":12,"from":"ag-v14.json","spec":{"plus":true,"shape":"32x16 warm","blend":0,"floor":0},"games":8000,"positions":351813,"epoch":1,"metrics":{"all":0.1683,"slow":0.2068,"late":0.1499,"flaws":0.0549},"today":{"all":0.1724,"slow":0.2117,"late":0.1453,"flaws":0.0481}}

@@ -1,0 +1,1 @@
+{"id":"aa-a0-sha","script":"part-sha.mjs","args":"ag-jv1","shards":1,"ref":"1a41461deb7048ff7c06241312f619b94224ddb4","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":10,"purpose":"checksums of the ag-jv1 judges, to check the copy of v14 in judges/","made":"2026-11-11"}

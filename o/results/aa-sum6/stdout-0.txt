@@ -1,0 +1,9 @@
+{"variant":"p64","decisions":489,"same":0.8814,"lostPerDecision":0.00239,"over2points":27,"over5points":6,"workShare":0.262,"ms":84940}
+{"variant":"m64","decisions":489,"same":0.8405,"lostPerDecision":0.00248,"over2points":28,"over5points":4,"workShare":0.264,"ms":107249}
+{"variant":"r64","decisions":489,"same":0.8405,"lostPerDecision":0.00248,"over2points":28,"over5points":4,"workShare":0.264,"ms":97000}
+{"variant":"p128","decisions":489,"same":0.9305,"lostPerDecision":0.00107,"over2points":11,"over5points":2,"workShare":0.477,"ms":155638}
+{"variant":"m128","decisions":489,"same":0.8691,"lostPerDecision":0.0019,"over2points":20,"over5points":3,"workShare":0.483,"ms":169841}
+{"variant":"r128","decisions":489,"same":0.8691,"lostPerDecision":0.0019,"over2points":20,"over5points":3,"workShare":0.483,"ms":172152}
+{"variant":"s256x2","decisions":489,"same":1,"lostPerDecision":0,"over2points":0,"over5points":0,"workShare":0.845,"ms":265343}
+{"variant":"s256x3","decisions":489,"same":1,"lostPerDecision":0,"over2points":0,"over5points":0,"workShare":0.862,"ms":263127}
+{"variant":"ms256x3","decisions":489,"same":0.8814,"lostPerDecision":0.00152,"over2points":17,"over5points":3,"workShare":0.867,"ms":290873}
