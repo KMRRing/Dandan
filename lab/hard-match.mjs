@@ -50,7 +50,10 @@ async function side(spec) {
   // "hard+<policy-train job>": Hard whose look-aheads are played past the tree by the stage-1 model instead of Medium (gate G2)
   // "hard^<policy-train job>": Hard whose shortlist the stage-1 model orders (plan 3.5's fallback after G2), Medium playing on
   const [search1, ranker] = search0.split("^");
-  if (ranker) budget.rank = makePlus(await modelOf(ranker)).rank;
+  // "hard…^~<model>" (14 Nov 2026, Fable No. 13 point 6): the model ranks the tree's options inside the look-aheads only (think's
+  // treeRank); the root's candidates and the questions stay as they are
+  if (ranker?.startsWith("~")) budget.treeRank = makePlus(await modelOf(ranker.slice(1))).rank;
+  else if (ranker) budget.rank = makePlus(await modelOf(ranker)).rank;
   const [search2, model] = search1.split("+");
   // "hard-t<n>" (12 November 2026, plan item 8): the look-ahead plays n turns ahead instead of 2
   const [, search, tn, arm] = search2.match(/^([a-z]+)(?:-t(\d+))?(?:-(short|margin|keep|knet|knetkeep))?$/) || [, search2];

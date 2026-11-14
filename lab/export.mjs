@@ -43,7 +43,10 @@ for (const sid of ids.split(",")) {
           const bar = TUNE.pass + (s.stack.length ? 0 : ADJ.pass);
           const c = d.list.map(([, m, q, se, n, cut]) => ({ m: marksOf(s, seat, m), s: r3(m.t === "pass" ? bar : P.score(m)), q, se, n, out: cut }));
           const won = rec.winner === seat ? 1 : rec.winner < 0 ? 0.5 : 0;
-          batch.push(JSON.stringify({ g: rec.seed, i, seat, deep: d.deep ?? (deals >= 1024 ? 1 : 0), deals: d.deep ? 1024 : deals, x: viewOf(s, seat), c, med: d.med, pick: d.pick, won, ...(every ? { every: 1, ...(d.off ? { off: 1 } : {}) } : {}), ...(rec.seed % 5 === 0 ? { hold: 1 } : {}) }));
+          batch.push(JSON.stringify({ g: rec.seed, i, seat, deep: d.deep ?? (deals >= 1024 ? 1 : 0), deals: d.deep ? 1024 : deals, x: viewOf(s, seat), c, med: d.med, pick: d.pick, won, ...(every ? { every: 1, ...(d.off ? { off: 1 } : {}) } : {}), ...(rec.seed % 5 === 0 ? { hold: 1 } : {}),
+            // a game with an explore3 mark (14 Nov 2026, Fable No. 15): x3 -1 before its random move, 0 at it, 1 after; at it
+            // `played` is the option played (pick stays the search's)
+            ...(rec.explore3 ? { x3: Math.sign(i - rec.explore3.i), ...(d.played != null ? { played: d.played } : {}) } : {}) }));
         }
         const r = applyMove(rules, G, seat, move, 0);
         if (r.error) { console.log(`game ${rec.seed} move ${i}: ${r.error}, rest of the game skipped`); break; }

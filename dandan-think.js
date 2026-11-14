@@ -416,7 +416,7 @@ function where(c, seat) {
  * decisions it chose as the full search did every time, for 15% fewer deals (lab/variants.mjs, ae-var3).
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide, all, rank });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
@@ -436,7 +436,7 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
       const res = act(c, seat, cands[i], { rng: r, quiet: true });
       const at = {};
       if (typeof res === "string") vals[i].push(-1);
-      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, rank));
+      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank));
       seen[i].push(at);
     }
     d++;
@@ -548,6 +548,7 @@ const SPREAD = 0.06;
  * `hold` (lab, 10 November 2026: looks from 16 deals, to spend the deals on the moves still in it): passing is never
  * dropped. Holding back pays only in the deals where the other player shows the spell it waits for (keeping a Mystic
  * Sanctuary's mana for their Retrieval, Korbi), so over a few deals it can trail by chance and still be the move.
+ * `treeRank` (lab, 14 Nov 2026): like `rank`, but for the tree's options inside the look-aheads only (the root as without it).
  */
 function prune(alive, vals, cands, must, hold = false, z = 3) {
   const k = Math.min(...alive.map(i => vals[i].length));
