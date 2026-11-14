@@ -59,8 +59,11 @@ function replay(game, decisions) {
       for (const id of unknownSlots(s, me)) { B.put("sf.f32", T.slotOf(me, s, id, new Float32Array(SLOT_N))); B.put("sy.i16", Int16Array.of(NAME_AT.get(DECK[id]))); B.put("srow.i32", Int32Array.of(nb)); ns++; }
       nb++;
     }
-    if (V && s.turn !== lastTurn && !s.pending) {
-      lastTurn = s.turn;
+    // value rows (14 Nov 11:40Z, the scorecard: the value net flat since generation 1): every turn's start as before, and now
+    // also one position with priority in three besides, so a game gives several times the rows
+    const turnStart = s.turn !== lastTurn && !s.pending;
+    if (turnStart) lastTurn = s.turn;
+    if (V && !s.pending && (turnStart || seeded(mix(seed, 4242 + i))() < 1 / 3)) {
       if (x3 != null && i <= x3) skipped += 2;
       else {
         const [r0, r1] = extValueRow(s, features, N);

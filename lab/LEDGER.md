@@ -721,3 +721,20 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
   Generation 5: az-g5-a 1,130 and az-g5-c 1,081 of 1,200 shards. sps079 1,197 of 1,200 games: export ae-x34. sps080 2,801 of 3,000.
 
 - 2026-11-14 11:38Z ops: Korbi 11:27Z "Yes to both" (exec's two options: raise the cap; trim the worker - heartbeat 2->5 min and one list per machine). Cap taken as $2.50/h until Korbi names a number. Added +152 vCPUs: new Chicago 16-core compute pool 48a8e737-3316-4dcd-8cf9-3d3ac2902916 (ch.vs1.2xlarge-ord, bid $0.04) x4, held $0.01; US East 8-core 8de624fa 14->18, held $0.005; Dallas 16-core 0cfd35a6 3->5, held $0.01; new Dallas 8-core pool 374791e4-6e67-4df5-9e16-56990c8961f2 (ch.vs1.xlarge-dfw, bid $0.02) x6 lifted $0.005->$0.015, cut to 3, still $0.015 ($0.0019/vCPU-h). New K8s machines may take up to 90 min to join. Cost est ~$2.0/h (machines ~$1.24, requests ~$0.67, Google ~$0.1).
+- 11:38Z **Monte Scry Zero A and C** (Korbi 11:33: the names). **The scorecard** (lab/zero-scorecard.mjs, a lab-read job, about 6 minutes, no fleet): every generation's nets on the same 300 held-out games of generation 4 (A and C; every fifth seed, never trained on). First run:
+
+  | nets | value loss (calib.) | policy | questions | Scry nats a card / 2+ lands Brier |
+  |---|---|---|---|---|
+  | g1-A | 0.525 (0.038) | 63.6% | 29.2% | pool's odds 2.629 / 0.175 |
+  | g2-A | 0.529 (0.054) | 67.2% | 30.1% | |
+  | g3-A | 0.543 (0.058) | 72.6% | 30.0% | |
+  | g4-A | 0.530 (0.042) | 73.4% | 51.3% | |
+  | g1-C | 0.512 (0.044) | 63.3% | 29.5% | |
+  | g2-C | 0.476 (0.014) | 68.6% | 30.4% | |
+  | g3-C | 0.510 (0.010) | 73.1% | 30.4% | |
+  | g4-C | 0.494 (0.026) | 74.9% | 57.0% | |
+  | g4x-A | 0.527 (0.041) | 73.8% | 54.8% | **2.431 / 0.148** |
+
+  Reading: **the value net has not improved since generation 1** (A 0.52–0.54, C 0.48–0.51 on the same positions): the likeliest reason the engine curve is flattening. The policy climbs but slows (A +5.4, +0.8 points). The question head was a step (30% → 51–57%). Scry beats the pool's odds by 7.6% a card.
+  **Pivot rules** (read every generation): Scry: under 10% better than the pool's odds two generations running → Scry 2 (ask Zero what it would have played with each hand). Value: held-out loss on the frozen set no better by 0.005 two generations running → change its training (now: flat). Policy: under +1 point two generations running → learn the search's full preferences (soft targets) or a bigger net. Engine: the yardstick against the crowned Monte flat two generations → the swap matches say which net.
+  **Value pivot, first step, from generation 6:** several times the rows per game (every turn's start plus one position with priority in three), with weight decay. Next if still flat: train on the search's own value of the position mixed with the result (less noise per row than the result alone).
