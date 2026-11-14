@@ -352,7 +352,7 @@ function tableFor(s, seat) {
  * the deals'. seen: where it was left, and the other player's first choice on the way (their answer, for the coach's
  * words).
  */
-export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null, focus = null) {
+export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null, focus = null, options = null) {
   const opp = other(seat), path = [];
   let node = root, growing = true;
   for (let i = 0; i < 4000 && !c.over; i++) {
@@ -363,7 +363,7 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
     if (growing && c.turn < to) {
       // focus (lab, 14 Nov 2026, Fable No. 17): with priority, the options are the picker's fewest top moves holding 90% of its
       // probability (1 to 6), all open from the first visit; the questions as before
-      const ms = focus && !c.pending ? focus(c, who) : candidates(c, who, { wide: WIDTH, rank });
+      const ms = focus && !c.pending ? focus(c, who) : options ? options(c, who) : candidates(c, who, { wide: WIDTH, rank });
       if (ms.length > 1) {
         // merged: the node is the position's, wherever it was reached from; one not met before ends the tree for this deal
         let fresh = false;
@@ -419,9 +419,11 @@ function where(c, seat) {
  * decisions it chose as the full search did every time, for 15% fewer deals (lab/variants.mjs, ae-var3).
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, weigh = true, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
   const t0 = Date.now();
-  const cands = candidates(s, seat, { wide, all, rank });
+  // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
+  // read Medium's scores); weigh false: hidden cards dealt without dandan-reads.js's tells (which read Medium's play)
+  const cands = options ? options(s, seat) : candidates(s, seat, { wide, all, rank });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
   const n = cands.length;
   if (n === 1) return { best: cands[0], list: [{ move: cands[0], mean: NaN, se: 0, n: 0 }], deals: 0, only: true };
@@ -433,13 +435,13 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
   let alive = cands.map((_, i) => i), d = 0;
   while (d < deals && alive.length > 1) {
     const rng = seeded(mix(seed, d + 1));
-    const base = determinize(s, seat, rng, true, open), runSeed = mix(seed ^ 0x5eed, d + 7);
+    const base = determinize(s, seat, rng, weigh, open), runSeed = mix(seed ^ 0x5eed, d + 7);
     for (const i of alive) {
       const c = fork(base), r = seeded(runSeed);
       const res = act(c, seat, cands[i], { rng: r, quiet: true });
       const at = {};
       if (typeof res === "string") vals[i].push(-1);
-      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank, focus));
+      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank, focus, options));
       seen[i].push(at);
     }
     d++;
