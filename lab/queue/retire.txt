@@ -13,3 +13,4 @@ ag-g2-match1  # Fable No. 3
 ag-g2-match2  # Fable No. 3
 ag-g2-match3  # Fable No. 3
 az-g2-b  # Zero approach B dropped after generation 1's yardsticks (weakest on both)
+az-g3-d  # Zero approach D dropped after generation 2's yardsticks (tied with A on both; A has the better value net and the head form)
