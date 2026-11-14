@@ -14,3 +14,7 @@ ag-g2-match2  # Fable No. 3
 ag-g2-match3  # Fable No. 3
 az-g2-b  # Zero approach B dropped after generation 1's yardsticks (weakest on both)
 az-g3-d  # Zero approach D dropped after generation 2's yardsticks (tied with A on both; A has the better value net and the head form)
+az-g6-a  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008) replaces g4x-A-value (0.5215) in generation 6 A; requeued as az-g6-av
+az-y5-a-e  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008) replaces g4x-A-value (0.5215) in generation 6 A; requeued as az-y5-a-ev
+az-o5-a  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008) replaces g4x-A-value (0.5215) in generation 6 A; requeued as az-o5-av
+az-x5-a  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008) replaces g4x-A-value (0.5215) in generation 6 A; requeued as az-x5-av

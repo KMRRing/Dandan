@@ -1,0 +1,1 @@
+{"id": "az-y5-a-ev", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g5x-A-value-v1~g5x-A-policy hard-knet+free~mpN6416:s5.json 64 200 970000", "shards": 100, "timeoutMin": 90, "purpose": "Zero yardstick, feedback only: generation 6's engine of approach A (g5x-A policy and Scry, g5x-A-value-v1) against the benchmark at Quick, 200 pairs on seeds 970000"}

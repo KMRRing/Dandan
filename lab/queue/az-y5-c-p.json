@@ -1,0 +1,1 @@
+{"id": "az-y5-c-p", "script": "plus-match.mjs", "args": "{shard} {shards} {out} zero@g5x-C-policy medium 500 700000", "shards": 100, "timeoutMin": 60, "purpose": "Zero yardstick, feedback only: generation 5's policy of approach C (new view, Scry) alone against Medium, 500 pairs"}
