@@ -27,9 +27,9 @@ const card = () => ({ scry: { n: 0, loss: 0, cal: bins(), lands: 0, landN: 0 }, 
 const { makeJudge } = await import("../dandan-eval.js"), fsm = await import("node:fs");
 const brains = sets.map(([p, v]) => {
   if (p.startsWith("judge=")) { const b = zeroBrain("-", "-"); b.judge = makeJudge(JSON.parse(fsm.readFileSync(new URL(`../judges/${p.slice(6)}`, import.meta.url), "utf8")).layers); b.player = null; return { name: `Monte 1 value net ${p.slice(6)}`, b, c: card() }; }
-  // "policy:value:pf": that pair with Scry 2 (the particle filter)
-  const pf = v.endsWith(":pf") || p.endsWith("+pf"), vv = v.replace(/:pf$/, "");
-  return { name: `${p.replace(/-policy$/, "")}${vv.replace(/-value$/, "") === p.replace(/-policy$/, "") ? "" : " + " + vv}${pf ? " + Scry 2" : ""}`, b: zeroBrain(p, vv, pf ? "pf" : null), c: card() };
+  // "policy:value:<scry mode>": that pair with another Scry (pf, pfs[:n=..:eps=..]: Scry 2a / 2b, the particle filter)
+  const [vv, ...rest] = v.split(":"), mode = rest.join(":") || null;
+  return { name: `${p.replace(/-policy$/, "")}${vv.replace(/-value$/, "") === p.replace(/-policy$/, "") ? "" : " + " + vv}${mode ? " + Scry " + mode : ""}`, b: zeroBrain(p, vv, mode), c: card() };
 });
 const pool = { b: { scry: scryOf(null) }, c: card() };   // the unseen pool's odds: the baseline every Scry is set against
 

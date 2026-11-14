@@ -41,7 +41,7 @@ function drawFrom(pool, k, rng, into) {
 export class HandFilter {
   // eps: the floor under the policy's chance of a move (it is no perfect model of the other player); prior (Scry 2b): a Scry 1
   // belief, (s, me) → its slot distributions in unknownSlots order, that deals fresh particles and draws in place of the pool
-  constructor(me, { policy = null, qpolicy = null, options, qMarks, n = 256, eps = 0.03, prior = null, rng = Math.random } = {}) {
+  constructor(me, { policy = null, qpolicy = null, options, qMarks, n = 1024, eps = 0.03, prior = null, rng = Math.random } = {}) {
     Object.assign(this, { me, opp: other(me), options, qMarks, N: n, eps, prior, rng });
     this.score = policy ? freeScorer(policy) : null; this.qscore = qpolicy ? freeScorer(qpolicy) : null;
     this.wide = !!(policy && policy.net.XN > VIEW_N);
