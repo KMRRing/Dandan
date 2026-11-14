@@ -1,0 +1,1 @@
+{"id": "az-y2-d-e", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g2-D-value~g2-D-policy hard-knet+free~mpN6416:s5.json 64 200 970000", "shards": 100, "timeoutMin": 90, "purpose": "Zero yardstick, feedback only: generation 2's engine of approach D against the benchmark at Quick, 200 pairs on seeds 970000"}
