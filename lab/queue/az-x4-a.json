@@ -1,0 +1,1 @@
+{"id": "az-x4-a", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g4x-A-value~g4x-A-policy zero~g4-A-value~g4-A-policy 64 500 985000", "shards": 100, "timeoutMin": 120, "purpose": "The new view against the old, same generation (Korbi 10:04): g4x-A whole (Scry, the extended-view policy and question head, the face-up value net) against g4-A at Quick, 500 pairs"}

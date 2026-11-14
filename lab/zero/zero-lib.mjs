@@ -140,8 +140,9 @@ export function zeroPlayer(policy, qpolicy = null, ctx = null) {
 /** Zero whole, from its nets' names (14 Nov 2026, Korbi 10:04): the player, the value net (either view), and Scry
  *  (<name>-scry.json beside <name>-policy.json) kept up to date after every move (seen) and frozen at each root (root:
  *  think's extra options, the deal by Scry). reset() at a new game. */
-export function zeroBrain(policyName, valueName) {
-  const policy = netOf(policyName), qpolicy = qnetOf(policyName), bnet = scryNetOf(policyName);
+export function zeroBrain(policyName, valueName, scryName = null) {
+  // scryName (the swap matches): a Scry other than the policy's own, "-" for none
+  const policy = netOf(policyName), qpolicy = qnetOf(policyName), bnet = scryName ? netOf(scryName) : scryNetOf(policyName);
   const ctx = { counts: [new Float32Array(NN), new Float32Array(NN)], any: [null, null] }, player = zeroPlayer(policy, qpolicy, ctx);
   const scry = bnet || player.wide ? scryOf(bnet) : null, judge = valueJudgeOf(valueName);
   let tracker = new Tracker();

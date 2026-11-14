@@ -1,0 +1,1 @@
+{"id": "az-x4-v", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g4x-A-value~g4-A-policy zero~g4-A-value~g4-A-policy 64 200 985000", "shards": 100, "timeoutMin": 120, "purpose": "Swap match (Korbi 10:54): the face-up value net alone in g4-A, against g4-A at Quick, 200 pairs"}

@@ -1,0 +1,1 @@
+{"id": "az-x4-s", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g4-A-value~g4-A-policy~scry=g4x-A-scry zero~g4-A-value~g4-A-policy 64 200 985000", "shards": 100, "timeoutMin": 120, "purpose": "Swap match (Korbi 10:54): Scry alone, dealing g4-A's hidden cards, against g4-A at Quick, 200 pairs"}

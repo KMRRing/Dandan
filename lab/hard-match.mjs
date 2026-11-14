@@ -48,7 +48,8 @@ async function side(spec) {
   // 2026, Korbi 10:04, the oracle): the other hand dealt as it really is (determinize open), only the library's order guessed:
   // the most any read of the hand can buy the search
   if (spec.startsWith("zero~")) {
-    const [, v, pol, flag] = spec.split("~"), open = flag === "open", Z = await import("./zero/zero-lib.mjs"), brain = Z.zeroBrain(pol, v);
+    // a fourth part: "open" (the oracle), or "scry=<net>" (the swap matches: that Scry deals the hidden cards, whatever the policy)
+    const [, v, pol, flag] = spec.split("~"), open = flag === "open", Z = await import("./zero/zero-lib.mjs"), brain = Z.zeroBrain(pol, v, flag?.startsWith("scry=") ? flag.slice(5) : null);
     const f = (s, seat) => {
       const ms = Z.zeroOptions(s, seat);
       if (ms.length <= 1) return { move: ms[0] ?? Z.PASS, off: false };
