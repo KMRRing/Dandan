@@ -16,14 +16,19 @@ import { zeroBrain, zeroOptions } from "./zero/zero-lib.mjs";
 import { seenBy, unknownSlots, handCounts, scryOf, NN } from "./zero/zero-view.mjs";
 import LANDS from "./zero/lands.json" with { type: "json" };
 
-const sets = process.argv[2].split(",").map(x => (x.includes(":") ? x.split(":") : [`${x}-policy`, `${x}-value`]));
+const sets = process.argv[2].split(",").map(x => (x.startsWith("judge=") ? [x, "-"] : x.includes(":") ? x.split(":") : [`${x}-policy`, `${x}-value`]));
 const PER = Number(process.argv[3] || 150), JOBS = (process.argv[4] || "az-g4-a,az-g4-c").split(",");
 const NAME_AT = new Map(NAMES.map((n, k) => [n, k])), J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m), realRandom = Math.random;
 const bins = () => Array.from({ length: 10 }, () => [0, 0, 0]);   // per bin: n, sum said, sum happened
 const ece = b => { const n = b.reduce((a, x) => a + x[0], 0); return n ? b.reduce((a, [k, p, y]) => a + Math.abs(p - y), 0) / n : 0; };
 const put = (b, p, y) => { const i = Math.min(9, Math.floor(p * 10)); b[i][0]++; b[i][1] += p; b[i][2] += y; };
 const card = () => ({ scry: { n: 0, loss: 0, cal: bins(), lands: 0, landN: 0 }, value: { n: 0, loss: 0, cal: bins() }, pol: { n: 0, ok: 0 }, q: { n: 0, ok: 0 } });
-const brains = sets.map(([p, v]) => ({ name: `${p.replace(/-policy$/, "")}${v.replace(/-value$/, "") === p.replace(/-policy$/, "") ? "" : " + " + v}`, b: zeroBrain(p, v), c: card() }));
+// "judge=<file in judges/>": a value net of the Monte 1 line (e.g. s5.json, the crowned Monte's) on the same positions, for scale
+const { makeJudge } = await import("../dandan-eval.js"), fsm = await import("node:fs");
+const brains = sets.map(([p, v]) => {
+  if (p.startsWith("judge=")) { const b = zeroBrain("-", "-"); b.judge = makeJudge(JSON.parse(fsm.readFileSync(new URL(`../judges/${p.slice(6)}`, import.meta.url), "utf8")).layers); b.player = null; return { name: `Monte 1 value net ${p.slice(6)}`, b, c: card() }; }
+  return { name: `${p.replace(/-policy$/, "")}${v.replace(/-value$/, "") === p.replace(/-policy$/, "") ? "" : " + " + v}`, b: zeroBrain(p, v), c: card() };
+});
 const pool = { b: { scry: scryOf(null) }, c: card() };   // the unseen pool's odds: the baseline every Scry is set against
 
 function scoreScry(c, sc, s, me, T) {
@@ -59,6 +64,7 @@ function replay(game) {
       }
     }
     if (i !== x3 && zeroOptions(s, who).length >= 2) for (const x of brains) {
+      if (!x.b.player) continue;
       x.b.root(s, who);
       const pick = x.b.player.rollout(s, who, rng), t = s.pending ? x.c.q : x.c.pol;
       t.n++; if (key(pick) === key(m)) t.ok++;
