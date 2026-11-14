@@ -296,9 +296,10 @@ function sigOf(m, c, seat, who) {
 }
 const newNode = () => ({ n: 0, kids: new Map() });
 /** The child to follow at a node: unvisited ones in Medium's order, then by UCB over the deals each was there; returns { k, m }. */
-function choose(node, ms, c, seat, who, at, explore = EXPLORE) {
+function choose(node, ms, c, seat, who, at, explore = EXPLORE, open = false) {
   node.n++;
-  const allow = Math.min(ms.length, 1 + Math.floor(Math.sqrt(node.n - 1)));
+  // open (Fable No. 17's focus arm): every option open from the first visit, unvisited ones tried in the given order
+  const allow = open ? ms.length : Math.min(ms.length, 1 + Math.floor(Math.sqrt(node.n - 1)));
   let best = null, m = null, top = -Infinity;
   for (let i = 0; i < allow; i++) {
     const sig = at + sigOf(ms[i], c, seat, who);
@@ -351,7 +352,7 @@ function tableFor(s, seat) {
  * the deals'. seen: where it was left, and the other player's first choice on the way (their answer, for the coach's
  * words).
  */
-export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null) {
+export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null, focus = null) {
   const opp = other(seat), path = [];
   let node = root, growing = true;
   for (let i = 0; i < 4000 && !c.over; i++) {
@@ -360,14 +361,16 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
     if (who == null) break;
     let m = null;
     if (growing && c.turn < to) {
-      const ms = candidates(c, who, { wide: WIDTH, rank });
+      // focus (lab, 14 Nov 2026, Fable No. 17): with priority, the options are the picker's fewest top moves holding 90% of its
+      // probability (1 to 6), all open from the first visit; the questions as before
+      const ms = focus && !c.pending ? focus(c, who) : candidates(c, who, { wide: WIDTH, rank });
       if (ms.length > 1) {
         // merged: the node is the position's, wherever it was reached from; one not met before ends the tree for this deal
         let fresh = false;
         if (table) { const k = posKey(c, seat, table.reads); node = table.get(k); if (!node) { node = newNode(); table.set(k, node); fresh = true; } }
         // a decision's children are keyed by who decides and where, as well as by the move: in other deals the same
         // line can reach another seat's decision first (a hand with nothing to do there is passed over)
-        const pick = choose(node, ms, c, seat, who, `${who}${c.step}${c.stack.length}${c.pending?.t ?? ""}:`, explore);
+        const pick = choose(node, ms, c, seat, who, `${who}${c.step}${c.stack.length}${c.pending?.t ?? ""}:`, explore, focus && !c.pending);
         m = pick.m;
         path.push([pick.k, who]);
         if (table) { if (fresh) growing = false; }
@@ -416,7 +419,7 @@ function where(c, seat) {
  * decisions it chose as the full search did every time, for 15% fewer deals (lab/variants.mjs, ae-var3).
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
   const t0 = Date.now();
   const cands = candidates(s, seat, { wide, all, rank });
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
@@ -436,7 +439,7 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
       const res = act(c, seat, cands[i], { rng: r, quiet: true });
       const at = {};
       if (typeof res === "string") vals[i].push(-1);
-      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank));
+      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank, focus));
       seen[i].push(at);
     }
     d++;

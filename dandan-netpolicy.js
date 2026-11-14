@@ -196,7 +196,22 @@ export function makePlus(model, { wide = 5, free = false } = {}) {
       for (let k = 1; k < sc.length; k++) if (sc[k] > sc[best]) best = k;
       return list[best];
     };
-    return { move, rank: (s, seat) => { const list = choices(s, seat), sc = score(viewOf(s, seat), list.map(m => marksOf(s, seat, m))); return list.map((m, k) => [m, sc[k]]).sort((a, b) => b[1] - a[1]).map(c => c[0]); } };
+    const rank = (s, seat) => { const list = choices(s, seat), sc = score(viewInto(s, seat), list.map(m => marksOf(s, seat, m))); return list.map((m, k) => [m, sc[k]]).sort((a, b) => b[1] - a[1]).map(c => c[0]); };
+    // the tree's options where the picker is unsure (14 Nov 2026, Fable No. 17, Korbi 01:40Z): passing and every legal move turned
+    // into probabilities (softmax of the scores), then the fewest top moves whose probabilities add up to `mass`, at least one
+    // and at most `most`, in the picker's order. `counts` tallies how many options each call gave (for the report).
+    const counts = {};
+    const focus = (s, seat, mass = 0.9, most = 6) => {
+      const list = choices(s, seat), sc = score(viewInto(s, seat), list.map(m => marksOf(s, seat, m)));
+      const order = sc.map((v, k) => k).sort((a, b) => sc[b] - sc[a] || a - b), top = sc[order[0]];
+      const e = order.map(k => Math.exp(sc[k] - top)), z = e.reduce((a, b) => a + b, 0), out = [];
+      let cum = 0;
+      for (let r = 0; r < order.length && out.length < most; r++) { out.push(list[order[r]]); cum += e[r] / z; if (cum >= mass) break; }
+      counts[out.length] = (counts[out.length] || 0) + 1;
+      return out;
+    };
+    focus.counts = counts;
+    return { move, rank, focus };
   }
   const { alpha, beta } = model, n = model.net, H1 = n.H1, H2 = n.H2, XN = n.XN;
   const wx = Float32Array.from(n.wx), wm = Float32Array.from(n.wm), ws = Float32Array.from(n.ws), b1 = Float32Array.from(n.b1);

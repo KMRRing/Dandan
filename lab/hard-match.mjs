@@ -20,6 +20,7 @@ import { makeJudge } from "../dandan-eval.js";
 import { makePlus } from "../dandan-netpolicy.js";
 import { policyMove } from "../dandan-policy.js";
 const [shard, shards, out, specA, specB] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5], process.argv[6]];
+let focusOf = null;   // a focus arm's picker (Fable No. 17): its tallies of options a tree decision go into the rows
 const deals = Number(process.argv[7] ?? 64), pairs = Number(process.argv[8] ?? 200), first = Number(process.argv[9] ?? 150000), from = Number(process.argv[10] ?? 0);
 async function judgeOf(t) {
   if (!t || t === "-") return undefined;
@@ -53,6 +54,9 @@ async function side(spec) {
   // "hard…^~<model>" (14 Nov 2026, Fable No. 13 point 6): the model ranks the tree's options inside the look-aheads only (think's
   // treeRank); the root's candidates and the questions stay as they are
   if (ranker?.startsWith("~")) budget.treeRank = makePlus(await modelOf(ranker.slice(1))).rank;
+  // "hard…^%<model>" (14 Nov 2026, Fable No. 17): the model's focus picks the tree's options with priority (the fewest top moves
+  // holding 90% of its probability, 1 to 6, all open); the root and the questions as they are
+  else if (ranker?.startsWith("%")) { budget.focus = makePlus(await modelOf(ranker.slice(1))).focus; focusOf = budget.focus; }
   else if (ranker) budget.rank = makePlus(await modelOf(ranker)).rank;
   const [search2, model] = search1.split("+");
   // "hard-t<n>" (12 November 2026, plan item 8): the look-ahead plays n turns ahead instead of 2
@@ -98,5 +102,5 @@ for (let p = from + shard; p < pairs; p += shards) {
   clock = [[0, 0], [0, 0]]; offs = [0, 0];
   const seed = first + p, g = [game(seed, 0), game(seed, 1)];
   const ms = clock.map(([t, n]) => (n ? Math.round(t / n) : 0)), n = clock.map(([, k]) => k);
-  fs.appendFileSync(out, JSON.stringify({ pair: p, a: (g[0] + g[1]) / 2, games: g, ms, n, off: offs }) + "\n");
+  fs.appendFileSync(out, JSON.stringify({ pair: p, a: (g[0] + g[1]) / 2, games: g, ms, n, off: offs, ...(focusOf ? { opts: { ...focusOf.counts } } : {}) }) + "\n");
 }
