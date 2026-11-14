@@ -159,7 +159,7 @@ details summary{cursor:pointer;font-size:12.5px;color:var(--mute)}
 .node .jid{font:11.5px var(--mono);color:var(--mute)}
 .node .vs{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:12.5px;margin:0}
 .node .vs dt{font:600 11.5px var(--mono);color:var(--t)} .node .vs dd{margin:0}
-.t-medium{--t:#23a26d} .t-check{--t:#8a8fa3} .t-set{--t:#7a5af5} .t-judge{--t:#c0399b} .t-engine{--t:var(--accent)} .t-match{--t:#d9822b} .t-out{--t:var(--good)}
+.t-medium{--t:#23a26d} .t-check{--t:#8a8fa3} .t-set{--t:#7a5af5} .t-judge{--t:#c0399b} .t-engine{--t:var(--accent)} .t-match{--t:#d9822b} .t-out{--t:var(--good)} .t-policy{--t:#1f8fb3} .t-belief{--t:#b8860b}
 .now{display:grid;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .now .item{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;padding:11px 14px;border-top:1px solid var(--line)}
 .now .item:first-child{border-top:0}
@@ -1207,6 +1207,8 @@ const TYPES = {
   engine: ["Engine", "Hard: a search, a value net and a Medium engine"],
   match: ["Match set", "engine A against engine B over many deal pairs"],
   check: ["Measurement", "measures something about a value net, with no verdict"],
+  policy: ["Policy network", "a net that chooses the moves: Zero's policy and question head"],
+  belief: ["Belief network", "a net that estimates the hidden cards: Scry"],
 };
 
 // ---------- the graph: built from what each job says it consumed ----------
@@ -1655,6 +1657,43 @@ function buildGraph(d, fable = false) {
     P("engine:questions", "engine", "Next purge: the engine's questions", "After the first swap (No. 8 point 5): the same model learns the questions the engine asks. The search already decides attacks, blocks and targets and records them, so first an export of those decisions with marks for their options; later keeps, bottoms and names follow from results, as the keep net did. Until then they stay Medium's.", ["bench:mpswap"], "questions");
     P("engine:scratch", "engine", "From scratch, no Medium anywhere (waiting for Korbi)", "Asked 23:10: the same loop from a random start with no Medium in the look-aheads, the questions, the keeps or the training games; each generation measured against Medium alone and against Hard. The proof that the method works where nobody can write a Medium. Built after the switch, on cheap games and a small share of the fleet.", ["bench:mpswap"], "scratch");
     P("check:live", "check", "Live: the pile (since 13 Nov, 21:30Z)", "S5 with the keep net is the live game's Hard and the game lab's default opponent, in place of S4 d with Medium's keep (Korbi, 23:27 local), on the Deep gate: 54.3%, 99%: 51.8 to 56.8.", ["match:pile"], "live-pile");
+    // ----- Monte Scry Zero (14 Nov 2026, Korbi 14:00: "what has been done, how it is going, what is progressing, what is stuck,
+    // what the next steps are"): three nets (Scry the belief net, the value net, Zero the policy), their games, the scorecard
+    // and the matches. Boxes with jobs read their progress from the bucket; the nets carry their state in `local`. -----
+    const Z = (key, t, title, what, ins = [], local = null, ids = []) => {
+      const js = ids.length ? jobsOf(...ids) : [];
+      node(key, t, { jobs: js.length ? js : ids.length ? [pl(ids[0], { script: t === "match" ? "hard-match.mjs" : "" })] : [], title, what, zero: true, ...(local && !js.length ? { local } : {}) });
+      ins.forEach(k => edge(k, key));
+    };
+    const ok = label => ({ v: "good", label }), slow = label => ({ v: "wait", label }), next = label => ({ v: "idle", label }), stuck = label => ({ v: "bad", label });
+    Z("set:z0", "set", "Zero generation 0: 20,000 random games", "Uniform random legal play, no search, no nets: where Zero starts. Its first value net learned from these.", [], ok("Done"));
+    Z("set:zgames", "set", "Zero self-play, generations 1–5 (A and C)", "Every decision weighed by the search with Zero's own nets, hidden cards dealt without tells, no Medium anywhere. A: 1,024 deals, 1,200 games a generation; C: 256 deals, 4,800 games (the same fleet time). B dropped after generation 1, D after generation 2. Each game replays exactly from its seed and moves, so every net can be retrained on it later.", ["set:z0"], ok("Done"), ["az-g1-a", "az-g2-a", "az-g3-a", "az-g4-a", "az-g5-a", "az-g1-c", "az-g2-c", "az-g3-c", "az-g4-c", "az-g5-c"]);
+    Z("belief:scry1", "belief", "Scry 1: the belief net (in play from generation 6)", "Each unknown card in the other hand its own chance by name: the unseen pool's odds × a net reading the board, the other player's public play (passes with mana up against a spell, turns with no land, draws…) and that card's history (opening hand after how many mulligans, drawn when, land drops skipped since). Deals the hidden cards in the search and feeds the policy. Frozen set: 2.428 nats a card against the pool's 2.628 (7.6% better); two-or-more-lands Brier 0.147 against 0.176. STUCK: flat after one epoch and no better on twice the games; the limit is its inputs (\"didn't counter\" is counted whether countering was right or not).", ["set:zgames"], stuck("Plateau: its inputs"));
+    Z("belief:scry2", "belief", "Next: Scry 2, asking Zero", "At each of the other player's decisions, deal a few possible hands and ask Zero's policy what it would have played with each: a pass where Zero would have countered with Memory Lapse is evidence against it, a pass where it would have held says nothing (Korbi's point). A proper Bayesian update with Zero as the model of the opponent, sharper as Zero improves, microseconds a hand, outside the search. Built if generation 6 confirms Scry 1 helps.", ["belief:scry1", "policy:zx"], next("Next"));
+    Z("judge:zold", "judge", "Zero value nets, old view (generations 1–4)", "Results only, sigmoid(g(mine) − g(theirs)) over the board summary (100 inputs). Frozen set: A 0.525 / 0.529 / 0.543 / 0.530, C 0.512 / 0.476 / 0.510 / 0.494 (g4-C 0.489 in the latest read); the crowned Monte's own value net 0.494 on the same positions, so the flat line is mostly the labels' noise (single results of games with random moves), not a stall.", ["set:zgames"], ok("Done"));
+    Z("judge:zv1", "judge", "Value v1 on the new view (in play: generation 6 A)", "The race inputs (as the crowned Monte's) + the new view face up, 665 inputs a side, 64×32, learning rate 1e-4, weight decay 0.3, best of 4 epochs. Frozen set 0.4854, calibration error 0.008: the best value net yet (crowned Monte's 0.494). The big 128×64×32 version overfit badly (0.565): each game's ~170 rows share one result and the face-up inputs let it tell games apart. C's v1 is training for generation 7.", ["set:zgames", "judge:zold"], ok("Best yet"));
+    Z("judge:zbench", "judge", "Low-noise value test (waiting for Korbi)", "About 500 frozen positions, each played out several times by one fixed strong engine, the share it wins as the label: scores value nets without the noise of single results. A few CPU-hours, made once and kept.", ["judge:zv1"], { v: "wait", label: "Waiting for Korbi" });
+    Z("judge:ztarget", "judge", "Next if value stalls: the search's own value as target", "Train on the search's value of each position mixed with the result: less noise a row than one game's result, and it stops the net memorising games.", ["judge:zv1"], next("If needed"));
+    Z("policy:zold", "policy", "Zero, old view (generations 1–4)", "The policy head (which move with priority) learns the search's pick; the question head (blocks, discards, orders, mulligans) from generation 4. Frozen set: policy 63.6 → 67.2 → 72.6 → 73.4% (A), 63.3 → 68.6 → 73.1 → 75.0% (C); questions ~30% → 51–57% with the head. Alone against Medium: 5–6% (random questions) → 14.5–14.8% with the head.", ["set:zgames"], ok("Done"));
+    Z("policy:zx", "policy", "Zero on the new view (in play: generation 6)", "Reads the extended view: the board by card name (lands each by name, tapped or not), both hands (theirs as Scry's counts and chance of at least one), floating mana, graveyard and exile, the known top of the library, the stack with targets, step and priority. Frozen set: A 73.5%, C 75.2% (flat on the old view); questions A 56.0%, C 60.7% (up). SLOWING: under a point a generation.", ["set:zgames", "belief:scry1"], slow("Slowing"));
+    Z("policy:zsoft", "policy", "Next: learn the search's full spread", "Train the policy on all the search's values (a soft target, as AlphaZero), not only its top move: more signal per decision. The data is already in every decision line.", ["policy:zx"], next("Next"));
+    Z("check:zscore", "check", "Scorecard: every generation on the same positions", "lab/zero-scorecard.mjs, a GitHub job, 6 minutes, no fleet: 300 held-out games of generation 4 (never trained on) replayed exactly; Scry's loss and two-lands Brier against the pool's odds, the value net's loss and calibration, the policy's and question head's agreement with the search. Pivot rules: Scry under 10% better than the pool two generations → Scry 2 (now: 7.6%, plateau); value no better by 0.005 two generations → change its target; policy under +1 point two generations → soft targets (now: flat); engine flat against the crowned Monte two generations → the swap matches say which net.", ["belief:scry1", "judge:zv1", "policy:zx"], ok("Every generation"));
+    // the engines and what they played
+    Z("engine:msz4", "engine", "Monte Zero generation 4 (old view)", "Zero's policy in the look-aheads and as the tree's focus, its value net at the end of each look-ahead, hidden cards dealt blind. Against the crowned Monte at Quick (yardsticks): A 7.1 → 16.0 → 18.5 → 18.0%, C 9.6 → 20.9 → 22.2 → 23.3% (generations 1–4): flattening.", ["policy:zold", "judge:zold"], ok("Done"));
+    Z("match:zoracle4", "match", "The oracle: how much the hidden hand is worth", "Monte Zero g4-A told the other hand as it really is, against the same engine dealing blind, 1,000 pairs at Quick: the most any belief can buy the search.", ["engine:msz4"], null, ["az-o4-a"]);
+    Z("match:zx4", "match", "The new view against the old (g4x-A vs g4-A)", "Scry, the new-view policy and question head and the face-up value net together, against the same generation on the old view, Quick, 500 pairs: the first proof the three modules pay.", ["engine:msz4", "belief:scry1", "policy:zx"], null, ["az-x4-a"]);
+    Z("match:zx4s", "match", "Swap: Scry dealing only", "g4-A with Scry dealing its hidden cards, against g4-A: 200 pairs.", ["match:zx4"], null, ["az-x4-s"]);
+    Z("match:zx4v", "match", "Swap: the new value net only", "g4-A with the face-up value net, against g4-A: 200 pairs.", ["match:zx4"], null, ["az-x4-v"]);
+    Z("match:zx4p", "match", "Swap: the new policy and its Scry only", "g4-A with the new-view policy and question head (and their Scry), its old value net, against g4-A: 200 pairs.", ["match:zx4"], null, ["az-x4-p"]);
+    Z("engine:msz6", "engine", "Monte Scry Zero generation 6 (A and C)", "The first generation on the new view: Zero (g5x policy and question head), Scry dealing the hidden cards, A with value v1, C with g4-C's value net. A: 1,024 deals, 1,200 games; C: 256 deals, 4,800 games.", ["policy:zx", "belief:scry1", "judge:zv1"], ok("Playing"));
+    Z("set:zg6", "set", "Generation 6's games", "Monte Scry Zero A and C playing themselves; generation 7's nets learn from generations 5 and 6.", ["engine:msz6"], null, ["az-g6-av", "az-g6-c"]);
+    Z("match:zx5", "match", "Generation 6 A against generation 5 (g4x-A)", "Generation against generation, the whole engine, Quick, 500 pairs.", ["engine:msz6", "match:zx4"], null, ["az-x5-av"]);
+    Z("match:zoracle5", "match", "The oracle again, with Scry dealing", "Generation 6 A told the other hand, against itself with Scry dealing, 500 pairs: with the first oracle (59.1% against blind dealing), how much of the gap Scry has closed.", ["engine:msz6", "match:zoracle4"], null, ["az-o5-av"]);
+    Z("match:zy5a", "match", "Yardstick A: generation 6 against the crowned Monte", "Quick, 200 pairs on seeds 970000, the deals of every earlier yardstick.", ["engine:msz6", "engine:msz4"], null, ["az-y5-a-ev"]);
+    Z("match:zy5c", "match", "Yardstick C: generation 6 against the crowned Monte", "Quick, 200 pairs on seeds 970000.", ["engine:msz6", "engine:msz4"], null, ["az-y5-c-e"]);
+    Z("match:zy5pa", "match", "Zero A alone against Medium (generation 5 policy)", "The policy and question head with no search against Medium, 500 pairs.", ["policy:zx"], null, ["az-y5-a-p"]);
+    Z("match:zy5pc", "match", "Zero C alone against Medium (generation 5 policy)", "The policy and question head with no search against Medium, 500 pairs.", ["policy:zx"], null, ["az-y5-c-p"]);
+    Z("check:znext", "check", "Next for Monte Scry Zero", "1. Read generation 6 (yardsticks, oracle, generation match) and the scorecard. 2. Generation 7's nets: Scry on generations 5–6, value v1 for both, then queue generation 7. 3. If Scry stays on its plateau: Scry 2. 4. If the policy stays flat: soft targets. 5. A or C dropped when one falls clearly behind (C leads so far). 6. When Monte Scry Zero nears the crowned Monte at Quick: a Deep match against it, then Korbi decides on live.", ["check:zscore", "match:zx5", "match:zoracle5", "match:zy5a", "match:zy5c"], next("Plan"));
     // the first round's S1 and S2 learned from the Deep games; S1′ and S2′ are their second rounds
     J("set:deep", "judge:job:aa-g3-s1#best", "judge:job:aa-g3-s2#best"); J("judge:job:aa-g3-s1#best", "judge:job:aa-g8-s1#best"); J("judge:job:aa-g3-s2#best", "judge:job:aa-g8-s2#best");
     // an averaged judge (avg(@a,@b)) is made from the nets it averages
@@ -1954,6 +1993,7 @@ const HEIGHT = {}, hOf = n => HEIGHT[n?.key] || (n?.t === "match" ? 380 : 330);
 const wOf = n => (n?.t === "match" ? W_MATCH : W_NODE) + ((n?.what || "").length > 420 ? 120 : (n?.what || "").length > 240 ? 60 : 0);
 // ---------- ideas: what each box is part of (the regions on the map, and the groups in Choose boxes) ----------
 const IDEAS = [
+  ["zero", "Monte Scry Zero", "the from-scratch line: Scry (belief), the value net, Zero (policy), their games, scorecard and matches"],
   ["live", "The live game", "v14 and today's Medium: what Monte plays now"],
   ["games", "Games to learn from", "self-play and filler games that value nets train on"],
   ["nets", "New value nets", "the nets trained to replace v14, and their Quick screen"],
@@ -1968,6 +2008,7 @@ const IDEAS = [
 const IDEA_NAME = Object.fromEntries(IDEAS.map(([k, n]) => [k, n]));
 function ideaOf(n) {
   const k = n.key;
+  if (n.zero) return "zero";
   if (n.stage === "s2" || n.stage === "s3" || n.stage === "crown" || /^check:crown/.test(k)) return "later";
   if (/^(match|check):i\d/.test(k)) return "search";
   if (/^(match:s5-s4d|check:trainer|judge:phase)/.test(k)) return "nets";
@@ -1985,7 +2026,7 @@ function ideaOf(n) {
 // ---------- the time axis ----------
 // when each box happened: a job's first finished shard (a job queued or running with none finished: now); a box with no job
 // of its own (an engine, a net built earlier) when its newest input happened; a planned box after now, in plan order
-const HOUR = 3600000, LANES = ["set", "judge", "medium", "engine", "match", "check"], AXIS = 96;
+const HOUR = 3600000, LANES = ["set", "belief", "judge", "policy", "medium", "engine", "match", "check"], AXIS = 96;
 function timesOf(G, d) {
   const t = {}, ins = k => G.edges.filter(e => e[1] === k).map(e => e[0]), byKey = new Map(G.nodes.map(n => [n.key, n]));
   const own = n => {
@@ -2014,7 +2055,7 @@ function relevantKeys(G, d) {
   const t = timesOf(G, d), active = /Running|Training|Waiting|Queued|Live/;
   return new Set(G.nodes.filter(n => {
     const st = nodeStatus(n, d, G), x = t[n.key];
-    return active.test(st.label) || (x?.plan && x.rank <= 2) || (x && !x.plan && Date.now() - x.at < RECENT);
+    return n.zero || active.test(st.label) || (x?.plan && x.rank <= 2) || (x && !x.plan && Date.now() - x.at < RECENT);
   }).map(n => n.key));
 }
 // rows of time (an hour each, only the hours something happened in), then "now", then the planned steps; one column a kind of
