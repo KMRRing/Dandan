@@ -16,7 +16,7 @@ import { zeroBrain, zeroOptions } from "./zero/zero-lib.mjs";
 import { seenBy, unknownSlots, handCounts, scryOf, NN } from "./zero/zero-view.mjs";
 import LANDS from "./zero/lands.json" with { type: "json" };
 
-const sets = process.argv[2].split(",").map(x => (x.startsWith("judge=") ? [x, "-"] : x.includes(":") ? x.split(":") : [`${x}-policy`, `${x}-value`]));
+const sets = process.argv[2].split(",").map(x => (x.startsWith("judge=") ? [x, "-"] : x.includes(":") ? [x.split(":")[0], x.split(":").slice(1).join(":")] : [`${x}-policy`, `${x}-value`]));
 const PER = Number(process.argv[3] || 150), JOBS = (process.argv[4] || "az-g4-a,az-g4-c").split(",");
 const NAME_AT = new Map(NAMES.map((n, k) => [n, k])), J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m), realRandom = Math.random;
 const bins = () => Array.from({ length: 10 }, () => [0, 0, 0]);   // per bin: n, sum said, sum happened
@@ -27,7 +27,9 @@ const card = () => ({ scry: { n: 0, loss: 0, cal: bins(), lands: 0, landN: 0 }, 
 const { makeJudge } = await import("../dandan-eval.js"), fsm = await import("node:fs");
 const brains = sets.map(([p, v]) => {
   if (p.startsWith("judge=")) { const b = zeroBrain("-", "-"); b.judge = makeJudge(JSON.parse(fsm.readFileSync(new URL(`../judges/${p.slice(6)}`, import.meta.url), "utf8")).layers); b.player = null; return { name: `Monte 1 value net ${p.slice(6)}`, b, c: card() }; }
-  return { name: `${p.replace(/-policy$/, "")}${v.replace(/-value$/, "") === p.replace(/-policy$/, "") ? "" : " + " + v}`, b: zeroBrain(p, v), c: card() };
+  // "policy:value:pf": that pair with Scry 2 (the particle filter)
+  const pf = v.endsWith(":pf") || p.endsWith("+pf"), vv = v.replace(/:pf$/, "");
+  return { name: `${p.replace(/-policy$/, "")}${vv.replace(/-value$/, "") === p.replace(/-policy$/, "") ? "" : " + " + vv}${pf ? " + Scry 2" : ""}`, b: zeroBrain(p, vv, pf ? "pf" : null), c: card() };
 });
 const pool = { b: { scry: scryOf(null) }, c: card() };   // the unseen pool's odds: the baseline every Scry is set against
 
@@ -48,6 +50,21 @@ function scoreScry(c, sc, s, me, T) {
   c.scry.lands += (p2 - (lands >= 2 ? 1 : 0)) ** 2; c.scry.landN++;
 }
 
+// Scry 2 (the particle filter): each unknown card's chance by name is the particles' share of that name among the unknown cards;
+// two or more lands straight from the particles (whole hands, no independence assumed)
+function scoreFilter(c, f, s, me) {
+  if (seenBy(s, me).unknown <= 0) return;
+  const { p, u } = f.marginals(s), ids = unknownSlots(s, me);
+  let lands = 0;
+  for (const id of ids) {
+    const y = NAME_AT.get(DECK[id]);
+    c.scry.n++; c.scry.loss -= Math.log(p[y] / (u || 1) + 1e-9);
+    for (let k = 0; k < NN; k++) put(c.scry.cal, p[k] / (u || 1), k === y ? 1 : 0);
+    if (LANDS[y]) lands++;
+  }
+  c.scry.lands += (f.landsAtLeast(2, LANDS, s) - (lands >= 2 ? 1 : 0)) ** 2; c.scry.landN++;
+}
+
 function replay(game) {
   const seed = game.seed, x3 = game.explore3?.i, won = seat => (game.winner === seat ? 1 : game.winner == null || game.winner < 0 ? 0.5 : 0);
   let G = newRecord(rules, { seats: 2, seed, now: 0 }), lastTurn = -1;
@@ -55,7 +72,10 @@ function replay(game) {
   for (let i = 0; i < game.moves.length; i++) {
     const [who, m] = game.moves[i], s = rules.restore(J(G.state)), rng = seeded(mix(seed, 777 + i));
     const sample = rng() < 1 / 6;
-    if (sample) for (const me of [0, 1]) { scoreScry(pool.c, pool.b.scry, s, me, null); for (const x of brains) if (x.b.scry) scoreScry(x.c, x.b.scry, s, me, x.b.tracker()); }
+    if (sample) for (const me of [0, 1]) {
+      scoreScry(pool.c, pool.b.scry, s, me, null);
+      for (const x of brains) if (x.b.filters?.()) scoreFilter(x.c, x.b.filters()[me], s, me); else if (x.b.scry) scoreScry(x.c, x.b.scry, s, me, x.b.tracker());
+    }
     if (s.turn !== lastTurn && !s.pending) {
       lastTurn = s.turn;
       if (x3 == null || i > x3) for (const x of brains) if (x.b.judge) for (const me of [0, 1]) {
