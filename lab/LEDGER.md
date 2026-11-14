@@ -693,3 +693,5 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 
 - 2026-11-14 08:56Z ops: exec raised filler batches to 3,000 shards (10d20a77), live from the next batch. Watch batch-boundary idle at the 09:34Z check.
 - 09:26Z **Filler fix:** the 08:50Z change raised the batch to 3,000 shards but left the run command's game count at 1,200. sps078's shards 1,200–2,999 therefore played no game and ended code 0 with no part (batch-check: 2,448 done, 1,800 without a part). Only empty shards were lost, a few seconds each; sps078 still holds its 1,200 games. args now `… 1024 3000 {seed} …`, so each of the 3,000 shards plays one game. The next batch is checked at its first shards.
+
+- 2026-11-14 09:38Z ops: 94% busy (1408/1498), 1,766 waiting (sps079, first 3,000-shard batch; exec fixed sps078's empty shards in ced6af25). Old 16-core VMs still short a third snapshot running: Sydney 2 67/112 (up 859 min), US East 3 34/64 (826), 104.130.29. 66/80 (815); HK2 VMs (up 150) 48/48. Proposed to Korbi: cycle those VM pools. Cost est ~$1.62/h (machines ~$1.08, requests $0.43, Google ~$0.1).
