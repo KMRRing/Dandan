@@ -1,0 +1,1 @@
+{"id": "ae-p13-mpHd2", "script": "plus-match.mjs", "args": "{shard} {shards} {out} plusfree@policy/mpHd2.json medium 20000 700000", "shards": 200, "timeoutMin": 90, "purpose": "Match 1 for the 20-epoch retrain mpHd2 (Korbi 02:22: more training; all 13 Deep exports, light 0.3, decay 0.9): alone against Medium, no search, 20,000 pairs on seeds 700000, with time per decision"}
