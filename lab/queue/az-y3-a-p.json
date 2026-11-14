@@ -1,0 +1,1 @@
+{"id": "az-y3-a-p", "script": "plus-match.mjs", "args": "{shard} {shards} {out} zero@g3-A-policy medium 500 700000", "shards": 100, "timeoutMin": 60, "purpose": "Zero yardstick, feedback only: generation 3's policy of approach A alone against Medium (questions at random: no question head yet), 500 pairs"}

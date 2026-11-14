@@ -1,0 +1,1 @@
+{"id": "az-g4-c", "script": "zero-play.mjs", "args": "{shard} {shards} {out} 256 4800 83000000 g3-C-policy g3-C-value 400", "shards": 1200, "timeoutMin": 240, "purpose": "Zero generation 4, approach C: 256 deals, 4800 games, g3-C's policy and value net; its searched questions are written for the question head; explore3 1 in 400; no Medium anywhere"}
