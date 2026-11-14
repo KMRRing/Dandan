@@ -228,7 +228,7 @@ export class SlotFilter {
   // kappa (Korbi 16:22: the floor should follow how big the gap is): when set, a hand's factor is exp(−regret / kappa), regret
   // the policy's score of its best move less that of the move made in that hand's world: two plays about as good keep both
   // hands near 1, a clear blunder in a hand's world drops it toward eps (then a small floor for a real misplay)
-  constructor(me, { policy = null, qpolicy = null, options, qMarks, n = 1000, eps = 0.005, tau = 0.1, kappa = 1, rng = Math.random } = {}) {
+  constructor(me, { policy = null, qpolicy = null, options, qMarks, n = 2000, eps = 0.005, tau = 0.1, kappa = 1, rng = Math.random } = {}) {
     Object.assign(this, { me, opp: other(me), options, qMarks, N: n, eps, tau, kappa, rng });
     this.score = policy ? freeScorer(policy) : null; this.qscore = qpolicy ? freeScorer(qpolicy) : null;
     this.wide = !!(policy && policy.net.XN > VIEW_N);
