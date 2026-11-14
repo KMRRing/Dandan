@@ -1,0 +1,53 @@
+# Zero's nets on the extended view (14 Nov 2026, Korbi 10:04): Zero's games replayed (lab/zero/replay-pack.mjs), first for the
+# belief net (lab/zero/belief_np.py: the other hand by name), then, with that belief, for the value net face up (FEATURES +
+# EXT_N a seat), the policy head and the question head (viewOf + ext with the belief's counts). Committed as
+# lab/zero/nets/<name>-belief.json, -value.json, -policy.json, -qpolicy.json. Reads the bucket with the read-only key.
+name: Zero (train a generation's nets, extended view)
+on:
+  workflow_dispatch:
+    inputs:
+      games: { description: "Zero game jobs to learn from, comma-separated", required: true }
+      name: { description: "Name of the nets", required: true }
+      value: { description: "Value net shape", required: true, default: "64x32" }
+      h1: { description: "Policy first layer", required: true, default: "128" }
+      h2: { description: "Policy second layer", required: true, default: "64" }
+      epochs: { description: "Policy epochs", required: true, default: "8" }
+      bh: { description: "Belief hidden layer", required: true, default: "64" }
+permissions:
+  contents: write
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Train
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          pip install -q numpy
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          mkdir -p lab/zero/nets
+          N="${{ inputs.name }}"; D="$RUNNER_TEMP/r"
+          LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "$D" "${{ inputs.games }}" belief | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 lab/zero/belief_np.py "$D/b" "lab/zero/nets/$N-belief.json" --h "${{ inputs.bh }}" | tee -a "$RUNNER_TEMP/log.txt"
+          rm -rf "$D/b"
+          LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "$D" "${{ inputs.games }}" train "lab/zero/nets/$N-belief.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -f "$RUNNER_TEMP/key.json"
+          python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$N-value.json" --shape "${{ inputs.value }}" | tee -a "$RUNNER_TEMP/log.txt"
+          python3 lab/policy_np.py "$D/p" "lab/zero/nets/$N-policy.json" --form head --h1 "${{ inputs.h1 }}" --h2 "${{ inputs.h2 }}" --epochs "${{ inputs.epochs }}" --decay 0.9 | tee -a "$RUNNER_TEMP/log.txt"
+          python3 lab/policy_np.py "$D/q" "lab/zero/nets/$N-qpolicy.json" --form head --h1 "${{ inputs.h1 }}" --h2 "${{ inputs.h2 }}" --epochs "${{ inputs.epochs }}" --decay 0.9 | tee -a "$RUNNER_TEMP/log.txt"
+          { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the nets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lab/zero/nets/
+          git commit -q -m "Zero nets (extended view) trained on GitHub: ${{ inputs.name }}" || exit 0
+          for i in 1 2 3 4 5 6 7 8; do if git pull -q --rebase origin main && git push -q origin HEAD:main; then exit 0; fi; git rebase --abort 2>/dev/null || true; sleep $((5 + RANDOM % 20)); done
+          echo "::error::the nets could not be pushed"; exit 1

@@ -11,19 +11,20 @@
 import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
-import { think } from "../../dandan-think.js";
-import { zeroOptions, zeroPlayer, netOf, qnetOf, judgeOf, valueRow, decisionLine, PASS } from "./zero-lib.mjs";
+import { zeroOptions, zeroBrain, valueRow, decisionLine, PASS } from "./zero-lib.mjs";
 
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5]), Number(process.argv[6]), Number(process.argv[7])];
-const policy = netOf(process.argv[8]), value = judgeOf(process.argv[9]), X3 = Number(process.argv[10] || 400);
-const random = !value;   // generation 0: no value net, no search
-const player = zeroPlayer(policy, qnetOf(process.argv[8])), J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
+// the nets by name; from generation 6 (Korbi 10:04) a policy on the extended view with its belief net, and a value net face up
+const brain = zeroBrain(process.argv[8], process.argv[9]), X3 = Number(process.argv[10] || 400);
+const random = !brain.judge;   // generation 0: no value net, no search
+const J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
 const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);
 const realRandom = Math.random;
 fs.writeFileSync(out, "");
 for (let g = first; g < first + n; g++) {
   const seed = seed0 + g, lines = [], rows = [];
   let G = newRecord(rules, { seats: 2, seed, now: 0 }), explored3 = null, lastTurn = -1;
+  brain.reset();
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state));
     const rng = seeded(mix(seed, i + 1));
@@ -34,7 +35,7 @@ for (let g = first; g < first + n; g++) {
     if (ms.length <= 1) move = ms[0] ?? PASS;
     else if (random) move = ms[Math.floor(rng() * ms.length)];
     else {
-      const res = think(s, who, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge: value, ...(player.focus ? { focus: player.focus } : {}) });
+      const res = brain.think(s, who, deals);
       move = res.best;
       if (X3 && !explored3 && res.list.length >= 2 && seeded(mix(seed, 9700003 + i))() < 1 / X3) {
         const others = res.list.filter(c => key(c.move) !== key(res.best));
@@ -45,6 +46,7 @@ for (let g = first; g < first + n; g++) {
     }
     const r = applyMove(rules, G, who, move, 0);
     if (r.error) throw new Error(`zero game ${seed} move ${i}: ${r.error}`);
+    brain.seen(s, who, move, r.G.state);
     G = r.G;
   }
   Math.random = realRandom;

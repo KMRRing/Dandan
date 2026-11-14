@@ -34,7 +34,7 @@ const REDEALS = 24;
  * open: the other hand as it is, only the library's order dealt (no one knows it): the lab's analysis with all the
  * information there is (lab/analysis.mjs), never the game's.
  */
-export function determinize(s, seat, rng, weigh = true, open = false) {
+export function determinize(s, seat, rng, weigh = true, open = false, deal = null) {
   const c = { ...s, log: [] };
   c.hand = s.hand.map(h => h.slice());
   c.lib = s.lib.slice();
@@ -67,8 +67,10 @@ export function determinize(s, seat, rng, weigh = true, open = false) {
   // (dandan-reads.js): a deal is kept with the chance its hand would have shown the same, else dealt again (the likeliest
   // of the tries when none is kept)
   pool.sort((x, y) => x - y);
-  let dealt = shuffle(pool, rng);
-  const reads = weigh ? readsOf(s, opp) : [];
+  // deal (lab, 14 Nov 2026, Zero's belief: Korbi 10:02): the other hand's unknown slots drawn by a belief, (pool, slots, rng) →
+  // the pool in dealt order, the hand's first
+  let dealt = deal ? deal(pool, handSlots.length, rng) : shuffle(pool, rng);
+  const reads = weigh && !deal ? readsOf(s, opp) : [];
   if (reads.length && handSlots.length) {
     const known = c.hand[opp].filter(id => pinned.has(id));
     let best = dealt, top = -1;
@@ -419,7 +421,7 @@ function where(c, seat) {
  * decisions it chose as the full search did every time, for 15% fewer deals (lab/variants.mjs, ae-var3).
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, weigh = true, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
+export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
   const t0 = Date.now();
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
   // read Medium's scores); weigh false: hidden cards dealt without dandan-reads.js's tells (which read Medium's play)
@@ -435,7 +437,7 @@ export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK
   let alive = cands.map((_, i) => i), d = 0;
   while (d < deals && alive.length > 1) {
     const rng = seeded(mix(seed, d + 1));
-    const base = determinize(s, seat, rng, weigh, open), runSeed = mix(seed ^ 0x5eed, d + 7);
+    const base = determinize(s, seat, rng, weigh, open, deal), runSeed = mix(seed ^ 0x5eed, d + 7);
     for (const i of alive) {
       const c = fork(base), r = seeded(runSeed);
       const res = act(c, seat, cands[i], { rng: r, quiet: true });

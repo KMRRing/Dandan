@@ -44,14 +44,17 @@ async function modelOf(name) {
 }
 async function side(spec) {
   // "zero~<value net>~<policy net|->" (14 Nov 2026, Zero, Fable No. 12's yardstick): Zero's engine, no Medium anywhere: every
-  // option weighed by the search with Zero's nets (lab/zero/nets/<name>.json), at the match's deals
+  // option weighed by the search with Zero's nets (lab/zero/nets/<name>.json), at the match's deals. "~open" at the end (14 Nov
+  // 2026, Korbi 10:04, the oracle): the other hand dealt as it really is (determinize open), only the library's order guessed:
+  // the most any read of the hand can buy the search
   if (spec.startsWith("zero~")) {
-    const [, v, pol] = spec.split("~"), Z = await import("./zero/zero-lib.mjs"), judge = Z.judgeOf(v), pl = Z.zeroPlayer(Z.netOf(pol), Z.qnetOf(pol));
-    return (s, seat) => {
+    const [, v, pol, flag] = spec.split("~"), open = flag === "open", Z = await import("./zero/zero-lib.mjs"), brain = Z.zeroBrain(pol, v);
+    const f = (s, seat) => {
       const ms = Z.zeroOptions(s, seat);
       if (ms.length <= 1) return { move: ms[0] ?? Z.PASS, off: false };
-      return { move: think(s, seat, { deals, ms: 1e9, all: true, options: Z.zeroOptions, weigh: false, rollout: pl.rollout, judge, ...(pl.focus ? { focus: pl.focus } : {}) }).best, off: false };
+      return { move: brain.think(s, seat, deals, { open }).best, off: false };
     };
+    return Object.assign(f, { reset: () => brain.reset(), seen: (...a) => brain.seen(...a) });
   }
   // "plus@<policy-train job>" or "medium": no search at all, the stage-1 model or Medium alone (to see where the model stands)
   if (spec === "medium") return (s, seat) => ({ move: policyMove(s, seat, { rng: Math.random }), off: false });
@@ -92,6 +95,7 @@ const A = await side(specA), B = await side(specB), J = x => JSON.parse(JSON.str
 let clock = [[0, 0], [0, 0]], offs = [0, 0];
 function game(seed, aSeat) {
   let G = newRecord(rules, { seats: 2, seed, now: 0 });
+  A.reset?.(); B.reset?.();
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state));
     Math.random = seeded(mix(seed, i + 1));
@@ -100,6 +104,7 @@ function game(seed, aSeat) {
     Math.random = realRandom;
     const r = applyMove(rules, G, who, m, 0);
     if (r.error) throw new Error(`deal ${seed} move ${i}: ${r.error}`);
+    A.seen?.(s, who, m, r.G.state); B.seen?.(s, who, m, r.G.state);
     G = r.G;
   }
   const w = G.state.winner;

@@ -7,9 +7,11 @@
 // game, not how to play it, and are kept.
 import fs from "node:fs";
 import { moves, MOST_MULLS } from "../../dandan-engine.js";
+import { think } from "../../dandan-think.js";
 import { DECK, NAMES } from "../../dandan-cards.js";
 import { makeJudge, features, FEATURES } from "../../dandan-eval.js";
-import { freeScorer, viewInto, viewOf, marksOf } from "../../dandan-netpolicy.js";
+import { freeScorer, viewInto, viewOf, marksOf, VIEW_N } from "../../dandan-netpolicy.js";
+import { ext, EXT_N, NN, Tracker, beliefOf, dealBy, extJudge } from "./zero-view.mjs";
 
 export const PASS = { t: "pass" };
 const key = m => JSON.stringify(m);
@@ -102,34 +104,61 @@ export function qMarksOf(s, seat, m) {
 
 /** Zero's player for the look-aheads: its policy head's top move with priority (uniform at random before one is trained), a
  *  question's answer by its question head (at random before one is trained); and its focus for the tree (No. 17 point 6), the
- *  policy's fewest top moves holding 90%. */
-export function zeroPlayer(policy, qpolicy = null) {
+ *  policy's fewest top moves holding 90%. A policy trained on the extended view (its XN past VIEW_N: zero-view.mjs) reads it,
+ *  the other hand as ctx.counts[seat] says (the beliefs frozen at the root). */
+export function zeroPlayer(policy, qpolicy = null, ctx = null) {
   const score = policy ? freeScorer(policy) : null, qscore = qpolicy ? freeScorer(qpolicy) : null;
+  const wide = !!(policy && policy.net.XN > VIEW_N), XB = new Float32Array(VIEW_N + EXT_N), EB = new Float32Array(EXT_N), none = new Float32Array(NN);
+  const view = wide ? (s, seat) => { XB.set(viewInto(s, seat), 0); XB.set(ext(s, seat, ctx?.counts[seat] ?? none, EB), VIEW_N); return XB; } : (s, seat) => viewInto(s, seat);
   const rollout = (s, seat, rng) => {
     const ms = zeroOptions(s, seat);
     if (ms.length <= 1) return ms[0] ?? PASS;
     if (s.pending) {
       if (!qscore) return ms[Math.floor(rng() * ms.length)];
-      const q = qscore(viewInto(s, seat), ms.map(m => qMarksOf(s, seat, m)));
+      const q = qscore(view(s, seat), ms.map(m => qMarksOf(s, seat, m)));
       let b = 0;
       for (let k = 1; k < q.length; k++) if (q[k] > q[b]) b = k;
       return ms[b];
     }
     if (!score) return ms[Math.floor(rng() * ms.length)];
-    const sc = score(viewInto(s, seat), ms.map(m => marksOf(s, seat, m)));
+    const sc = score(view(s, seat), ms.map(m => marksOf(s, seat, m)));
     let b = 0;
     for (let k = 1; k < sc.length; k++) if (sc[k] > sc[b]) b = k;
     return ms[b];
   };
   const focus = score ? (s, seat, mass = 0.9, most = 6) => {
-    const ms = zeroOptions(s, seat), sc = score(viewInto(s, seat), ms.map(m => marksOf(s, seat, m)));
+    const ms = zeroOptions(s, seat), sc = score(view(s, seat), ms.map(m => marksOf(s, seat, m)));
     const order = sc.map((v, k) => k).sort((a, b) => sc[b] - sc[a] || a - b), top = sc[order[0]];
     const e = order.map(k => Math.exp(sc[k] - top)), z = e.reduce((a, b) => a + b, 0), out = [];
     let cum = 0;
     for (let r = 0; r < order.length && out.length < most; r++) { out.push(ms[order[r]]); cum += e[r] / z; if (cum >= mass) break; }
     return out;
   } : null;
-  return { rollout, focus };
+  return { rollout, focus, wide };
+}
+
+/** Zero whole, from its nets' names (14 Nov 2026, Korbi 10:04): the player, the value net (either view), and the belief
+ *  (<name>-belief.json beside <name>-policy.json) kept up to date after every move (seen) and frozen at each root (root:
+ *  think's extra options, the deal by the belief). reset() at a new game. */
+export function zeroBrain(policyName, valueName) {
+  const policy = netOf(policyName), qpolicy = qnetOf(policyName), bnet = beliefNetOf(policyName);
+  const ctx = { counts: [new Float32Array(NN), new Float32Array(NN)] }, player = zeroPlayer(policy, qpolicy, ctx);
+  const belief = bnet || player.wide ? beliefOf(bnet) : null, judge = valueJudgeOf(valueName);
+  let tracker = new Tracker();
+  return {
+    player, judge, belief, wide: player.wide, dealing: !!bnet,
+    reset() { tracker = new Tracker(); },
+    seen(s, who, m, after) { tracker.update(s, who, m, after); },
+    root(s, seat) {
+      if (!belief) return {};
+      const b = [belief(s, 0, tracker), belief(s, 1, tracker)];
+      ctx.counts[0] = b[0].counts; ctx.counts[1] = b[1].counts;
+      return bnet ? { deal: dealBy(b[seat].p) } : {};
+    },
+    think(s, seat, deals, extra = {}) {
+      return think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge, ...(player.focus ? { focus: player.focus } : {}), ...this.root(s, seat), ...extra });
+    },
+  };
 }
 
 /** A net file of Zero's (lab/zero/nets/<name>.json), or null for "-". */
@@ -138,6 +167,10 @@ export const netOf = name => (name && name !== "-" ? JSON.parse(fs.readFileSync(
 export const qnetOf = name => { if (!name || name === "-") return null; const q = name.replace(/-policy$/, "-qpolicy"); return q !== name && fs.existsSync(new URL(`./nets/${q}.json`, import.meta.url)) ? netOf(q) : null; };
 /** Zero's value net as a judge (dandan-eval.js's layer format), or null. */
 export const judgeOf = name => { const n = netOf(name); return n ? makeJudge(n.layers) : null; };
+/** The belief net that goes with a policy net (<name>-policy → <name>-belief), or null. */
+export const beliefNetOf = name => { if (!name || name === "-") return null; const b = name.replace(/-policy$/, "-belief"); return b !== name && fs.existsSync(new URL(`./nets/${b}.json`, import.meta.url)) ? netOf(b) : null; };
+/** Zero's value net as a judge, on either view: the extended one (its first layer reads FEATURES + EXT_N) or the old. */
+export const valueJudgeOf = name => { const n = netOf(name); if (!n) return null; return n.layers[0].n[0] === FEATURES.length + EXT_N ? extJudge(n.layers, features, FEATURES.length) : makeJudge(n.layers); };
 
 // ---------- lessons written as the games are played ----------
 const N = FEATURES.length, r3 = v => Math.round(v * 1000) / 1000;
