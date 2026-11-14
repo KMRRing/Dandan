@@ -9,7 +9,7 @@ import fs from "node:fs";
 import { moves, MOST_MULLS } from "../../dandan-engine.js";
 import { think } from "../../dandan-think.js";
 import { DECK, NAMES } from "../../dandan-cards.js";
-import { makeJudge, features, FEATURES } from "../../dandan-eval.js";
+import { makeJudge, features, featuresRace, FEATURES, PLUS, RACE } from "../../dandan-eval.js";
 import { freeScorer, viewInto, viewOf, marksOf, VIEW_N } from "../../dandan-netpolicy.js";
 import { ext, EXT_N, NN, Tracker, scryOf, dealBy, extJudge } from "./zero-view.mjs";
 
@@ -172,7 +172,13 @@ export const judgeOf = name => { const n = netOf(name); return n ? makeJudge(n.l
 /** The Scry that goes with a policy net (<name>-policy → <name>-scry), or null. */
 export const scryNetOf = name => { if (!name || name === "-") return null; const b = name.replace(/-policy$/, "-scry"); return b !== name && fs.existsSync(new URL(`./nets/${b}.json`, import.meta.url)) ? netOf(b) : null; };
 /** Zero's value net as a judge, on either view: the extended one (its first layer reads FEATURES + EXT_N) or the old. */
-export const valueJudgeOf = name => { const n = netOf(name); if (!n) return null; return n.layers[0].n[0] === FEATURES.length + EXT_N ? extJudge(n.layers, features, FEATURES.length) : makeJudge(n.layers); };
+export const RACE_N = FEATURES.length + 2 * PLUS + 2 * RACE;   // 132: dandan-eval.js featuresRace, as the crowned Monte's value net reads
+export const valueJudgeOf = name => {
+  const n = netOf(name); if (!n) return null;
+  const nIn = n.layers[0].n[0];
+  // the extended view face up: from generation 6 over featuresRace (the race inputs, Korbi 11:41), g4x-A's over features
+  return nIn === RACE_N + EXT_N ? extJudge(n.layers, featuresRace, RACE_N) : nIn === FEATURES.length + EXT_N ? extJudge(n.layers, features, FEATURES.length) : makeJudge(n.layers);
+};
 
 // ---------- lessons written as the games are played ----------
 const N = FEATURES.length, r3 = v => Math.round(v * 1000) / 1000;

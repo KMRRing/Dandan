@@ -13,12 +13,13 @@ import fs from "node:fs";
 import { labStore } from "../lib.mjs";
 import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
-import { features, FEATURES } from "../../dandan-eval.js";
+import { featuresRace, FEATURES, PLUS, RACE } from "../../dandan-eval.js";
 import { viewOf } from "../../dandan-netpolicy.js";
 import { NN, Tracker, scryInput, scryOf, seenBy, ext, handCounts, extValueRow, BX, SLOT_N, unknownSlots } from "./zero-view.mjs";
 import { DECK, NAMES } from "../../dandan-cards.js";
 
-const [dir, ids, mode, bfile] = process.argv.slice(2), EVERY = 6, N = FEATURES.length, SH = Number(process.argv[6] || 0), SHS = Number(process.argv[7] || 1);
+const [dir, ids, mode, bfile] = process.argv.slice(2), EVERY = 6, N = FEATURES.length + 2 * PLUS + 2 * RACE,   // the value rows over featuresRace (the race inputs) from generation 6
+  SH = Number(process.argv[6] || 0), SHS = Number(process.argv[7] || 1);
 const scry = mode === "train" ? scryOf(bfile && bfile !== "-" ? JSON.parse(fs.readFileSync(bfile, "utf8").split("\n")[0]) : null) : null;
 const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random;
 function sink(sub, names) {
@@ -66,7 +67,7 @@ function replay(game, decisions) {
     if (V && !s.pending && (turnStart || seeded(mix(seed, 4242 + i))() < 1 / 3)) {
       if (x3 != null && i <= x3) skipped += 2;
       else {
-        const [r0, r1] = extValueRow(s, features, N);
+        const [r0, r1] = extValueRow(s, featuresRace, N);
         VN ||= r0.length;
         for (const me of [0, 1]) { V.put("mine.f32", Float32Array.from(me ? r1 : r0)); V.put("theirs.f32", Float32Array.from(me ? r0 : r1)); V.put("won.f32", Float32Array.of(won(me))); V.put("hold.u8", Uint8Array.of(hold ? 1 : 0)); nv++; }
       }
