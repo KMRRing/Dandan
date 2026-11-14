@@ -1,19 +1,19 @@
-// Zero's extended view and its belief about the other hand (14 Nov 2026, Korbi 09:50 and 10:02, "do it all" 10:04).
-// The policy sees only what its seat knows (an information set), with the other hand as the belief net's estimate; the value
+// Zero's extended view and its scry about the other hand (14 Nov 2026, Korbi 09:50 and 10:02, "do it all" 10:04).
+// The policy sees only what its seat knows (an information set), with the other hand as the Scry's estimate; the value
 // net judges a dealt world face up (both hands as dealt). Nothing here reads Medium (dandan-policy.js, dandan-reads.js).
 //
 // ext(s, me, theirHand) — EXT_N numbers:
 //   per seat, me first then the other: on the battlefield untapped and tapped by card name (lands each by name, not grouped),
-//   the hand by name (mine as it is; theirs as `theirHand` says: the belief's expected counts, or the dealt hand face up), the
+//   the hand by name (mine as it is; theirs as `theirHand` says: the Scry's expected counts, or the dealt hand face up), the
 //   hand's size, the floating mana by colour (W U B R G C), life;
 //   then: the graveyard and exile by name, the library's top 5 where this seat knows them, the stack's top 4 (name, whose,
 //   ability or spell, what it targets and whose that is), the step, whose turn and priority, the turn, the library's size,
 //   and the cards this seat hasn't seen, by name (the deck less every card it has seen).
-// The belief (Korbi 10:02, 10:19): each unknown card in the other hand its own distribution over names, softmax(log unseen + a
+// Scry (Korbi 10:02, 10:19): each unknown card in the other hand its own distribution over names, softmax(log unseen + a
 // net reading the public view, the other player's play so far (the Tracker) and that card's own history: from the opening hand
 // after how many mulligans, drawn when, land drops skipped since…), so "no land last turn, one card drawn" makes two lands
 // unlikely though neither card's chance of a land is 0. Expected counts = known + the slots' sum; the policy also sees the
-// chance of at least one of each name. One belief a seat, kept up to date after every move, frozen at the root.
+// chance of at least one of each name. One scry a seat, kept up to date after every move, frozen at the root.
 import fs from "node:fs";
 import { DECK, NAMES, TOKEN_AT } from "../../dandan-cards.js";
 import { isLandId, knOf, knownIn } from "../../dandan-core.js";
@@ -63,7 +63,7 @@ export function ext(s, me, theirHand, out = new Float32Array(EXT_N), unseen = nu
     k += 6;
     out[k++] = Math.max(0, s.life[x]) / 20;
   }
-  // their hand: the chance it holds at least one of each name (the belief's slots; face up, 1 where they hold one)
+  // their hand: the chance it holds at least one of each name (the Scry's slots; face up, 1 where they hold one)
   for (let n = 0; n < NN; n++) out[k + n] = theirAny ? r3(theirAny[n]) : theirHand[n] > 0.5 ? 1 : 0;
   k += ANY;
   for (const id of s.yard) { const n = nameAt(id); if (n >= 0) out[k + n] += 0.25; }
@@ -161,21 +161,21 @@ export class Tracker {
   }
 }
 
-// ---------- the belief net: one distribution a card in the other hand (Korbi 10:19) ----------
+// ---------- the Scry: one distribution a card in the other hand (Korbi 10:19) ----------
 export const BX = EXT_N + TRACK_N + 1;
 const BX_BUF = new Float32Array(BX), EXT_BUF = new Float32Array(EXT_N);
-/** The belief net's shared input for `me`: the view with only the known part of the other hand, the Tracker, the unknown slots. */
-export function beliefInput(s, me, tracker, seen = seenBy(s, me), out = BX_BUF) {
+/** The Scry's shared input for `me`: the view with only the known part of the other hand, the Tracker, the unknown slots. */
+export function scryInput(s, me, tracker, seen = seenBy(s, me), out = BX_BUF) {
   ext(s, me, seen.known, EXT_BUF, seen.unseen);
   out.set(EXT_BUF, 0); out.set(tracker ? tracker.of(me, s) : new Array(TRACK_N).fill(0), EXT_N); out[EXT_N + TRACK_N] = seen.unknown / 7;
   return out;
 }
 /** The other hand's unknown cards (its slots), in hand order: the ones `me` doesn't know (determinize deals them in this order). */
 export function unknownSlots(s, me) { const kh = new Set(knownIn(s, other(me), me)); return s.hand[other(me)].filter(id => !kh.has(id)); }
-/** A belief net (lab/zero/belief_np.py: { H, Wg (BX×H), Ws (SLOT_N×H), b1, W2 (H×NN), b2 }) as (s, me, tracker) → { slots (each
+/** A Scry (lab/zero/scry_np.py: { H, Wg (BX×H), Ws (SLOT_N×H), b1, W2 (H×NN), b2 }) as (s, me, tracker) → { slots (each
  *  unknown card's chance by name: softmax(log unseen + net)), counts (expected, by name: known + the slots' sum), any (the
  *  chance of at least one of a name), known, unknown, unseen }; with no net, every slot the unseen pool's own odds. */
-export function beliefOf(net) {
+export function scryOf(net) {
   const H = net ? net.H : 0, F = a => (net ? Float32Array.from(a) : null);
   const Wg = net ? F(net.Wg) : null, Ws = net ? F(net.Ws) : null, b1 = net ? F(net.b1) : null, W2 = net ? F(net.W2) : null, b2 = net ? F(net.b2) : null;
   const g = new Float32Array(H), h = new Float32Array(H), sf = new Float32Array(SLOT_N);
@@ -183,7 +183,7 @@ export function beliefOf(net) {
     const seen = seenBy(s, me), ids = unknownSlots(s, me), lp = new Float32Array(NN);
     for (let n = 0; n < NN; n++) lp[n] = seen.unseen[n] > 0 ? Math.log(seen.unseen[n]) : -Infinity;
     if (net) {
-      const x = beliefInput(s, me, tracker, seen);
+      const x = scryInput(s, me, tracker, seen);
       g.set(b1);
       for (let i = 0; i < BX; i++) { const v = x[i]; if (!v) continue; const r = i * H; for (let o = 0; o < H; o++) g[o] += v * Wg[r + o]; }
     }
@@ -210,7 +210,7 @@ export function beliefOf(net) {
     return { slots, counts, any, ...seen };
   };
 }
-/** Hidden cards dealt by a belief (dandan-think.js determinize's `deal`): each unknown slot of the other hand, in hand order,
+/** Hidden cards dealt by a scry (dandan-think.js determinize's `deal`): each unknown slot of the other hand, in hand order,
  *  drawn from the pool by its own distribution (a card's weight its name's chance for that slot), without putting back; the
  *  rest of the pool shuffled. */
 export function dealBy(slots) {

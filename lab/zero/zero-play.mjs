@@ -14,7 +14,7 @@ import { newRecord, applyMove, seeded, mix } from "../../seats.js";
 import { zeroOptions, zeroBrain, valueRow, decisionLine, PASS } from "./zero-lib.mjs";
 
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5]), Number(process.argv[6]), Number(process.argv[7])];
-// the nets by name; from generation 6 (Korbi 10:04) a policy on the extended view with its belief net, and a value net face up
+// the nets by name; from generation 6 (Korbi 10:04) a policy on the extended view with its Scry, and a value net face up
 const brain = zeroBrain(process.argv[8], process.argv[9]), X3 = Number(process.argv[10] || 400);
 const random = !brain.judge;   // generation 0: no value net, no search
 const J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);

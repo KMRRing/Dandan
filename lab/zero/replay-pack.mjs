@@ -1,31 +1,32 @@
 // Zero's games read again on the extended view (14 Nov 2026, Korbi 10:04): every game of the given zero-play jobs replayed
 // from its seed and moves (the play sets Math.random the same way, so each position comes back exactly), the Tracker kept
 // up to date as in play, and packed for the trainers.
-//   belief  <dir>/b: the belief net's rows (lab/zero/belief_np.py): a position's x.f32 (BX), its unseen pool (u.f32, NN),
+//   scry  <dir>/b: the Scry's rows (lab/zero/scry_np.py): a position's x.f32 (BX), its unseen pool (u.f32, NN),
 //           hold.u8; and every unknown card of the other hand: its history (sf.f32, SLOT_N), what it really was (sy.i16, a
 //           name) and its position's row (srow.i32); one position in EVERY, both seats.
-//   train   (with a belief net) <dir>/p and <dir>/q: the searched decisions (priority, every legal move weighed) and the
-//           questions in lab/fetch-ex.mjs's format with x = viewOf + ext(the belief's counts), for lab/policy_np.py; <dir>/v:
+//   train   (with a Scry) <dir>/p and <dir>/q: the searched decisions (priority, every legal move weighed) and the
+//           questions in lab/fetch-ex.mjs's format with x = viewOf + ext(the Scry's counts), for lab/policy_np.py; <dir>/v:
 //           value rows face up (lab/zero/fetch-values.mjs's format, FEATURES + EXT_N a seat), after any random move only.
-// usage: node lab/zero/replay-pack.mjs <dir> <zero-play job ids, comma-separated> <belief|train> [belief net file]
+// usage: node lab/zero/replay-pack.mjs <dir> <zero-play job ids, comma-separated> <scry|train> [Scry file|-] [shard shards]
+// (shard/shards: only the parts whose place in the list is shard mod shards, so several can run side by side, each to its own <dir>)
 import fs from "node:fs";
 import { labStore } from "../lib.mjs";
 import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
 import { features, FEATURES } from "../../dandan-eval.js";
 import { viewOf } from "../../dandan-netpolicy.js";
-import { NN, Tracker, beliefInput, beliefOf, seenBy, ext, handCounts, extValueRow, BX, SLOT_N, unknownSlots } from "./zero-view.mjs";
+import { NN, Tracker, scryInput, scryOf, seenBy, ext, handCounts, extValueRow, BX, SLOT_N, unknownSlots } from "./zero-view.mjs";
 import { DECK, NAMES } from "../../dandan-cards.js";
 
-const [dir, ids, mode, bfile] = process.argv.slice(2), EVERY = 6, N = FEATURES.length;
-const belief = mode === "train" ? beliefOf(bfile ? JSON.parse(fs.readFileSync(bfile, "utf8").split("\n")[0]) : null) : null;
+const [dir, ids, mode, bfile] = process.argv.slice(2), EVERY = 6, N = FEATURES.length, SH = Number(process.argv[6] || 0), SHS = Number(process.argv[7] || 1);
+const scry = mode === "train" ? scryOf(bfile && bfile !== "-" ? JSON.parse(fs.readFileSync(bfile, "utf8").split("\n")[0]) : null) : null;
 const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random;
 function sink(sub, names) {
   fs.mkdirSync(`${dir}/${sub}`, { recursive: true });
   const fd = Object.fromEntries(names.map(n => [n, fs.openSync(`${dir}/${sub}/${n}`, "w")]));
   return { put: (n, a) => fs.writeSync(fd[n], Buffer.from(a.buffer, a.byteOffset, a.byteLength)), close: () => Object.values(fd).forEach(f => fs.closeSync(f)) };
 }
-const B = mode === "belief" ? sink("b", ["x.f32", "u.f32", "hold.u8", "sf.f32", "sy.i16", "srow.i32"]) : null, NAME_AT = new Map(NAMES.map((n, k) => [n, k]));
+const B = mode === "scry" ? sink("b", ["x.f32", "u.f32", "hold.u8", "sf.f32", "sy.i16", "srow.i32"]) : null, NAME_AT = new Map(NAMES.map((n, k) => [n, k]));
 let ns = 0;
 const EX = ["x.f32", "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8"];
 const P = mode === "train" ? { p: sink("p", EX), q: sink("q", EX) } : null, PC = { p: { D: 0, C: 0, K: 0, XN: 0 }, q: { D: 0, C: 0, K: 0, XN: 0 } };
@@ -53,7 +54,7 @@ function replay(game, decisions) {
     if (B && seeded(mix(seed, 31337 + i))() < 1 / EVERY) for (const me of [0, 1]) {
       const seen = seenBy(s, me);
       if (seen.unknown <= 0) continue;
-      B.put("x.f32", Float32Array.from(beliefInput(s, me, T, seen))); B.put("u.f32", seen.unseen); B.put("hold.u8", Uint8Array.of(hold ? 1 : 0));
+      B.put("x.f32", Float32Array.from(scryInput(s, me, T, seen))); B.put("u.f32", seen.unseen); B.put("hold.u8", Uint8Array.of(hold ? 1 : 0));
       // every unknown card of the other hand: its history and what it really was
       for (const id of unknownSlots(s, me)) { B.put("sf.f32", T.slotOf(me, s, id, new Float32Array(SLOT_N))); B.put("sy.i16", Int16Array.of(NAME_AT.get(DECK[id]))); B.put("srow.i32", Int32Array.of(nb)); ns++; }
       nb++;
@@ -69,7 +70,7 @@ function replay(game, decisions) {
     }
     for (const d of decisions.get(i) || []) {
       if (d.seat !== who) continue;
-      const b = belief(s, who, T), x = [...viewOf(s, who), ...ext(s, who, b.counts, undefined, null, b.any)];
+      const b = scry(s, who, T), x = [...viewOf(s, who), ...ext(s, who, b.counts, undefined, null, b.any)];
       if (d.qd) putDecision("q", d, x); else if (d.every) putDecision("p", d, x);
     }
     Math.random = seeded(mix(seed, i + 1));
@@ -87,7 +88,8 @@ function replay(game, decisions) {
 const local = ids.startsWith("file:"), store = local ? { list: async () => [ids.slice(5)], get: async n => fs.readFileSync(n, "utf8") } : await labStore();
 for (const id of local ? [ids] : ids.split(",")) {
   const parts = local ? [ids.slice(5)] : (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n));
-  for (const name of parts) {
+  for (const [pi, name] of parts.entries()) {
+    if (pi % SHS !== SH) continue;
     const decisions = new Map();   // seed → (i → lines)
     for (const line of ((await store.get(name)) || "").split("\n")) {
       if (!line || line.startsWith('{"v":1')) continue;
@@ -106,4 +108,4 @@ if (P) for (const w of ["p", "q"]) {
   fs.writeFileSync(`${dir}/${w}/meta.json`, JSON.stringify({ XN: PC[w].XN, decisions: PC[w].D, candidates: PC[w].C, marks: PC[w].K, exports: ids, every: true }));
 }
 if (V) { V.close(); fs.writeFileSync(`${dir}/v/meta.json`, JSON.stringify({ N: VN, rows: nv, skipped, ids })); }
-console.log(`replayed ${games} games (${broken} not the same); belief rows ${nb}; decisions ${PC.p.D}, questions ${PC.q.D}; value rows ${nv} (${skipped} before a random move skipped)`);
+console.log(`replayed ${games} games (${broken} not the same); scry rows ${nb}; decisions ${PC.p.D}, questions ${PC.q.D}; value rows ${nv} (${skipped} before a random move skipped)`);

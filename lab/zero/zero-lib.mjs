@@ -11,7 +11,7 @@ import { think } from "../../dandan-think.js";
 import { DECK, NAMES } from "../../dandan-cards.js";
 import { makeJudge, features, FEATURES } from "../../dandan-eval.js";
 import { freeScorer, viewInto, viewOf, marksOf, VIEW_N } from "../../dandan-netpolicy.js";
-import { ext, EXT_N, NN, Tracker, beliefOf, dealBy, extJudge } from "./zero-view.mjs";
+import { ext, EXT_N, NN, Tracker, scryOf, dealBy, extJudge } from "./zero-view.mjs";
 
 export const PASS = { t: "pass" };
 const key = m => JSON.stringify(m);
@@ -105,7 +105,7 @@ export function qMarksOf(s, seat, m) {
 /** Zero's player for the look-aheads: its policy head's top move with priority (uniform at random before one is trained), a
  *  question's answer by its question head (at random before one is trained); and its focus for the tree (No. 17 point 6), the
  *  policy's fewest top moves holding 90%. A policy trained on the extended view (its XN past VIEW_N: zero-view.mjs) reads it,
- *  the other hand as ctx.counts[seat] says (the beliefs frozen at the root). */
+ *  the other hand as ctx.counts[seat] says (Scrys frozen at the root). */
 export function zeroPlayer(policy, qpolicy = null, ctx = null) {
   const score = policy ? freeScorer(policy) : null, qscore = qpolicy ? freeScorer(qpolicy) : null;
   const wide = !!(policy && policy.net.XN > VIEW_N), XB = new Float32Array(VIEW_N + EXT_N), EB = new Float32Array(EXT_N), none = new Float32Array(NN);
@@ -137,21 +137,21 @@ export function zeroPlayer(policy, qpolicy = null, ctx = null) {
   return { rollout, focus, wide };
 }
 
-/** Zero whole, from its nets' names (14 Nov 2026, Korbi 10:04): the player, the value net (either view), and the belief
- *  (<name>-belief.json beside <name>-policy.json) kept up to date after every move (seen) and frozen at each root (root:
- *  think's extra options, the deal by the belief). reset() at a new game. */
+/** Zero whole, from its nets' names (14 Nov 2026, Korbi 10:04): the player, the value net (either view), and Scry
+ *  (<name>-scry.json beside <name>-policy.json) kept up to date after every move (seen) and frozen at each root (root:
+ *  think's extra options, the deal by Scry). reset() at a new game. */
 export function zeroBrain(policyName, valueName) {
-  const policy = netOf(policyName), qpolicy = qnetOf(policyName), bnet = beliefNetOf(policyName);
+  const policy = netOf(policyName), qpolicy = qnetOf(policyName), bnet = scryNetOf(policyName);
   const ctx = { counts: [new Float32Array(NN), new Float32Array(NN)], any: [null, null] }, player = zeroPlayer(policy, qpolicy, ctx);
-  const belief = bnet || player.wide ? beliefOf(bnet) : null, judge = valueJudgeOf(valueName);
+  const scry = bnet || player.wide ? scryOf(bnet) : null, judge = valueJudgeOf(valueName);
   let tracker = new Tracker();
   return {
-    player, judge, belief, wide: player.wide, dealing: !!bnet,
+    player, judge, scry, wide: player.wide, dealing: !!bnet,
     reset() { tracker = new Tracker(); },
     seen(s, who, m, after) { tracker.update(s, who, m, after); },
     root(s, seat) {
-      if (!belief) return {};
-      const b = [belief(s, 0, tracker), belief(s, 1, tracker)];
+      if (!scry) return {};
+      const b = [scry(s, 0, tracker), scry(s, 1, tracker)];
       ctx.counts[0] = b[0].counts; ctx.counts[1] = b[1].counts; ctx.any[0] = b[0].any; ctx.any[1] = b[1].any;
       return bnet ? { deal: dealBy(b[seat].slots) } : {};
     },
@@ -167,8 +167,8 @@ export const netOf = name => (name && name !== "-" ? JSON.parse(fs.readFileSync(
 export const qnetOf = name => { if (!name || name === "-") return null; const q = name.replace(/-policy$/, "-qpolicy"); return q !== name && fs.existsSync(new URL(`./nets/${q}.json`, import.meta.url)) ? netOf(q) : null; };
 /** Zero's value net as a judge (dandan-eval.js's layer format), or null. */
 export const judgeOf = name => { const n = netOf(name); return n ? makeJudge(n.layers) : null; };
-/** The belief net that goes with a policy net (<name>-policy → <name>-belief), or null. */
-export const beliefNetOf = name => { if (!name || name === "-") return null; const b = name.replace(/-policy$/, "-belief"); return b !== name && fs.existsSync(new URL(`./nets/${b}.json`, import.meta.url)) ? netOf(b) : null; };
+/** The Scry that goes with a policy net (<name>-policy → <name>-scry), or null. */
+export const scryNetOf = name => { if (!name || name === "-") return null; const b = name.replace(/-policy$/, "-scry"); return b !== name && fs.existsSync(new URL(`./nets/${b}.json`, import.meta.url)) ? netOf(b) : null; };
 /** Zero's value net as a judge, on either view: the extended one (its first layer reads FEATURES + EXT_N) or the old. */
 export const valueJudgeOf = name => { const n = netOf(name); if (!n) return null; return n.layers[0].n[0] === FEATURES.length + EXT_N ? extJudge(n.layers, features, FEATURES.length) : makeJudge(n.layers); };
 

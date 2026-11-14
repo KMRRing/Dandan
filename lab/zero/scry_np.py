@@ -1,11 +1,11 @@
-"""Zero's belief net on NumPy (14 Nov 2026, Korbi 10:02, 10:19): one distribution over names for each unknown card in the other
+"""Zero's Scry on NumPy (14 Nov 2026, Korbi 10:02, 10:19): one distribution over names for each unknown card in the other
 hand. A card's chance by name p = softmax(log unseen + f(x, slot)), f = W2 · ReLU(Wg x + Ws slot + b1) + b2, x the position
-(lab/zero/zero-view.mjs beliefInput, BX numbers, read once a position) and slot that card's own history (SLOT_N: from the
+(lab/zero/zero-view.mjs scryInput, BX numbers, read once a position) and slot that card's own history (SLOT_N: from the
 opening hand after how many mulligans, drawn when, land drops skipped since…). Untrained (W2 = 0) it is the unseen pool's odds.
 Loss: the cross-entropy of what each card really was. Adam, the held-out rows (every fifth game) measured each epoch, the best
 kept; the pool's odds alone measured too; and the land check Korbi asked for: how well the chance of two or more lands among
-the unknown cards is called (Brier score, against the pool's odds). Written as { H, Wg, Ws, b1, W2, b2 } for beliefOf.
-usage: python3 lab/zero/belief_np.py <packed folder (replay-pack.mjs belief: <dir>/b)> <out> [--h 64] [--epochs 6] [--lr 1e-3]
+the unknown cards is called (Brier score, against the pool's odds). Written as { H, Wg, Ws, b1, W2, b2 } for scryOf.
+usage: python3 lab/zero/scry_np.py <packed folder (replay-pack.mjs scry: <dir>/b)> <out> [--h 64] [--epochs 6] [--lr 1e-3]
 """
 import argparse, json, os, time
 import numpy as np
@@ -16,10 +16,15 @@ ap.add_argument("--h", type=int, default=64); ap.add_argument("--epochs", type=i
 ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--batch", type=int, default=256); ap.add_argument("--seed", type=int, default=1)
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
-meta = json.load(open(os.path.join(A.dir, "meta.json"))); BX, NN, SN, R, S = meta["BX"], meta["NN"], meta["SLOT_N"], meta["rows"], meta["slots"]
-rd = lambda n, t: np.fromfile(os.path.join(A.dir, n), dtype=t)
-X, U, HOLD = rd("x.f32", np.float32).reshape(R, BX), rd("u.f32", np.float32).reshape(R, NN), rd("hold.u8", np.uint8) > 0
-SF, SY, SR = rd("sf.f32", np.float32).reshape(S, SN), rd("sy.i16", np.int16).astype(np.int64), rd("srow.i32", np.int32).astype(np.int64)
+# one folder or several (comma-separated: replay-pack.mjs run side by side), their rows one after another
+X, U, HOLD, SF, SY, SR, R, S = [], [], [], [], [], [], 0, 0
+for d in A.dir.split(","):
+    meta = json.load(open(os.path.join(d, "meta.json"))); BX, NN, SN, r, s = meta["BX"], meta["NN"], meta["SLOT_N"], meta["rows"], meta["slots"]
+    rd = lambda n, t: np.fromfile(os.path.join(d, n), dtype=t)
+    X.append(rd("x.f32", np.float32).reshape(r, BX)); U.append(rd("u.f32", np.float32).reshape(r, NN)); HOLD.append(rd("hold.u8", np.uint8) > 0)
+    SF.append(rd("sf.f32", np.float32).reshape(s, SN)); SY.append(rd("sy.i16", np.int16).astype(np.int64)); SR.append(rd("srow.i32", np.int32).astype(np.int64) + R)
+    R += r; S += s
+X, U, HOLD, SF, SY, SR = (np.concatenate(a) for a in (X, U, HOLD, SF, SY, SR))
 LP = np.where(U > 0, np.log(np.maximum(U, 1e-9)), -1e9).astype(np.float32)
 LANDS = np.array(json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lands.json"))), bool) if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lands.json")) else np.zeros(NN, bool)
 sh = HOLD[SR]; tr, he = np.flatnonzero(~sh), np.flatnonzero(sh)
@@ -71,7 +76,7 @@ for e in range(1, A.epochs + 1):
     say(f"epoch {e}: held-out loss {l:.4f} a card; two-or-more-lands Brier {br:.4f}")
     if l < best: best, bbr, bestP = l, br, {k: v.copy() for k, v in P.items()}
 r5 = lambda a: [round(float(v), 5) for v in a.ravel()]
-json.dump(dict(source="lab/zero/belief_np.py", H=A.h, BX=BX, SLOT_N=SN, NN=NN, **{k: r5(v) for k, v in bestP.items()},
+json.dump(dict(source="lab/zero/scry_np.py", H=A.h, BX=BX, SLOT_N=SN, NN=NN, **{k: r5(v) for k, v in bestP.items()},
                metrics=dict(heldLoss=round(float(best), 4), priorLoss=round(float(prior), 4), landBrier=round(bbr, 4), priorLandBrier=round(pbr, 4), positions=int(R), cards=int(S))), open(A.out, "w"))
 open(A.out, "a").write("\n")
 say(f"best held-out loss {best:.4f} a card against the pool's odds {prior:.4f}; two-or-more-lands Brier {bbr:.4f} against {pbr:.4f}")

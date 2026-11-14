@@ -1,7 +1,7 @@
 # Zero's nets on the extended view (14 Nov 2026, Korbi 10:04): Zero's games replayed (lab/zero/replay-pack.mjs), first for the
-# belief net (lab/zero/belief_np.py: the other hand by name), then, with that belief, for the value net face up (FEATURES +
-# EXT_N a seat), the policy head and the question head (viewOf + ext with the belief's counts). Committed as
-# lab/zero/nets/<name>-belief.json, -value.json, -policy.json, -qpolicy.json. Reads the bucket with the read-only key.
+# Scry (lab/zero/scry_np.py: the other hand by name), then, with that scry, for the value net face up (FEATURES +
+# EXT_N a seat), the policy head and the question head (viewOf + ext with the Scry's counts). Committed as
+# lab/zero/nets/<name>-scry.json, -value.json, -policy.json, -qpolicy.json. Reads the bucket with the read-only key.
 name: Zero (train a generation's nets, extended view)
 on:
   workflow_dispatch:
@@ -12,7 +12,8 @@ on:
       h1: { description: "Policy first layer", required: true, default: "128" }
       h2: { description: "Policy second layer", required: true, default: "64" }
       epochs: { description: "Policy epochs", required: true, default: "8" }
-      bh: { description: "Belief hidden layer", required: true, default: "64" }
+      sh: { description: "Scry hidden layer", required: true, default: "64" }
+      scry_games: { description: "Games for Scry (default: the same games)", required: false, default: "" }
 permissions:
   contents: write
 jobs:
@@ -34,10 +35,13 @@ jobs:
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
           mkdir -p lab/zero/nets
           N="${{ inputs.name }}"; D="$RUNNER_TEMP/r"
-          LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "$D" "${{ inputs.games }}" belief | tee -a "$GITHUB_STEP_SUMMARY"
-          python3 lab/zero/belief_np.py "$D/b" "lab/zero/nets/$N-belief.json" --h "${{ inputs.bh }}" | tee -a "$RUNNER_TEMP/log.txt"
-          rm -rf "$D/b"
-          LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "$D" "${{ inputs.games }}" train "lab/zero/nets/$N-belief.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          SG="${{ inputs.scry_games }}"; SG="${SG:-${{ inputs.games }}}"
+          # four replays side by side (the runner's cores), each over a quarter of the parts
+          for k in 0 1 2 3; do LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "$D$k" "$SG" scry - $k 4 > "$RUNNER_TEMP/s$k.txt" & done; wait
+          tail -n 1 "$RUNNER_TEMP"/s?.txt | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 lab/zero/scry_np.py "${D}0/b,${D}1/b,${D}2/b,${D}3/b" "lab/zero/nets/$N-scry.json" --h "${{ inputs.sh }}" | tee -a "$RUNNER_TEMP/log.txt"
+          rm -rf "$D"?/
+          LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "$D" "${{ inputs.games }}" train "lab/zero/nets/$N-scry.json" | tee -a "$GITHUB_STEP_SUMMARY"
           rm -f "$RUNNER_TEMP/key.json"
           python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$N-value.json" --shape "${{ inputs.value }}" | tee -a "$RUNNER_TEMP/log.txt"
           python3 lab/policy_np.py "$D/p" "lab/zero/nets/$N-policy.json" --form head --h1 "${{ inputs.h1 }}" --h2 "${{ inputs.h2 }}" --epochs "${{ inputs.epochs }}" --decay 0.9 | tee -a "$RUNNER_TEMP/log.txt"
