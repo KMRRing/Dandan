@@ -19,3 +19,5 @@ az-y5-a-e  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008)
 az-o5-a  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008) replaces g4x-A-value (0.5215) in generation 6 A; requeued as az-o5-av
 az-x5-a  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008) replaces g4x-A-value (0.5215) in generation 6 A; requeued as az-x5-av
 az-s2d  # 16:40Z: Scry 2d's flat 0.5 floor replaced by the gap rule (Korbi 16:22); requeued as az-s2e
+az-g7-a  # 18:35Z: approach A dropped after generation 7's first reads (C against the crowned Monte 44.3%, A 28.0%; C's generation 7 beat its generation 6 70.3%, A's 51.0%); its fleet time goes to more C games
+az-x6-a  # 18:35Z: approach A dropped after generation 7's first reads (C against the crowned Monte 44.3%, A 28.0%; C's generation 7 beat its generation 6 70.3%, A's 51.0%); its fleet time goes to more C games
