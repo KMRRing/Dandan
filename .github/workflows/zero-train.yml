@@ -42,6 +42,11 @@ jobs:
             if [ "$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).decisions)' "$RUNNER_TEMP/p/meta.json")" -gt 0 ]; then
               python3 lab/policy_np.py "$RUNNER_TEMP/p" "lab/zero/nets/${{ inputs.name }}-policy.json" --form "${{ inputs.form }}" --h1 "${{ inputs.h1 }}" --h2 "${{ inputs.h2 }}" --epochs "${{ inputs.epochs }}" --decay 0.9 | tee -a "$RUNNER_TEMP/log.txt"
             fi
+            # the question head (14 Nov 2026): the searched questions (qd lines), the same form and size
+            LAB_KEY="$RUNNER_TEMP/key.json" node lab/fetch-ex.mjs "$RUNNER_TEMP/q" "${{ inputs.games }}" q | tee -a "$GITHUB_STEP_SUMMARY"
+            if [ "$(node -e 'console.log(JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).decisions)' "$RUNNER_TEMP/q/meta.json")" -gt 0 ]; then
+              python3 lab/policy_np.py "$RUNNER_TEMP/q" "lab/zero/nets/${{ inputs.name }}-qpolicy.json" --form "${{ inputs.form }}" --h1 "${{ inputs.h1 }}" --h2 "${{ inputs.h2 }}" --epochs "${{ inputs.epochs }}" --decay 0.9 | tee -a "$RUNNER_TEMP/log.txt"
+            fi
           fi
           rm -f "$RUNNER_TEMP/key.json"
           { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

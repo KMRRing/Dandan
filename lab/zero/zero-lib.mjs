@@ -74,14 +74,48 @@ export function zeroOptions(s, seat) {
   return out;
 }
 
+// ---------- the question head's marks (14 Nov 2026): a question's answer described by what it does ----------
+const Q_TYPES = ["attack", "block", "order", "surveil", "search", "pick", "owner", "bend", "retarget", "putback", "discard", "bottom", "mull", "name"];
+const NAME_AT = new Map(NAMES.map((n, i) => [n, i])), LANDS5 = ["Island", "Swamp", "Mountain", "Plains", "Forest"];
+/** The marks of a question's answer, in the 80 slots the move-picker's nets take: its kind (0–14), the cards it names or moves
+ *  (15–39 by name; an order's second card 40–64), a count (65–69: attackers, blockers), a yes (70: to the graveyard, to the bottom,
+ *  a mulligan, no card, no new target), a land type (71–75). */
+export function qMarksOf(s, seat, m) {
+  const t = Q_TYPES.indexOf(m.t), out = [t >= 0 ? t : 14], card = (id, at = 15) => { const i = NAME_AT.get(DECK[id]); if (i != null) out.push(at + i); };
+  switch (m.t) {
+    case "attack": out.push(65 + Math.min(4, m.ids.length)); break;
+    case "block": out.push(65 + Math.min(4, m.pairs.length)); break;
+    case "order": if (m.cards[0] != null) card(m.cards[0]); if (m.cards[1] != null) card(m.cards[1], 40); break;
+    case "surveil": if (m.yard) out.push(70); break;
+    case "search": case "pick": if (m.card == null) out.push(70); else card(m.card); break;
+    case "owner": if (m.bottom) out.push(70); break;
+    case "bend": { const i = LANDS5.indexOf(m.to); if (i >= 0) out.push(71 + i); break; }
+    case "retarget": if (!m.targets) out.push(70); break;
+    case "putback": case "discard": case "bottom": for (const id of m.cards) card(id); break;
+    case "mull": out.push(70); break;
+    case "keep": out[0] = 12; break;
+    case "name": { const i = NAME_AT.get(m.name); if (i != null) out.push(15 + i); break; }
+    default: break;
+  }
+  return [...new Set(out)];
+}
+
 /** Zero's player for the look-aheads: its policy head's top move with priority (uniform at random before one is trained), a
- *  question's answer at random; and its focus for the tree (No. 17 point 6), the policy's fewest top moves holding 90%. */
-export function zeroPlayer(policy) {
-  const score = policy ? freeScorer(policy) : null;
+ *  question's answer by its question head (at random before one is trained); and its focus for the tree (No. 17 point 6), the
+ *  policy's fewest top moves holding 90%. */
+export function zeroPlayer(policy, qpolicy = null) {
+  const score = policy ? freeScorer(policy) : null, qscore = qpolicy ? freeScorer(qpolicy) : null;
   const rollout = (s, seat, rng) => {
     const ms = zeroOptions(s, seat);
     if (ms.length <= 1) return ms[0] ?? PASS;
-    if (s.pending || !score) return ms[Math.floor(rng() * ms.length)];
+    if (s.pending) {
+      if (!qscore) return ms[Math.floor(rng() * ms.length)];
+      const q = qscore(viewInto(s, seat), ms.map(m => qMarksOf(s, seat, m)));
+      let b = 0;
+      for (let k = 1; k < q.length; k++) if (q[k] > q[b]) b = k;
+      return ms[b];
+    }
+    if (!score) return ms[Math.floor(rng() * ms.length)];
     const sc = score(viewInto(s, seat), ms.map(m => marksOf(s, seat, m)));
     let b = 0;
     for (let k = 1; k < sc.length; k++) if (sc[k] > sc[b]) b = k;
@@ -100,6 +134,8 @@ export function zeroPlayer(policy) {
 
 /** A net file of Zero's (lab/zero/nets/<name>.json), or null for "-". */
 export const netOf = name => (name && name !== "-" ? JSON.parse(fs.readFileSync(new URL(`./nets/${name}.json`, import.meta.url), "utf8").split("\n")[0]) : null);
+/** The question head that goes with a policy net (<name>-policy → <name>-qpolicy), or null when none has been trained yet. */
+export const qnetOf = name => { if (!name || name === "-") return null; const q = name.replace(/-policy$/, "-qpolicy"); return q !== name && fs.existsSync(new URL(`./nets/${q}.json`, import.meta.url)) ? netOf(q) : null; };
 /** Zero's value net as a judge (dandan-eval.js's layer format), or null. */
 export const judgeOf = name => { const n = netOf(name); return n ? makeJudge(n.layers) : null; };
 
@@ -117,9 +153,10 @@ const SPELLS_N = 17;   // dandan-eval.js SPELLS.length: (N − 3 − 17) / 2 = 4
 /** A searched decision as lab/export.mjs writes one (so lab/fetch-ex.mjs and lab/policy_np.py read it unchanged): the view, each
  *  option's marks and the search's value, the search's pick, every legal move weighed, Deep when 1,024 deals. */
 export function decisionLine(s, seat, g, i, res, pick, deals, hold, x3) {
+  const q = !!s.pending, mk = q ? qMarksOf : marksOf;
   return {
     g, i, seat, deep: deals >= 1024 ? 1 : 0, deals, x: viewOf(s, seat),
-    c: res.list.map(c => ({ m: marksOf(s, seat, c.move), s: 0, q: +c.mean.toFixed(4), se: +c.se.toFixed(4), n: c.n })),
-    med: 0, pick, every: 1, ...(hold ? { hold: 1 } : {}), ...(x3 != null ? { x3 } : {}),
+    c: res.list.map(c => ({ m: mk(s, seat, c.move), s: 0, q: +c.mean.toFixed(4), se: +c.se.toFixed(4), n: c.n })),
+    med: 0, pick, every: 1, ...(q ? { qd: 1 } : {}), ...(hold ? { hold: 1 } : {}), ...(x3 != null ? { x3 } : {}),
   };
 }

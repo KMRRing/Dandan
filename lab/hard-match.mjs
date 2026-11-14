@@ -46,7 +46,7 @@ async function side(spec) {
   // "zero~<value net>~<policy net|->" (14 Nov 2026, Zero, Fable No. 12's yardstick): Zero's engine, no Medium anywhere: every
   // option weighed by the search with Zero's nets (lab/zero/nets/<name>.json), at the match's deals
   if (spec.startsWith("zero~")) {
-    const [, v, pol] = spec.split("~"), Z = await import("./zero/zero-lib.mjs"), judge = Z.judgeOf(v), pl = Z.zeroPlayer(Z.netOf(pol));
+    const [, v, pol] = spec.split("~"), Z = await import("./zero/zero-lib.mjs"), judge = Z.judgeOf(v), pl = Z.zeroPlayer(Z.netOf(pol), Z.qnetOf(pol));
     return (s, seat) => {
       const ms = Z.zeroOptions(s, seat);
       if (ms.length <= 1) return { move: ms[0] ?? Z.PASS, off: false };

@@ -5,12 +5,13 @@
 // (Medium's pick), flags.u8 (1 held out, 2 Deep, 4 every legal move weighed, 8 the search played off Medium's shortlist);
 // per candidate q.f32 (the search's mean), mark.i32 (the first mark's index; one more at the end); per mark marks.u8.
 // A candidate's first mark is its kind (0 pass, 1 land, 2 cast, 3 cycle, 4 ability: dandan-netpolicy.js marksOf).
-// usage: node lab/fetch-ex.mjs <folder> <export ids, comma-separated> [every: only decisions where every legal move was weighed]
+// usage: node lab/fetch-ex.mjs <folder> <export ids, comma-separated> [every: only decisions where every legal move was weighed | q]
 import fs from "node:fs";
 import { labStore } from "./lib.mjs";
 
 const [dir, ids, only] = [process.argv[2], process.argv[3], process.argv[4]];
-const EVERY = only === "every";
+// "every": decisions with priority where every legal move was weighed; "q" (14 Nov 2026, Zero): only the questions (qd lines)
+const EVERY = only === "every" || only === "q", Q = only === "q";
 fs.mkdirSync(dir, { recursive: true });
 const names = ["x.f32", "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8"];
 const fd = Object.fromEntries(names.map(n => [n, fs.openSync(`${dir}/${n}`, "w")]));
@@ -23,7 +24,7 @@ for (const id of ids.split(",")) {
   for (const name of parts) {
     const lines = ((await store.get(name)) || "").split("\n").filter(Boolean);
     const ds = [];
-    for (const line of lines) { const d = JSON.parse(line); if (EVERY && !d.every) continue; ds.push(d); }
+    for (const line of lines) { const d = JSON.parse(line); if (EVERY && !d.every) continue; if (!!d.qd !== Q) continue; ds.push(d); }
     if (!ds.length) continue;
     XN ||= ds[0].x.length;
     const nc = ds.reduce((a, d) => a + d.c.length, 0), nk = ds.reduce((a, d) => a + d.c.reduce((b, c) => b + c.m.length, 0), 0);

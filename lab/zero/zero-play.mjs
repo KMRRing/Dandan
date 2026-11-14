@@ -12,12 +12,12 @@ import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
 import { think } from "../../dandan-think.js";
-import { zeroOptions, zeroPlayer, netOf, judgeOf, valueRow, decisionLine, PASS } from "./zero-lib.mjs";
+import { zeroOptions, zeroPlayer, netOf, qnetOf, judgeOf, valueRow, decisionLine, PASS } from "./zero-lib.mjs";
 
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5]), Number(process.argv[6]), Number(process.argv[7])];
 const policy = netOf(process.argv[8]), value = judgeOf(process.argv[9]), X3 = Number(process.argv[10] || 400);
 const random = !value;   // generation 0: no value net, no search
-const player = zeroPlayer(policy), J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
+const player = zeroPlayer(policy, qnetOf(process.argv[8])), J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
 const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);
 const realRandom = Math.random;
 fs.writeFileSync(out, "");
@@ -40,7 +40,8 @@ for (let g = first; g < first + n; g++) {
         const others = res.list.filter(c => key(c.move) !== key(res.best));
         if (others.length) { move = others[Math.floor(seeded(mix(seed, 9800003 + i))() * others.length)].move; explored3 = { i, seat: who, move }; }
       }
-      if (!s.pending && !res.only && res.list.length >= 2) lines.push(decisionLine(s, who, seed, i, res, res.list.findIndex(c => key(c.move) === key(res.best)), deals, seed % 5 === 0, null));
+      // every searched decision: with priority for the policy head, a question (qd) for the question head
+      if (!res.only && res.list.length >= 2) lines.push(decisionLine(s, who, seed, i, res, res.list.findIndex(c => key(c.move) === key(res.best)), deals, seed % 5 === 0, null));
     }
     const r = applyMove(rules, G, who, move, 0);
     if (r.error) throw new Error(`zero game ${seed} move ${i}: ${r.error}`);
