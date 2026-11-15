@@ -21,3 +21,4 @@ az-x5-a  # 13:50Z: g5x-A-value-v1 (frozen-set value 0.4854, calibration 0.008) r
 az-s2d  # 16:40Z: Scry 2d's flat 0.5 floor replaced by the gap rule (Korbi 16:22); requeued as az-s2e
 az-g7-a  # 18:35Z: approach A dropped after generation 7's first reads (C against the crowned Monte 44.3%, A 28.0%; C's generation 7 beat its generation 6 70.3%, A's 51.0%); its fleet time goes to more C games
 az-x6-a  # 18:35Z: approach A dropped after generation 7's first reads (C against the crowned Monte 44.3%, A 28.0%; C's generation 7 beat its generation 6 70.3%, A's 51.0%); its fleet time goes to more C games
+az-t1  # 11:37Z: look-ahead of one turn loses clearly to two: 38.5% (99%: 33.3 to 43.8) over 244 pairs; two turns stays the default
