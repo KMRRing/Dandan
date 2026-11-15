@@ -20,7 +20,7 @@
 //      lab.html?replay=<game key>&m=<moves made>. The lab's own game waits underneath.
 // The choices are kept in localStorage under dandan-lab:lab, a lab game under dandan-lab:game (never the player's own saved
 // game), and its flags under dandan-lab:flags. Lab games are recorded like any game, marked "lab · <engine>".
-import { ENGINES, engineOf, DEFAULT_ENGINE, decide } from "./dandan-engines.js";
+import { ENGINES, engineOf, DEFAULT_ENGINE, LIVE_ENGINE, BENCHMARK_ENGINE, decide } from "./dandan-engines.js";
 import { moveName } from "./dandan-words.js";
 import { DECK } from "./dandan-cards.js";
 import { nm } from "./dandan-core.js";
@@ -115,7 +115,8 @@ async function setVerdict(id, v, flag = verdicts[id]?.flag) {
 function simulate(item) {
   const got = {};
   sims.set(item.id, got);
-  for (const e of ENGINES.filter(x => x.available)) {
+  // the engines that matter now and the coaches on (all of them, 17 and counting, would keep a phone busy for minutes)
+  for (const e of ENGINES.filter(x => x.available && (groupOf(x) === "now" || (settings.coach[x.id] && !settings.hide[x.id])))) {
     got[e.id] = { status: "thinking" };
     const done = r => {
       got[e.id] = r.error || !r.result?.move ? { status: "error", text: r.error || "no move" }
@@ -123,7 +124,7 @@ function simulate(item) {
       paintSheet();
     };
     if (e.kind === "medium") decide(e, structuredClone(item.state), item.seat).then(result => done({ result }), err => done({ error: String(err?.message || err) }));
-    else askCoach(e, structuredClone(item.state), item.seat).then(done);
+    else askCoach(e, structuredClone(item.state), item.seat, null).then(done);   // a kept position: no record, Zero's Scry starts there
   }
   paintSheet();
 }
@@ -135,7 +136,7 @@ function reviewHtml() {
   const bf = (st, seat) => st.bf.filter(p => p.ctl === seat).map(p => nm(p.id) + (p.tapped ? " (tapped)" : "")).join(", ") || "—";
   const done = review.items.filter(i => verdicts[i.id]).length;
   const extra = Object.entries(verdicts).filter(([id, v]) => v.flag && !review.items.some(i => i.id === id));
-  return `<p class="lab-note">Positions where Monte's move was flagged as a possible error. Each can be played again by every engine (Simulate). Mark it an objective error, and every future engine is checked against it: playing the move again counts against that engine. ${done} of ${review.items.length} marked.</p>
+  return `<p class="lab-note">Positions where Monte's move was flagged as a possible error. Each can be played again (Simulate) by the engines under Now and the coaches you have on. Mark it an objective error, and every future engine is checked against it: playing the move again counts against that engine. ${done} of ${review.items.length} marked.</p>
     ${review.items.map(i => {
       const st = i.state, v = verdicts[i.id]?.verdict, sim = sims.get(i.id), stack = st.stack.map(x => x.name).join(" ← ");
       return `<details class="lab-eng lab-err${v ? " marked" : ""}"${sim ? " open" : ""}><summary><b>Turn ${i.turn}: Monte ${esc(moveName(i.played, st, i.seat) || "passes")}</b>${v ? ` · <em>${esc(VERDICT_WORDS[v])}</em>` : ""}</summary>
@@ -229,7 +230,7 @@ export const botCtx = ctx => ({ ...ctx, style: engineOf(settings.engine)?.style 
 
 function seatOpponent() {
   const e = engineOf(settings.engine);
-  C.opts.level = e.kind === "hard" ? "hard" : "medium";    // Hard's look-ahead runs in the worker; a Medium answers on the page's thread
+  C.opts.level = e.kind === "medium" ? "medium" : "hard";  // Hard's and Zero's look-aheads run in the worker; a Medium answers on the page's thread
   C.opts.think = settings.oppDepth;
   C.LAB.engine = e.id;
 }
@@ -301,8 +302,10 @@ const coachWorkers = new Map();                    // a Hard coach's own worker,
 
 const myNow = v => !!v?.G && !v.over && (v.replay ? v.toMove != null : v.seat != null && v.toMove === v.seat);
 
+/** The game so far as a record, for Zero's Scry (it follows the whole game): as dandan.js's gameRecord. */
+const recordOf = (v, state) => (v?.G ? { seed: v.G.seed, seq: v.G.seq, options: v.G.options || {}, started: v.G.started, first: state?.first, moves: v.G.moves || [] } : null);
 /** Asks a Hard coach's worker (the look-ahead off the page's thread, dandan-worker.js with an engine id). */
-function askCoach(e, state, seatNo) {
+function askCoach(e, state, seatNo, game) {   // game: the record Zero follows (undefined: the game on the table)
   let wk = coachWorkers.get(e.id);
   if (!wk) {
     try {
@@ -313,7 +316,7 @@ function askCoach(e, state, seatNo) {
       coachWorkers.set(e.id, wk);
     } catch { return Promise.resolve({ error: "no worker in this browser" }); }
   }
-  return new Promise(res => { const id = ++wk.n; wk.waiting.set(id, res); wk.w.postMessage({ id, kind: "think", state, seat: seatNo, depth: settings.coachDepth, engine: e.id }); });
+  return new Promise(res => { const id = ++wk.n; wk.waiting.set(id, res); wk.w.postMessage({ id, kind: "think", state, seat: seatNo, depth: settings.coachDepth, engine: e.id, ...(e.kind === "zero" ? { game: game === undefined ? recordOf(C.view(), state) : game } : {}) }); });
 }
 /** A decision has passed: a look-ahead still running for it is dropped (its worker stopped), not waited for. */
 function stopCoaches() {
@@ -425,34 +428,62 @@ function paintStrip() {
 }
 
 // ---------- the sheet ----------
+// 15 Nov 2026 (Korbi 16:21: "clean up the interface and options to account for the large number of deployed items"): the
+// engines in four groups, Monte chosen from one list, a coach switched on by one tick, the older engines folded away.
 const openInfo = new Set();
-const KIND = { medium: "Medium", hard: "Hard" };
+const KIND = { medium: "Medium", hard: "Hard", zero: "Zero" };
+/** An engine's group on the sheet: the ones that matter now (live, the benchmark, Zero), the Mediums, the older Hards, unbuilt. */
+export const groupOf = e => (!e.available ? "unbuilt" : e.kind === "zero" || e.id === LIVE_ENGINE || e.id === BENCHMARK_ENGINE ? "now" : e.kind === "medium" ? "medium" : "earlier");
+const GROUPS = [["now", "Now"], ["medium", "Medium"], ["earlier", "Earlier Hard engines"], ["unbuilt", "Not built yet"]];
+const inGroup = g => ENGINES.filter(e => groupOf(e) === g);
+/** A long text's first sentence (to its first ". " or ": " past 40 characters), for a one-line summary. */
+const firstSentence = (t = "") => { const m = String(t).slice(40).search(/[.:;] /); return m < 0 ? String(t) : String(t).slice(0, 41 + m); };
+const options = (cur, pick = e => e.available) => GROUPS.map(([g, label]) => {
+  const es = inGroup(g).filter(pick);
+  return es.length ? `<optgroup label="${esc(label)}">${es.map(e => `<option value="${e.id}"${cur === e.id ? " selected" : ""}>${esc(e.name)}</option>`).join("")}</optgroup>` : "";
+}).join("");
 function paintSheet() {
   const body = $("labBody"), top = body.scrollTop;
   const depth = (cur, keys) => keys.map(k => `<option value="${k}"${cur === k ? " selected" : ""}>${esc(DEPTH_WORDS[k])}</option>`).join("");
-  const card = e => {
-    const on = !!settings.coach[e.id], shown = e.available && !settings.hide[e.id], open = openInfo.has(e.id);
-    return `<article class="lab-eng${e.available ? "" : " off"}" data-id="${e.id}">
-      <button type="button" class="lab-name" data-info="${e.id}" aria-expanded="${open}"><b>${esc(e.name)}</b><span class="lab-kind">${KIND[e.kind]}${e.available ? "" : " · not built yet"}</span><i aria-hidden="true">${open ? "−" : "i"}</i></button>
-      <div class="lab-ctl">
-        <label><input type="radio" name="opp" value="${e.id}"${settings.engine === e.id ? " checked" : ""}${e.available ? "" : " disabled"}> Monte plays this</label>
-        <label><input type="checkbox" data-coach="${e.id}"${on ? " checked" : ""}${e.available ? "" : " disabled"}> Coach</label>
-        <label><input type="checkbox" data-show="${e.id}"${shown ? " checked" : ""}${e.available ? "" : " disabled"}> Show</label>
+  const about = e => openInfo.has(e.id) ? `<div class="lab-desc"><p>${esc(e.description)}</p><p><b>What to expect.</b> ${esc(e.expect)}</p></div>` : "";
+  // one row an engine: its coach tick, its name (tap: how it was built), what it is
+  const row = e => {
+    const on = e.available && !!settings.coach[e.id] && !settings.hide[e.id], open = openInfo.has(e.id);
+    return `<article class="lab-eng${e.available ? "" : " off"}${on ? " on" : ""}" data-id="${e.id}">
+      <div class="lab-line">
+        <label class="lab-tick" title="${e.available ? `Coach: ${esc(e.short)}'s pick shown at each of your decisions` : "Not built yet"}"><input type="checkbox" data-coach="${e.id}"${on ? " checked" : ""}${e.available ? "" : " disabled"}><span class="lab-short">${esc(e.short)}</span></label>
+        <button type="button" class="lab-name" data-info="${e.id}" aria-expanded="${open}"><span>${esc(e.name)}</span>${settings.engine === e.id ? `<em class="lab-monte">Monte</em>` : ""}<i aria-hidden="true">${open ? "−" : "i"}</i></button>
       </div>
-      ${open ? `<div class="lab-desc"><p>${esc(e.description)}</p><p><b>What to expect.</b> ${esc(e.expect)}</p></div>` : ""}
+      ${about(e)}
     </article>`;
   };
-  body.innerHTML = `<p class="lab-lead">The same game as the live one. Choose who Monte is, and who coaches you: at each decision of yours every shown coach's pick is ringed on the table and listed above your hand, and you are told when they differ. A hidden coach is not run. ▶ Auto lets the chosen engine play your moves until the shown coaches disagree. Tap ⚑ on a pick you disagree with: lab games are recorded (marked lab), flags and all, so the game history lists them. Tap a name to read how it was built.</p>
-    ${ENGINES.map(card).join("")}
-    <h3 class="lab-h">Error review</h3>
-    ${reviewHtml()}
-    <h3 class="lab-h">Thinking</h3>
+  const group = ([g, label]) => {
+    const es = inGroup(g);
+    if (!es.length) return "";
+    const on = es.filter(e => settings.coach[e.id] && !settings.hide[e.id] && e.available).length;
+    const fold = g === "earlier" || g === "unbuilt", open = !fold || es.some(e => openInfo.has(e.id) || settings.engine === e.id);
+    const inner = `<div class="lab-list">${es.map(row).join("")}</div>`;
+    return fold ? `<details class="lab-group" data-group="${g}"${open ? " open" : ""}><summary>${esc(label)} <span>${es.length}${on ? ` · ${on} coaching` : ""}</span></summary>${inner}</details>`
+      : `<section class="lab-group" data-group="${g}"><div class="lab-gh">${esc(label)}${on ? ` <span>${on} coaching</span>` : ""}</div>${inner}</section>`;
+  };
+  const monte = engineOf(settings.engine);
+  body.innerHTML = `<p class="lab-lead">The same game as the live one. Choose who Monte is and who coaches you: each coach's pick is ringed on the table and listed above your hand, and you are told when they differ.</p>
+    <h3 class="lab-h">Monte</h3>
+    <label class="lab-sel">Monte plays <select data-opp="1">${options(settings.engine)}</select></label>
+    <p class="lab-note">${esc(monte?.tag || `${KIND[monte?.kind] || ""} engine: ${firstSentence(monte?.expect)}`)} <button type="button" class="lab-more" data-info="${monte?.id}">More</button></p>
     <label class="lab-sel">Monte's look-ahead <select data-depth="oppDepth">${depth(settings.oppDepth, ["quick", "long", "deep", "deepest"])}</select></label>
-    <label class="lab-sel">Autoplay: who plays for you <select data-pilot="1">${ENGINES.filter(e => e.available).map(e => `<option value="${e.id}"${settings.pilot === e.id ? " selected" : ""}>${esc(e.name)}</option>`).join("")}</select></label>
-    <label class="lab-sel">Hard coaches' look-ahead <select data-depth="coachDepth">${depth(settings.coachDepth, ["quick", "long", "deep"])}</select></label>
-    <label class="lab-sel"><input type="checkbox" data-cover="1"${settings.cover !== false ? " checked" : ""}> Hide Monte's timing tell</label>
-    <p class="lab-note">On, Monte stops and takes its time wherever a card you can't see could have had it act, so how fast it passes shows nothing. Off, it passes at once where it has nothing to do: quicker games, but its speed gives its hand away. A new game takes the setting up; switched off mid-game, its passes there come at once.</p>
-    <p class="lab-note">Deals are the guesses of the hidden cards a look-ahead plays each move out over; more take longer and judge better. A Hard coach thinks in its own worker, so the table never stops for it.</p>`;
+    <h3 class="lab-h">Coaches</h3>
+    <p class="lab-note">Tick an engine to have it coach you; tap its name for how it was built. Coaches that are off are not run.</p>
+    ${GROUPS.map(group).join("")}
+    <label class="lab-sel">Hard and Zero coaches' look-ahead <select data-depth="coachDepth">${depth(settings.coachDepth, ["quick", "long", "deep"])}</select></label>
+    <label class="lab-sel">▶ Auto: who plays for you <select data-pilot="1">${options(settings.pilot)}</select></label>
+    <p class="lab-note">Autoplay plays for you until the coaches disagree.</p>
+    <details class="lab-group lab-review"${sims.size ? " open" : ""}><summary class="lab-h">Error review <span>${review?.items?.length ? `${review.items.length} positions · ${review.items.filter(i => verdicts[i.id]).length} marked` : ""}</span></summary>
+    ${reviewHtml()}</details>
+    <h3 class="lab-h">Table</h3>
+    <label class="lab-sel lab-check"><input type="checkbox" data-cover="1"${settings.cover !== false ? " checked" : ""}> Hide Monte's timing tell</label>
+    <p class="lab-note">On, Monte stops and takes its time wherever a card you can't see could have had it act, so how fast it passes shows nothing. Off, it passes at once where it has nothing to do: quicker games, but its speed gives its hand away. A new game takes the setting up.</p>
+    <p class="lab-note">Deals are the guesses of the hidden cards a look-ahead plays each move out over; more take longer and judge better. A Hard or Zero coach thinks in its own worker, so the table never stops for it.</p>`;
   body.scrollTop = top;
 }
 function openSheet(info) {
@@ -487,8 +518,8 @@ function wireSheet() {
   });
   $("labBody").addEventListener("change", e => {
     const t = e.target;
-    if (t.name === "opp") { settings.engine = t.value; seatOpponent(); save(); C.forgetBot(); C.toast(`Monte is now ${engineOf(t.value).name}`); }
-    else if (t.dataset.coach) { settings.coach[t.dataset.coach] = t.checked; save(); reask(); }
+    if (t.dataset.opp || t.name === "opp") { settings.engine = t.value; seatOpponent(); save(); C.forgetBot(); C.toast(`Monte is now ${engineOf(t.value).name}`); }
+    else if (t.dataset.coach) { settings.coach[t.dataset.coach] = t.checked; if (t.checked) delete settings.hide[t.dataset.coach]; save(); reask(); }
     else if (t.dataset.show) { settings.hide[t.dataset.show] = !t.checked; save(); reask(); }
     else if (t.dataset.cover) { settings.cover = t.checked; save(); C.toast(t.checked ? "Monte hides its timing tell from the next game" : "Monte's timing tell is no longer hidden"); }
     else if (t.dataset.pilot) { settings.pilot = t.value; save(); if (auto) reask(); else paintStrip(); }

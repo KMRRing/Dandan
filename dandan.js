@@ -129,11 +129,13 @@ function botWorker() {
   }
   return workers.bot;
 }
+/** The game so far as a record (seed, deal, moves) for an engine that follows the whole game: Zero's Scry (the lab). */
+const gameRecord = (v, state = v?.state) => (v?.G ? { seed: v.G.seed, seq: v.G.seq, options: v.G.options || {}, started: v.G.started, first: state?.first, moves: v.G.moves || [] } : null);
 /** The computer's move, from the look-ahead at the deepest search. */
 function askMove(state, seat) {
   const wk = botWorker();
   if (!wk) return Promise.resolve({ error: "no worker" });
-  return new Promise(res => { const id = ++wk.n; wk.waiting.set(id, res); wk.w.postMessage({ id, kind: "move", state, seat, depth: opts.think, ...(LAB ? { engine: LAB.engine } : {}) }); });
+  return new Promise(res => { const id = ++wk.n; wk.waiting.set(id, res); wk.w.postMessage({ id, kind: "move", state, seat, depth: opts.think, ...(LAB ? { engine: LAB.engine, game: gameRecord(V, state) } : {}) }); });
 }
 /** A position's key: the state as the runner hands it to the computer (FNV-1a of its JSON). */
 function keyOf(state) {

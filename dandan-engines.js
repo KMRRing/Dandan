@@ -90,14 +90,19 @@ export const ENGINES = [
     expect: "Against Hard with v14, both at Deep (1,024 deals): 57.6% ± 3.6 after 575 of 600 deals played both ways, and above 50% even if it lost every deal still to come: CROWNED (12 November). At Quick: 54.6% ± 2.6 over 1,000. Predicts results best of all (Brier 0.143 against v14's 0.155 on held-out games). About 1.3× v14's thinking time a decision. The live game's Hard from 12 to 13 November 2026.",
   },
   {
-    id: "hard-s5-knet", name: "Hard (S5 + keep net): live", short: "Live", kind: "hard", judge: "s5", knet: true, available: true,
+    id: "hard-s5-knet", name: "Hard (S5 + keep net): live", short: "Live", kind: "hard", tag: "What the live game plays: Hard with value net S5 and the keep net on the first seven.", judge: "s5", knet: true, available: true,
     description: "The lab's benchmark since 13 November 2026 (keep net from 18:30Z, Korbi): Hard with value net S5 (judges/s5.json: S4 d's recipe with the race inputs) and the keep net on the first seven (judges/keep-net.json: a small network trained on real results that rates a seven by its cards and the seat; a seven Medium throws back still goes back, one Medium keeps goes back when the net rates it under the redraw value, 49.9% on the play, 49.0% on the draw). Every later keep and the bottom cards are Medium's. The live game's Hard since 13 November 2026, 21:30Z (Korbi).",
     expect: "With S5 on both sides at Quick: the keep net against Medium's keep 52.0% ± 1.2 over 3,660 pairs; against the value keep +1.1 ± 1.2 on the same deals; the value table after the first seven (the hybrid) costs 1.4 ± 0.8. S5 against S4 d at Quick: 51.8% ± 1.8; S5 + value keep against live 52.1% ± 1.2 over 5,000. Its Deep gate against S4 d with Medium's keep, both at Deep (1,024 deals, every legal move): 54.3% ± 2.5 over 1,195 of 1,200 pairs (99%: 51.8 to 56.8), the same thinking time: it went live on that.",
   },
   {
-    id: "hard-s5-knet-mpN6416", name: "Hard (S5 + keep net + mpN6416): the benchmark", short: "Bench mp", kind: "hard", judge: "s5", knet: true, look: "mpN6416", available: true,
+    id: "hard-s5-knet-mpN6416", name: "Hard (S5 + keep net + mpN6416): the benchmark", short: "Bench mp", kind: "hard", tag: "The lab's yardstick: the live Hard with a Medium-free move-picker in its look-aheads, within a point of the live Hard.", judge: "s5", knet: true, look: "mpN6416", available: true,
     description: "The lab's benchmark since 14 November 2026, 00:55Z (Fable No. 11, Korbi 00:10): the live game's Hard (S5 and the keep net on the first seven) whose look-aheads are played past the tree by the Medium-free move-picker mpN6416 (judges/mp-mpN6416.json, a copy of lab/policy/mpN6416.json: 121 inputs, 64·16, every legal move and passing scored from the position and the move's marks alone, no Medium inside) instead of Medium. Medium still answers the engine's questions (attacks, blocks, targets, later keeps). Not the live game.",
     expect: "Against the live Hard (Medium in the look-aheads), Quick, 2,000 pairs: 49.1% (99%: 47.3 to 51.0), its side thinking 1.08 times as long: the swap bar (49% and at most 1.2 times) is met. Alone against Medium, no search: 49.2% over 20,000 pairs.",
+  },
+  {
+    id: "zero-g9x", name: "Monte Scry Zero (generation 10's engine)", short: "Zero", kind: "zero", tag: "The from-scratch line: its own Scry, policy and value nets, no Medium inside; 61.7% against the benchmark at Deep, not crown-tested.", nets: "g9x-C", deeper: 0.03, available: true,
+    description: "The from-scratch line (lab, 14–15 November 2026): nothing of Medium inside. Its options are every legal move and passing; its look-aheads are played by its own policy net (g9x-C, 654 inputs: the position as its seat sees it and Scry's estimate of the other hand) and its questions by its own question head; the hidden cards are dealt by Scry, a net that follows the other player's play and gives each unseen card in their hand its own chance of every name; positions are judged by its own value net (both hands face up). Close calls (the best two within 3 points) are weighed again three turns ahead instead of two (Korbi's variable look-ahead). Its nets are read from the lab's folder the first time it plays, about 2 MB, so it needs a connection then.",
+    expect: "Against the lab's benchmark (the live Hard with a Medium-free look-ahead, within a point of the live Hard), both at Deep: 61.7% (99%: 55.0 to 68.5) over 175 of 200 pairs (lab job az-yd9-c); at Quick 59.0% over 200. Not crown-tested yet (1,200 pairs at Deep) and never at Deepest. It thinks about 1.5 to 2 times as long as Hard a deal: its nets are larger than Hard's.",
   },
   {
     id: "hard-s5-keep", name: "Hard (S5 + value keep)", short: "S5 vkeep", kind: "hard", judge: "s5", keep: true, available: false,
@@ -160,6 +165,49 @@ export const lookOf = (name, load = fetchJson) => {
 let keepNetP = null;
 export const keepNet = (load = fetchJson) => (keepNetP ||= load(new URL("./judges/keep-net.json", import.meta.url).href));
 
+// ---------- Monte Scry Zero (kind "zero"; 15 Nov 2026, Korbi 16:21: Zero in the game lab) ----------
+// Its nets live in the lab's folder (lab/zero/nets/<nets>-policy, -qpolicy, -scry, -value.json), read the first time it plays,
+// not kept offline (the lab only). Scry follows the whole game, so a request carries the game record (`game`: seed, seq,
+// options, started, first, moves) and the brain is caught up on the moves since it last saw this game, replayed as the page
+// plays them (shownRules).
+const zeroP = new Map();
+async function zeroOf(engine, load = fetchJson) {
+  if (!zeroP.has(engine.id)) zeroP.set(engine.id, (async () => {
+    const [{ makeZero }, nets] = await Promise.all([import("./dandan-zero.js"),
+      Promise.all(["policy", "qpolicy", "scry", "value"].map(k => load(new URL(`./lab/zero/nets/${engine.nets}-${k}.json`, import.meta.url).href)))]);
+    const [policy, qpolicy, scry, value] = nets;
+    return { brain: makeZero({ policy, qpolicy, scry, value }), game: null, G: null, at: 0 };
+  })());
+  return zeroP.get(engine.id);
+}
+/** The brain caught up on the game up to its last move (a new game, or one gone back on, from its start). */
+async function zeroAt(engine, game, load) {
+  const z = await zeroOf(engine, load);
+  const [{ shownRules }, { newRecord, applyMove }] = await Promise.all([import("./dandan-rules.js"), import("./seats.js")]);
+  const moves = game?.moves ? (typeof game.moves === "string" ? JSON.parse(game.moves) : game.moves) : [];
+  const id = game ? `${game.seed}:${game.started}` : null;
+  if (!game || z.game !== id || moves.length < z.at) {
+    z.brain.reset(); z.game = id; z.at = 0;
+    const prev = game && (game.first === 0 || game.first === 1) ? { state: { over: true, winner: 1 - game.first } } : null;
+    z.G = game ? newRecord(shownRules, { seats: 2, options: game.options || {}, seed: game.seed, seq: game.seq || 1, now: game.started, prev }) : null;
+  }
+  for (; z.G && z.at < moves.length; z.at++) {
+    const [who, move] = moves[z.at], before = shownRules.restore(JSON.parse(JSON.stringify(z.G.state)));
+    const r = applyMove(shownRules, z.G, who, move, game.started);
+    if (r.error) { z.G = null; break; }                            // the record and the rules part ways: Scry stops following
+    z.brain.seen(before, who, move, r.G.state);
+    z.G = r.G;
+  }
+  return z.brain;
+}
+/** Zero's weighing of a decision: { best, list, only } as think's. */
+async function zeroThink(engine, s, seat, { budget = {}, must = null, load, game } = {}) {
+  const brain = await zeroAt(engine, game, load), { zeroOptions } = await import("./dandan-zero.js");
+  const ms = zeroOptions(s, seat);
+  if (ms.length <= 1) return { best: ms[0] ?? PASS, list: [], only: true };
+  return brain.think(s, seat, budget.deals || 64, { ...(engine.deeper ? { deeper: { gap: engine.deeper } } : {}), ...(must ? { must } : {}) });
+}
+
 // ---------- asking an engine ----------
 /** A question the look-ahead leaves to Medium (as thinkMove does): the mulligan, what to put on the bottom, a name. */
 const MEDIUM_ONLY = ["mull", "bottom", "name"];
@@ -176,8 +224,12 @@ export function mediumMove(engine, s, seat, opts = {}) {
   Object.assign(TUNE, engine.tune || {});
   try { return policyMove(s, seat, { style: engine.style || "tempo", ...opts }); } finally { Object.assign(TUNE, was); }
 }
-export async function decide(engine, s, seat, { budget = {}, must = null, load } = {}) {
+export async function decide(engine, s, seat, { budget = {}, must = null, load, game = null } = {}) {
   if (engine.kind === "medium") return { move: mediumMove(engine, s, seat), chance: null, list: [] };
+  if (engine.kind === "zero") {
+    const r = await zeroThink(engine, s, seat, { budget, must, load, game }), top = r.list[0];
+    return { move: r.best, chance: top && Number.isFinite(top.mean) && top.mean >= 0 ? top.mean : null, list: r.list.slice(0, 4).map(c => ({ move: c.move, mean: c.mean })) };
+  }
   const p = s.pending, judge = await judgeOf(engine, load);
   // the keep net on the first seven (an engine with `knet`), the keep by the value net (`keep`, its net carrying a redraw
   // table); else Medium's, as before
@@ -193,8 +245,9 @@ export async function decide(engine, s, seat, { budget = {}, must = null, load }
 }
 
 /** Hard's move for an engine, as the live game plays it (thinkMove) but with the engine's judge: what the opponent's worker runs. */
-export async function engineMove(engine, s, seat, budget, load) {
+export async function engineMove(engine, s, seat, budget, load, game = null) {
   if (engine.kind === "medium") return mediumMove(engine, s, seat);
+  if (engine.kind === "zero") return (await zeroThink(engine, s, seat, { budget, load, game })).best;
   const judge = await judgeOf(engine, load);
   return thinkMove(s, seat, { ...budget, ...(judge ? { judge } : {}), ...(engine.keep && judge?.mull ? { keep: true } : {}), ...(engine.knet ? { knet: await keepNet(load) } : {}), ...(engine.look ? { rollout: await lookOf(engine.look, load) } : {}) });
 }

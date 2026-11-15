@@ -16,11 +16,12 @@ const check = (ok, what) => { console.log(`${ok ? "ok  " : "FAIL"} ${what}`); if
 const load = url => Promise.resolve(JSON.parse(fs.readFileSync(new URL(url), "utf8")));
 
 // ---------- the registry ----------
-check(ENGINES.every(e => e.id && e.name && e.short && ["medium", "hard"].includes(e.kind) && e.description.length > 40 && e.expect && typeof e.available === "boolean"), "every engine has an id, names, a kind, a description and what to expect");
+check(ENGINES.every(e => e.id && e.name && e.short && ["medium", "hard", "zero"].includes(e.kind) && e.description.length > 40 && e.expect && typeof e.available === "boolean"), "every engine has an id, names, a kind, a description and what to expect");
 check(new Set(ENGINES.map(e => e.id)).size === ENGINES.length && new Set(ENGINES.map(e => e.short)).size === ENGINES.length, "ids and short names are unique (the strip names a coach by its short name)");
 check(["medium-tempo", "medium-squeeze", "medium-deckout", "hard-today", "hard-jh2", "hard-v14"].every(id => engineOf(id)), "the engines are listed");
 check(!engineOf("medium-deckout").available && /not built yet/i.test(engineOf("medium-deckout").description) && !seatable().some(e => e.id === "medium-deckout"), "the deckout Medium is listed but cannot be seated");
 check(ENGINES.filter(e => e.judge).every(e => JUDGES[e.judge] && [JUDGES[e.judge]].flat().every(f => fs.existsSync(new URL(f, new URL("../dandan-engines.js", import.meta.url))))), "every retrained judge named has its file (each of a mean's)");
+check(ENGINES.filter(e => e.kind === "zero").every(e => ["policy", "qpolicy", "scry", "value"].every(k => fs.existsSync(new URL(`../lab/zero/nets/${e.nets}-${k}.json`, import.meta.url)))), "every Zero engine's four nets are in the lab's folder");
 check(engineOf(DEFAULT_ENGINE).kind === "hard" && engineOf(DEFAULT_ENGINE).judge === LIVE_JUDGE, "Monte starts as the live game's Hard, with the live judge");
 
 // ---------- the settings ----------
@@ -55,7 +56,8 @@ check(disagreement([{ short: "Hard", text: "cast Dandân" }, { short: "Tempo", t
   for (const e of ENGINES.filter(e => e.available)) {
     const r = await decide(e, JSON.parse(before), seatNo, { budget: { deals: 4, ms: 3000 }, load });
     check(r.move && legal(r.move) && !!moveName(r.move, st, seatNo), `${e.short} picks a legal move at a decision: ${moveName(r.move, st, seatNo)}${r.chance != null ? ` (${Math.round(r.chance * 100)}%)` : ""}`);
-    check(e.kind === "hard" ? r.chance != null && r.list.length > 0 : r.chance === null, `${e.short} gives ${e.kind === "hard" ? "a win chance and the moves weighed" : "no win chance"}`);
+    const weighs = e.kind !== "medium";   // Hard and Zero weigh their moves
+    check(weighs ? r.chance != null && r.list.length > 0 : r.chance === null, `${e.short} gives ${weighs ? "a win chance and the moves weighed" : "no win chance"}`);
   }
   const t0 = JSON.stringify(st), m1 = await decide(engineOf("medium-squeeze"), st, seatNo);
   check(JSON.stringify(st) === t0 && !!m1.move, "a Medium leaves the state it is given as it was");

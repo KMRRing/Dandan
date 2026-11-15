@@ -50,14 +50,14 @@ async function review(id, game) {
 }
 
 onmessage = async e => {
-  const { id, kind, state, seat, move, depth, engine } = e.data;
+  const { id, kind, state, seat, move, depth, engine, game } = e.data;   // game: the record so far, for Zero's Scry (dandan-engines.js)
   try {
     if (kind === "review") return await review(id, e.data.game);
     if (engine) {
       const eng = engineOf(engine);
       if (!eng?.available) throw new Error(`no engine ${engine}`);
-      if (kind === "move") postMessage({ id, move: await engineMove(eng, state, seat, DEPTH[depth] || BUDGET.move) });
-      else postMessage({ id, result: await decide(eng, state, seat, { budget: coachBudget(kind, depth), must: kind === "check" ? move : null }) });
+      if (kind === "move") postMessage({ id, move: await engineMove(eng, state, seat, DEPTH[depth] || BUDGET.move, undefined, game) });
+      else postMessage({ id, result: await decide(eng, state, seat, { budget: coachBudget(kind, depth), must: kind === "check" ? move : null, game }) });
       return;
     }
     const judge = await judgeOf({ judge: LIVE_JUDGE }).catch(() => undefined);   // no file (offline, a fetch failed): the game's own
