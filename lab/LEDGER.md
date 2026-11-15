@@ -792,3 +792,15 @@ Korbi, 17:43Z: the three-way final goes ahead as he set it (S1′ vs v14, S2′ 
 - 06:36Z **Generation 9 is flat against 8: az-x8-c 50.6% (45.6 to 55.7) over 310 pairs.** Against the crowned Monte at Quick it reads 55.3% (48.8 to 61.7) over 200 (generation 8: 52.0%); at Deep (az-yd8-c) 47.9% over the first 73. Generation 8 at Deep (az-yd7-c): 54.8% (48.1 to 61.5) over 188 of 200. **Worker errors:** 16 of az-g9-c's first 193 shards ended "worker error: git fetch -q --depth=1 origin fbecf9a2… failed" (the machines fetching the commit; GitHub now answers "This repository moved" to pushes, the repo's new location being KMRRing/Dandan), and a worker error is written as done, so those shards are not retried (64 games lost so far). Worker code is Korbi's call: reported.
 - 07:55Z **Generation 8 at Deep against the crowned Monte, final: 54.8% (99%: 48.1 to 61.5) over 188 pairs**; 12 of 200 shards killed at the 8-hour limit (the longest games). Ahead, not proven. **Generation 9 against 8: 50.0% (46.0 to 54.0) over 483 of 500: flat, the first plateau.** Generation 9 at Deep against the crowned Monte: 53.0% (45.2 to 60.8) over 132. Games: az-g9-c 909, az-g9-c2 956 of 1,200; worker errors 21 + 23 (git fetch, about 2%). Proposed to Korbi: soft policy targets, three generations of games for generation 10, and the 2,000-pair Deep crown test of generation 8.
 - 08:59Z Generation 9 against 8 final: 50.1% (46.2 to 54.0) over 498. Generation 9 at Deep against the crowned Monte: 55.0% (48.0 to 61.9) over 161 of 200 (generation 8: 54.8% over 188): the two generations are level, both about 55% at Deep. az-g9-c / -c2 at 1,160 / 1,159: **g9x-C training dispatched** on the default (generations 8–9; no answer from Korbi yet on soft targets or three generations); az-g9-c3 queued (4,800 more, seeds 133000000).
+
+## 2026-11-15 10:05Z ops: $90 month rule - fleet cut to minimum
+Korbi's rule "when we get to 90$, cut services and ask for my greenlight". Month estimate ~$89.4 (only $5 confirmed, 13 Nov); Korbi warned 05:22Z, 07:42Z, 08:29Z, 09:16Z, no reply.
+Spot pools refuse desired 0 (connector: "use deleteSpotNodePool"); nothing deleted, so every pool set to 1. VM pools set to 1.
+Restore list (pool, class, old count -> 1):
+- US East kmr-ring1-89: 1bcf9431 ch.medium 10, c274e388 ch.large 6, e7f00bce ch2xl 14, c3bd10fc gp2xl 6, 8de624fa ch.xlarge 26 (a9e1a635 mh.medium, 7e7b615a gp.medium already 1)
+- HK kmr-ring1-25: 59d42923 ch2xl 10, 62708293 ch.large 10, 0a70acd0 ch.xlarge 12, a9260c35 gp2xl 13 (91555ee5, f4060db0, 601cbd03 already 1)
+- Chicago kmr-ring1-71: 8b47d1d2 ch.medium 12, 3c385656 ch.xlarge 6, 48a8e737 ch2xl 12 (a5f6b675 already 1)
+- Dallas kmr-ring1-86: 5660d0e1 ch.medium 6, 374791e4 ch.xlarge 3, 0cfd35a6 ch2xl 9 (1bd3b76c, 702b1853 already 1)
+- London kmr-ring1-55: c8e65e7b ch2xl 2, 4a0dd4b5 ch.large 2 (5e41d538 already 1)
+- VMs: 78c626c3 Sydney 2 7, a2b0e1bf US East 3 9, 0e83f5f1 HK2 3, 09546bc6 Sydney 5 (e086d81d Sydney 3 already 1)
+After: ~31 machines, ~240 vCPUs, est ~$0.5/h incl. requests and Google Batch. Bids unchanged. Waiting for Korbi's greenlight to restore.
