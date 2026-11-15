@@ -421,11 +421,29 @@ function where(c, seat) {
  * decisions it chose as the full search did every time, for 15% fewer deals (lab/variants.mjs, ae-var3).
  */
 const EARLY = 16;
-export function think(s, seat, { deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
+/**
+ * think, and on a close call a second look further ahead (lab, 15 Nov 2026, Korbi: "3 turn look ahead when the decision isn't
+ * clear"): `deeper` { gap, k = 2, turns = turns + 1 }: when the best two moves still in the race are within `gap` of each
+ * other, the best k are weighed again, alone, `turns` ahead in the same deals, and that look decides between them. Their
+ * means in `list` become the deeper look's; the other moves keep the first look's. Without `deeper`, think as it was.
+ */
+export function think(s, seat, opts = {}) {
+  const r = thinkOnce(s, seat, opts), dp = opts.deeper;
+  if (!dp || r.only) return r;
+  const top = r.list.filter(c => !c.out).sort((a, b) => b.mean - a.mean).slice(0, dp.k || 2);
+  if (top.length < 2 || top[0].mean - top[1].mean >= dp.gap) return r;
+  const keys = new Set(top.map(c => key(c.move)));
+  const r2 = thinkOnce(s, seat, { ...opts, pick: keys, turns: dp.turns ?? (opts.turns ?? 2) + 1 });
+  const by = new Map(r2.list.map(c => [key(c.move), c]));
+  const list = r.list.map(c => (by.has(key(c.move)) ? { ...c, mean: by.get(key(c.move)).mean, se: by.get(key(c.move)).se, n: by.get(key(c.move)).n } : c));
+  const best = list.find(c => key(c.move) === key(r2.best));
+  return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && keys.has(key(c.move))).sort((a, b) => b.mean - a.mean), ...list.filter(c => !keys.has(key(c.move)))], deeper: true };
+}
+function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
   const t0 = Date.now();
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
   // read Medium's scores); weigh false: hidden cards dealt without dandan-reads.js's tells (which read Medium's play)
-  const cands = options ? options(s, seat) : candidates(s, seat, { wide, all, rank });
+  const cands = (options ? options(s, seat) : candidates(s, seat, { wide, all, rank })).filter(m => !pick || pick.has(key(m)));
   if (must && !cands.some(m => key(m) === key(must))) cands.push(must);
   const n = cands.length;
   if (n === 1) return { best: cands[0], list: [{ move: cands[0], mean: NaN, se: 0, n: 0 }], deals: 0, only: true };

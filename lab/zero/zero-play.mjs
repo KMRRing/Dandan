@@ -7,7 +7,7 @@
 // Out, one JSON line each: a searched decision with priority (lab/export.mjs's format, so fetch-ex.mjs / policy_np.py read it),
 // then the game's value rows { v: 1, g, seat, turn, f: [mine, theirs], won, x3 } at every turn's start for both seats, then
 // { game, seed, winner, turns, moves, explore3 }.
-// usage: node lab/zero/zero-play.mjs <shard> <shards> <out> <deals> <games> <first seed> <policy net|-> <value net|-> [x3 400]
+// usage: node lab/zero/zero-play.mjs <shard> <shards> <out> <deals> <games> <first seed> <policy net|-> <value net|-> [x3 400] [deeper=<gap>]
 import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
@@ -16,6 +16,8 @@ import { zeroOptions, zeroBrain, valueRow, decisionLine, PASS } from "./zero-lib
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5]), Number(process.argv[6]), Number(process.argv[7])];
 // the nets by name; from generation 6 (Korbi 10:04) a policy on the extended view with its Scry, and a value net face up
 const brain = zeroBrain(process.argv[8], process.argv[9]), X3 = Number(process.argv[10] || 400);
+// "deeper=<gap>" (15 Nov 2026, Korbi): three turns ahead on close calls, the search's values for those moves the deeper look's
+const DEEPER = (process.argv[11] || "").startsWith("deeper=") ? { deeper: { gap: Number(process.argv[11].slice(7)) } } : {};
 const random = !brain.judge;   // generation 0: no value net, no search
 const J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
 const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);
@@ -35,7 +37,7 @@ for (let g = first; g < first + n; g++) {
     if (ms.length <= 1) move = ms[0] ?? PASS;
     else if (random) move = ms[Math.floor(rng() * ms.length)];
     else {
-      const res = brain.think(s, who, deals);
+      const res = brain.think(s, who, deals, DEEPER);
       move = res.best;
       if (X3 && !explored3 && res.list.length >= 2 && seeded(mix(seed, 9700003 + i))() < 1 / X3) {
         const others = res.list.filter(c => key(c.move) !== key(res.best));
