@@ -458,10 +458,11 @@ async function snapCmd(cmd) {
     return names.join("\n");
   }
   if (/^gcloud storage cat /.test(cmd)) {
-    const urls = urlsIn(cmd), groups = urls.map(match); if (groups.some(g => !g.length)) throw noObjects();
-    // a match's part files come joined in one file
+    const urls = urlsIn(cmd);
+    // a match's part files come joined in one file (the listing no longer names part files)
     const one = urls.length === 1 && urls[0].match(/^results\/([^/]+)\/part-\*\.jsonl$/);
-    if (one && s.joined?.[one[1]]) return snapGet(`o/results/${one[1]}/parts.jsonl`, s.joined[one[1]]);
+    if (one) { if (s.joined?.[one[1]]) return snapGet(`o/results/${one[1]}/parts.jsonl`, s.joined[one[1]]); throw noObjects(); }
+    const groups = urls.map(match); if (groups.some(g => !g.length)) throw noObjects();
     const texts = await Promise.all(groups.flat().map(n => snapGet("o/" + n.split("/").map(encodeURIComponent).join("/"), s.times.get(n)).catch(() => "")));
     return texts.join("\n");
   }
@@ -566,9 +567,11 @@ async function loadMain(pfx, { rows: wantRows = true } = {}) {
   if (!matchCacheLoaded) { matchCacheLoaded = true; Object.assign(matchCache, store("fleet:rows") || {}); }
   // the job list and both listings at once: each is a separate trip through the connector
   const ls = url => gcloud(`gcloud storage ls -l "${url}"`).then(r => r.out, e => { if (noMatch(e)) return ""; throw e; });
+  // the snapshot carries each job's done times and claim counts already summed (its full listing ran a phone out of memory)
+  const agg = SNAP_MODE ? (await snapLoad()).jobs : null;
   const [jobsTxt, doneTxt, claimTxt] = await Promise.all([
     gcloud(`gcloud storage cat "${B}/jobs/${pfx}*.json"`).then(r => { rawJobs = r.raw; return r.out; }, e => { if (noMatch(e)) return ""; throw e; }),
-    ls(`${B}/results/${pfx}*/done-*`), ls(`${B}/claims/${pfx}*/*`)]);
+    agg ? "" : ls(`${B}/results/${pfx}*/done-*`), agg ? "" : ls(`${B}/claims/${pfx}*/*`)]);
   const jobs = [];
   for (const j of parsed(jobsTxt)) if (j.id && j.shards && j.script && !jobs.some(x => x.id === j.id)) jobs.push(j);
   const done = {}, claims = {}, seen = new Set(), live = {}, doneN = {};
@@ -583,6 +586,15 @@ async function loadMain(pfx, { rows: wantRows = true } = {}) {
   // a core is busy on a shard whose claim was renewed in the last 6 minutes (every 2) and that has no done- file yet
   const busyNow = {};
   for (const [id, set] of Object.entries(live)) busyNow[id] = [...set].filter(sh => !doneN[id]?.has(sh)).length;
+  if (agg) {
+    const shift = Date.now() - SNAP.at;
+    for (const [id, g] of Object.entries(agg)) {
+      if (!id.startsWith(pfx)) continue;
+      if (g.d.length) { let t = 0; done[id] = g.d.map(x => (t += x) * 1000 + shift); }
+      if (g.c) claims[id] = g.c;
+      if (g.b) busyNow[id] = g.b;
+    }
+  }
   // how one-shard jobs ended (so a crash isn't shown as done), and match rows (A's score per deal pair), all at once
   const ended = {}, rows = {}, singles = jobs.filter(j => j.shards === 1 && done[j.id]);
   await Promise.all([

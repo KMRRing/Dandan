@@ -113,6 +113,27 @@ if (gce != null) fs.writeFileSync(path.join(out, "gce.txt"), gce);
 const updated = Object.fromEntries(files.concat([...want]).map(([n, t]) => [n, t]));
 fs.mkdirSync(cache, { recursive: true });
 fs.writeFileSync(path.join(cache, "updated.json"), JSON.stringify(updated));
-fs.writeFileSync(path.join(out, "list.json"), JSON.stringify({ at, bucket: BUCKET, objects, joined }));
+// list.json slim (15 Nov 2026: 706,000 names, 28 MB, crashed the page on the phone): per-shard done and claim files go into
+// `jobs` instead ({ id: { d: done times as seconds, first then gaps, c: claims, b: shards claimed in the last 6 minutes with
+// no done file } }); the listing keeps done-0, claims of the last 10 minutes and one claim a folder (the page reads folder names)
+const agg = {}, a0 = id => (agg[id] ??= { d: [], c: 0, b: 0, cl: new Set(), dn: new Set() }), lastClaim = new Map(), slim = [];
+for (const [n, t] of objects) {
+  let m;
+  if ((m = n.match(/^results\/([^/]+)\/done-(\d+)$/))) { const g = a0(m[1]); g.d.push(t); g.dn.add(m[2]); if (m[2] !== "0") continue; }
+  else if (/^results\/[^/]+\/part-\d+\.jsonl$/.test(n)) continue;
+  else if ((m = n.match(/^claims\/([^/]+)\/(\d+)$/))) {
+    const g = a0(m[1]); g.c++; if (at / 1000 - t < 6 * 60) g.cl.add(m[2]);
+    if (!lastClaim.has(m[1]) || lastClaim.get(m[1])[1] < t) lastClaim.set(m[1], [n, t]);
+    if (at / 1000 - t >= 10 * 60) continue;
+  }
+  slim.push([n, t]);
+}
+for (const [n, t] of lastClaim.values()) if (at / 1000 - t >= 10 * 60) slim.push([n, t]);
+const jobsAgg = {};
+for (const [id, g] of Object.entries(agg)) {
+  const d = g.d.sort((x, y) => x - y).map((t, i, a) => (i ? t - a[i - 1] : t));
+  jobsAgg[id] = { d, c: g.c, b: [...g.cl].filter(k => !g.dn.has(k)).length };
+}
+fs.writeFileSync(path.join(out, "list.json"), JSON.stringify({ at, bucket: BUCKET, objects: slim, joined, jobs: jobsAgg }));
 const bytes = walk(out).reduce((s, f) => s + fs.statSync(f).size, 0);
 console.log(`${objects.length} objects listed, ${files.length + want.size} kept, ${(bytes / 1e6).toFixed(1)} MB in ${out}, ${((Date.now() - at) / 1000).toFixed(0)} s`);
