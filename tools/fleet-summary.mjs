@@ -59,6 +59,11 @@ for (const [name, updated] of list.objects) {
   m = name.match(/^results\/([^/]+)\/done-(\d+)$/); if (m) { done[m[1]] = (done[m[1]] || 0) + 1; (doneSet[m[1]] ||= new Set()).add(m[2]); }
 }
 const LEASE_MS = 15 * M;
+// since 15 Nov 2026 the listing no longer names every done and claim file (706,000 names crashed the page on a phone): the
+// snapshot's per-job sums (list.jobs: d done times, c claims, l lapsed claims) stand in for them. Without them every job looked
+// unfinished and every old one went back on the open list (15 Nov, 19:00–22:10Z: the fleet ran the filler, the queue untouched)
+const lapsedOf = {};
+if (list.jobs) for (const [id, g] of Object.entries(list.jobs)) { done[id] = g.d.length; claims[id] = g.c; lapsedOf[id] = g.l || 0; }
 const jobs = [], finished = [], jdir = path.join(snap, "o/jobs");
 for (const f of fs.existsSync(jdir) ? fs.readdirSync(jdir) : []) {
   const spec = (() => { try { return JSON.parse(fs.readFileSync(path.join(jdir, f), "utf8")); } catch { return null; } })();
@@ -69,7 +74,7 @@ for (const f of fs.existsSync(jdir) ? fs.readdirSync(jdir) : []) {
   const d = done[id] || 0;
   if (d >= spec.shards) { finished.push(id); continue; }
   const c = claims[id] || 0, s = shardMin[id], perHour = s?.n || 0;
-  const lapsed = Object.entries(claimAt[id] || {}).filter(([k, t]) => now - t > LEASE_MS && !doneSet[id]?.has(k)).length;
+  const lapsed = list.jobs ? lapsedOf[id] || 0 : Object.entries(claimAt[id] || {}).filter(([k, t]) => now - t > LEASE_MS && !doneSet[id]?.has(k)).length;
   jobs.push({ id, purpose: (spec.purpose || "").slice(0, 160), shards: spec.shards, done: d, running: Math.max(0, c - d), unclaimed: Math.max(0, spec.shards - c), lapsed,
     shardMin: s ? Math.round(s.sec / s.n / 6) / 10 : null, perHour, etaMin: perHour ? Math.round(60 * (spec.shards - d) / perHour) : null });
 }
