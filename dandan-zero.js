@@ -173,6 +173,8 @@ export function makeZero({ policy = null, qpolicy = null, scry: bnet = null, val
 export const RACE_N = FEATURES.length + 2 * PLUS + 2 * RACE;   // 132: dandan-eval.js featuresRace, as the crowned Monte's value net reads
 export const valueJudge = n => {
   if (!n) return null;
+  // several nets (15 Nov 2026, Korbi: a freebie to try): the mean of their chances, each on its own view
+  if (Array.isArray(n)) { const js = n.map(valueJudge).filter(Boolean); return js.length === 1 ? js[0] : (s, me) => js.reduce((a, j) => a + j(s, me), 0) / js.length; }
   const nIn = n.layers[0].n[0];
   // the extended view face up: from generation 6 over featuresRace (the race inputs, Korbi 11:41), g4x-A's over features
   return nIn === RACE_N + EXT_N ? extJudge(n.layers, featuresRace, RACE_N) : nIn === FEATURES.length + EXT_N ? extJudge(n.layers, features, FEATURES.length) : makeJudge(n.layers);

@@ -23,7 +23,9 @@ export function zeroBrain(policyName, valueName, scryName = null) {
   const opt = Object.fromEntries((scryName || "").split(":").slice(1).map(x => x.split("=")).map(([k, v]) => [k, Number(v)]));
   const bnet = pf ? (pfs ? scryNetOf(policyName) : null) : scryName ? netOf(scryName) : scryNetOf(policyName);
   const filterOf = !pf ? null : (me, scry, tracker) => pfd ? new SlotFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt }) : new HandFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt, ...(pfs && scry ? { prior: (s, x) => scry(s, x, tracker()).slots } : {}) });
-  return makeZero({ policy, qpolicy, scry: bnet, value: netOf(valueName) }, { filterOf, scryAlso: pfs });
+  // "<a>+<b>": the value nets' mean (an ensemble, 15 Nov 2026)
+  const value = valueName && valueName.includes("+") ? valueName.split("+").map(netOf) : netOf(valueName);
+  return makeZero({ policy, qpolicy, scry: bnet, value }, { filterOf, scryAlso: pfs });
 }
 
 /** A net file of Zero's (lab/zero/nets/<name>.json), or null for "-". */
