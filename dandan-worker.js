@@ -6,10 +6,11 @@
 // is only a backstop for a slow one).
 // The game lab (lab.html) adds one field, `engine` (an id of dandan-engines.js): "move" then plays that engine's move (a Hard with
 // the retrained judge, say) and "think" is that engine's weighing, answered as { id, result: { move, chance, list } }. A request
-// with no engine (the live game) is answered by the live engine: Hard with the live judge and the keep net on the first seven
-// (LIVE_ENGINE: S5 + keep net since 13 November 2026, S4 d before it, v14 before that: each beat the one before it in its match).
+// with no engine (the live game) is answered by the live engine (LIVE_ENGINE: Monte Scry Zero since 15 November 2026, which needs
+// the game record, `game`, for its Scry; Hard with S5 + keep net before it, S4 d before that, v14 before that). The coach's
+// weighing (think, check) and the review stay Hard with the live judge (S5).
 import { think, thinkMove, coachBudget, BUDGET, DEPTH } from "./dandan-think.js";
-import { engineOf, engineMove, decide, judgeOf, keepNet, LIVE_JUDGE } from "./dandan-engines.js";
+import { engineOf, engineMove, decide, judgeOf, keepNet, LIVE_JUDGE, LIVE_ENGINE } from "./dandan-engines.js";
 import { shownRules } from "./dandan-rules.js";
 import { newRecord, applyMove } from "./seats.js";
 import { flawAt } from "./dandan-flaws.js";
@@ -59,6 +60,12 @@ onmessage = async e => {
       if (kind === "move") postMessage({ id, move: await engineMove(eng, state, seat, DEPTH[depth] || BUDGET.move, undefined, game) });
       else postMessage({ id, result: await decide(eng, state, seat, { budget: coachBudget(kind, depth), must: kind === "check" ? move : null, game }) });
       return;
+    }
+    // Monte's move: the live engine (Monte Scry Zero since 15 Nov 2026), its Scry following the game record the page sends
+    const live = engineOf(LIVE_ENGINE);
+    if (kind === "move" && live?.kind === "zero") {
+      try { return postMessage({ id, move: await engineMove(live, state, seat, DEPTH[depth] || BUDGET.move, undefined, game) }); }
+      catch { /* its nets would not load (offline before they were kept): Hard plays the move, as below */ }
     }
     const judge = await judgeOf({ judge: LIVE_JUDGE }).catch(() => undefined);   // no file (offline, a fetch failed): the game's own
     const knet = kind === "move" ? await keepNet().catch(() => undefined) : undefined;   // no file: Medium's keep, as before

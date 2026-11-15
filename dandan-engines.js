@@ -30,11 +30,12 @@ export const JUDGES = {
   "avg-jt130-s3c": ["./judges/jt130.json", "./judges/s3c.json"],
   "avg-jt130-s4d": ["./judges/jt130.json", "./judges/s4d.json"],
 };
-/** The engine the live game's Hard plays (dandan-worker.js, a request with no engine), and its judge.
- *  S5 + the keep net since 13 November 2026, 21:30Z (Korbi: deploy the current best; its Deep gate against S4 d with Medium's
- *  keep, 54.3% ± 2.5 over 1,195 of 1,200 pairs, 99% range 51.8 to 56.8). S4 d from 12 November (57.7% ± 3.5 against v14 at
- *  Deep), v14 before it. */
-export const LIVE_ENGINE = "hard-s5-knet";
+/** The engine Monte plays in the live game (dandan-worker.js, a request with no engine), and the judge of the live game's coach
+ *  and its end-of-game review. Monte Scry Zero since 15 November 2026, 16:48Z (Korbi: "replace Monte in the standard app",
+ *  after playing it in the lab; its Deep match against the benchmark 62.2%, 99% range 55.6 to 68.7, over 181 of 200 pairs, no
+ *  crown test yet). Before it, Hard with S5 + the keep net from 13 November (its Deep gate against S4 d with Medium's keep,
+ *  54.3% ± 2.5 over 1,195 of 1,200 pairs), S4 d from 12 November, v14 before that. The coach and the review stay Hard with S5. */
+export const LIVE_ENGINE = "zero-g9x";
 export const LIVE_JUDGE = "s5";
 
 export const ENGINES = [
@@ -90,7 +91,7 @@ export const ENGINES = [
     expect: "Against Hard with v14, both at Deep (1,024 deals): 57.6% ± 3.6 after 575 of 600 deals played both ways, and above 50% even if it lost every deal still to come: CROWNED (12 November). At Quick: 54.6% ± 2.6 over 1,000. Predicts results best of all (Brier 0.143 against v14's 0.155 on held-out games). About 1.3× v14's thinking time a decision. The live game's Hard from 12 to 13 November 2026.",
   },
   {
-    id: "hard-s5-knet", name: "Hard (S5 + keep net): live", short: "Live", kind: "hard", tag: "What the live game plays: Hard with value net S5 and the keep net on the first seven.", judge: "s5", knet: true, available: true,
+    id: "hard-s5-knet", name: "Hard (S5 + keep net)", short: "Hard S5", kind: "hard", tag: "The live game's Monte from 13 to 15 November 2026, and still its coach: Hard with value net S5 and the keep net on the first seven.", judge: "s5", knet: true, available: true,
     description: "The lab's benchmark since 13 November 2026 (keep net from 18:30Z, Korbi): Hard with value net S5 (judges/s5.json: S4 d's recipe with the race inputs) and the keep net on the first seven (judges/keep-net.json: a small network trained on real results that rates a seven by its cards and the seat; a seven Medium throws back still goes back, one Medium keeps goes back when the net rates it under the redraw value, 49.9% on the play, 49.0% on the draw). Every later keep and the bottom cards are Medium's. The live game's Hard since 13 November 2026, 21:30Z (Korbi).",
     expect: "With S5 on both sides at Quick: the keep net against Medium's keep 52.0% ± 1.2 over 3,660 pairs; against the value keep +1.1 ± 1.2 on the same deals; the value table after the first seven (the hybrid) costs 1.4 ± 0.8. S5 against S4 d at Quick: 51.8% ± 1.8; S5 + value keep against live 52.1% ± 1.2 over 5,000. Its Deep gate against S4 d with Medium's keep, both at Deep (1,024 deals, every legal move): 54.3% ± 2.5 over 1,195 of 1,200 pairs (99%: 51.8 to 56.8), the same thinking time: it went live on that.",
   },
@@ -100,8 +101,8 @@ export const ENGINES = [
     expect: "Against the live Hard (Medium in the look-aheads), Quick, 2,000 pairs: 49.1% (99%: 47.3 to 51.0), its side thinking 1.08 times as long: the swap bar (49% and at most 1.2 times) is met. Alone against Medium, no search: 49.2% over 20,000 pairs.",
   },
   {
-    id: "zero-g9x", name: "Monte Scry Zero (generation 10's engine)", short: "Zero", kind: "zero", tag: "The from-scratch line: its own Scry, policy and value nets, no Medium inside; 61.7% against the benchmark at Deep, not crown-tested.", nets: "g9x-C", deeper: 0.03, available: true,
-    description: "The from-scratch line (lab, 14–15 November 2026): nothing of Medium inside. Its options are every legal move and passing; its look-aheads are played by its own policy net (g9x-C, 654 inputs: the position as its seat sees it and Scry's estimate of the other hand) and its questions by its own question head; the hidden cards are dealt by Scry, a net that follows the other player's play and gives each unseen card in their hand its own chance of every name; positions are judged by its own value net (both hands face up). Close calls (the best two within 3 points) are weighed again three turns ahead instead of two (Korbi's variable look-ahead). Its nets are read from the lab's folder the first time it plays, about 2 MB, so it needs a connection then.",
+    id: "zero-g9x", name: "Monte Scry Zero: live", short: "Zero", kind: "zero", tag: "What the live game plays since 15 November 2026: the from-scratch line, its own Scry, policy and value nets, no Medium inside; 62.2% against the benchmark at Deep, not crown-tested.", nets: "g9x-C", deeper: 0.03, available: true,
+    description: "The from-scratch line (lab, 14–15 November 2026): nothing of Medium inside. Its options are every legal move and passing; its look-aheads are played by its own policy net (g9x-C, 654 inputs: the position as its seat sees it and Scry's estimate of the other hand) and its questions by its own question head; the hidden cards are dealt by Scry, a net that follows the other player's play and gives each unseen card in their hand its own chance of every name; positions are judged by its own value net (both hands face up). Close calls (the best two within 3 points) are weighed again three turns ahead instead of two (Korbi's variable look-ahead). Its nets (about 2 MB) ship with the app and are kept offline.",
     expect: "Against the lab's benchmark (the live Hard with a Medium-free look-ahead, within a point of the live Hard), both at Deep: 61.7% (99%: 55.0 to 68.5) over 175 of 200 pairs (lab job az-yd9-c); at Quick 59.0% over 200. Not crown-tested yet (1,200 pairs at Deep) and never at Deepest. It thinks about 1.5 to 2 times as long as Hard a deal: its nets are larger than Hard's.",
   },
   {
@@ -166,15 +167,15 @@ let keepNetP = null;
 export const keepNet = (load = fetchJson) => (keepNetP ||= load(new URL("./judges/keep-net.json", import.meta.url).href));
 
 // ---------- Monte Scry Zero (kind "zero"; 15 Nov 2026, Korbi 16:21: Zero in the game lab) ----------
-// Its nets live in the lab's folder (lab/zero/nets/<nets>-policy, -qpolicy, -scry, -value.json), read the first time it plays,
-// not kept offline (the lab only). Scry follows the whole game, so a request carries the game record (`game`: seed, seq,
+// Its nets ship with the app (judges/zero-<nets>-policy, -qpolicy, -scry, -value.json: copies of lab/zero/nets/), kept offline
+// like the judges, read the first time it plays. Scry follows the whole game, so a request carries the game record (`game`: seed, seq,
 // options, started, first, moves) and the brain is caught up on the moves since it last saw this game, replayed as the page
 // plays them (shownRules).
 const zeroP = new Map();
 async function zeroOf(engine, load = fetchJson) {
   if (!zeroP.has(engine.id)) zeroP.set(engine.id, (async () => {
     const [{ makeZero }, nets] = await Promise.all([import("./dandan-zero.js"),
-      Promise.all(["policy", "qpolicy", "scry", "value"].map(k => load(new URL(`./lab/zero/nets/${engine.nets}-${k}.json`, import.meta.url).href)))]);
+      Promise.all(["policy", "qpolicy", "scry", "value"].map(k => load(new URL(`./judges/zero-${engine.nets}-${k}.json`, import.meta.url).href)))]);
     const [policy, qpolicy, scry, value] = nets;
     return { brain: makeZero({ policy, qpolicy, scry, value }), game: null, G: null, at: 0 };
   })());
@@ -205,7 +206,8 @@ async function zeroThink(engine, s, seat, { budget = {}, must = null, load, game
   const brain = await zeroAt(engine, game, load), { zeroOptions } = await import("./dandan-zero.js");
   const ms = zeroOptions(s, seat);
   if (ms.length <= 1) return { best: ms[0] ?? PASS, list: [], only: true };
-  return brain.think(s, seat, budget.deals || 64, { ...(engine.deeper ? { deeper: { gap: engine.deeper } } : {}), ...(must ? { must } : {}) });
+  // the budget's time backstop as Hard's (Deep 40 s, Deepest 120 s): a slow phone stops there, each look of a close call its own
+  return brain.think(s, seat, budget.deals || 64, { ...(budget.ms ? { ms: budget.ms } : {}), ...(engine.deeper ? { deeper: { gap: engine.deeper } } : {}), ...(must ? { must } : {}) });
 }
 
 // ---------- asking an engine ----------
