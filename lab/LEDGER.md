@@ -866,3 +866,6 @@ ch.vs1.2xlarge-dfw at $0.035 (was $0.01) with our 7: 0cfd35a6 7->3, back to $0.0
 ch.vs1.2xlarge at $0.035 in iad, ord and dfw at once (was $0.01). Cut Chicago 48a8e737 22->12, US East K8s e7f00bce 6->3 + VMs a2b0e1bf 5->3, Dallas 0cfd35a6 3->1. After 2.5 min iad and ord back to $0.01; dfw still $0.035 (1 machine; pool can't go lower).
 Fleet 98% busy, 2,364 waiting (fleet summary counts look fixed). Rackspace month est ~$82.5, burn ~$1.35/h after the cuts.
 - 23:10Z Freebies 3 and 4 flat: **az-gap2** (gap 0.02 against 0.03) 49.7% (45.6 to 53.9) over 388; **az-ens9** (value nets' mean) 51.3% (46.9 to 55.6) over 352: 0.03 and a single value net stay. az-x10-c final 48.7% (44.9 to 52.5) over 500. az-yd10-c 58.7% (51.6 to 65.8) over 172. az-dd9 51.6% over 31; az-pf10 18.8% over 8 (early). g10w-C still training.
+
+## 2026-11-15 23:53Z ops: US East 16c lifted again
+ch.vs1.2xlarge-iad back at $0.035 with our 6: K8s e7f00bce 3->1, VMs a2b0e1bf 3->1 (the floor). Queue nearly drained: 225 waiting, 99% busy, 160 machines. Rackspace month est ~$83.4.
