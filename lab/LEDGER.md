@@ -861,3 +861,7 @@ Rackspace month est ~$80 (console $65.07 at 10:52Z): growth stops here per the <
 ## 2026-11-15 22:16Z ops: Dallas 16c market lifted
 ch.vs1.2xlarge-dfw at $0.035 (was $0.01) with our 7: 0cfd35a6 7->3, back to $0.01 (Dallas ceiling 3, as on 13 Nov). Fleet 98% busy, ~7,800 real waiting; no growth (Rackspace month est ~$81).
 - 22:48Z Queued **az-pf10** (Korbi 00:47: one belief system, the same hands tracked and dealt): Scry 2d (2,000 hands, struck and replaced at every action, dealt into the look-aheads) against Scry 1 on the live engine, 400 pairs. Local pair at 4 deals and 100 hands clean. Next if it holds level or better: the fused filter, its hands weighted also by Scry 1's chance of each.
+
+## 2026-11-15 23:08Z ops: US 16-core markets lifted together
+ch.vs1.2xlarge at $0.035 in iad, ord and dfw at once (was $0.01). Cut Chicago 48a8e737 22->12, US East K8s e7f00bce 6->3 + VMs a2b0e1bf 5->3, Dallas 0cfd35a6 3->1. After 2.5 min iad and ord back to $0.01; dfw still $0.035 (1 machine; pool can't go lower).
+Fleet 98% busy, 2,364 waiting (fleet summary counts look fixed). Rackspace month est ~$82.5, burn ~$1.35/h after the cuts.
