@@ -1,0 +1,1 @@
+{"id": "az-yd8-c", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g8x-C-value~g8x-C-policy hard-knet+free~mpN6416:s5.json 1024 200 996000", "shards": 200, "timeoutMin": 600, "purpose": "Generation 9 against the crowned Monte at Deep (1,024 deals both), 200 pairs on seeds 996000 (the same deals as generation 8's az-yd7-c); a 10-hour limit for the longest games"}

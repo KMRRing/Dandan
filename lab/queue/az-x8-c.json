@@ -1,0 +1,1 @@
+{"id": "az-x8-c", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g8x-C-value~g8x-C-policy zero~g7x-C-value~g7x-C-policy 64 500 985000", "shards": 100, "timeoutMin": 120, "purpose": "Generation against generation: generation 9's engine against generation 8's, Quick, 500 pairs"}
