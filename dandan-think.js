@@ -423,21 +423,28 @@ function where(c, seat) {
 const EARLY = 16;
 /**
  * think, and on a close call a second look further ahead (lab, 15 Nov 2026, Korbi: "3 turn look ahead when the decision isn't
- * clear"): `deeper` { gap, k = 2, turns = turns + 1 }: when the best two moves still in the race are within `gap` of each
- * other, the best k are weighed again, alone, `turns` ahead in the same deals, and that look decides between them. Their
- * means in `list` become the deeper look's; the other moves keep the first look's. Without `deeper`, think as it was.
+ * clear"): `deeper` { gap, k = 2, turns = turns + 1, max = turns }: when the best two moves still in the race are within `gap` of
+ * each other, the best k are weighed again, alone, `turns` ahead in the same deals, and that look decides between them; while
+ * they stay that close, again a turn further each time, up to `max` (Korbi 14:14: "even deeper if it continues to be a close
+ * call, up to 5"). Their means in `list` become the last look's; the other moves keep the first look's. Without `deeper`, think
+ * as it was.
  */
 export function think(s, seat, opts = {}) {
   const r = thinkOnce(s, seat, opts), dp = opts.deeper;
   if (!dp || r.only) return r;
-  const top = r.list.filter(c => !c.out).sort((a, b) => b.mean - a.mean).slice(0, dp.k || 2);
+  let top = r.list.filter(c => !c.out).sort((a, b) => b.mean - a.mean).slice(0, dp.k || 2);
   if (top.length < 2 || top[0].mean - top[1].mean >= dp.gap) return r;
-  const keys = new Set(top.map(c => key(c.move)));
-  const r2 = thinkOnce(s, seat, { ...opts, pick: keys, turns: dp.turns ?? (opts.turns ?? 2) + 1 });
+  const keys = new Set(top.map(c => key(c.move))), first = dp.turns ?? (opts.turns ?? 2) + 1, max = Math.max(first, dp.max ?? first);
+  let r2 = null, looks = 0;
+  for (let t = first; t <= max; t++) {
+    r2 = thinkOnce(s, seat, { ...opts, pick: keys, turns: t }); looks++;
+    const v = r2.list.map(c => c.mean).sort((a, b) => b - a);
+    if (r2.only || v.length < 2 || v[0] - v[1] >= dp.gap) break;
+  }
   const by = new Map(r2.list.map(c => [key(c.move), c]));
   const list = r.list.map(c => (by.has(key(c.move)) ? { ...c, mean: by.get(key(c.move)).mean, se: by.get(key(c.move)).se, n: by.get(key(c.move)).n } : c));
   const best = list.find(c => key(c.move) === key(r2.best));
-  return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && keys.has(key(c.move))).sort((a, b) => b.mean - a.mean), ...list.filter(c => !keys.has(key(c.move)))], deeper: true };
+  return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && keys.has(key(c.move))).sort((a, b) => b.mean - a.mean), ...list.filter(c => !keys.has(key(c.move)))], deeper: looks };
 }
 function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
   const t0 = Date.now();

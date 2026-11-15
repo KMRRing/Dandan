@@ -52,9 +52,9 @@ async function side(spec) {
     // how far each look-ahead runs, 2 by default; shorter is cheaper now the value net is better)
     const [, v, pol, ...flags] = spec.split("~"), open = flags.includes("open"), Z = await import("./zero/zero-lib.mjs");
     const scryFlag = flags.find(x => x.startsWith("scry=")), turnsFlag = flags.find(x => x.startsWith("turns="));
-    // "deeper=<gap>[:<turns>]": close calls weighed again, three turns ahead (dandan-think.js); ":2", the control: the second look
-    // at the same depth, so only the extra deals differ
-    const deeperFlag = flags.find(x => x.startsWith("deeper=")), deeperOf = f => { const [g, t] = f.split(":").map(Number); return { gap: g, ...(t ? { turns: t } : {}) }; };
+    // "deeper=<gap>[:<turns>[:<max>]]": close calls weighed again, three turns ahead (dandan-think.js); ":2", the control: the
+    // second look at the same depth, so only the extra deals differ; ":3:5", a turn further while still close, up to five
+    const deeperFlag = flags.find(x => x.startsWith("deeper=")), deeperOf = f => { const [g, t, m] = f.split(":").map(Number); return { gap: g, ...(t ? { turns: t } : {}), ...(m ? { max: m } : {}) }; };
     const brain = Z.zeroBrain(pol, v, scryFlag ? scryFlag.slice(5) : null), extra = { open, ...(turnsFlag ? { turns: Number(turnsFlag.slice(6)) } : {}), ...(deeperFlag ? { deeper: deeperOf(deeperFlag.slice(7)) } : {}) };
     const f = (s, seat) => {
       const ms = Z.zeroOptions(s, seat);
