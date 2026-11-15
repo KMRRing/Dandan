@@ -1,0 +1,1 @@
+{"id": "az-g11-c", "script": "zero-play.mjs", "args": "{shard} {shards} {out} 256 4800 151000000 g10x-C-policy g10x-C-value 400 deeper=0.03", "shards": 1200, "timeoutMin": 300, "purpose": "Monte Scry Zero generation 11 (C): g10x-C's nets (generations 9\u201310, 18,990 games) with the variable look-ahead (deeper=0.03); 256 deals, 4,800 games, explore3 1 in 400"}
