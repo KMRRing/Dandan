@@ -7,11 +7,12 @@ kept; the pool's odds alone measured too; and the land check Korbi asked for: ho
 the unknown cards is called (Brier score, against the pool's odds). Written as { H, Wg, Ws, b1, W2, b2 } for scryOf.
 usage: python3 lab/zero/scry_np.py <packed folder (replay-pack.mjs scry: <dir>/b)> <out> [--h 64] [--epochs 6] [--lr 1e-3]
 """
-import argparse, json, os, time
+import argparse, json, os, sys, time
 import numpy as np
 
 ap = argparse.ArgumentParser()
 ap.add_argument("dir"); ap.add_argument("out")
+ap.add_argument("--init", default="")  # warm start from a Scry net of the same sizes (15 Nov 2026)
 ap.add_argument("--h", type=int, default=64); ap.add_argument("--epochs", type=int, default=6)
 ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--batch", type=int, default=256); ap.add_argument("--seed", type=int, default=1)
 A = ap.parse_args()
@@ -31,6 +32,10 @@ sh = HOLD[SR]; tr, he = np.flatnonzero(~sh), np.flatnonzero(sh)
 rng = np.random.default_rng(A.seed)
 P = dict(Wg=rng.normal(0, np.sqrt(2 / BX), (BX, A.h)).astype(np.float32), Ws=rng.normal(0, np.sqrt(2 / SN), (SN, A.h)).astype(np.float32),
          b1=np.zeros(A.h, np.float32), W2=np.zeros((A.h, NN), np.float32), b2=np.zeros(NN, np.float32))
+if A.init:
+    S0 = json.loads(open(A.init).readline())
+    if (S0["H"], S0["BX"], S0["SLOT_N"], S0["NN"]) != (A.h, BX, SN, NN): sys.exit(f"--init {A.init}: sizes differ")
+    for k in P: P[k] = np.asarray(S0[k], np.float32).reshape(P[k].shape)
 M = {k: np.zeros_like(v) for k, v in P.items()}; Vv = {k: np.zeros_like(v) for k, v in P.items()}
 say(f"{R} positions, {S} unknown cards ({len(tr)} training, {len(he)} held out), {BX} + {SN} inputs, {NN} names, hidden {A.h}")
 
@@ -60,6 +65,7 @@ def measure(idx, P, prior=False):
 prior, pbr = measure(he, P, True)
 best, bbr = measure(he, P); bestP = {k: v.copy() for k, v in P.items()}; t = 0
 say(f"the pool's odds alone: held-out loss {prior:.4f} a card; two-or-more-lands Brier {pbr:.4f}")
+if A.init: say(f"before training (from {os.path.basename(A.init)}): held-out loss {best:.4f} a card; two-or-more-lands Brier {bbr:.4f}")
 for e in range(1, A.epochs + 1):
     order = rng.permutation(tr)
     for s in range(0, len(order), A.batch):

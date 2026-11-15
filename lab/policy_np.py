@@ -18,7 +18,7 @@ The model is written as one JSON line that dandan-netpolicy.js makePlus plays (m
 usage: python3 lab/policy_np.py <packed folder> <out> [--form mlp|head] [--h1 128] [--h2 64] [--epochs 6] [--lr 1e-3]
        [--batch 64] [--seed 1] [--light 1] [--decay 1]
 """
-import argparse, json, os, time
+import argparse, json, os, sys, time
 
 import numpy as np
 
@@ -33,6 +33,9 @@ ap.add_argument("--light", type=float, default=1.0)  # the weight of a decision 
 # soft targets (15 Nov 2026, Korbi 10:45, as AlphaZero): learn the search's whole spread, softmax(q / soft) over the candidates'
 # searched values, not only its top move; 0 = the top move alone
 ap.add_argument("--soft", type=float, default=0.0)
+# warm start (15 Nov 2026, Korbi: "very significant"): begin from a trained net of the same form and sizes instead of from random,
+# as AlphaGo Zero and AlphaZero never reset theirs; the held-out loss before training is the bar, so it never comes out worse there
+ap.add_argument("--init", default="")
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 MOVE_N = 80
@@ -79,6 +82,10 @@ if A.form == "mlp":   # policy-train.mjs's start: w3 at zero
 else:
     P = dict(W1=U((XN, H1), np.sqrt(6 / XN)), c1=np.zeros(H1), W2=U((H1, H2), np.sqrt(6 / H1)), c2=np.zeros(H2),
              E=U((MOVE_N, H2), 0.05), eb=np.zeros(MOVE_N))
+if A.init:
+    net0 = json.load(open(A.init))["net"]
+    if (net0["XN"], net0["H1"], net0["H2"]) != (XN, H1, H2): sys.exit(f"--init {A.init}: sizes {net0['XN']}·{net0['H1']}·{net0['H2']}, not {XN}·{H1}·{H2}")
+    for k in P: P[k] = np.asarray(net0[k], dtype=P[k].dtype).reshape(P[k].shape)
 M = {k: np.zeros_like(v) for k, v in P.items()}
 V = {k: np.zeros_like(v) for k, v in P.items()}
 

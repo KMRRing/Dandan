@@ -5,13 +5,14 @@ after each epoch, the best epoch kept. Written in dandan-eval.js's layer format 
 makeJudge reads it.
 usage: python3 lab/zero/value_np.py <packed folder> <out> [--shape 64x32] [--epochs 8] [--lr 1e-3] [--seed 1] [--wd 0]
 """
-import argparse, base64, json, os, time
+import argparse, base64, json, os, sys, time
 import numpy as np
 
 ap = argparse.ArgumentParser()
 ap.add_argument("dir"); ap.add_argument("out")
 ap.add_argument("--shape", default="64x32"); ap.add_argument("--epochs", type=int, default=8)
 ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--seed", type=int, default=1); ap.add_argument("--batch", type=int, default=256)
+ap.add_argument("--init", default="")  # warm start from a value net of the same shape (15 Nov 2026), its int8 weights read back
 ap.add_argument("--wd", type=float, default=0.0)  # decoupled weight decay a step (14 Nov: the face-up net overfits from epoch 2)
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
@@ -22,6 +23,11 @@ tr, he = np.flatnonzero(~H), np.flatnonzero(H)
 sizes = [N] + [int(x) for x in A.shape.split("x")] + [1]
 rng = np.random.default_rng(A.seed)
 W = [rng.normal(0, np.sqrt(2 / a), (a, b)) for a, b in zip(sizes[:-1], sizes[1:])]; B = [np.zeros(b) for b in sizes[1:]]
+if A.init:
+    L0 = json.load(open(A.init))["layers"]
+    if [l["n"] for l in L0] != [[a, b] for a, b in zip(sizes[:-1], sizes[1:])]: sys.exit(f"--init {A.init}: layers {[l['n'] for l in L0]}, not the shape {sizes}")
+    W = [np.frombuffer(base64.b64decode(l["q"]), np.int8).reshape(l["n"]).astype(np.float64) * np.asarray(l["s"]) for l in L0]
+    B = [np.asarray(l["b"], np.float64) if l["b"] else np.zeros(l["n"][1]) for l in L0]
 mW = [np.zeros_like(w) for w in W]; vW = [np.zeros_like(w) for w in W]; mB = [np.zeros_like(b) for b in B]; vB = [np.zeros_like(b) for b in B]
 say(f"{R} rows ({len(tr)} training, {len(he)} held out), {N} inputs, shape {A.shape}")
 
