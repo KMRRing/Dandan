@@ -825,3 +825,4 @@ Hong Kong rebuild not done: GitHub Actions secrets API is blocked from here, so 
 Trimmed where the restore lifted markets: US East gp 2xl c3bd10fc 6->4 ($0.04 now, was $0.01); Chicago 2c 8b47d1d2 12->6 ($0.006, was $0.001).
 Note for exec: since caffc90cd (12:02Z) fleet summary shows done=1 for every job (~216k "waiting"); reporting bug, queue fine.
 Rackspace month est ~$67 (console $65.07 at 10:52Z); burn ~$1.35/h.
+- 13:33Z Korbi 13:32: crown test and deployment wait until generation 10 is finished and the look-ahead question (az-t3, az-t3v) is settled; then the 1,200–2,000-pair Deep crown test of the best engine, and the port to the app.
