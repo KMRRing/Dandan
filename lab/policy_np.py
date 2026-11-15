@@ -30,6 +30,9 @@ ap.add_argument("--epochs", type=int, default=6); ap.add_argument("--lr", type=f
 ap.add_argument("--batch", type=int, default=64); ap.add_argument("--seed", type=int, default=1)
 ap.add_argument("--decay", type=float, default=1.0)  # the learning rate times this after each epoch (14 Nov: longer trainings)
 ap.add_argument("--light", type=float, default=1.0)  # the weight of a decision that is not Deep (No. 7 point 7: 0.3); Deep ones 1
+# soft targets (15 Nov 2026, Korbi 10:45, as AlphaZero): learn the search's whole spread, softmax(q / soft) over the candidates'
+# searched values, not only its top move; 0 = the top move alone
+ap.add_argument("--soft", type=float, default=0.0)
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 MOVE_N = 80
@@ -108,8 +111,13 @@ def step(g, t):
     p = softmax(f, g)
     n = len(g["idx"])
     w = WEIGHT[g["idx"]]
-    loss = -(w * np.log(p[g["target"]] + 1e-12)).sum()
-    df = p.copy(); df[g["target"]] -= 1; df *= w[g["dec"]] / n
+    if A.soft > 0:
+        pi = softmax(Q[g["cid"]] / A.soft, g)
+        loss = -(w[g["dec"]] * pi * np.log(p + 1e-12)).sum()
+        df = (p - pi) * w[g["dec"]] / n
+    else:
+        loss = -(w * np.log(p[g["target"]] + 1e-12)).sum()
+        df = p.copy(); df[g["target"]] -= 1; df *= w[g["dec"]] / n
     G = {}
     if A.form == "mlp":
         G["w3"] = c["h2"].T @ df

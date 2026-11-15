@@ -18,6 +18,8 @@ import { viewOf } from "../../dandan-netpolicy.js";
 import { NN, Tracker, scryInput, scryOf, seenBy, ext, handCounts, extValueRow, BX, SLOT_N, unknownSlots } from "./zero-view.mjs";
 import { DECK, NAMES } from "../../dandan-cards.js";
 
+// PKEEP / VKEEP (env): the share of decisions / value rows kept (15 Nov: three generations would not fit the runner whole)
+const PKEEP = Number(process.env.PKEEP || 1), VKEEP = Number(process.env.VKEEP || 1);
 const [dir, ids, mode, bfile] = process.argv.slice(2), EVERY = 6, N = FEATURES.length + 2 * PLUS + 2 * RACE,   // the value rows over featuresRace (the race inputs) from generation 6
   SH = Number(process.argv[6] || 0), SHS = Number(process.argv[7] || 1);
 const scry = mode === "train" ? scryOf(bfile && bfile !== "-" ? JSON.parse(fs.readFileSync(bfile, "utf8").split("\n")[0]) : null) : null;
@@ -64,7 +66,7 @@ function replay(game, decisions) {
     // also one position with priority in three besides, so a game gives several times the rows
     const turnStart = s.turn !== lastTurn && !s.pending;
     if (turnStart) lastTurn = s.turn;
-    if (V && !s.pending && (turnStart || seeded(mix(seed, 4242 + i))() < 1 / 3)) {
+    if (V && !s.pending && (turnStart || seeded(mix(seed, 4242 + i))() < 1 / 3) && (VKEEP >= 1 || seeded(mix(seed, 5151 + i))() < VKEEP)) {
       if (x3 != null && i <= x3) skipped += 2;
       else {
         const [r0, r1] = extValueRow(s, featuresRace, N);
@@ -73,7 +75,7 @@ function replay(game, decisions) {
       }
     }
     for (const d of decisions.get(i) || []) {
-      if (d.seat !== who) continue;
+      if (d.seat !== who || (PKEEP < 1 && seeded(mix(seed, 6161 + i))() >= PKEEP)) continue;
       const b = scry(s, who, T), x = [...viewOf(s, who), ...ext(s, who, b.counts, undefined, null, b.any)];
       if (d.qd) putDecision("q", d, x); else if (d.every) putDecision("p", d, x);
     }

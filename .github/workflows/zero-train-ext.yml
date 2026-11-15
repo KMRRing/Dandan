@@ -9,13 +9,12 @@ on:
       games: { description: "Zero game jobs to learn from, comma-separated", required: true }
       name: { description: "Name of the nets", required: true }
       value: { description: "Value net shape", required: true, default: "64x32" }
-      h1: { description: "Policy first layer", required: true, default: "128" }
-      h2: { description: "Policy second layer", required: true, default: "64" }
-      epochs: { description: "Policy epochs", required: true, default: "8" }
       sh: { description: "Scry hidden layer", required: true, default: "64" }
       scry_games: { description: "Games for Scry (default: the same games)", required: false, default: "" }
       parts: { description: "all, or value (the value net only, with the Scry already in lab/zero/nets/<name>-scry.json)", required: false, default: "all" }
       value_out: { description: "The value net's file name (default <name>-value)", required: false, default: "" }
+      policy_args: { description: "More policy_np.py arguments, after --h1 128 --h2 64 --epochs 8 (e.g. --soft 0.02: the search's whole spread)", required: false, default: "" }
+      keep: { description: "Share of decisions and value rows kept in the train replay (three generations: 0.6)", required: false, default: "1" }
       value_args: { description: "More value_np.py arguments", required: false, default: "--lr 3e-4 --wd 0.1" }
 permissions:
   contents: write
@@ -47,12 +46,16 @@ jobs:
           python3 lab/zero/scry_np.py "${D}0/b,${D}1/b,${D}2/b,${D}3/b" "lab/zero/nets/$N-scry.json" --h "${{ inputs.sh }}" | tee -a "$RUNNER_TEMP/log.txt"
           rm -rf "$D"?/
           fi
-          LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "$D" "${{ inputs.games }}" train "lab/zero/nets/$N-scry.json" | tee -a "$GITHUB_STEP_SUMMARY"
+          # the train-mode replay four side by side too (three generations, Korbi 15 Nov 10:45, are too many for one in six hours), merged
+          for k in 0 1 2 3; do PKEEP="${{ inputs.keep }}" VKEEP="${{ inputs.keep }}" LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "${D}t$k" "${{ inputs.games }}" train "lab/zero/nets/$N-scry.json" $k 4 > "$RUNNER_TEMP/t$k.txt" & done; wait
+          tail -n 1 "$RUNNER_TEMP"/t?.txt | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 lab/zero/pack-merge.py "$D" "${D}t0" "${D}t1" "${D}t2" "${D}t3" | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -rf "${D}"t?/
           rm -f "$RUNNER_TEMP/key.json"
           python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$VO.json" --shape "${{ inputs.value }}" ${{ inputs.value_args }} | tee -a "$RUNNER_TEMP/log.txt"
           [ "$P" = all ] || { { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; exit 0; }
-          python3 lab/policy_np.py "$D/p" "lab/zero/nets/$N-policy.json" --form head --h1 "${{ inputs.h1 }}" --h2 "${{ inputs.h2 }}" --epochs "${{ inputs.epochs }}" --decay 0.9 | tee -a "$RUNNER_TEMP/log.txt"
-          python3 lab/policy_np.py "$D/q" "lab/zero/nets/$N-qpolicy.json" --form head --h1 "${{ inputs.h1 }}" --h2 "${{ inputs.h2 }}" --epochs "${{ inputs.epochs }}" --decay 0.9 | tee -a "$RUNNER_TEMP/log.txt"
+          python3 lab/policy_np.py "$D/p" "lab/zero/nets/$N-policy.json" --form head --h1 128 --h2 64 --epochs 8 --decay 0.9 ${{ inputs.policy_args }} | tee -a "$RUNNER_TEMP/log.txt"
+          python3 lab/policy_np.py "$D/q" "lab/zero/nets/$N-qpolicy.json" --form head --h1 128 --h2 64 --epochs 8 --decay 0.9 ${{ inputs.policy_args }} | tee -a "$RUNNER_TEMP/log.txt"
           { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the nets
         run: |
