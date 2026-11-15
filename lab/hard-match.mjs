@@ -48,12 +48,15 @@ async function side(spec) {
   // 2026, Korbi 10:04, the oracle): the other hand dealt as it really is (determinize open), only the library's order guessed:
   // the most any read of the hand can buy the search
   if (spec.startsWith("zero~")) {
-    // a fourth part: "open" (the oracle), or "scry=<net>" (the swap matches: that Scry deals the hidden cards, whatever the policy)
-    const [, v, pol, flag] = spec.split("~"), open = flag === "open", Z = await import("./zero/zero-lib.mjs"), brain = Z.zeroBrain(pol, v, flag?.startsWith("scry=") ? flag.slice(5) : null);
+    // more parts: "open" (the oracle), "scry=<net>" (the swap matches: that Scry deals the hidden cards), "turns=<n>" (15 Nov 2026:
+    // how far each look-ahead runs, 2 by default; shorter is cheaper now the value net is better)
+    const [, v, pol, ...flags] = spec.split("~"), open = flags.includes("open"), Z = await import("./zero/zero-lib.mjs");
+    const scryFlag = flags.find(x => x.startsWith("scry=")), turnsFlag = flags.find(x => x.startsWith("turns="));
+    const brain = Z.zeroBrain(pol, v, scryFlag ? scryFlag.slice(5) : null), extra = { open, ...(turnsFlag ? { turns: Number(turnsFlag.slice(6)) } : {}) };
     const f = (s, seat) => {
       const ms = Z.zeroOptions(s, seat);
       if (ms.length <= 1) return { move: ms[0] ?? Z.PASS, off: false };
-      return { move: brain.think(s, seat, deals, { open }).best, off: false };
+      return { move: brain.think(s, seat, deals, extra).best, off: false };
     };
     return Object.assign(f, { reset: () => brain.reset(), seen: (...a) => brain.seen(...a) });
   }
