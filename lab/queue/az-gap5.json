@@ -1,0 +1,1 @@
+{"id": "az-gap5", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g9x-C-value~g9x-C-policy~deeper=0.05 zero~g9x-C-value~g9x-C-policy~deeper=0.03 64 400 993000", "shards": 100, "timeoutMin": 150, "purpose": "The close-call gap: 0.05 (more decisions looked at three turns ahead) against 0.03, generation 10's engine, Quick, 400 pairs"}
