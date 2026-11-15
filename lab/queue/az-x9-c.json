@@ -1,0 +1,1 @@
+{"id": "az-x9-c", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g9x-C-value~g9x-C-policy zero~g8x-C-value~g8x-C-policy 64 500 985000", "shards": 100, "timeoutMin": 120, "purpose": "Generation against generation, nets only (both plain two-turn look-aheads): g9x-C against g8x-C, Quick, 500 pairs"}

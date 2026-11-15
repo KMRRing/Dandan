@@ -1,0 +1,1 @@
+{"id": "az-y9-c-e", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g9x-C-value~g9x-C-policy~deeper=0.03 hard-knet+free~mpN6416:s5.json 64 200 970000", "shards": 100, "timeoutMin": 120, "purpose": "Zero yardstick: generation 10's engine (g9x-C, variable look-ahead) against the crowned Monte at Quick, 200 pairs on seeds 970000"}
