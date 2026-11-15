@@ -1,0 +1,1 @@
+{"id": "az-x9-s", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g9s-C-value~g9s-C-policy zero~g9x-C-value~g9x-C-policy 64 400 985000", "shards": 100, "timeoutMin": 120, "purpose": "Soft targets and three generations in play: g9s-C (soft 0.02, generations 7\u20139, keep 0.6) against g9x-C (top move, generations 8\u20139), both plain two turns, Quick, 400 pairs"}
