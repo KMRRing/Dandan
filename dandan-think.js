@@ -446,7 +446,7 @@ export function think(s, seat, opts = {}) {
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && keys.has(key(c.move))).sort((a, b) => b.mean - a.mean), ...list.filter(c => !keys.has(key(c.move)))], deeper: looks };
 }
-function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
+function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0 } = {}) {
   const t0 = Date.now();
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
   // read Medium's scores); weigh false: hidden cards dealt without dandan-reads.js's tells (which read Medium's play)
@@ -522,7 +522,10 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     // Medium's own move stands unless another beats it by more than the deals can explain (a standard error of the gap, deal
     // by deal, and half a point): what two turns can't show, a land drop kept for nothing above all (the judge counts a land
     // in hand nearly as one down), is in Medium's habits, and a gap that is mostly chance would otherwise decide it
-    if (b.i !== 0 && alive.includes(0) && vals[0].length) {
+    // Only for Medium's candidates (16 Nov 2026, Korbi 14:37): with `options` (Zero) the first option is a pass, or an attack
+    // with nothing, so the rule made Zero lean to doing nothing on every close call (How Monte thinks, seed 3298: no attacks
+    // at 99% on turns 22-28); `keepFirst`, the old rule kept for Zero too (the lab's A/B)
+    if ((!options || keepFirst) && b.i !== 0 && alive.includes(0) && vals[0].length) {
       const k = Math.min(vals[0].length, vals[b.i].length);
       const diffs = vals[b.i].slice(0, k).map((x, j) => x - vals[0][j]);
       const m = diffs.reduce((a, x) => a + x, 0) / k;
@@ -532,7 +535,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     // nor does a pass at the end of the main phases outweigh the land Medium would play: it loses the drop for good, which
     // the look can't see past, and nothing is gained by it, as the reads take it of the other player (dandan-observe.js).
     // A land kept back at the first main phase may still go down after combat.
-    if (s.step === "main2" && !s.stack.length && b.move.t === "pass" && list[0].move.t === "land") b = list[0];
+    if ((!options || keepFirst) && s.step === "main2" && !s.stack.length && b.move.t === "pass" && list[0].move.t === "land") b = list[0];
     return b;
   };
   best = protect(best);
