@@ -228,8 +228,12 @@ export class SlotFilter {
   // kappa (Korbi 16:22: the floor should follow how big the gap is): when set, a hand's factor is exp(−regret / kappa), regret
   // the policy's score of its best move less that of the move made in that hand's world: two plays about as good keep both
   // hands near 1, a clear blunder in a hand's world drops it toward eps (then a small floor for a real misplay)
-  constructor(me, { policy = null, qpolicy = null, options, qMarks, n = 2000, eps = 0.005, tau = 0.1, kappa = 1, rng = Math.random } = {}) {
-    Object.assign(this, { me, opp: other(me), options, qMarks, N: n, eps, tau, kappa, rng });
+  // net (Scry fusion, 16 Nov 2026, Korbi: one set of hands, the net's knowledge on top): a function (s) → Scry 1's chances by
+  // unknown slot (unknownSlots order). Then the filter only strikes and replaces (what they could hold), the policy's regret
+  // weighing is off, and each hand's weight at the root is Scry 1's chance of that hand over the pool's own (importance: the
+  // hands were drawn from the pool), so the net says how likely each possible hand is
+  constructor(me, { policy = null, qpolicy = null, options, qMarks, n = 2000, eps = 0.005, tau = 0.1, kappa = 1, net = null, rng = Math.random } = {}) {
+    Object.assign(this, { me, opp: other(me), options, qMarks, N: n, eps, tau, kappa, net, rng });
     this.score = policy ? freeScorer(policy) : null; this.qscore = qpolicy ? freeScorer(qpolicy) : null;
     this.wide = !!(policy && policy.net.XN > VIEW_N);
     this.XB = new Float32Array(VIEW_N + EXT_N); this.EB = new Float32Array(EXT_N);
@@ -355,20 +359,37 @@ export class SlotFilter {
   }
   update(s, who, m, after) {
     if (!this.ready) this.reset(s);
-    if (who === this.opp && this.options(s, who).length >= 2) this.weigh(s, m);
+    if (!this.net && who === this.opp && this.options(s, who).length >= 2) this.weigh(s, m);
     this.reconcile(s, after);
   }
   counts() { const c = new Float64Array(NN); let u = 0; for (let i = 0; i < this.N; i++) { for (const n of this.H[i]) c[n] += this.w[i]; u += this.w[i] * this.H[i].length; } return { c, u }; }
+  /** The weights to read and deal by: the filter's own, or (fused) each hand's chance under Scry 1 over its chance under the pool. */
+  weightsAt(s) {
+    if (!this.net) return this.w;
+    const ids = unknownSlots(s, this.me), P = this.net(s), at = new Map(ids.map((id, j) => [id, P[j]])), unseen = seenBy(s, this.me).unseen;
+    let tot = 0; for (let n = 0; n < NN; n++) tot += unseen[n];
+    const lw = new Float64Array(this.N);
+    let top = -Infinity;
+    for (let i = 0; i < this.N; i++) {
+      let l = Math.log(this.w[i] || 1e-300);
+      this.slots.forEach((id, j) => { const p = at.get(id), n = this.H[i][j]; if (p && unseen[n] > 0) l += Math.log(p[n] + 1e-6) - Math.log(unseen[n] / tot); });
+      lw[i] = l; if (l > top) top = l;
+    }
+    let z = 0; for (let i = 0; i < this.N; i++) { lw[i] = Math.exp(lw[i] - top); z += lw[i]; }
+    for (let i = 0; i < this.N; i++) lw[i] /= z;
+    return lw;
+  }
   belief(s) {
     if (!this.ready) this.reset(s);
-    const known = seenBy(s, this.me).known, counts = Float32Array.from(known), any = new Float32Array(NN);
-    for (let i = 0; i < this.N; i++) { const seen = new Set(); for (const n of this.H[i]) { counts[n] += this.w[i]; seen.add(n); } for (const n of seen) any[n] += this.w[i]; }
+    const known = seenBy(s, this.me).known, counts = Float32Array.from(known), any = new Float32Array(NN), w = (this.dw = this.weightsAt(s));
+    for (let i = 0; i < this.N; i++) { const seen = new Set(); for (const n of this.H[i]) { counts[n] += w[i]; seen.add(n); } for (const n of seen) any[n] += w[i]; }
     for (let n = 0; n < NN; n++) if (known[n] > 0) any[n] = 1;
     return { counts, any };
   }
   deal() {
+    const w = this.dw || this.w;
     return (pool, slots, rng) => {
-      let r = rng(), i = 0; while (i < this.N - 1 && (r -= this.w[i]) > 0) i++;
+      let r = rng(), i = 0; while (i < this.N - 1 && (r -= w[i]) > 0) i++;
       const want = new Int8Array(NN); for (const n of this.H[i]) want[n]++;
       return HandFilter.prototype.deal.call({ N: 1, w: [1], P: [want] })(pool, slots, rng);
     };

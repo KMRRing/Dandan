@@ -19,10 +19,11 @@ export function zeroBrain(policyName, valueName, scryName = null) {
   // scry2.mjs: no net, Zero's own policy and question head as the model of the other player)
   // "pf[:n=..][:eps=..]" Scry 2a; "pfs[...]" Scry 2b: the same filter with the policy's own Scry 1 dealing its fresh hands and
   // draws; "pfd[...]" Scry 2d: the hands they could still hold, struck hands replaced (Korbi 16:00)
-  const policy = netOf(policyName), qpolicy = qnetOf(policyName), pf = /^pf[sd]?(:|$)/.test(scryName || ""), pfs = /^pfs(:|$)/.test(scryName || ""), pfd = /^pfd(:|$)/.test(scryName || "");
+  // "pfx[...]" the Scry fusion (16 Nov 2026, Korbi: one set of hands): Scry 2d's hands, struck and replaced, weighed by Scry 1
+  const policy = netOf(policyName), qpolicy = qnetOf(policyName), pf = /^pf[sdx]?(:|$)/.test(scryName || ""), pfs = /^pf[sx](:|$)/.test(scryName || ""), pfd = /^pf[dx](:|$)/.test(scryName || ""), pfx = /^pfx(:|$)/.test(scryName || "");
   const opt = Object.fromEntries((scryName || "").split(":").slice(1).map(x => x.split("=")).map(([k, v]) => [k, Number(v)]));
   const bnet = pf ? (pfs ? scryNetOf(policyName) : null) : scryName ? netOf(scryName) : scryNetOf(policyName);
-  const filterOf = !pf ? null : (me, scry, tracker) => pfd ? new SlotFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt }) : new HandFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt, ...(pfs && scry ? { prior: (s, x) => scry(s, x, tracker()).slots } : {}) });
+  const filterOf = !pf ? null : (me, scry, tracker) => pfd ? new SlotFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt, ...(pfx && scry ? { net: s => scry(s, me, tracker()).slots } : {}) }) : new HandFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt, ...(pfs && scry ? { prior: (s, x) => scry(s, x, tracker()).slots } : {}) });
   // "<a>+<b>": the value nets' mean (an ensemble, 15 Nov 2026)
   const value = valueName && valueName.includes("+") ? valueName.split("+").map(netOf) : netOf(valueName);
   return makeZero({ policy, qpolicy, scry: bnet, value }, { filterOf, scryAlso: pfs });
