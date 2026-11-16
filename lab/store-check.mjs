@@ -1,9 +1,10 @@
 // The B2 store's two one-off steps (.github/workflows/store-move.yml; lab/store.mjs). The key comes from the environment
 // (LAB_B2_KEY_ID, LAB_B2_KEY, LAB_B2_ENDPOINT, LAB_B2_BUCKET) and is never printed.
 //   node lab/store-check.mjs            a write, read, list and delete under _check/, then the bucket's objects by top folder
-//   node lab/store-check.mjs --config   fleet/store.json written on the Google bucket (LAB_BUCKET, writer key at LAB_KEY): from the
-//                                       workers' next look (10 minutes), everything but fleet/ is read and written on B2
-import { s3Store, googleStore, REQ } from "./store.mjs";
+//   node lab/store-check.mjs --config   private/store.json written on the Google bucket (LAB_BUCKET, writer key at LAB_KEY), a path
+//                                       nothing lists or copies out: from the workers' next look (10 minutes), everything but
+//                                       fleet/ is read and written on B2
+import { s3Store, googleStore, REQ, STORE_CONFIG } from "./store.mjs";
 import { googleToken } from "./lib.mjs";
 
 const env = process.env;
@@ -12,9 +13,9 @@ const cfg = { kind: "s3", endpoint: env.LAB_B2_ENDPOINT, bucket: env.LAB_B2_BUCK
 
 if (process.argv.includes("--config")) {
   const g = googleStore(env.LAB_BUCKET, googleToken);
-  await g.put("fleet/store.json", JSON.stringify(cfg));
-  const back = JSON.parse((await g.get("fleet/store.json")) || "{}");
-  console.log(back.kind === "s3" && back.bucket === cfg.bucket && back.keyId === cfg.keyId ? `fleet/store.json written: the lab's store is ${cfg.bucket} at ${new URL(cfg.endpoint).host}` : "fleet/store.json did not read back");
+  await g.put(STORE_CONFIG, JSON.stringify(cfg));
+  const back = JSON.parse((await g.get(STORE_CONFIG)) || "{}");
+  console.log(back.kind === "s3" && back.bucket === cfg.bucket && back.keyId === cfg.keyId ? `${STORE_CONFIG} written: the lab's store is ${cfg.bucket} at ${new URL(cfg.endpoint).host}` : `${STORE_CONFIG} did not read back`);
   process.exit(back.keyId === cfg.keyId ? 0 : 1);
 }
 

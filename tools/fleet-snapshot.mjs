@@ -18,7 +18,12 @@ import { openStore } from "../lab/store.mjs";
 const BUCKET = process.env.LAB_BUCKET || "dandan-lab-807207481983";
 const PROJECT = process.env.LAB_PROJECT || "project-b753c78c-ef88-46f1-b37";
 const out = path.resolve(process.argv[2] || "fleet-status"), cache = path.resolve(process.argv[3] || "fleet-cache");
-const KEEP = /^(fleet\/[^/]+\.json|jobs\/[^/]+\.json|workers\/[^/]+\.json|claims\/[^/]+\/[^/]+|results\/[^/]+\/(done-\d+|part-\d+\.jsonl|stdout-0\.txt))$/;
+// fleet/: the files the page reads, by name, never the folder (16 Nov 2026, Fable: a key kept in fleet/ would have been copied to
+// the public fleet-status branch); everything this writes is public
+export const FLEET_FILES = ["fleet/sources.json", "fleet/market.json", "fleet/filler.json", "fleet/open.json", "fleet/finished.json", "fleet/ops.json", "fleet/summary.json"];
+const KEEP = /^(jobs\/[^/]+\.json|workers\/[^/]+\.json|claims\/[^/]+\/[^/]+|results\/[^/]+\/(done-\d+|part-\d+\.jsonl|stdout-0\.txt))$/;
+/** A text that names a key or a secret, whatever object it came from: never written out (a backstop to the lists above). */
+const SECRET = /"(keyId|applicationKey|secretAccessKey|secret|private_key|client_secret|password)"\s*:|BEGIN [A-Z ]*PRIVATE KEY|"kind"\s*:\s*"s3"/;   // the store config (lab/store.mjs), an S3 or Google key; a row's "key" is not one
 const STDOUT_MAX = 2 << 20;
 // a worker's report and a claim are rewritten every 5 minutes (lab/worker.mjs BEAT_MS, 16 Nov 2026): fresh if written in the last 11
 const FRESH_S = 11 * 60;
@@ -32,7 +37,8 @@ async function token() {
   if (!r.ok) throw new Error("no token: " + r.status + " " + (await r.text()));
   return (await r.json()).access_token;
 }
-const TOK = await token(), auth = { authorization: "Bearer " + TOK };
+// the Compute Engine listing needs the key at LAB_KEY; a folder lab (LAB_DIR, tests/snapshot-secrets.mjs) has no machines
+const auth = process.env.LAB_DIR ? null : { authorization: "Bearer " + (await token()) };
 async function get(url, tries = 5) {
   for (let i = 0; ; i++) {
     try { const r = await fetch(url, { headers: auth }); if (r.ok || r.status === 404 || i >= tries) return r; } catch (e) { if (i >= tries) throw e; }
@@ -40,14 +46,15 @@ async function get(url, tries = 5) {
   }
 }
 
-// the lab's store (lab/store.mjs): fleet/ on the Google bucket, the rest wherever fleet/store.json says (B2 from 16 Nov 2026)
+// the lab's store (lab/store.mjs): fleet/ on the Google bucket, the rest wherever private/store.json says (B2 from 16 Nov 2026)
 process.env.LAB_BUCKET ||= BUCKET;
 const store = await openStore();
 /** Every object under a prefix: [name, updated seconds]. */
 const list = async prefix => (await store.list(prefix)).filter(o => KEEP.test(o.name)).map(o => [o.name, Math.floor(o.t / 1000)]);
+const fleetFiles = async () => (await Promise.all(FLEET_FILES.map(async n => { const o = (await store.list(n)).find(x => x.name === n); return o ? [n, Math.floor(o.t / 1000)] : null; }))).filter(Boolean);
 
 const at = Date.now();
-const objects = (await Promise.all(["fleet/", "jobs/", "workers/", "claims/", "results/"].map(list))).flat().sort((a, b) => (a[0] < b[0] ? -1 : 1));
+const objects = (await Promise.all([fleetFiles(), ...["jobs/", "workers/", "claims/", "results/"].map(list)])).flat().sort((a, b) => (a[0] < b[0] ? -1 : 1));
 
 // which files to keep: the page cats job specs, done-0, a match's parts, a finished job's stdout, the fresh worker reports
 const specs = {};
@@ -62,6 +69,7 @@ const keep = async (n, t, cap) => {
   if (prev[n] === t && fs.existsSync(f)) return;
   let txt = await fetchText(n);
   if (txt == null) return;
+  if (SECRET.test(txt)) { console.log(`left out (it names a key): ${n}`); return; }
   if (cap && txt.length > cap) txt = txt.slice(-cap);
   fs.mkdirSync(path.dirname(f), { recursive: true });
   fs.writeFileSync(f, txt);
@@ -77,7 +85,7 @@ for (const [n, t] of objects) {
   if (m) {
     const j = specs[m[1]];
     if (m[2] === "done-0" || (j && m[2].startsWith("part-") && kind(j) === "match") || (j && m[2] === "stdout-0.txt" && kind(j) !== "selfplay")) files.push([n, t]);
-  } else if ((n.startsWith("workers/") && at / 1000 - t < FRESH_S) || n.startsWith("fleet/")) files.push([n, t]);
+  } else if ((n.startsWith("workers/") && at / 1000 - t < FRESH_S) || FLEET_FILES.includes(n)) files.push([n, t]);
 }
 await pool(files, 24, ([n, t]) => keep(n, t, n.endsWith("stdout-0.txt") ? STDOUT_MAX : 0));
 
@@ -100,7 +108,7 @@ for (const base of [out, cache]) for (const f of walk(path.join(base, "o"))) {
 
 // the machines on Compute Engine, as the page's `gcloud compute instances list --filter="name~^lab-"` prints them
 let gce = "";
-const r = await get(`https://compute.googleapis.com/compute/v1/projects/${PROJECT}/aggregated/instances?filter=${encodeURIComponent('name eq "lab-.*"')}&fields=items/*/instances(name,machineType,status)`);
+const r = !auth ? { ok: true, json: async () => ({}) } : await get(`https://compute.googleapis.com/compute/v1/projects/${PROJECT}/aggregated/instances?filter=${encodeURIComponent('name eq "lab-.*"')}&fields=items/*/instances(name,machineType,status)`);
 if (r.ok) {
   const j = await r.json();
   for (const z of Object.values(j.items || {})) for (const i of z.instances || []) gce += `${i.name}\t${i.machineType.split("/").pop()}\t${i.status}\n`;

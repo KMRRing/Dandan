@@ -26,10 +26,11 @@ const TYPES = ["pass", "cast", "land", "cycle", "ability", "attack", "block", "m
 const TYPE_AT = { pass: 0, cast: 1, land: 2, cycle: 3, ability: 4, attack: 5, block: 6, mull: 7, keep: 8, putback: 9, bottom: 9, discard: 9, draw: 11 };
 const CTX = 11, T0 = 1, S0 = T0 + TYPES.length, C0 = S0 + STEPS.length, N0 = C0 + CTX;
 export const EV_N = N0 + NN + 2;    // 1 + 12 + 10 + 11 + 25 + 2 = 61
-export const BX12 = EXT_N + 1, SB_N = 5, HANDS = 48;
+export const BX12 = EXT_N + 1, SB_N = 5, HANDS = 1024;   // dealt hands a belief (Fable 21:15: 48 left a 50% chance ±7 points; 1,024 ±1.6)
 const lcg = x => () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296);
 const untapped = (s, x) => s.bf.reduce((a, p) => a + (p.ctl === x && !p.tapped && p.id < DECK.length && isLandId(p.id) ? 1 : 0), 0);
 const nameOf = id => (id != null && id >= 0 && id < DECK.length ? NAME_AT.get(DECK[id]) ?? -1 : -1);
+const LAND = NAMES.map(n => isLandId(DECK.indexOf(n)));
 const played = m => m.t === "land" || (m.t === "cast" && m.from === "hand") || m.t === "cycle";
 
 /** One event as seen by `me`: `s` the position it happened in, `who` whose it was, `m` the move (or { t: "pass" } at a priority
@@ -155,7 +156,8 @@ export class Scry12 {
   /**
    * The belief the policy reads (Fable's review, item 10): the expected counts by name and the chance of at least one of each,
    * from HANDS whole hands dealt card after card (each card's odds given those dealt before it), so "at least one counter" holds
-   * for the hand and not card by card. slots: each card's odds with nothing dealt before it (the scorecard's marginals).
+   * for the hand and not card by card. slots: each card's odds with nothing dealt before it (the scorecard's marginals); hit: the
+   * chance of at least one of each name among the unknown cards alone, and land: of at least one land among them (belief-eval).
    * The deals use a stream fixed by the record's length, so a position gives the same belief however often it is asked.
    */
   belief(s) {
@@ -163,12 +165,15 @@ export class Scry12 {
     const p0 = this.card(g, null, seen.unseen), slots = ids.map(() => p0);
     this.last = { s, seen, ids, g };
     const counts = Float32Array.from(seen.known), hit = new Float32Array(NN), rng = lcg(1 + this.rec.events.length);
+    let land = 0;
     if (ids.length) for (let h = 0; h < HANDS; h++) {
       const d = this.hand(rng);
-      for (let k = 0; k < NN; k++) if (d[k]) { counts[k] += d[k] / HANDS; hit[k] += 1 / HANDS; }
+      let l = false;
+      for (let k = 0; k < NN; k++) if (d[k]) { counts[k] += d[k] / HANDS; hit[k] += 1 / HANDS; l ||= LAND[k]; }
+      if (l) land += 1 / HANDS;
     }
     const any = Float32Array.from(hit, (v, k) => (seen.known[k] > 0 ? 1 : v));
-    return { slots, counts, any, ...seen };
+    return { slots, counts, any, hit, land, ...seen };
   }
   /** One whole hand of the unknown cards at the last belief's position, dealt card after card: counts by name. */
   hand(rng) {

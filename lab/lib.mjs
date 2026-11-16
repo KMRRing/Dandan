@@ -4,7 +4,7 @@ export const hr = () => Number(process.hrtime.bigint()) / 1e6;     // ms
 
 /**
  * The lab's store for the scripts that read results and queue work (lab/store.mjs): LAB_DIR a folder, else the Google bucket
- * LAB_BUCKET for fleet/ and B2 for the rest once fleet/store.json names it (or LAB_B2_* in the environment). list(prefix) →
+ * LAB_BUCKET for fleet/ and B2 for the rest once private/store.json names it (or LAB_B2_* in the environment). list(prefix) →
  * names, get(name) → text or null, put/create/del/getG as lab/store.mjs; listAll(prefix) → [{ name, generation, t }].
  */
 export async function labStore() {

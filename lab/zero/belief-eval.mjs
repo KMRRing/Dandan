@@ -24,7 +24,6 @@ import { netOf } from "./zero-lib.mjs";
 const AT = new Map(NAMES.map((n, k) => [n, k])), EVERY = 6, J = x => JSON.parse(JSON.stringify(x)), real = Math.random;
 const nats = p => -Math.log((p || 0) + 1e-9);
 const NN = NAMES.length, LAND = NAMES.map(n => isLandId(DECK.indexOf(n))), CALLS = ["Memory Lapse", "Dandân"].map(n => NAMES.indexOf(n));
-const HANDS = 48, lcg = x => () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296);
 /** The truth of the three calls for the unknown cards `ids`: [a Lapse, a Dandân, a land] as 0 or 1. */
 const truthOf = ids => { const ks = ids.map(id => AT.get(DECK[id])); return [...CALLS.map(c => (ks.includes(c) ? 1 : 0)), ks.some(k => LAND[k]) ? 1 : 0]; };
 /** Card by card (independent cards): the chance of at least one of name k, and of at least one land. */
@@ -72,10 +71,8 @@ function scorer(sp) {
   return () => { const F = [new Cls(0, net), new Cls(1, net)]; return { update(s, who, m, after) { for (const x of F) x.update(s, who, m, after); }, score(s, me, ids) {
     const r = F[me].score(s, ids), f = F[me];
     if (!f.hand) return { each: r.each, chain: r.chain };
-    f.belief(s);   // the whole hands item 10 deals, read for the three calls (unknown cards only)
-    const hit = [0, 0, 0], rng = lcg(1 + f.rec.events.length);
-    for (let h = 0; h < HANDS; h++) { const d = f.hand(rng); CALLS.forEach((c, i) => { if (d[c]) hit[i]++; }); if (d.some((v, k) => v && LAND[k])) hit[2]++; }
-    return { each: r.each, chain: r.chain, calls: hit.map(v => v / HANDS) };
+    const b = f.belief(s);   // item 10's own output: the whole hands it deals, the unknown cards alone
+    return { each: r.each, chain: r.chain, calls: [...CALLS.map(c => b.hit[c]), b.land] };
   } }; };
 }
 const makers = specs.map(scorer), out = Object.fromEntries(specs.map(k => [k, { each: 0, chain: 0, n: 0, games: 0, brier: [0, 0, 0], m: 0 }]));

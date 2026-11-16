@@ -4,8 +4,8 @@
 // secret: on a Google machine it works as the machine's own service account (the metadata server), and the code comes from
 // the public repo. A session queues work and reads results with `gcloud storage` (see lab/README or the notes at the end).
 //
-//   the store (16 Nov 2026, lab/store.mjs): fleet/ (the open list, the filler's spec, store.json…) on the Google bucket, the rest on
-//   Backblaze B2 once fleet/store.json names it; B2's claims are advisory (written, then read back), so a shard can now and then
+//   the store (16 Nov 2026, lab/store.mjs): fleet/ (the open list, the filler's spec…) on the Google bucket, the rest on
+//   Backblaze B2 once private/store.json (on Google) names it; B2's claims are advisory (written, then read back), so a shard can now and then
 //   be played twice, which is harmless: its output is fixed by its job, shard and seed
 //   layout
 //     jobs/<id>.json            { id, script, args, shards, ref, repo?, timeoutMin? }  args: {shard} {shards} {out} filled in
@@ -32,7 +32,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn, execFileSync } from "node:child_process";
-import { openStore, dataStoreOf, REQ } from "./store.mjs";
+import { openStore, dataStoreOf, REQ, STORE_CONFIG } from "./store.mjs";
 import { readOpen, editOpen, OPEN_STALE_MS } from "./open-list.mjs";
 
 const env = process.env;
@@ -43,14 +43,15 @@ const LEASE_MS = 15 * 60000, BEAT_MS = 5 * 60000, NAME = `${os.hostname()}-${pro
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
-// ---------- the store (lab/store.mjs): fleet/ on the Google bucket, the rest on B2 once fleet/store.json names it ----------
+// ---------- the store (lab/store.mjs): fleet/ on the Google bucket, the rest on B2 once STORE_CONFIG names it ----------
 const store = await openStore(env);
-/** The store's data side follows fleet/store.json (16 Nov 2026, the move to B2): looked at every 10 minutes, and when it changes
- *  the worker writes there from then on, shards in hand included (their claims carry over at the next beat). */
-let storeCfg = env.LAB_DIR || env.LAB_B2_KEY_ID ? null : await store.get("fleet/store.json").catch(() => null);
+/** The store's data side follows STORE_CONFIG (16 Nov 2026, the move to B2), read from the Google side only: looked at every 10
+ *  minutes, and when it changes the worker writes there from then on, shards in hand included (their claims carry over at the
+ *  next beat). Its text holds the B2 key: never logged. */
+let storeCfg = env.LAB_DIR || env.LAB_B2_KEY_ID ? null : await store.control.get(STORE_CONFIG).catch(() => null);
 async function followStore() {
   if (env.LAB_DIR || env.LAB_B2_KEY_ID) return;
-  const t = await store.get("fleet/store.json").catch(() => undefined);
+  const t = await store.control.get(STORE_CONFIG).catch(() => undefined);
   if (t === undefined || t === storeCfg) return;
   storeCfg = t;
   store.set(t ? await dataStoreOf({ get: async () => t }) : null);

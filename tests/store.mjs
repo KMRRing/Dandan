@@ -1,6 +1,6 @@
 // The lab's store (lab/store.mjs, 16 Nov 2026, the move to B2): the S3 signature against AWS's own published examples (Signature
 // V4 for S3: GET Object, GET Bucket, PUT Object), and the routing: fleet/ on the control store, the rest on the data store, the
-// data store swapped live when fleet/store.json changes (lab/worker.mjs followStore). Folders stand in for both stores.
+// data store swapped live when private/store.json changes (lab/worker.mjs followStore). Folders stand in for both stores.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -17,13 +17,13 @@ check(sig({ method: "PUT", path: "/test$file.text", body: "Welcome to Amazon S3.
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "store-")), ctl = folderStore(path.join(tmp, "google")), b2 = folderStore(path.join(tmp, "b2"));
 const s = routedStore(ctl, null);
 await s.put("fleet/open.json", "{}"); await s.put("claims/j/0", "a");
-check(fs.existsSync(path.join(tmp, "google/claims/j/0")) && s.kind === "folder", "without fleet/store.json everything is on the control store");
+check(fs.existsSync(path.join(tmp, "google/claims/j/0")) && s.kind === "folder", "without private/store.json everything is on the control store");
 s.set(b2);
 await s.put("claims/j/1", "b"); await s.put("fleet/filler.json", "{}");
 check(fs.existsSync(path.join(tmp, "b2/claims/j/1")) && fs.existsSync(path.join(tmp, "google/fleet/filler.json")) && !fs.existsSync(path.join(tmp, "b2/fleet")), "with a data store: fleet/ stays on the control store, the rest goes to the data store");
 check((await s.list("claims/")).map(o => o.name).join() === "claims/j/1" && (await s.get("fleet/open.json")) === "{}", "reads follow the same routing (no fallback to the old store)");
 check(await s.create("claims/j/1", "c") === false && (await s.get("claims/j/1")) === "b", "create is only if absent");
 const none = await dataStoreOf({ get: async () => null }, {}), cfg = await dataStoreOf({ get: async () => JSON.stringify({ kind: "s3", endpoint: "https://s3.us-east-005.backblazeb2.com", bucket: "ML-queue", keyId: "k", key: "s" }) }, {});
-check(none === null && cfg?.kind === "s3", "fleet/store.json names the data store (none without it)");
+check(none === null && cfg?.kind === "s3", "private/store.json names the data store (none without it)");
 fs.rmSync(tmp, { recursive: true, force: true });
 if (fails) process.exit(1);

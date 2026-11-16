@@ -1,8 +1,8 @@
 # The move of the lab's store to Backblaze B2 (16 Nov 2026, Korbi via ops; lab/store.mjs). One step at a time, by hand:
 #   check   B2 answers: a write, read, list and delete under _check/, and the bucket's objects counted by top folder
 #   copy    every object of the Google bucket but fleet/ copied to B2 (rclone; again later it copies only what is new or changed)
-#   config  fleet/store.json written on the Google bucket from the secrets: workers switch to B2 within 10 minutes, and every
-#           GitHub run after it reads and writes B2 (fleet/ stays on Google)
+#   config  private/store.json written on the Google bucket from the secrets (a path nothing lists or copies to the public status
+#           branch): workers switch to B2 within 10 minutes, and every GitHub run after it reads and writes B2 (fleet/ stays on Google)
 #   verify  objects and bytes on both sides (fleet/ left out), objects missing or different on B2, and objects written to
 #           Google outside fleet/ in the last 30 minutes (none once every worker has switched)
 # The B2 key comes from the secrets LAB_B2_KEY_ID, LAB_B2_KEY, LAB_B2_ENDPOINT and is never printed; nothing here echoes it.
@@ -42,7 +42,7 @@ jobs:
           export RCLONE_CONFIG_B2_TYPE=s3 RCLONE_CONFIG_B2_PROVIDER=Other RCLONE_CONFIG_B2_ACCESS_KEY_ID="$LAB_B2_KEY_ID" RCLONE_CONFIG_B2_SECRET_ACCESS_KEY="$LAB_B2_KEY"
           export RCLONE_CONFIG_B2_ENDPOINT="$LAB_B2_ENDPOINT" RCLONE_CONFIG_B2_FORCE_PATH_STYLE=true RCLONE_CONFIG_B2_NO_CHECK_BUCKET=true
           export RCLONE_CONFIG_B2_REGION="$(printf '%s' "$LAB_B2_ENDPOINT" | sed -E 's#^(https?://)?s3\.([^.]+)\..*#\2#')"
-          R="--exclude fleet/** --exclude _check/** --fast-list --retries 10 --low-level-retries 30 --stats 120s --stats-one-line --stats-log-level NOTICE"
+          R="--exclude fleet/** --exclude private/** --exclude _check/** --fast-list --retries 10 --low-level-retries 30 --stats 120s --stats-one-line --stats-log-level NOTICE"
           case "${{ inputs.step }}" in
             check)  node lab/store-check.mjs ;;
             copy)   rclone copy "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --transfers 96 --checkers 96 --size-only 2>&1 | tail -40 ;;

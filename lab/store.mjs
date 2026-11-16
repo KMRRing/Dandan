@@ -4,8 +4,10 @@
 //   google   the Google bucket LAB_BUCKET, as the machine's service account or the key at LAB_KEY (lab/lib.mjs googleToken)
 //   s3       any S3-compatible store; the lab's is Backblaze B2 (bucket ML-queue), path-style, signed with AWS Signature V4
 // and the lab's routing: the small control files under fleet/ (open.json, filler.json, finished.json, sources.json, summary.json,
-// ops.json, store.json…) stay on Google, where the ops chat can read and write them; everything else (jobs/, claims/, results/,
-// workers/, retired/…) lives on B2 once fleet/store.json names it. Without that file, everything is on Google, as before.
+// ops.json…) stay on Google, where the ops chat can read and write them; everything else (jobs/, claims/, results/, workers/,
+// retired/…) lives on B2 once STORE_CONFIG names it. Without that file, everything is on Google, as before.
+// STORE_CONFIG holds the B2 key, so it is on the Google bucket at a path nothing lists or copies out (16 Nov 2026, Fable: under
+// fleet/ the status snapshot would have put it on the public fleet-status branch), read only from Google, never through routing.
 //
 // The interface: list(prefix) → [{ name, generation, t (ms, last written) }]; get(name) → text or null; getG(name) → { text,
 // generation } or null; put(name, body, { ifAbsent, ifGeneration }) → whether it was written; create(name, text) = put ifAbsent;
@@ -196,11 +198,13 @@ export function s3Store({ endpoint, bucket, keyId, key, region }) {
 }
 
 // ---------- the lab's routing ----------
-/** fleet/ on `control` (Google), the rest on `data`; `data` may be swapped later (set). */
+export const STORE_CONFIG = "private/store.json";
+/** fleet/ on `control` (Google), the rest on `data`; `data` may be swapped later (set). `control` is the Google side itself. */
 export function routedStore(control, data) {
   let main = data || control;
   const on = name => (name.startsWith("fleet/") ? control : main);
   return {
+    control,
     get kind() { return main === control ? control.kind : `${control.kind}+${main.kind}`; },
     set(d) { main = d || control; },
     list: prefix => on(prefix).list(prefix),
@@ -211,11 +215,11 @@ export function routedStore(control, data) {
     del: name => on(name).del(name),
   };
 }
-/** The data store fleet/store.json names ({ kind: "s3", endpoint, bucket, keyId, key }), or null; LAB_B2_* in the environment
+/** The data store STORE_CONFIG names ({ kind: "s3", endpoint, bucket, keyId, key }), or null; LAB_B2_* in the environment
  *  first (GitHub's runs have the secrets), so a run needs no read of the file. */
 export async function dataStoreOf(control, env = process.env) {
   if (env.LAB_B2_KEY_ID && env.LAB_B2_KEY && env.LAB_B2_ENDPOINT) return s3Store({ endpoint: env.LAB_B2_ENDPOINT, bucket: env.LAB_B2_BUCKET || "ML-queue", keyId: env.LAB_B2_KEY_ID, key: env.LAB_B2_KEY });
-  const t = await control.get("fleet/store.json").catch(() => null);
+  const t = await control.get(STORE_CONFIG).catch(() => null);
   if (!t) return null;
   const c = JSON.parse(t);
   return c.kind === "s3" ? s3Store(c) : null;
