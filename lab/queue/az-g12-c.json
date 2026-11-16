@@ -1,0 +1,1 @@
+{"id": "az-g12-c", "script": "zero-play.mjs", "args": "{shard} {shards} {out} 256 4800 161000000 g11w-C-policy g11w-C-value 400 deeper=0.03", "shards": 1200, "timeoutMin": 300, "purpose": "Monte Scry Zero generation 12 (C): g11w-C's nets (warm-started line) with the variable look-ahead; 256 deals, 4,800 games"}

@@ -1,0 +1,1 @@
+{"id": "az-x11b", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g11w-C-value~g11w-C-policy~deeper=0.03 zero~g10w-C-value~g10w-C-policy~deeper=0.03 64 500 986000", "shards": 100, "timeoutMin": 150, "purpose": "g11w-C against g10w-C (the generation it started from), Quick, 500 pairs"}
