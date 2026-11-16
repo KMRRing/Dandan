@@ -38,12 +38,13 @@ ap.add_argument("--soft", type=float, default=0.0)
 ap.add_argument("--init", default="")
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
-MOVE_N = 80
+MOVE_N = 80   # a move's marks; a pack can say otherwise (markN: Zero 2's moves and answers in one encoding, 256)
 KINDS = ["pass", "land", "cast", "cycle", "ability"]
 
 # ---------- the packed decisions ----------
 meta = json.load(open(os.path.join(A.dir, "meta.json")))
 XN, D = meta["XN"], meta["decisions"]
+MOVE_N = meta.get("markN", MOVE_N)
 rd = lambda n, t: np.fromfile(os.path.join(A.dir, n), dtype=t)
 X = rd("x.f32", np.float32).reshape(D, XN)
 cand = rd("cand.i32", np.int32).astype(np.int64)

@@ -67,6 +67,20 @@ async function side(spec) {
     };
     return Object.assign(f, { reset: () => brain.reset(), seen: (...a) => brain.seen(...a) });
   }
+  // "zero2~<name>[~scry=<name>][~deeper=<gap>][~deals=<n>]" (16 Nov 2026, lab/zero/zero2.mjs): Zero 2, the bundle of stages 1-2,
+  // its nets lab/zero/nets/<name>-policy2.json (moves and answers), -value2.json (raw, face up), and Scry 1.2's <name>-scry12.json
+  if (spec.startsWith("zero2~")) {
+    const [, name, ...flags] = spec.split("~"), Z = await import("./zero/zero-lib.mjs"), Z2 = await import("./zero/zero2.mjs");
+    const scryFlag = flags.find(x => x.startsWith("scry=")), deeperFlag = flags.find(x => x.startsWith("deeper=")), dealsFlag = flags.find(x => x.startsWith("deals="));
+    const brain = Z2.makeZero2({ policy: Z.netOf(`${name}-policy2`), value: Z.netOf(`${name}-value2`), scry12: Z.netOf(`${scryFlag ? scryFlag.slice(5) : name}-scry12`) });
+    const extra = deeperFlag ? { deeper: { gap: Number(deeperFlag.slice(7)) } } : {}, ownDeals = dealsFlag ? Number(dealsFlag.slice(6)) : 0;
+    const f = (s, seat) => {
+      const ms = Z.zeroOptions(s, seat);
+      if (ms.length <= 1) return { move: ms[0] ?? Z.PASS, off: false };
+      return { move: brain.think(s, seat, ownDeals || deals, extra).best, off: false };
+    };
+    return Object.assign(f, { reset: () => brain.reset(), seen: (...a) => brain.seen(...a) });
+  }
   // "plus@<policy-train job>" or "medium": no search at all, the stage-1 model or Medium alone (to see where the model stands)
   if (spec === "medium") return (s, seat) => ({ move: policyMove(s, seat, { rng: Math.random }), off: false });
   if (/^plus(free)?@/.test(spec)) { const free = spec.startsWith("plusfree@"), mv = makePlus(JSON.parse((await readParts(spec.replace(/^plus(free)?@/, ""))).flatMap(x => x.split("\n").filter(Boolean))[0]), { free }).move; return (s, seat) => ({ move: mv(s, seat, Math.random), off: false }); }

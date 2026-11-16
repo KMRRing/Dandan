@@ -13,6 +13,7 @@ ap.add_argument("dir"); ap.add_argument("out")
 ap.add_argument("--shape", default="64x32"); ap.add_argument("--epochs", type=int, default=8)
 ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--seed", type=int, default=1); ap.add_argument("--batch", type=int, default=256)
 ap.add_argument("--init", default="")  # warm start from a value net of the same shape (15 Nov 2026), its int8 weights read back
+ap.add_argument("--aux", type=float, default=0.0)  # weight of the second output (16 Nov 2026, Zero 2): whether this seat decks out (aux.f32); dropped from the file written
 ap.add_argument("--wd", type=float, default=0.0)  # decoupled weight decay a step (14 Nov: the face-up net overfits from epoch 2)
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
@@ -20,14 +21,17 @@ meta = json.load(open(os.path.join(A.dir, "meta.json"))); N, R = meta["N"], meta
 rd = lambda n, t: np.fromfile(os.path.join(A.dir, n), dtype=t)
 M, T, Y, H = rd("mine.f32", np.float32).reshape(R, N), rd("theirs.f32", np.float32).reshape(R, N), rd("won.f32", np.float32), rd("hold.u8", np.uint8) > 0
 tr, he = np.flatnonzero(~H), np.flatnonzero(H)
-sizes = [N] + [int(x) for x in A.shape.split("x")] + [1]
+AUX = rd("aux.f32", np.float32) if A.aux and os.path.exists(os.path.join(A.dir, "aux.f32")) else None
+OUT = 2 if AUX is not None else 1   # with --aux the last layer has a second output, the deck-out logit
+sizes = [N] + [int(x) for x in A.shape.split("x")] + [OUT]
 rng = np.random.default_rng(A.seed)
 W = [rng.normal(0, np.sqrt(2 / a), (a, b)) for a, b in zip(sizes[:-1], sizes[1:])]; B = [np.zeros(b) for b in sizes[1:]]
 if A.init:
     L0 = json.load(open(A.init))["layers"]
-    if [l["n"] for l in L0] != [[a, b] for a, b in zip(sizes[:-1], sizes[1:])]: sys.exit(f"--init {A.init}: layers {[l['n'] for l in L0]}, not the shape {sizes}")
+    if [l["n"] for l in L0] != [[a, b] for a, b in zip(sizes[:-1], sizes[1:-1] + [1])]: sys.exit(f"--init {A.init}: layers {[l['n'] for l in L0]}, not the shape {sizes}")
     W = [np.frombuffer(base64.b64decode(l["q"]), np.int8).reshape(l["n"]).astype(np.float64) * np.asarray(l["s"]) for l in L0]
     B = [np.asarray(l["b"], np.float64) if l["b"] else np.zeros(l["n"][1]) for l in L0]
+    if OUT == 2: W[-1] = np.concatenate([W[-1], np.zeros((W[-1].shape[0], 1))], 1); B[-1] = np.zeros(2)
 mW = [np.zeros_like(w) for w in W]; vW = [np.zeros_like(w) for w in W]; mB = [np.zeros_like(b) for b in B]; vB = [np.zeros_like(b) for b in B]
 say(f"{R} rows ({len(tr)} training, {len(he)} held out), {N} inputs, shape {A.shape}")
 
@@ -64,7 +68,11 @@ for e in range(1, A.epochs + 1):
         d = hm[-1][:, 0] - ht[-1][:, 0]
         p = 1 / (1 + np.exp(-np.clip(d, -30, 30)))
         gd = ((p - Y[j]) / len(j))[:, None]
-        aW, aB = back(hm, gd); bW, bB = back(ht, -gd)
+        if OUT == 2:   # the deck-out output, read from this seat's side only
+            pa = 1 / (1 + np.exp(-np.clip(hm[-1][:, 1], -30, 30)))
+            aW, aB = back(hm, np.concatenate([gd, (A.aux * (pa - AUX[j]) / len(j))[:, None]], 1)); bW, bB = back(ht, np.concatenate([-gd, np.zeros_like(gd)], 1))
+        else:
+            aW, aB = back(hm, gd); bW, bB = back(ht, -gd)
         for l in range(len(W)):
             for P_, G_, m_, v_ in ((W, aW[l] + bW[l], mW, vW), (B, aB[l] + bB[l], mB, vB)):
                 m_[l] = 0.9 * m_[l] + 0.1 * G_; v_[l] = 0.999 * v_[l] + 0.001 * G_ ** 2
@@ -75,6 +83,8 @@ for e in range(1, A.epochs + 1):
     if h < best: best, bestW = h, ([w.copy() for w in W], [b.copy() for b in B])
 
 Wb, Bb = bestW
+if OUT == 2:   # the value output alone is kept: the deck-out output only shaped the layers below it
+    Wb = Wb[:-1] + [Wb[-1][:, :1]]; Bb = Bb[:-1] + [Bb[-1][:1]]
 layers = []
 for l, (w, b) in enumerate(zip(Wb, Bb)):
     sc = np.maximum(np.abs(w).max(0), 1e-8) / 127

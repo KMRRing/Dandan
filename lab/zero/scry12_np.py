@@ -82,7 +82,7 @@ def batch(bs, order="random", train=True):
     C = np.zeros((n + 1, D), np.float32); C[1:] = np.cumsum(e, 0)
     a_ = WIN[rows, 0] + off_row; r_ = WIN[rows, 1] + off_row; b_ = WIN[rows, 2] + off_row
     Aall = (C[b_] - C[a_]) / 8; Arec = (C[b_] - C[r_]) / 4
-    rowpos = np.searchsorted(rows, SR[sl])                       # each slot's row within the batch
+    ro = np.argsort(rows); rowpos = ro[np.searchsorted(rows[ro], SR[sl])]   # each slot's row within the batch (records in any order)
     s_a = SA[sl] + off_row[rowpos]; Asin = (C[b_[rowpos]] - C[s_a]) / 4
     # the names dealt before each card
     Y = SY[sl]; S = len(sl); onehot = np.zeros((S, NN), np.float32); onehot[np.arange(S), Y] = 1
