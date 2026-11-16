@@ -12,7 +12,7 @@ import { shuffle } from "./seats.js";
 import {
   LIFE, HAND, other, list, withRng, say, nm, isLandId, perm, isLand, isCreature, pt, canAttack, unblockable, fetchTypes, typesOf, needType,
   payPlan, payFrom, pay, manaAlts, draw, shuffleLib, pushItem, itemOf, leaveStack, enterBf, leaveBf, toGrave, toLib, toYard, fromYard, fromLib, fromHand,
-  mill, lands, permToLib, bounce, emptyPools, handToLib, toHandOpen, topKnown, isSpellCard, affords, tellsOf, freshTells, hushed, khOf, knOf,
+  mill, lands, permToLib, bounce, emptyPools, handToLib, toHandOpen, topKnown, isSpellCard, affords, tellsOf, freshTells, hushed, khOf, knOf, points, notePoint,
 } from "./dandan-core.js";
 import { RES, T, same, targetLists, stillLegal, modesOf, hasType } from "./dandan-spells.js";
 import { noteAction } from "./dandan-advantage.js";
@@ -349,14 +349,14 @@ function mustCounter(s, it, seat) {
  * to be damaged. Each is kept with a copy of the game as it stood, for dandan-rules.js to read once the move that led to
  * it is made (dandan-observe.js), whether the seat was asked there or had nothing to do.
  */
-export const passPoints = [];
+export const passPoints = points;   // with the draws among them (dandan-core.js points): a pass point has no `draw`
 function notePassPoint(s) {
   const seat = s.prio, top = s.stack[s.stack.length - 1];
   const telling = top ? top.kind === "spell" && top.ctl !== seat
     : s.step === "main2" ? seat === s.active
     : s.step === "end" ? seat !== s.active
     : s.step === "blockers" && seat !== s.active && !!s.combat?.att.length;
-  if (telling) passPoints.push({ seat, s: JSON.parse(JSON.stringify({ ...s, log: [] })) });
+  if (telling) notePoint(s, { seat });
 }
 function passPriority(s) {
   if (!hushed()) notePassPoint(s);
@@ -380,10 +380,18 @@ export function settle(s, shown = -1) {
     if (wants(s, s.prio)) return;
     if (shown >= 0 && showStop(s, shown)) return;
     if (s.cover != null && !hushed() && coverStop(s)) return;
+    if (stopAll && !hushed()) return;
     passPriority(s);
   }
   throw new Error("dandan: the game didn't settle");
 }
+/**
+ * For the tests only (tests/scry-honest.mjs): a real game stops at every priority, a seat with nothing to do asked to pass, so a
+ * belief's input can be checked to be the same however the stops fall. Off unless a test turns it on. (fullStops above is the
+ * calculator's: it asks wherever a seat has a move, which is a different game's stops, not every priority.)
+ */
+let stopAll = false;
+export const stopEverywhere = on => { stopAll = !!on; };
 /**
  * The other player has nothing to answer a spell with, and so would never see it: it would go on the stack and
  * resolve inside the move that cast it. The game stops there once for each such spell, with the other seat to pass

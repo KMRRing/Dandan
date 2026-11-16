@@ -79,8 +79,8 @@ function pickN(hand, n, ordered) {
 }
 const byName = (ids, k = nm) => { const m = new Map(); for (const id of ids) if (!m.has(k(id))) m.set(k(id), id); return [...m.values()]; };
 
-/** Every answer to the question a seat is asked. */
-function answers(s, seat) {
+/** Every answer to the question a seat is asked (also tests/scry-honest.mjs, its random games). */
+export function answers(s, seat) {
   const p = s.pending, out = [];
   switch (p.t) {
     case "attack": for (const ids of subsets(p.ids)) out.push({ t: "attack", ids }); break;

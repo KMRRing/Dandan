@@ -4,7 +4,7 @@
 //   x.f32      a sampled position's own input (BX12), one position in EVERY per seat as replay-pack.mjs's Scry rows
 //   u.f32      its unseen pool (NN)       hold.u8  1 if held out (every fifth game, by seed)
 //   win.i32    its windows, as global event indices: [block start, recent start, end)
-//   sb.f32     every unknown card of the other hand: its arrival facts (SB_N)   sa.i32  the event index it arrived at (global)
+//   sb.f32     every unknown card of the other hand: the hand's facts (SB_N)   sa.i32  where this turn's events begin (global)
 //   sy.i16     what it really was (a name)   srow.i32  its position's row
 //   meta.json  sizes and counts
 // usage: node lab/zero/scry12-pack.mjs <dir> <zero-play job ids, comma-separated | file:<local zero-play output>> [shard shards]
@@ -15,8 +15,7 @@ import { DECK, NAMES } from "../../dandan-cards.js";
 import { NN, seenBy, unknownSlots } from "./zero-view.mjs";
 import { Record12, input12, EV_N, BX12, SB_N } from "./scry12.mjs";
 
-// HONEST=1 (env, 16 Nov 2026, Fable items 6-7): the record from every priority point and the hand as a set (Record12 honest)
-const HONEST = process.env.HONEST === "1", [dir, ids] = process.argv.slice(2), SH = Number(process.argv[4] || 0), SHS = Number(process.argv[5] || 1), EVERY = 6;
+const [dir, ids] = process.argv.slice(2), SH = Number(process.argv[4] || 0), SHS = Number(process.argv[5] || 1), EVERY = 6;
 const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random, NAME_AT = new Map(NAMES.map((n, k) => [n, k]));
 fs.mkdirSync(dir, { recursive: true });
 const files = ["ev.u8", "x.f32", "u.f32", "hold.u8", "win.i32", "sb.f32", "sa.i32", "sy.i16", "srow.i32"];
@@ -27,14 +26,14 @@ let nev = 0, rows = 0, slots = 0, games = 0, broken = 0;
 function replay(game) {
   const seed = game.seed, hold = seed % 5 === 0;
   let G = newRecord(rules, { seats: 2, seed, now: 0 });
-  const R = [new Record12(0, { honest: HONEST }), new Record12(1, { honest: HONEST })], pend = [[], []];   // each seat's sampled positions, written once its block's start is known
+  const R = [new Record12(0), new Record12(1)], pend = [[], []];   // each seat's sampled positions, written once its block's start is known
   for (let i = 0; i < game.moves.length; i++) {
     const [who, m] = game.moves[i], s = rules.restore(J(G.state));
     if (seeded(mix(seed, 31337 + i))() < 1 / EVERY) for (const me of [0, 1]) {
       const seen = seenBy(s, me);
       if (seen.unknown <= 0) continue;
-      const rec = R[me], sl = unknownSlots(s, me).map(id => ({ sb: rec.slotFacts(id, s), a: rec.arrivalOf(id), y: NAME_AT.get(DECK[id]) }));
-      pend[me].push({ x: input12(s, me, seen), u: Float32Array.from(seen.unseen), recent: rec.recent(), end: rec.events.length, sl });
+      const rec = R[me], sb = rec.slotFacts(s), a = rec.thisTurn(s), sl = unknownSlots(s, me).map(id => ({ sb, a, y: NAME_AT.get(DECK[id]) }));   // the hand as a set
+      pend[me].push({ x: input12(s, me, seen), u: Float32Array.from(seen.unseen), recent: rec.recent(s), end: rec.events.length, sl });
     }
     Math.random = seeded(mix(seed, i + 1));
     const r = applyMove(rules, G, who, m, 0);
@@ -64,5 +63,5 @@ for (const name of parts) {
   for (const line of text.split("\n")) if (line.startsWith('{"game"')) replay(JSON.parse(line));
 }
 for (const f of Object.values(fd)) fs.closeSync(f);
-fs.writeFileSync(`${dir}/meta.json`, JSON.stringify({ EV_N, BX: BX12, SB_N, NN, events: nev, rows, slots, games, honest: HONEST }));
+fs.writeFileSync(`${dir}/meta.json`, JSON.stringify({ EV_N, BX: BX12, SB_N, NN, events: nev, rows, slots, games, honest: true }));
 console.log(`scry12-pack: ${games} games (${broken} not the same), ${nev} events, ${rows} positions, ${slots} unknown cards`);

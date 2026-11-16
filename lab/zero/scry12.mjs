@@ -4,13 +4,14 @@
 // unknown card's odds are conditioned on the cards already dealt before it (autoregressive, as Learned Belief Search, Hu et
 // al. 2021), so "at least one counter" or "no land at all" holds for the hand, not card by card.
 //
-// An event (EV_N numbers, raw facts only): who moved (them or me), the kind of move, the step, whether it was their turn, the
-// stack, both players' untapped lands, hand sizes, library, turn, life, the card named if the move shows one (a spell cast, a
-// land played, a card cycled), whether it targets a spell, cards drawn. Each event is embedded by a small layer learned with
-// the rest, e = ReLU(We·ev + be), and the record is read through three windows of those embeddings, summed: the whole game,
-// the last two turns, and since this card came into their hand. With the board (the extended view) and five raw facts of the
-// card's arrival (opening hand, mulligans before, drawn in the draw step, turns held, came this turn), and the names already
-// dealt to the cards before it, a hidden layer gives the card's odds by name: softmax(log of the copies still unseen + net).
+// An event (EV_N numbers, raw facts only): whose it was (them or me), the kind (a move, a pass at a priority point, cards drawn),
+// the step, whether it was their turn, the stack, both players' untapped lands, hand sizes, library, turn, life, the card named
+// if the move shows one (a spell cast, a land played, a card cycled), whether it targets a spell, how many cards were drawn.
+// Each event is embedded by a small layer learned with the rest, e = ReLU(We·ev + be), and the record is read through three
+// windows of those embeddings, summed: the whole game, the last two turns, and this turn. With the board (the extended view),
+// five facts of the hand (cards they drew this turn and last, hand size, cards played this turn, mulligans) and the names
+// already dealt to the cards before it, a hidden layer gives a card's odds by name: softmax(log of the copies unseen + net).
+// The record is honest (Record12): nothing in it depends on where the engine stopped to ask.
 // Untrained (W2 = 0) it is the unseen pool's odds, as Scry 1. Trained by lab/zero/scry12_np.py on lab/zero/scry12-pack.mjs's rows.
 //
 // In Zero it plugs in where Scry 2 does (makeZero's filterOf): update() after every move, belief() the counts and the chance
@@ -21,19 +22,20 @@ import { EXT_N, NN, ext, seenBy, unknownSlots } from "./zero-view.mjs";
 
 const other = x => 1 - x, NAME_AT = new Map(NAMES.map((n, k) => [n, k]));
 const STEPS = ["mull", "upkeep", "draw", "main1", "attackers", "blockers", "damage", "main2", "end", "over"];
-const TYPES = ["pass", "cast", "land", "cycle", "ability", "attack", "block", "mull", "keep", "hide", "other"];   // hide: put back, bottom, discard
-const TYPE_AT = { pass: 0, cast: 1, land: 2, cycle: 3, ability: 4, attack: 5, block: 6, mull: 7, keep: 8, putback: 9, bottom: 9, discard: 9 };
+const TYPES = ["pass", "cast", "land", "cycle", "ability", "attack", "block", "mull", "keep", "hide", "other", "draw"];   // hide: put back, bottom, discard
+const TYPE_AT = { pass: 0, cast: 1, land: 2, cycle: 3, ability: 4, attack: 5, block: 6, mull: 7, keep: 8, putback: 9, bottom: 9, discard: 9, draw: 11 };
 const CTX = 11, T0 = 1, S0 = T0 + TYPES.length, C0 = S0 + STEPS.length, N0 = C0 + CTX;
-export const EV_N = N0 + NN + 2;    // 1 + 11 + 10 + 11 + 25 + 2 = 60
+export const EV_N = N0 + NN + 2;    // 1 + 12 + 10 + 11 + 25 + 2 = 61
 export const BX12 = EXT_N + 1, SB_N = 5;
 const untapped = (s, x) => s.bf.reduce((a, p) => a + (p.ctl === x && !p.tapped && p.id < DECK.length && isLandId(p.id) ? 1 : 0), 0);
 const nameOf = id => (id != null && id >= 0 && id < DECK.length ? NAME_AT.get(DECK[id]) ?? -1 : -1);
+const played = m => m.t === "land" || (m.t === "cast" && m.from === "hand") || m.t === "cycle";
 
-/** One move as seen by `me`: `s` the position it was made in, `after` the one it led to. */
-export function eventOf(s, who, m, after, me, out = new Float32Array(EV_N)) {
+/** One event as seen by `me`: `s` the position it happened in, `who` whose it was, `m` the move (or { t: "pass" } at a priority
+ *  point, { t: "draw", n } for cards drawn). Every number is the position's or the event's own. */
+export function eventOf(s, who, m, me, out = new Float32Array(EV_N)) {
   out.fill(0);
-  const them = other(me);
-  out[0] = who === them ? 1 : 0;
+  out[0] = who === other(me) ? 1 : 0;
   out[T0 + (TYPE_AT[m.t] ?? 10)] = 1;
   const st = STEPS.indexOf(s.mull && !(s.mull.done?.[0] && s.mull.done?.[1]) ? "mull" : s.step);
   if (st >= 0) out[S0 + st] = 1;
@@ -48,60 +50,46 @@ export function eventOf(s, who, m, after, me, out = new Float32Array(EV_N)) {
   const k = m.t === "cast" || m.t === "land" || m.t === "cycle" ? nameOf(m.card) : m.t === "ability" ? nameOf(m.id) : -1;
   if (k >= 0) out[N0 + k] = 1;
   out[N0 + NN] = m.targets?.some(t => t.k === "s") ? 1 : 0;
-  out[N0 + NN + 1] = Math.min(4, Math.max(0, ((after.draws || [0, 0])[who] || 0) - ((s.draws || [0, 0])[who] || 0))) / 4;
+  out[N0 + NN + 1] = m.t === "draw" ? Math.min(4, m.n) / 4 : 0;
   return out;
 }
 
 /**
- * The record as `me` has seen it: every event, the index where each turn began, and for each card in the other hand the event
- * index it arrived at with its arrival facts. Indices are counts of events, so a window is [from, length).
+ * The record as `me` has seen it, honest by construction (16 Nov 2026, Fable's review items 6-7 and his note on the honest
+ * record): nothing in it depends on where the engine stopped to ask, which depends on the hidden hand. Its events are every
+ * move but a pass of priority, then what the move led to in the order it happened (the state's passPoints, dandan-rules.js):
+ * a pass event at every priority point the engine notes, asked or not, and a draw event at every draw. Each event keeps its
+ * own turn, and the windows are found from those turns; the hand's facts are the position's own. The hand is a set: every
+ * unknown card gets the same facts and the same window ("this turn"), none is followed by its id.
  */
 export class Record12 {
-  // honest (16 Nov 2026, Fable's review items 6-7): no move-by-move passes (a pass is only recorded when the seat was asked to
-  // act); instead one pass event at every priority point the rules note, asked or not (the state's passPoints, dandan-rules.js).
-  // And the hand as a set: no card followed by its id; every unknown card gets the same hand-level facts (cards they drew this
-  // turn and last, hand size, cards they played this turn, mulligans) and the window "since it arrived" becomes "this turn".
-  constructor(me, { honest = false } = {}) {
-    this.me = me; this.honest = honest; this.events = []; this.turnAt = []; this.turn = -1; this.arrived = new Map(); this.mulls = 0;
-    this.drawn = [0, 0]; this.lastDraws = 0; this.played = 0; this.draws0 = 0;
-  }
-  update(s, who, m, after) {
+  constructor(me) { this.me = me; this.events = []; this.turns = []; this.drew = []; this.plays = []; }
+  push(s, who, m) {
     const them = other(this.me);
-    if (m.t === "mull" && who === them) this.mulls++;
-    if (!this.honest || m.t !== "pass") this.events.push(eventOf(s, who, m, after, this.me));
-    if (this.honest) for (const p of after.passPoints || []) this.events.push(eventOf(p.s, p.seat, { t: "pass" }, p.s, this.me));
-    if (who === them && (m.t === "land" || (m.t === "cast" && m.from === "hand") || m.t === "cycle")) this.played++;
-    const d = (after.draws || [0, 0])[them] || 0;
-    if (after.turn !== this.turn) {
-      this.turn = after.turn; this.turnAt.push(this.events.length);
-      this.drawn = [d - this.draws0, this.drawn[0]]; this.draws0 = d; this.played = 0;
-    }
-    this.lastDraws = d - this.draws0;
-    if (this.honest) return;
-    const opening = !(after.mull?.done?.[0] && after.mull?.done?.[1]), now = new Set(after.hand[them]);
-    for (const id of [...this.arrived.keys()]) if (!now.has(id)) this.arrived.delete(id);
-    for (const id of after.hand[them]) if (!this.arrived.has(id) || opening) this.arrived.set(id, { at: opening ? 0 : this.events.length, open: opening, mulls: this.mulls, draw: after.step === "draw", turn: after.turn });
+    this.events.push(eventOf(s, who, m, this.me)); this.turns.push(s.turn || 0);
+    this.drew.push(who === them && m.t === "draw" ? m.n : 0); this.plays.push(who === them && played(m) ? 1 : 0);
   }
-  /** Where the last two turns began. */
-  recent() { const n = this.turnAt.length; return n >= 2 ? this.turnAt[n - 2] : 0; }
-  /** A card's arrival facts (SB_N): opening hand, mulligans before, drawn in the draw step, turns held, came this turn; honest:
-   *  the hand's facts, the same for every unknown card. */
-  slotFacts(id, s, out = new Float32Array(SB_N)) {
-    out.fill(0);
-    if (this.honest) {
-      const them = other(this.me);
-      out[0] = Math.min(4, this.lastDraws) / 4; out[1] = Math.min(4, Math.max(0, this.drawn[1])) / 4; out[2] = Math.min(10, s.hand[them].length) / 10;
-      out[3] = Math.min(4, this.played) / 4; out[4] = Math.min(3, this.mulls) / 3;
-      return out;
-    }
-    const a = this.arrived.get(id);
-    if (!a) return out;
-    out[0] = a.open ? 1 : 0; out[1] = Math.min(3, a.mulls) / 3; out[2] = a.draw ? 1 : 0;
-    out[3] = Math.min(6, Math.max(0, (s.turn || 0) - (a.turn || 0))) / 6; out[4] = a.turn === s.turn ? 1 : 0;
+  /** After every move: `s` the position it was made in, `who` who made it, `m` the move, `after` the position it led to. */
+  update(s, who, m, after) {
+    if (m.t !== "pass" || s.pending) this.push(s, who, m);   // a pass of priority is read where the engine notes it, asked or not
+    for (const p of after.passPoints || []) this.push(p.s, p.seat, p.draw ? { t: "draw", n: p.draw } : { t: "pass" });
+  }
+  /** Where the events of turn `t` and after begin. */
+  from(t) { let i = this.turns.length; while (i > 0 && this.turns[i - 1] >= t) i--; return i; }
+  /** Where the last two turns began, and where this turn did (every unknown card's own window). */
+  recent(s) { return this.from((s.turn || 0) - 1); }
+  thisTurn(s) { return this.from(s.turn || 0); }
+  /** The hand's facts (SB_N), the same for every unknown card: cards they drew this turn and last, hand size, cards they played
+   *  this turn, mulligans. */
+  slotFacts(s, out = new Float32Array(SB_N)) {
+    const them = other(this.me), t = s.turn || 0, a = this.from(t - 1), b = this.from(t);
+    let last = 0, now = 0;
+    for (let i = a; i < b; i++) last += this.drew[i];
+    for (let i = b; i < this.events.length; i++) now += this.plays[i];
+    out[0] = Math.min(4, s.drawn?.[them] || 0) / 4; out[1] = Math.min(4, last) / 4; out[2] = Math.min(10, s.hand[them].length) / 10;
+    out[3] = Math.min(4, now) / 4; out[4] = Math.min(3, s.mull?.n?.[them] || 0) / 3;
     return out;
   }
-  /** The start of a card's own window: when it arrived; honest: this turn's start, the same for every card. */
-  arrivalOf(id) { return this.honest ? (this.turnAt[this.turnAt.length - 1] ?? 0) : this.arrived.get(id)?.at ?? 0; }
 }
 
 /** The position's own input (BX12): the extended view with only what `me` knows of the other hand, and the unknown count. */
@@ -118,38 +106,41 @@ export function input12(s, me, seen = seenBy(s, me), out = new Float32Array(BX12
 export class Scry12 {
   constructor(me, net) {
     const F = a => Float32Array.from(a);
-    this.me = me; this.n = net; this.rec = new Record12(me, { honest: !!net.honest });
-    if (net.EV_N !== EV_N || net.BX !== BX12 || net.SB_N !== SB_N || net.NN !== NN) throw new Error("Scry 1.2: the net's sizes differ from the code's");
+    this.me = me; this.n = net; this.rec = new Record12(me);
+    if (!net.honest || net.EV_N !== EV_N || net.BX !== BX12 || net.SB_N !== SB_N || net.NN !== NN) throw new Error("Scry 1.2: the net's sizes differ from the code's");
     for (const k of ["We", "be", "Wx", "Wa", "Wt", "Wb", "Ws", "Wc", "b1", "W2", "b2"]) this[k] = F(net[k]);
     this.D = net.D; this.H = net.H;
     this.cum = [new Float32Array(this.D)];   // cum[j]: the sum of the first j events' embeddings
   }
   update(s, who, m, after) {
     this.rec.update(s, who, m, after);
-    const ev = this.rec.events[this.rec.events.length - 1], D = this.D, e = Float32Array.from(this.be);
-    for (let i = 0; i < EV_N; i++) { const v = ev[i]; if (!v) continue; const r = i * D; for (let o = 0; o < D; o++) e[o] += v * this.We[r + o]; }
-    const c = Float32Array.from(this.cum[this.cum.length - 1]);
-    for (let o = 0; o < D; o++) if (e[o] > 0) c[o] += e[o];
-    this.cum.push(c);
+    const D = this.D;
+    for (let j = this.cum.length - 1; j < this.rec.events.length; j++) {   // a move adds none, one or several events
+      const ev = this.rec.events[j], e = Float32Array.from(this.be), c = Float32Array.from(this.cum[j]);
+      for (let i = 0; i < EV_N; i++) { const v = ev[i]; if (!v) continue; const r = i * D; for (let o = 0; o < D; o++) e[o] += v * this.We[r + o]; }
+      for (let o = 0; o < D; o++) if (e[o] > 0) c[o] += e[o];
+      this.cum.push(c);
+    }
   }
-  /** The part of the hidden layer every card of this position shares: board, whole game, last two turns. */
+  /** The part of the hidden layer every unknown card of this position shares (the hand is a set): the board, the whole game,
+   *  the last two turns, this turn and the hand's facts. */
   base(s, seen) {
     const H = this.H, D = this.D, x = input12(s, this.me, seen), g = Float32Array.from(this.b1), n = this.cum.length - 1;
-    for (let i = 0; i < BX12; i++) { const v = x[i]; if (!v) continue; const r = i * H; for (let o = 0; o < H; o++) g[o] += v * this.Wx[r + o]; }
-    const all = this.cum[n], rs = this.rec.recent(), rec = this.cum[rs];
+    const add = (v, W, r) => { for (let o = 0; o < H; o++) g[o] += v * W[r + o]; };
+    for (let i = 0; i < BX12; i++) if (x[i]) add(x[i], this.Wx, i * H);
+    const all = this.cum[n], last2 = this.cum[this.rec.recent(s)], now = this.cum[Math.min(this.rec.thisTurn(s), n)], sb = this.rec.slotFacts(s);
     for (let d = 0; d < D; d++) {
-      const a = all[d] / 8, t = (all[d] - rec[d]) / 4, ra = d * H;
-      if (a) for (let o = 0; o < H; o++) g[o] += a * this.Wa[ra + o];
-      if (t) for (let o = 0; o < H; o++) g[o] += t * this.Wt[ra + o];
+      const a = all[d] / 8, t = (all[d] - last2[d]) / 4, w = (all[d] - now[d]) / 4;
+      if (a) add(a, this.Wa, d * H);
+      if (t) add(t, this.Wt, d * H);
+      if (w) add(w, this.Wb, d * H);
     }
+    for (let i = 0; i < SB_N; i++) if (sb[i]) add(sb[i], this.Ws, i * H);
     return g;
   }
-  /** One card's odds by name, given the board's share g, the names already dealt (counts), and the unseen pool. */
-  card(g, s, id, dealt, unseen) {
-    const H = this.H, D = this.D, h = Float32Array.from(g), n = this.cum.length - 1, a = this.rec.arrivalOf(id);
-    const since = this.cum[n], from = this.cum[Math.min(a, n)], sb = this.rec.slotFacts(id, s);
-    for (let d = 0; d < D; d++) { const v = (since[d] - from[d]) / 4; if (v) { const r = d * H; for (let o = 0; o < H; o++) h[o] += v * this.Wb[r + o]; } }
-    for (let i = 0; i < SB_N; i++) { const v = sb[i]; if (v) { const r = i * H; for (let o = 0; o < H; o++) h[o] += v * this.Ws[r + o]; } }
+  /** A card's odds by name, given the position's share g, the names already dealt before it (counts) and the unseen pool. */
+  card(g, dealt, unseen) {
+    const H = this.H, h = Float32Array.from(g);
     if (dealt) for (let k = 0; k < NN; k++) { const v = dealt[k]; if (v) { const r = k * H; for (let o = 0; o < H; o++) h[o] += v * this.Wc[r + o]; } }
     const z = Float32Array.from(this.b2);
     for (let o = 0; o < H; o++) { const v = h[o]; if (v <= 0) continue; const r = o * NN; for (let k = 0; k < NN; k++) z[k] += v * this.W2[r + k]; }
@@ -163,7 +154,7 @@ export class Scry12 {
   /** Each unknown card's odds with nothing dealt before it, and from them the expected counts and the chance of at least one. */
   belief(s) {
     const seen = seenBy(s, this.me), ids = unknownSlots(s, this.me), g = this.base(s, seen);
-    const slots = ids.map(id => this.card(g, s, id, null, seen.unseen));
+    const p0 = this.card(g, null, seen.unseen), slots = ids.map(() => p0);
     const counts = Float32Array.from(seen.known), none = new Float32Array(NN).fill(1);
     for (const p of slots) for (let k = 0; k < NN; k++) { counts[k] += p[k]; none[k] *= 1 - p[k]; }
     const any = Float32Array.from(none, (v, k) => (seen.known[k] > 0 ? 1 : 1 - v));
@@ -176,7 +167,7 @@ export class Scry12 {
     return (pool, n, rng) => {
       const left = pool.slice(), hand = [], dealt = new Float32Array(NN);
       for (let j = 0; j < n && left.length; j++) {
-        const p = L && L.ids[j] != null ? this.card(L.g, L.s, L.ids[j], dealt, L.seen.unseen) : null;
+        const p = L && j < L.ids.length ? this.card(L.g, dealt, L.seen.unseen) : null;
         // a name by its odds among the names still in the pool, then one card of it
         const byName = new Map();
         left.forEach((id, i) => { const k = NAME_AT.get(DECK[id]) ?? -1; if (!byName.has(k)) byName.set(k, []); byName.get(k).push(i); });
@@ -198,8 +189,8 @@ export class Scry12 {
     let hit = 0;
     for (let t = 0; t < n; t++) {
       const dealt = new Float32Array(NN); let lands = 0;
-      for (const id of L.ids) {
-        const p = this.card(L.g, L.s, id, dealt, L.seen.unseen);
+      for (let j = 0; j < L.ids.length; j++) {
+        const p = this.card(L.g, dealt, L.seen.unseen);
         let r = rng(), c = 0; while (c < NN - 1 && (r -= p[c]) > 0) c++;
         dealt[c]++; if (LANDS[c]) lands++;
       }
@@ -213,7 +204,7 @@ export class Scry12 {
     let chain = 0, each = 0;
     for (const id of truthIds) {
       const y = NAME_AT.get(DECK[id]);
-      const p1 = this.card(g, s, id, null, seen.unseen), pc = this.card(g, s, id, dealt, seen.unseen);
+      const p1 = this.card(g, null, seen.unseen), pc = this.card(g, dealt, seen.unseen);
       each -= Math.log((p1[y] || 0) + 1e-9); chain -= Math.log((pc[y] || 0) + 1e-9); dealt[y]++;
     }
     return { chain, each, n: truthIds.length };

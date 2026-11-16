@@ -8,7 +8,6 @@ on:
       games: { description: "Zero game jobs to learn from, comma-separated", required: true }
       name: { description: "Name of the net (written as <name>-scry12.json)", required: true }
       args: { description: "More scry12_np.py arguments", required: false, default: "--d 32 --h 64 --epochs 8" }
-      honest: { description: "1: the record from every priority point and the hand as a set (Fable items 6-7)", required: false, default: "0" }
 permissions:
   contents: write
 jobs:
@@ -30,7 +29,7 @@ jobs:
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
           mkdir -p lab/zero/nets
           N="${{ inputs.name }}"; D="$RUNNER_TEMP/s"
-          for k in 0 1 2 3; do LAB_KEY="$RUNNER_TEMP/key.json" HONEST="${{ inputs.honest }}" node lab/zero/scry12-pack.mjs "$D$k" "${{ inputs.games }}" $k 4 > "$RUNNER_TEMP/p$k.txt" & done; wait
+          for k in 0 1 2 3; do LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/scry12-pack.mjs "$D$k" "${{ inputs.games }}" $k 4 > "$RUNNER_TEMP/p$k.txt" & done; wait
           rm -f "$RUNNER_TEMP/key.json"
           tail -n 1 "$RUNNER_TEMP"/p?.txt | tee -a "$GITHUB_STEP_SUMMARY"
           python3 lab/zero/scry12_np.py "${D}0,${D}1,${D}2,${D}3" "lab/zero/nets/$N-scry12.json" ${{ inputs.args }} | tee "$RUNNER_TEMP/log.txt"

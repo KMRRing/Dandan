@@ -25,6 +25,14 @@ export function withRng(r, fn, hush = false) {
 export const random = () => rng();
 /** Whether the move being made is one played out in the head (no log, nothing noted for the table). */
 export const hushed = () => quiet;
+/**
+ * What a real move (not one played out in the head) led to that a belief must read the same however the game's stops fall
+ * (16 Nov 2026, Fable on the honest record): the priority points the engine notes (dandan-engine.js notePassPoint) and every draw,
+ * in the order they happened, each with a copy of the game as it stood. dandan-rules.js hands them on with the move's new state.
+ */
+export const points = [];
+const snap = s => JSON.parse(JSON.stringify({ ...s, log: [] }));
+export const notePoint = (s, p) => { if (!quiet) points.push({ ...p, s: snap(s) }); };
 
 // ---------- the log: a line for each thing that happens, {s0} for whoever sits in seat 0 ----------
 // A step line (st: 1) marks where the turn is (Untap, Upkeep, Draw…); it is not something done, so the page shows it dim and
@@ -282,6 +290,7 @@ export function draw(s, seat, n = 1) {
     (s.draws ||= [0, 0])[seat]++;
     got++;
   }
+  if (got) notePoint(s, { seat, draw: got });
   return got;
 }
 /** The top n cards of the library into the graveyard (the ids milled). */
