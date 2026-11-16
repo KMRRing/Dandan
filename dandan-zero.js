@@ -142,11 +142,11 @@ export function zeroPlayer(policy, qpolicy = null, ctx = null) {
  *  every move (seen) and frozen at each root (root: think's extra options, the deal by Scry). reset() at a new game.
  *  nets: { policy, qpolicy, scry (null: none), value } as read from their files. filterOf (the lab's Scry 2, scry2.mjs): a
  *  belief filter for a seat in place of Scry 1; `dealing` whether it deals. */
-export function makeZero({ policy = null, qpolicy = null, scry: bnet = null, value = null } = {}, { filterOf = null, scryAlso = false, fix = false } = {}) {
+export function makeZero({ policy = null, qpolicy = null, scry: bnet = null, value = null } = {}, { filterOf = null, scryAlso = false } = {}) {
   const pf = !!filterOf;
   const ctx = { counts: [new Float32Array(NN), new Float32Array(NN)], any: [null, null] }, player = zeroPlayer(policy, qpolicy, ctx);
   // fix (16 Nov 2026, Fable's review, items 1-2): the fixed dealer and the stack copies not counted; off until its match clears
-  const scry = (!pf || scryAlso) && (bnet || player.wide) ? scryOf(bnet, { fix }) : null, judge = valueJudge(value);
+  const scry = (!pf || scryAlso) && (bnet || player.wide) ? scryOf(bnet) : null, judge = valueJudge(value);
   let tracker = new Tracker(), filters = pf ? [filterOf(0, scry, () => tracker), filterOf(1, scry, () => tracker)] : null;
   return {
     player, judge, scry, wide: player.wide, dealing: !!bnet || pf, filters: () => filters,
@@ -162,7 +162,7 @@ export function makeZero({ policy = null, qpolicy = null, scry: bnet = null, val
       if (!scry) return {};
       const b = [scry(s, 0, tracker), scry(s, 1, tracker)];
       ctx.counts[0] = b[0].counts; ctx.counts[1] = b[1].counts; ctx.any[0] = b[0].any; ctx.any[1] = b[1].any;
-      return bnet ? { deal: dealBy(b[seat].slots, fix) } : {};
+      return bnet ? { deal: dealBy(b[seat].slots) } : {};
     },
     think(s, seat, deals, extra = {}) {
       return think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge, ...(player.focus ? { focus: player.focus } : {}), ...this.root(s, seat), ...extra });

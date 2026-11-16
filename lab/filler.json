@@ -6,5 +6,5 @@
   "seedBase": 200000000,
   "timeoutMin": 300,
   "args": "{shard} {shards} {out} 256 4800 {seed} g11w-C-policy g11w-C-value 400 deeper=0.03",
-  "purpose": "Filler (Korbi, 16 Nov 14:21: the latest model): Monte Scry Zero with g11w-C's nets (the latest, warm-started line) against itself, 256 deals, close calls searched again three turns ahead (deeper 0.03), 1 decision in 400 explored (explore3); 4 games a shard, 1,200 shards a batch, as generation 12's C sets; seeds from 200,000,000 (every fifth held out, as all Zero games). Games for the last wave's training."
+  "purpose": "Filler (Korbi, 16 Nov 14:21: the latest model): Monte Scry Zero with g11w-C's nets (the latest, warm-started line) against itself, 256 deals, close calls searched again three turns ahead (deeper 0.03), 1 decision in 400 explored (explore3); 4 games a shard, 1,200 shards a batch, as generation 12's C sets; seeds from 200,000,000 (every fifth held out, as all Zero games). Hidden hands dealt name first by Scry's odds, stack copies not counted (the dealing fix, live from az-df1 50.5%, 16 Nov; shards begun before a worker updated keep the old dealer). Games for the last wave's training."
 }

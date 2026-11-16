@@ -1,0 +1,31 @@
+# Every belief net on the same frozen held-out cards (16 Nov 2026, Fable on 89d49477, ask 2; lab/zero/belief-eval.mjs): error a
+# card and edge over the pool, each card and whole hand. The leaky Scry 1.2 (g12s) runs under its own commit's scry12.mjs, copied
+# in for the run and never committed. Reads the bucket with the read-only key; writes nothing but the run's summary.
+name: Belief nets (frozen held-out)
+on:
+  workflow_dispatch:
+    inputs:
+      games: { description: "Zero game jobs (their every fifth game, held out by every trainer)", required: true, default: "az-g12-c,az-g12-c2" }
+      beliefs: { description: "Beliefs, space-separated", required: true, default: "pool s1:g11w-C s1:g12r-C old12:./scry12-g12s.mjs:g12s s12:g12h2" }
+permissions:
+  contents: read
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Score
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          git show a159d452a1cae89a96cafd67a63a2de90592504d:lab/zero/scry12.mjs > lab/zero/scry12-g12s.mjs   # the record g12s learned on
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          for k in 0 1 2 3; do LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/belief-eval.mjs "${{ inputs.games }}" $k 4 ${{ inputs.beliefs }} > "$RUNNER_TEMP/e$k.json" & done; wait
+          rm -f "$RUNNER_TEMP/key.json"
+          node lab/zero/belief-eval.mjs --sum "$RUNNER_TEMP"/e*.json | tee "$RUNNER_TEMP/table.txt"
+          { echo '```'; cat "$RUNNER_TEMP/table.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

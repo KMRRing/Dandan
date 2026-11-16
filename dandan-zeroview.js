@@ -30,16 +30,16 @@ export const DECK_COUNT = Float32Array.from(NAMES, n => DECK.filter(d => d === n
 const other = x => 1 - x;
 
 /** The cards `me` hasn't seen, by name, and what it knows of the other hand: { unseen, known (by name), unknown (slots) }. */
-/** `fix` (16 Nov 2026, Fable's review, item 2): a copied spell on the stack (Narset's Reversal's) is not a card, so it isn't
- *  counted off the unseen pool (else the pool can show no copy left while the other hand holds one). Off until its match clears. */
-export function seenBy(s, me, fix = false) {
+/** A copied spell on the stack (Narset's Reversal's) is not a card, so it isn't counted off the unseen pool (16 Nov 2026, Fable's
+ *  review, item 2: else the pool can show no copy left while the other hand holds one; live with the dealer below, az-df1). */
+export function seenBy(s, me) {
   const unseen = Float32Array.from(DECK_COUNT), known = new Float32Array(NN), bit = 1 << me, opp = other(me);
   const take = id => { const k = nameAt(id); if (k >= 0) unseen[k]--; };
   for (const id of s.hand[me]) take(id);
   for (const p of s.bf) if (p.id < TOKEN_AT) take(p.id);
   for (const id of s.yard) take(id);
   for (const id of s.exile) take(id);
-  for (const it of s.stack) if (it.kind === "spell" && it.card != null && !(fix && it.copy)) take(it.card);
+  for (const it of s.stack) if (it.kind === "spell" && it.card != null && !it.copy) take(it.card);
   const kh = knownIn(s, opp, me);
   for (const id of kh) { take(id); const k = nameAt(id); if (k >= 0) known[k]++; }
   for (const id of s.lib) if (knOf(s, id) & bit) take(id);
@@ -177,12 +177,12 @@ export function unknownSlots(s, me) { const kh = new Set(knownIn(s, other(me), m
 /** A Scry (lab/zero/scry_np.py: { H, Wg (BX×H), Ws (SLOT_N×H), b1, W2 (H×NN), b2 }) as (s, me, tracker) → { slots (each
  *  unknown card's chance by name: softmax(log unseen + net)), counts (expected, by name: known + the slots' sum), any (the
  *  chance of at least one of a name), known, unknown, unseen }; with no net, every slot the unseen pool's own odds. */
-export function scryOf(net, { fix = false } = {}) {
+export function scryOf(net) {
   const H = net ? net.H : 0, F = a => (net ? Float32Array.from(a) : null);
   const Wg = net ? F(net.Wg) : null, Ws = net ? F(net.Ws) : null, b1 = net ? F(net.b1) : null, W2 = net ? F(net.W2) : null, b2 = net ? F(net.b2) : null;
   const g = new Float32Array(H), h = new Float32Array(H), sf = new Float32Array(SLOT_N);
   return (s, me, tracker) => {
-    const seen = seenBy(s, me, fix), ids = unknownSlots(s, me), lp = new Float32Array(NN);
+    const seen = seenBy(s, me), ids = unknownSlots(s, me), lp = new Float32Array(NN);
     for (let n = 0; n < NN; n++) lp[n] = seen.unseen[n] > 0 ? Math.log(seen.unseen[n]) : -Infinity;
     if (net) {
       const x = scryInput(s, me, tracker, seen);
@@ -212,32 +212,21 @@ export function scryOf(net, { fix = false } = {}) {
     return { slots, counts, any, ...seen };
   };
 }
-/** Hidden cards dealt by a scry (dandan-think.js determinize's `deal`): each unknown slot of the other hand, in hand order,
- *  drawn from the pool by its own distribution (a card's weight its name's chance for that slot), without putting back; the
- *  rest of the pool shuffled. */
-export function dealBy(slots, fix = false) {
+/** Hidden cards dealt by a scry (dandan-think.js determinize's `deal`): each unknown slot of the other hand, in hand order, a name
+ *  drawn by its chance for that slot among the names still in the pool, then one copy of it; the rest of the pool shuffled.
+ *  (16 Nov 2026, Fable's review, item 1: a slot's odds already count the copies unseen, so the old dealer, weighing each card by
+ *  its name's chance, drew a name with ten copies left about ten times too often: up to 26 points off. Live from az-df1, 50.5%.) */
+export function dealBy(slots) {
   return (pool, n, rng) => {
     const left = pool.slice(), hand = [];
     for (let j = 0; j < n && left.length; j++) {
-      const p = slots[j];
-      if (fix) {
-        // (16 Nov 2026, Fable's review, item 1) the name first, by its chance among the names still in the pool, then one
-        // copy of it: a slot's odds already count the copies unseen, so weighing each card by its name's chance drew a name
-        // with ten copies left about ten times too often
-        const by = new Map();
-        left.forEach((id, i) => { const k = nameAt(id); if (!by.has(k)) by.set(k, []); by.get(k).push(i); });
-        const ks = [...by.keys()];
-        let tot = 0; const w = ks.map(k => { const v = (p && k >= 0 ? p[k] : by.get(k).length / NN) + 1e-6; tot += v; return v; });
-        let r = rng() * tot, c = 0;
-        while (c < ks.length - 1 && (r -= w[c]) > 0) c++;
-        const at = by.get(ks[c]), i = at[Math.floor(rng() * at.length)];
-        hand.push(left[i]); left.splice(i, 1);
-        continue;
-      }
-      let tot = 0;
-      const w = left.map(id => { const k = nameAt(id), v = (p && k >= 0 ? p[k] : 1 / NN) + 1e-4; tot += v; return v; });
-      let r = rng() * tot, i = 0;
-      while (i < left.length - 1 && (r -= w[i]) > 0) i++;
+      const p = slots[j], by = new Map();
+      left.forEach((id, i) => { const k = nameAt(id); if (!by.has(k)) by.set(k, []); by.get(k).push(i); });
+      const ks = [...by.keys()];
+      let tot = 0; const w = ks.map(k => { const v = (p && k >= 0 ? p[k] : by.get(k).length / NN) + 1e-6; tot += v; return v; });
+      let r = rng() * tot, c = 0;
+      while (c < ks.length - 1 && (r -= w[c]) > 0) c++;
+      const at = by.get(ks[c]), i = at[Math.floor(rng() * at.length)];
       hand.push(left[i]); left.splice(i, 1);
     }
     for (let i = left.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [left[i], left[j]] = [left[j], left[i]]; }

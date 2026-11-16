@@ -1,5 +1,5 @@
 // Standing tests for the belief (16 Nov 2026, Fable's review, items 1, 2 and 6, and his note on the honest record):
-//   1. dealt hands follow Scry's odds, slot by slot (the fixed dealer: within 1.5 points on 20,000 deals; the old one was 26 off)
+//   1. dealt hands follow Scry's odds, slot by slot (within 1.5 points on 20,000 deals; the old dealer was up to 26 off)
 //   2. Scry 1.2's whole input (events, windows, the hand's facts) is the same however the engine's stops fall: the same games
 //      replayed with every priority point a stop and each extra stop answered with a pass, over every position of both
 //   3. Fable's three cases: one public line, the other hand once holding an instant (asked) and once not (passed over)
@@ -27,14 +27,11 @@ const rows = a => Array.from(a, v => v.toFixed(4)).join(",");
   const s = scene({ active: 1, step: "main1", turn: 6, prio: 0, hand: [["Island", "Predict"], ["Memory Lapse", "Dandân", "Island", "Brainstorm", "Quicken"]], bf: [...islandsOf(0, 4), ...islandsOf(1, 4)] });
   const ids = unknownSlots(s, 0), b = scry(s, 0, null), pool = [...ids, ...s.lib.filter(id => !(knOf(s, id) & 1))].sort((x, y) => x - y);
   const N = 20000, rng = seeded(11);
-  for (const fix of [true, false]) {
-    const got = ids.map(() => new Float32Array(NAMES.length)), deal = dealBy(b.slots, fix);
-    for (let d = 0; d < N; d++) deal(pool, ids.length, rng).slice(0, ids.length).forEach((id, j) => { got[j][AT.get(DECK[id])] += 1 / N; });
-    let gap = 0;
-    got.forEach((g, j) => g.forEach((v, k) => { gap = Math.max(gap, Math.abs(v - b.slots[j][k])); }));
-    if (fix) check(gap < 0.015, `the fixed dealer follows Scry slot by slot (largest gap ${(100 * gap).toFixed(2)} points, bar 1.5)`);
-    else console.log(`     (the old dealer: largest gap ${(100 * gap).toFixed(1)} points)`);
-  }
+  const got = ids.map(() => new Float32Array(NAMES.length)), deal = dealBy(b.slots);
+  for (let d = 0; d < N; d++) deal(pool, ids.length, rng).slice(0, ids.length).forEach((id, j) => { got[j][AT.get(DECK[id])] += 1 / N; });
+  let gap = 0;
+  got.forEach((g, j) => g.forEach((v, k) => { gap = Math.max(gap, Math.abs(v - b.slots[j][k])); }));
+  check(gap < 0.015, `the dealer follows Scry slot by slot (largest gap ${(100 * gap).toFixed(2)} points, bar 1.5; the old one was 12.8 off)`);
 }
 
 /** Scry 1.2's whole input for `me` at `s`, as text: the events so far, the two windows, the hand's facts. The record only grows,

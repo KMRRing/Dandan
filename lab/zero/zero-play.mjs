@@ -15,8 +15,7 @@ import { zeroOptions, zeroBrain, valueRow, decisionLine, PASS } from "./zero-lib
 
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5]), Number(process.argv[6]), Number(process.argv[7])];
 // the nets by name; from generation 6 (Korbi 10:04) a policy on the extended view with its Scry, and a value net face up
-// "dealfix" anywhere in the arguments (16 Nov 2026, Fable items 1-2): the fixed dealer, once its match clears
-const brain = zeroBrain(process.argv[8], process.argv[9], null, { fix: process.argv.includes("dealfix") }), X3 = Number(process.argv[10] || 400);
+const brain = zeroBrain(process.argv[8], process.argv[9], null), X3 = Number(process.argv[10] || 400);
 // "deeper=<gap>" (15 Nov 2026, Korbi): three turns ahead on close calls, the search's values for those moves the deeper look's
 const DEEPER = (process.argv[11] || "").startsWith("deeper=") ? { deeper: { gap: Number(process.argv[11].slice(7)) } } : {};
 const random = !brain.judge;   // generation 0: no value net, no search
