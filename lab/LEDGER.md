@@ -1026,3 +1026,17 @@ Korbi wants Modern. Order: one fixed Modern matchup; his deck against the 5-10 m
 Stage 3 contract change now: the belief interface takes a weighted set of candidate decklists (one list today). Each dealt world
 picks a list, then a hand from it. The deck layer above Scry comes after the card-vector net and the automatic loop. Data source
 (Magic Online published results) and its terms for Modern still to check. XMage cloned to read (plain clone, no footprint).
+
+## 17 Nov 00:10Z — XMage read, first pass (plain clone of magefree/mage, depth 1, no footprint)
+1. Dealing hidden cards again in a copy: yes, already done. Its own MCTS player (Mage.Player.AIMCTS) copies the game
+   (createSimulationForAI = full copy) and for every other player shuffles hand into library and draws the same number again
+   (MCTSNode.randomizePlayers). Naive: ignores cards known from reveals, scry or tutors; our belief would replace it. A world on
+   another decklist needs card objects made from the card database, not just moved: more work, needed only for the deck layer.
+2. One choice at a time: half. Every choice goes through the Player interface (priority, choose, chooseTarget, chooseUse,
+   chooseMode, announceX, getAmount, attackers, blockers, trigger and replacement order, mulligan), so all are reachable. But they
+   are callbacks made from inside resolving rules code: the engine waits on the call, and the Java call stack is not part of the
+   copyable state. XMage's MCTS branches only at priority, attackers and blockers, and answers every other question at random in
+   play-outs. To search a question we would copy at the last priority point and re-run with a script of forced answers per branch.
+   This is exactly the defect we just measured in our own engine (questions answered by a quick head, not searched).
+3. Speed: a copy deep-copies the whole game state and every card object in the game (gameCards, LKI maps, effects, triggers):
+   for 120 cards with abilities, likely milliseconds, against microseconds in our engine. To be timed before any decision on it.
