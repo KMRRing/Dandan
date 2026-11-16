@@ -1010,3 +1010,13 @@ Fable (23:13): the "mean loss where it differs" column overstates the cost: the 
 looks, so its edge over any other option is biased up (winner's curse). The agreement rates stand; the match is the measure.
 Plan split at Fable's word: defect fixes (questions searched to end of turn + review item 3 twin classes) one match at bar 48%;
 the in-tree belief its own arm that must win; 6a second game from Dandan's cards before 6b; XMage probe before any real card.
+
+## 16 Nov 23:45Z — re-thinks of an unchanged position (Korbi, Fable)
+lab/rethink-count.mjs, held-out games, old lines compared by the old marks (twins alike count as the same move):
+az-g12-c+c2, 1,917 games: 89,999 of 516,652 searches (17.4%) re-think a position unchanged since the mover's own pass this turn
+(main1→main2 51,444, main2→end 34,193, attackers→blockers 4,291). The mover then acts in 36.1%; that act is the earlier search's best
+non-pass option in 77.6% (25,217 of 32,477). The two had exactly the same mean and se at the earlier search in 6.4%.
+zps003 (half its parts, fixed dealer), 135 games: 14.8%, acts 32.1%, the same 82.6%, ties 10.8%. Fixture 4245: 15 of 147, 10 of 11.
+Reading: the waste is real (a sixth of all searches), but the fixtures' 10 of 11 was high: about one act in five at the re-think
+is not the earlier best move, and two re-thinks in three end in another pass. The best non-pass option is only a proxy for what the
+first search's look-ahead would play next, which no line stores.
