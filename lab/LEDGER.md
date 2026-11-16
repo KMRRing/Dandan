@@ -920,3 +920,6 @@ Restore list for the rest still in the 03:55Z entry; the deleted pools would nee
 - Scry 1.2 honest built: passes from every priority point (dandan-rules.js keeps them on the state, out of its JSON), the hand as a set (hand-level facts, a this-turn window). tests/scry-honest.mjs: deal per slot 0.34 points (old 12.8); honest record the same asked or not (old differs). g12h training (12 epochs).
 - When az-df1 clears: fixed dealer and copy rule default everywhere, the switch deleted, one commit.
 - Acceptance, items 3-5: 3 same-picks test; 4 a match bundled with the root change; 5 a retrain (marks2 separates player, land, put-back order), no tie-break in the live line.
+
+## 2026-11-16 16:40Z ops: Google Batch lab-fill2026111318 deleted (Korbi)
+Korbi 18:38 local: stop it (3 c2d-highcpu-4 spot VMs, us-central1-f, 12 slots, old worker code, ~80% of the fleet's list calls). `gcloud batch jobs delete` accepted (deletion in progress). Korbi: no full restore until the store has moved off the bucket (at full size, request fees would end the Google credit in ~4 days). Bucket size/object count: needs the console's Observability tab (no browser connected; gcloud du too large for the connector).
