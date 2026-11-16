@@ -39,7 +39,7 @@ function scryLoss(bx, sf, lp, y) {
   for (let o = 0; o < H; o++) { const h = g[o]; if (h <= 0) continue; const r = o * NN; for (let n = 0; n < NN; n++) z[n] += h * Sg.W2[r + n]; }
   let top = -Infinity; for (let n = 0; n < NN; n++) { z[n] = lp[n] === -Infinity ? -Infinity : z[n] + lp[n]; if (z[n] > top) top = z[n]; }
   let sum = 0; for (let n = 0; n < NN; n++) sum += z[n] === -Infinity ? 0 : Math.exp(z[n] - top);
-  return -(z[y] - top - Math.log(sum));
+  return z[y] === -Infinity ? -Math.log(1e-9) : -(z[y] - top - Math.log(sum));   // as the scorecard: a name the pool rules out costs 1e-9
 }
 const softLoss = (sc, k) => { const top = Math.max(...sc); let z = 0; for (const v of sc) z += Math.exp(v - top); return -(sc[k] - top - Math.log(z)); };
 
@@ -101,7 +101,18 @@ for (const id of JOBS) {
 // a group: [start, end) of an input; scrambling takes those values from another row (the same donor for both of a value row's
 // sides, so a position's two views stay one position's)
 const perm = (n, seed) => { const r = seeded(seed), p = Array.from({ length: n }, (_, i) => i); for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } return p; };
-const take = (x, donor, [a, b]) => { const y = Float32Array.from(x); y.set(donor.subarray(a, b), a); return y; };
+// a group is a range [a, b) or a list of indices
+const take = (x, donor, g) => { const y = Float32Array.from(x); if (typeof g[0] === "number" && g.length === 2 && !g.list) y.set(donor.subarray(g[0], g[1]), g[0]); else for (const i of g) y[i] = donor[i]; return y; };
+const idx = (names, off = 0) => { const out = []; FEATURES.forEach((f, i) => { if (names.some(n => (typeof n === "string" ? f === n || f === n + "Them" : n.test(f)))) out.push(off + i); }); out.list = true; return out; };
+const CLOCK = ["hits", "lastHit", "twoHits", "threeHits", "dandans", "attackers", "onLastIsland"], MANA = ["lands", "islands", "noIsland", "red", "mana", "open", "clues"];
+const SUMS = ["cycling land", "flashback"], HAND = ["hand", ...FEATURES.slice(15, 38)], GY = [/ in the graveyard$/], BASICS = ["toMove", "library", "turn"];
+const judgeGroups = off => [
+  ["hand-built: the clock (hits taken, last hit, two and three hits away, Dandâns and attackers out, on the last Island), both seats", idx(CLOCK, off)],
+  ["hand-built: lands and mana (lands, Islands, none, red, mana, open, clues), both seats", idx(MANA, off)],
+  ["hand-built: hand summaries (cycling lands, flashback cards held), both seats", idx(SUMS, off)],
+  ["fundamental: the hand by name, both seats", idx(HAND, off)],
+  ["fundamental: the graveyard by name", idx(GY, off)],
+  ["fundamental: to move, library, turn", idx(BASICS, off)]];
 function evalPolicy(R, sc, g, seed) {
   const pi = g ? perm(R.length, seed) : null; let ok = 0, loss = 0;
   R.forEach((r, i) => { const x = g ? take(r.x, R[pi[i]].x, g) : r.x, v = sc(x, r.marks); let best = 0; for (let k = 1; k < v.length; k++) if (v[k] > v[best]) best = k; if (best === r.k) ok++; loss += softLoss(v, r.k); });
@@ -131,11 +142,11 @@ const fmt = x => x.toFixed(4), pc = x => `${(100 * x).toFixed(1)}%`;
 console.log(`Scrambled inputs, ${NETS}, on ${games} held-out games of ${JOBS.join(", ")}: ${rows.p.length} decisions, ${rows.q.length} questions, ${rows.v.length} value rows, ${rows.s.length} Scry slots; each scramble averaged over ${REP}`);
 console.log("(hand-built groups are the ones that could be removed; the raw extended view is the yardstick of a group that carries real information)");
 const NB = FEATURES.length;
-const vGroups = [["none", null], ["hand-built: the Monte 1 judge's 100 features", [0, NB]], ["hand-built: 16 squeeze features (card and land lead, answers, counters, draw spells, Dandâns held, hits it can take, counter with mana open)", [NB, NB + 2 * PLUS]], ["hand-built: 16 deck-out race features", [NB + 2 * PLUS, N]], ["all 132 hand-built together", [0, N]], ["raw: the extended view (533)", [N, N + EXT_N]]];
+const vGroups = [["none", null], ...judgeGroups(0), ["all of the Monte 1 judge's 100 features", [0, NB]], ["hand-built: 16 squeeze features (card and land lead, answers, counters, draw spells, Dandâns held, hits it can take, counter with mana open)", [NB, NB + 2 * PLUS]], ["hand-built: 16 deck-out race features", [NB + 2 * PLUS, N]], ["all 132 hand-built together", [0, N]], ["raw: the extended view (533)", [N, N + EXT_N]]];
 const v0 = evalValue(null).loss;
 console.log(`\nValue net (log loss, lower better): ${fmt(v0)} as trained`);
 for (const [name, g] of vGroups.slice(1)) { const r = avg(evalValue, g); console.log(`  ${name}: ${fmt(r.loss)} (${r.loss - v0 >= 0 ? "+" : ""}${fmt(r.loss - v0)})`); }
-const pGroups = [["hand-built: the policy view's 121 (the judge's features with their hand blanked, the step, the stack)", [0, VIEW_N]], ["raw: the extended view with Scry's belief (533)", [VIEW_N, VIEW_N + EXT_N]]];
+const pGroups = [...judgeGroups(0), ["fundamental: the step and the stack", [NB, VIEW_N - PLUS - 1]], ["hand-built: 8 squeeze features", [VIEW_N - PLUS - 1, VIEW_N - 1]], ["hand-built: library 12 or fewer", [VIEW_N - 1, VIEW_N]], ["all 121 of the policy view", [0, VIEW_N]], ["raw: the extended view with Scry's belief (533)", [VIEW_N, VIEW_N + EXT_N]]];
 for (const [label, R, sc] of [["Policy", rows.p, pscore], ["Question head", rows.q, qscore]]) {
   if (!R.length || !sc) continue;
   const b0 = evalPolicy(R, sc, null);
