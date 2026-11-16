@@ -998,3 +998,11 @@ Korbi 18:38 local: stop it (3 c2d-highcpu-4 spot VMs, us-central1-f, 12 slots, o
 - Fable's stage 3 brief: https://claude.ai/artifact/PCMJ9vZWyFkw5DA1c2dPk3; its steps 1-2 start while Zero 2 trains.
 - Korbi 22:35 Kiev: yes to the in-tree belief arm (the policy's belief updated along a play-out by what it shows: cast or revealed cards out, drawn cards in), as an arm off by default, then a match.
 - 21:00Z stage 3 step 1 (Fable's brief): tests/card-census.mjs, a standing test of card names in quoted strings outside comments on Zero 2's path, per file, allowances only going down. 36 today (dandan-netpolicy.js 28, dandan-think.js 4, dandan-zero.js 2, zero2.mjs 2; Fable's 38 counted a few in comments). A real scanner, not a regex: "Commit // Memory" is a card name.
+
+## 16 Nov 23:20Z — the look-ahead's quick answers against the search (Fable on Korbi's game, item 4)
+lab/qhead-agree.mjs over az-g12-c + az-g12-c2 held-out games (1,917 games, 0 not the same, g11w-C nets that played them): at
+64,396 searched questions the question head's top answer is the search's pick 67.3% of the time. Worst: putback 24.0% the same
+(3,864), order 38.3% (3,432), discard 46.8% (6,069), name 59.5%, search 61.7%, pick 65.4%. Where they differ the search valued its
+own pick higher by 1.8 (discard) to 6.4 (mull) points on its first look (noisy: each first look has its own se). So inside every
+look-ahead about half the mover's discards and three quarters of its put-backs are not what a search would choose: the defect in
+Korbi's game is common, not a corner. Next: the arm (the root player's own questions to the end of its turn searched in the tree).
