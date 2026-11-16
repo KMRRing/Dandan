@@ -897,3 +897,8 @@ Fleet stays cut. Deleted pools whose machine did no work in the 10:57Z snapshot:
 - Spot 48a8e737 (Chicago ch2xl) - not reporting
 Kept: every pool whose machine is working (all at 1); Google Batch (12/12 busy); Hong Kong cluster kmr-ring1-25 (~45 orphans doing 70% useful work, ~150 idle slots - flagged to Korbi).
 Restore list for the rest still in the 03:55Z entry; the deleted pools would need creating again (VM pools via console).
+
+## 2026-11-16 12:30Z exec: "How Monte thinks" page (Korbi: walk through a real game where a player floods)
+- New owner page howitworks.html (gear menu, same key): the engine's four parts, then game seed 3298 (live g9x-C nets in both seats, Quick, 64 deals) decision by decision with Scry against the truth, the policy's and the search's numbers, the value net. Data: lab/explain/game-3298.json (trace.mjs → without-scry.mjs → pack.mjs, notes-3298.json). Local CPU only, no fleet.
+- Screened 14 games (seeds from a land-heavy-deal pre-screen); 3298 is the only clear flood by the loser (8 of its turns with 2+ lands and at most 1 spell in hand).
+- Findings: (1) Scry's real read here is the land shortage (turns 10-15: 0.0-0.8 lands where luck says 0.7-1.4, truth 0); in the flood it adds little to the public cards (Boilerworks returns lands in view). (2) Without Scry (9 decisions at 256 deals) the move changed only twice, both at 99%+; the gaps moved (Take Inventory 98% vs 93%). (3) think()'s protect rule (the first-listed option stands unless beaten by its noise + 0.5 points, written for Medium's move) favours passing in Zero: Cobalt skipped attacks on turns 22-28 at 99%. Not changed; for Korbi.

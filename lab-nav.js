@@ -1,9 +1,9 @@
-// The settings button of the owner's two pages (games.html, the game history, and lab.html, the game lab): a gear at the top right
+// The settings button of the owner's pages (games.html, the game history; lab.html, the game lab; howitworks.html, how Monte thinks): a gear at the top right
 // that opens a small menu to go to the other. Both pages open only with the key in the address (?k=…, games-key.js), so the
 // link to the other page carries the same key; each page checks it again on its own, so a wrong key goes to the game.
-// mountSettings(current) is called once the key is known good ("history" or "lab").
+// mountSettings(current) is called once the key is known good ("history", "lab" or "how").
 const GEAR = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Z"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l1.9-1.5-1.9-3.3-2.3.9a7.6 7.6 0 0 0-2.6-1.5L14.1 2.6h-3.8l-.4 2.5A7.6 7.6 0 0 0 7.3 6.6l-2.3-.9-1.9 3.3L5 10.5a7.6 7.6 0 0 0 0 3L3.1 15l1.9 3.3 2.3-.9a7.6 7.6 0 0 0 2.6 1.5l.4 2.5h3.8l.4-2.5a7.6 7.6 0 0 0 2.6-1.5l2.3.9 1.9-3.3Z"/></svg>`;
-const PAGES = [["history", "Game history", "games.html"], ["lab", "Game lab", "lab.html"]];
+const PAGES = [["history", "Game history", "games.html"], ["lab", "Game lab", "lab.html"], ["how", "How Monte thinks", "howitworks.html"]];
 
 export function mountSettings(current, key = new URLSearchParams(location.search).get("k")) {
   if (document.getElementById("navGear")) return document.getElementById("navGear");

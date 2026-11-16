@@ -1,0 +1,96 @@
+{
+  "title": "Cobalt against Copper, seed 3298",
+  "summary": "Both seats are the live Monte Scry Zero at Quick (64 deals a decision). Copper first runs short of lands, then from turn 15 its hand fills with lands it can't use. Cobalt deploys its Dandâns, counters Copper's two answers with two Memory Lapses and wins at 20 life on turn 32.",
+  "moments": [
+    {
+      "i": 1,
+      "act": "Before the game",
+      "title": "A free mulligan by a 3-point margin",
+      "text": "Cobalt's first seven has three lands and no threat. The search deals 64 possible games from here for each answer: keeping wins 39% of them, the free mulligan 42%. Close, so it mulligans. The policy net alone leaned the same way, 57% to 42%. The new seven has two Dandâns and a Memory Lapse."
+    },
+    {
+      "i": 9,
+      "act": "Before the game",
+      "title": "The search overrules the policy",
+      "text": "At Copper's upkeep the policy net gives islandcycling Lórien Revealed only 9%: it would pass. The search plays both out and finds cycling now wins 54% to passing's 50%, so it cycles. This is the usual division of labour: the policy proposes and plays the look-aheads, the search decides."
+    },
+    {
+      "i": 20,
+      "act": "Before the game",
+      "title": "Dandân blocks Dandân",
+      "text": "Copper attacks with its Dandân. Blocking trades the two (77%); taking 4 is 67%. Every option is a number, from the same kind of look-ahead."
+    },
+    {
+      "i": 70,
+      "act": "The turn",
+      "title": "Scry reads a land-light hand",
+      "text": "Copper holds six cards, none a land (see the true hand). Scry, which sees only what Cobalt sees, puts 0.9 lands in that hand where the bare pool of unseen cards says 1.7. One public sign: Copper skipped its land drop on turn 11. Scry also expects a Memory Lapse (63% at least one) and is wrong: Copper holds Narset's Reversal and Commit // Memory instead."
+    },
+    {
+      "i": 77,
+      "act": "The turn",
+      "title": "Mind Bend kills a Dandân",
+      "text": "Copper has cast two Dandâns. At the end of Copper's turn Cobalt Mind Bends one into needing a Swamp, which kills it. On its own turn it bends the second (step 90). Cobalt's chance goes from about 40% to 80% over these two spells."
+    },
+    {
+      "i": 93,
+      "act": "The turn",
+      "title": "Scry's best read: no lands at all",
+      "text": "Copper has missed land drops and keeps casting spells. Scry puts 0.03 lands in its two unknown cards; luck alone says 0.7. The truth is none. This is Scry at its best in this game: a land-light hand is easy to see in how someone plays. Then Copper casts Brainstorm."
+    },
+    {
+      "i": 99,
+      "act": "The flood",
+      "title": "Copper digs, and finds lands",
+      "text": "Copper Brainstorms twice (Narset's Reversal copies the first) and keeps two Izzet Boilerworks. From here almost every card Copper draws is a land: 7 of its last 11."
+    },
+    {
+      "i": 102,
+      "act": "The flood",
+      "title": "The flood is mostly public",
+      "text": "Izzet Boilerworks returns a land to its owner's hand face up. Each time Copper plays one, Cobalt learns one card of Copper's hand for certain. Scry adds these to its count, so its lands estimate jumps without any guessing."
+    },
+    {
+      "i": 104,
+      "act": "The flood",
+      "title": "Threat into a tapped-out opponent",
+      "text": "Copper's lands are all tapped, so nothing can answer a Dandân this turn. Casting it wins 91% of the dealt games, passing 77%."
+    },
+    {
+      "i": 114,
+      "act": "The flood",
+      "title": "The flood is read from public cards",
+      "text": "Scry expects 2.7 lands in Copper's four cards and the truth is three. Luck alone says 2.7 too: two of those lands came back to Copper's hand in view, and the other two cards at the pool's odds add the rest. In the flood Scry adds little to what is public. Its blind spot: Commit // Memory, in that hand since turn 13, at 5%."
+    },
+    {
+      "i": 136,
+      "act": "The flood",
+      "title": "Two answers, two Memory Lapses",
+      "text": "Copper finally finds Deem Inferior for Cobalt's Dandân. Cobalt Lapses it (97%), Copper Commits the Lapse, and Cobalt Lapses the Commit (step 138, 98%). Both of Copper's spells go back on top of the library, so Copper's next two draws are known to both players."
+    },
+    {
+      "i": 141,
+      "act": "The flood",
+      "title": "Scry is certain",
+      "text": "Copper's hand is two cards and Cobalt knows both: Halimar Depths and Island, both returned to hand in view. 'Unknown 0' means no guessing at all. Cobalt attacks: 4 damage."
+    },
+    {
+      "i": 154,
+      "act": "Endgame",
+      "title": "Passing gets a head start",
+      "text": "Cobalt doesn't attack with a Dandân Copper can't block. Attacking scored 99.7%, not attacking 99.2%, and not attacking was picked. The search keeps the first-listed option unless another beats it by more than its noise plus half a point. That rule is from the Medium era, when the first option was Medium's own move. In Zero the first option is passing (or not attacking), so near-certain wins drift toward doing nothing: no attacks on turns 22, 24, 26 and 28. It costs time here, not the game."
+    },
+    {
+      "i": 188,
+      "act": "Endgame",
+      "title": "Two Dandâns into six open lands",
+      "text": "Copper has six untapped lands, but Scry gives it only a 27% chance of holding a Memory Lapse (it holds none). Cobalt casts both of its Dandâns. The table below shows what that read was worth: without Scry the same position rates Take Inventory 5 points lower, because blind deals keep finding counters that aren't there."
+    },
+    {
+      "i": 197,
+      "act": "Endgame",
+      "title": "Eight damage, then eight more",
+      "text": "Cobalt attacks with two of its three Dandâns. All three scored 100.0% and two 99.9%; on a call that close only those two are weighed again, three turns ahead, and the same head start goes to whichever is listed first. Copper goes to 4, then to -4 on turn 32."
+    }
+  ]
+}
