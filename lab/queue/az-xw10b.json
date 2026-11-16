@@ -1,0 +1,1 @@
+{"id": "az-xw10b", "script": "hard-match.mjs", "args": "{shard} {shards} {out} zero~g10w-C-value~g10w-C-policy~deeper=0.03 zero~g9x-C-value~g9x-C-policy~deeper=0.03 64 500 986000", "shards": 100, "timeoutMin": 150, "purpose": "g10w-C against g9x-C (the live nets), both with the variable look-ahead, Quick, 500 pairs: a swap candidate if clearly ahead (Korbi's call)"}
