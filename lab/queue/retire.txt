@@ -23,3 +23,4 @@ az-g7-a  # 18:35Z: approach A dropped after generation 7's first reads (C agains
 az-x6-a  # 18:35Z: approach A dropped after generation 7's first reads (C against the crowned Monte 44.3%, A 28.0%; C's generation 7 beat its generation 6 70.3%, A's 51.0%); its fleet time goes to more C games
 az-t1  # 11:37Z: look-ahead of one turn loses clearly to two: 38.5% (99%: 33.3 to 43.8) over 244 pairs; two turns stays the default
 sps119  # 16 Nov 14:30Z: the old Hard S5 filler retired; the filler is now Zero self-play with the latest nets (zps, g11w-C; Korbi 14:21)
+zps002  # 16 Nov 18:20Z (Fable on 39dde07e): made before the dealing fix went live (pinned to 918243d4, old dealer), 1,117 of 1,200 shards unclaimed at 17:49Z; zps003 at the fixed commit replaces it. Rule: when anything goes live, close the open filler batch
