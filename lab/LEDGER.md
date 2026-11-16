@@ -887,3 +887,13 @@ Note: US 16-core markets were unstable tonight ($0.035 vs $0.01); on restore, ke
 - 07:26Z g11w-C against the live g9x-C (az-x11) 52.8% (99%: 48.7 to 56.9) over 450; against g10w-C (az-x11b) 52.7% (48.6 to 56.9) over 475; at Deep against the benchmark (az-yd11) 62.1% (54.7 to 69.4) over 112. Each warm generation edges the one before by 2–3 points without clearing 99%; no swap yet. az-dd9 52.1% over 189. Generation 12's games: az-g12-c 117, -c2 146 of 1,200.
 - 07:56Z **Scry fusion built** (Korbi 09:54): SlotFilter's `net` option (scry2.mjs), zeroBrain's scry mode "pfx[:n=..]": Scry 2d's hands (struck when their play or a draw rules them out, replaced by hands that fit) with the policy's regret weighing off; at each root every hand is weighed by Scry 1's chance of it over the pool's (an importance weight: the hands were drawn from the pool), and the same weighted hands give the policy's belief and the look-aheads' deals. Local: a 120-move game, 500 hands: the net's weights leave 230 → 90 effective hands as the game goes (top weight 0.025 → 0.063); a 16-deal pair clean (34 s). Queued **az-px11** (fusion against Scry 1 on the live engine, 400 pairs) and its accuracy on the frozen games (scorecard).
 - 09:30Z Finals: **az-x11 (g11w-C against the live g9x-C) 53.1% (99%: 49.2 to 57.0) over 500**; az-x11b (against g10w-C) 52.9% (48.8 to 57.0) over 500. **az-yd11 (g11w-C at Deep against the benchmark) 64.1% (57.9 to 70.3) over 177**, the best Deep read yet (g9x-C 62.8%). **az-px11 (Scry fusion, before fixes 1–2 and the hand generator) 48.8% (44.2 to 53.4) over 370**: level with Scry 1, as expected before the fixes. az-dd9 52.1% over 190. **Hold (Korbi 10:49): no new compute until the conceptual changes are written down and built** (review doc, "Changes to make before more compute"): g12w-C training, the pooled swap test and further generations wait for the last Dandân wave. Running jobs finish: az-g12-c 494, -c2 484 of 1,200.
+
+## 2026-11-16 11:05Z ops: Korbi "Cut and remove all idle" (13:01 Tallinn)
+Fleet stays cut. Deleted pools whose machine did no work in the 10:57Z snapshot:
+- VM e72934ed (kmr-ring1-18, HK gp.large, old worker code, 1/4 busy, 0 shards in 60 min)
+- VM 0e83f5f1 (kmr-ring1-49, HK ch2xl) - not reporting
+- Spot a5f6b675 (Chicago ch.large) - not reporting
+- Spot 0cfd35a6 (Dallas ch2xl, $0.035) - not reporting
+- Spot 48a8e737 (Chicago ch2xl) - not reporting
+Kept: every pool whose machine is working (all at 1); Google Batch (12/12 busy); Hong Kong cluster kmr-ring1-25 (~45 orphans doing 70% useful work, ~150 idle slots - flagged to Korbi).
+Restore list for the rest still in the 03:55Z entry; the deleted pools would need creating again (VM pools via console).
