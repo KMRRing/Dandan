@@ -55,11 +55,13 @@ async function side(spec) {
     // "deeper=<gap>[:<turns>[:<max>]]": close calls weighed again, three turns ahead (dandan-think.js); ":2", the control: the
     // second look at the same depth, so only the extra deals differ; ":3:5", a turn further while still close, up to five
     const deeperFlag = flags.find(x => x.startsWith("deeper=")), deeperOf = f => { const [g, t, m] = f.split(":").map(Number); return { gap: g, ...(t ? { turns: t } : {}), ...(m ? { max: m } : {}) }; };
+    // "dealfix" (16 Nov 2026, Fable's review, items 1-2): hidden hands dealt name first (by Scry's odds among the names left), and
+    // stack copies not counted as cards
     // "keepfirst" (16 Nov 2026): the search's old rule that the first option (for Zero, the pass) stands unless beaten by the
     // noise plus half a point, the control for its removal
     // "deals=<n>": this side's own deals a decision (Deep against Deepest, 15 Nov 2026); "v1+v2" as the value: their mean
     const dealsFlag = flags.find(x => x.startsWith("deals=")), ownDeals = dealsFlag ? Number(dealsFlag.slice(6)) : 0;
-    const brain = Z.zeroBrain(pol, v, scryFlag ? scryFlag.slice(5) : null), extra = { open, ...(turnsFlag ? { turns: Number(turnsFlag.slice(6)) } : {}), ...(deeperFlag ? { deeper: deeperOf(deeperFlag.slice(7)) } : {}), ...(flags.includes("keepfirst") ? { keepFirst: true } : {}) };
+    const brain = Z.zeroBrain(pol, v, scryFlag ? scryFlag.slice(5) : null, { fix: flags.includes("dealfix") }), extra = { open, ...(turnsFlag ? { turns: Number(turnsFlag.slice(6)) } : {}), ...(deeperFlag ? { deeper: deeperOf(deeperFlag.slice(7)) } : {}), ...(flags.includes("keepfirst") ? { keepFirst: true } : {}) };
     const f = (s, seat) => {
       const ms = Z.zeroOptions(s, seat);
       if (ms.length <= 1) return { move: ms[0] ?? Z.PASS, off: false };

@@ -15,7 +15,7 @@ import { Scry12 } from "./scry12.mjs";
 export { PASS, zeroOptions, qMarksOf, zeroPlayer, makeZero, valueJudge, RACE_N } from "../../dandan-zero.js";
 
 /** Zero whole, from its nets' names (lab/zero/nets/<name>.json). */
-export function zeroBrain(policyName, valueName, scryName = null) {
+export function zeroBrain(policyName, valueName, scryName = null, { fix = false } = {}) {
   // scryName (the swap matches): a Scry other than the policy's own, "-" for none, "pf" for Scry 2 (the particle filter,
   // scry2.mjs: no net, Zero's own policy and question head as the model of the other player)
   // "pf[:n=..][:eps=..]" Scry 2a; "pfs[...]" Scry 2b: the same filter with the policy's own Scry 1 dealing its fresh hands and
@@ -35,7 +35,7 @@ export function zeroBrain(policyName, valueName, scryName = null) {
   const filterOf = !pf ? null : (me, scry, tracker) => pfd ? new SlotFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt, ...(pfx && scry ? { net: s => scry(s, me, tracker()).slots } : {}) }) : new HandFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt, ...(pfs && scry ? { prior: (s, x) => scry(s, x, tracker()).slots } : {}) });
   // "<a>+<b>": the value nets' mean (an ensemble, 15 Nov 2026)
   const value = valueName && valueName.includes("+") ? valueName.split("+").map(netOf) : netOf(valueName);
-  return makeZero({ policy, qpolicy, scry: bnet, value }, { filterOf, scryAlso: pfs });
+  return makeZero({ policy, qpolicy, scry: bnet, value }, { filterOf, scryAlso: pfs, fix });
 }
 
 /** A net file of Zero's (lab/zero/nets/<name>.json), or null for "-". */
