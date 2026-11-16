@@ -427,7 +427,7 @@ const EARLY = 16;
  * each other, the best k are weighed again, alone, `turns` ahead in the same deals, and that look decides between them; while
  * they stay that close, again a turn further each time, up to `max` (Korbi 14:14: "even deeper if it continues to be a close
  * call, up to 5"). Their means in `list` become the last look's; the other moves keep the first look's, and each re-weighed one
- * keeps the first look's as `first` (Fable's review, item 9: soft targets from one depth). Without `deeper`, think as it was.
+ * keeps the first look's as `first`, `firstSe`, `firstN` (Fable's review, item 9: soft targets from one depth). Without `deeper`, think as it was.
  */
 export function think(s, seat, opts = {}) {
   const r = thinkOnce(s, seat, opts), dp = opts.deeper;
@@ -442,7 +442,7 @@ export function think(s, seat, opts = {}) {
     if (r2.only || v.length < 2 || v[0] - v[1] >= dp.gap) break;
   }
   const by = new Map(r2.list.map(c => [key(c.move), c]));
-  const list = r.list.map(c => (by.has(key(c.move)) ? { ...c, first: c.mean, mean: by.get(key(c.move)).mean, se: by.get(key(c.move)).se, n: by.get(key(c.move)).n } : c));
+  const list = r.list.map(c => (by.has(key(c.move)) ? { ...c, first: c.mean, firstSe: c.se, firstN: c.n, mean: by.get(key(c.move)).mean, se: by.get(key(c.move)).se, n: by.get(key(c.move)).n } : c));
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && keys.has(key(c.move))).sort((a, b) => b.mean - a.mean), ...list.filter(c => !keys.has(key(c.move)))], deeper: looks };
 }

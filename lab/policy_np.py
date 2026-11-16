@@ -121,6 +121,12 @@ def step(g, t):
     w = WEIGHT[g["idx"]]
     if A.soft > 0:
         pi = softmax(Q[g["cid"]] / A.soft, g)
+        # a decision flagged hard (16, replay-pack2: a line written before each option's move was stored, whose q mix two looks)
+        # learns its pick alone (Fable's review, item 8)
+        hard = (flags[g["idx"]] & 16) > 0
+        if hard.any():
+            one = np.zeros_like(pi); one[g["target"]] = 1.0
+            pi = np.where(hard[g["dec"]], one, pi)
         loss = -(w[g["dec"]] * pi * np.log(p + 1e-12)).sum()
         df = (p - pi) * w[g["dec"]] / n
     else:
