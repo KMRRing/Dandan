@@ -394,6 +394,7 @@ export class SlotFilter {
       return HandFilter.prototype.deal.call({ N: 1, w: [1], P: [want] })(pool, slots, rng);
     };
   }
-  marginals(s) { if (!this.ready) this.reset(s); const { c, u } = this.counts(); return { p: c, u }; }
-  landsAtLeast(k, lands, s) { if (!this.ready) this.reset(s); let pr = 0; for (let i = 0; i < this.N; i++) { let c = 0; for (const n of this.H[i]) if (lands[n]) c++; if (c >= k) pr += this.w[i]; } return pr; }
+  // read with the weights the deals use (fused: Scry 1's; the scorecard reads these)
+  marginals(s) { if (!this.ready) this.reset(s); const w = this.weightsAt(s), c = new Float64Array(NN); let u = 0; for (let i = 0; i < this.N; i++) { for (const n of this.H[i]) c[n] += w[i]; u += w[i] * this.H[i].length; } return { p: c, u }; }
+  landsAtLeast(k, lands, s) { if (!this.ready) this.reset(s); const w = this.weightsAt(s); let pr = 0; for (let i = 0; i < this.N; i++) { let c = 0; for (const n of this.H[i]) if (lands[n]) c++; if (c >= k) pr += w[i]; } return pr; }
 }
