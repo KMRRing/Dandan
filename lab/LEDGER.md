@@ -941,3 +941,10 @@ Korbi 18:38 local: stop it (3 c2d-highcpu-4 spot VMs, us-central1-f, 12 slots, o
 - The filler: zps002 (old dealer, 1,117 of 1,200 shards unclaimed at 17:49Z) retired; zps003 queued at the fixed commit (seeds from 200,009,600, so refill goes on at zps004 and no batch id is reused). zps001 left to finish. Rule: when anything goes live, close the open filler batch.
 - az-df1 was tallied by hand from its rows (the fleet-status snapshot has been stale since 13 Nov; for ops); to be confirmed with gate-sum once it works.
 - The copy rule in the policy's and judge's views (only with a copied spell on the stack) went live untested by the match: Korbi decides whether it stays.
+
+## 2026-11-16 18:50Z exec: g12h2 (honest Scry 1.2) and every belief on frozen held-out cards
+- g12h2 packer (generations 11-12 replayed on the new engine): 23,976 games, 0 not the same (5996, 5996, 5992, 5992): the engine change leaves play unchanged. 8.20M unknown cards; kept epoch 11: held out each card 2.6102, whole hand 2.5750, pool 2.7677.
+- belief-eval (run 43930134550; every fifth game of az-g12-c, c2; 663,844 cards, 1,917 games; nats a card, edge over the pool 2.7755):
+  pool 2.7755 / 2.7755; Scry 1 g11w-C (live, leaky) 2.5772, edge 0.198; Scry 1 g12r-C (leaky) 2.5519, edge 0.224; Scry 1.2 g12s (leaky) 2.4916 / 2.4448, edge 0.284 / 0.331; Scry 1.2 g12h2 (honest) 2.6107 / 2.5750, edge 0.165 / 0.201 (each card / whole hand).
+- The arms are on the same cards (pool 2.777 there; the copy rule moved it by 0.0015), as edge: today 0.227, no pass counters 0.222, hand as a set 0.160, both 0.158 (all with the leaky Tracker).
+- Honesty costs Scry 1.2 about 0.12-0.13 nats a card. Honest g12h2 dealing whole hands (0.201) matches the live leaky Scry 1 (0.198). Next on the plan: item 10, then the swap match on the live nets (500 pairs, Quick, bar 48%).
