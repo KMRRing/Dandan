@@ -1,16 +1,21 @@
 # The move of the lab's store to Backblaze B2 (16 Nov 2026, Korbi via ops; lab/store.mjs). One step at a time, by hand:
 #   check   B2 answers: a write, read, list and delete under _check/, and the bucket's objects counted by top folder
-#   copy    every object of the Google bucket but fleet/ copied to B2 (rclone; again later it copies only what is new or changed)
+#   copy    every object of the Google bucket but fleet/ and private/ copied to B2 (rclone): the first copy, before config only
+#   catchup-dry, catchup   after config (Fable 21:44): what is new on Google copied over, but never over an object newer on B2
+#           (--update --use-server-modtime), so nothing a worker wrote on B2 is undone; the dry run lists what it would copy.
+#           From config to the last catch-up: no retire, requeue or spec edit (a copy would bring a deleted object back)
 #   config  private/store.json written on the Google bucket from the secrets (a path nothing lists or copies to the public status
 #           branch): workers switch to B2 within 10 minutes, and every GitHub run after it reads and writes B2 (fleet/ stays on Google)
-#   verify  objects and bytes on both sides (fleet/ left out), objects missing or different on B2, and objects written to
-#           Google outside fleet/ in the last 30 minutes (none once every worker has switched)
+#   verify  objects and bytes on both sides, then by top folder: objects missing on B2 and objects that differ, and objects written
+#           to Google outside fleet/ in the last 30 minutes. It passes (Fable 21:44) when Google has been quiet for 30 minutes, a
+#           catch-up has run after that, and nothing is missing on B2 outside claims/ and workers/ (sizes there, and of done marks,
+#           differ by design once workers write on B2)
 # The B2 key comes from the secrets LAB_B2_KEY_ID, LAB_B2_KEY, LAB_B2_ENDPOINT and is never printed; nothing here echoes it.
 name: Store move (Google to B2)
 on:
   workflow_dispatch:
     inputs:
-      step: { description: "check, copy, config or verify", required: true, default: "check" }
+      step: { description: "check, copy, config, catchup-dry, catchup or verify", required: true, default: "check" }
 permissions:
   contents: read
 jobs:
@@ -45,13 +50,23 @@ jobs:
           R="--exclude fleet/** --exclude private/** --exclude _check/** --fast-list --retries 10 --low-level-retries 30 --stats 120s --stats-one-line --stats-log-level NOTICE"
           case "${{ inputs.step }}" in
             check)  node lab/store-check.mjs ;;
-            copy)   rclone copy "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --transfers 96 --checkers 96 --size-only 2>&1 | tail -40 ;;
+            copy)   [ -z "$(LAB_KEY="$RUNNER_TEMP/rkey.json" node -e 'import("./lab/store.mjs").then(async m => { const { googleToken } = await import("./lab/lib.mjs"); const g = m.googleStore(process.env.LAB_BUCKET, googleToken); process.stdout.write((await g.get(m.STORE_CONFIG)) ? "set" : ""); })')" ] || { echo "the store has switched: use catchup, not copy"; exit 1; }
+                    rclone copy "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --transfers 96 --checkers 96 --size-only ;;
+            catchup-dry) rclone copy "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --transfers 96 --checkers 96 --update --use-server-modtime --dry-run 2>&1 | sed -n 's/.*NOTICE: \(.*\): Skipped copy.*/\1/p' | cut -d/ -f1 | sort | uniq -c | sed 's/^/would copy: /' ;;
+            catchup) rclone copy "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --transfers 96 --checkers 96 --update --use-server-modtime ;;
             config) LAB_KEY="$RUNNER_TEMP/wkey.json" node lab/store-check.mjs --config ;;
             verify)
               echo "## Google (fleet/ left out)"; rclone size "gcs:$LAB_BUCKET" $R --json
               echo "## B2"; rclone size "b2:$LAB_B2_BUCKET" $R --json
-              echo "## missing or different on B2"; rclone check "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --one-way --size-only 2>&1 | tail -5 || true
-              echo "## written to Google outside fleet/ in the last 30 minutes"; rclone lsf "gcs:$LAB_BUCKET" $R -R --files-only --max-age 30m | wc -l ;;
+              rclone check "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --one-way --size-only --missing-on-dst "$RUNNER_TEMP/miss.txt" --differ "$RUNNER_TEMP/diff.txt" > /dev/null 2>&1 || true
+              by() { cut -d/ -f1 "$1" | sort | uniq -c | sort -rn; }
+              echo "## missing on B2, by top folder"; by "$RUNNER_TEMP/miss.txt"
+              echo "## different size on B2, by top folder (claims/, workers/ and done marks differ by design)"; by "$RUNNER_TEMP/diff.txt"
+              quiet=$(rclone lsf "gcs:$LAB_BUCKET" $R -R --files-only --max-age 30m | wc -l)
+              missing=$(grep -v -E '^(claims|workers)/' "$RUNNER_TEMP/miss.txt" | wc -l)
+              echo "## written to Google outside fleet/ in the last 30 minutes: $quiet"
+              echo "## missing on B2 outside claims/ and workers/: $missing"
+              if [ "$quiet" = 0 ] && [ "$missing" = 0 ]; then echo "VERIFY: passed (if a catch-up ran after Google went quiet)"; else echo "VERIFY: not yet"; fi ;;
             *) echo "unknown step"; exit 1 ;;
           esac
           rm -f "$RUNNER_TEMP"/*key.json

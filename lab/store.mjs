@@ -128,6 +128,8 @@ export function sigV4({ method, host, path: p, query = {}, body = "", region, ke
 }
 const unxml = s => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
 const tag = (x, t) => { const m = x.match(new RegExp(`<${t}>([\\s\\S]*?)</${t}>`)); return m ? unxml(m[1]) : null; };
+/** B2's reason for a refusal, from its error body: the code and its message (a cap reached reads as AccessDenied too). */
+const why = x => [tag(x, "Code"), tag(x, "Message")].filter(Boolean).join(": ");
 
 /** { endpoint: "https://s3.<region>.backblazeb2.com", bucket, keyId, key, region? } */
 export function s3Store({ endpoint, bucket, keyId, key, region }) {
@@ -152,7 +154,7 @@ export function s3Store({ endpoint, bucket, keyId, key, region }) {
         REQ.read++;
         const r = await call("GET", name);
         if (r.status === 404) { await r.arrayBuffer().catch(() => {}); return null; }
-        if (!r.ok) throw new Error(`get ${name}: ${r.status} ${tag(await r.text(), "Code") || ""}`);
+        if (!r.ok) throw new Error(`get ${name}: ${r.status} ${why(await r.text())}`);
         return { text: await r.text(), generation: r.headers.get("etag") };
       } catch (e) { if (tries >= 5) throw e; await backoff(tries); }
     }
@@ -162,7 +164,7 @@ export function s3Store({ endpoint, bucket, keyId, key, region }) {
     REQ.write++;
     const b = typeof body === "string" ? body : Buffer.from(body);
     const r = await call("PUT", name, { body: b, headers: { "content-type": "application/octet-stream" } });
-    if (!r.ok) throw new Error(`put ${name}: ${r.status} ${tag(await r.text(), "Code") || ""}`);
+    if (!r.ok) throw new Error(`put ${name}: ${r.status} ${why(await r.text())}`);
     await r.arrayBuffer().catch(() => {});
   };
   return {
@@ -173,7 +175,7 @@ export function s3Store({ endpoint, bucket, keyId, key, region }) {
         REQ.list++;
         const query = { "list-type": "2", prefix, "max-keys": "1000", ...(token ? { "continuation-token": token } : {}) };
         const r = await call("GET", null, { query }), x = await r.text();
-        if (!r.ok) throw new Error(`list ${prefix}: ${r.status} ${tag(x, "Code") || ""}`);
+        if (!r.ok) throw new Error(`list ${prefix}: ${r.status} ${why(x)}`);
         for (const c of x.match(/<Contents>[\s\S]*?<\/Contents>/g) || []) out.push({ name: tag(c, "Key"), generation: tag(c, "ETag"), t: Date.parse(tag(c, "LastModified")) });
         token = tag(x, "IsTruncated") === "true" ? tag(x, "NextContinuationToken") : null;
       } while (token);
