@@ -10,6 +10,7 @@ import { makeJudge, features, FEATURES } from "../../dandan-eval.js";
 import { viewOf, marksOf } from "../../dandan-netpolicy.js";
 import { zeroOptions, qMarksOf, makeZero, valueJudge } from "../../dandan-zero.js";
 import { HandFilter, SlotFilter } from "./scry2.mjs";
+import { Scry12 } from "./scry12.mjs";
 // the options, the marks, the player and the brain: dandan-zero.js (the app's, since 15 Nov 2026); the nets read from files here
 export { PASS, zeroOptions, qMarksOf, zeroPlayer, makeZero, valueJudge, RACE_N } from "../../dandan-zero.js";
 
@@ -22,7 +23,15 @@ export function zeroBrain(policyName, valueName, scryName = null) {
   // "pfx[...]" the Scry fusion (16 Nov 2026, Korbi: one set of hands): Scry 2d's hands, struck and replaced, weighed by Scry 1
   const policy = netOf(policyName), qpolicy = qnetOf(policyName), pf = /^pf[sdx]?(:|$)/.test(scryName || ""), pfs = /^pf[sx](:|$)/.test(scryName || ""), pfd = /^pf[dx](:|$)/.test(scryName || ""), pfx = /^pfx(:|$)/.test(scryName || "");
   const opt = Object.fromEntries((scryName || "").split(":").slice(1).map(x => x.split("=")).map(([k, v]) => [k, Number(v)]));
-  const bnet = pf ? (pfs ? scryNetOf(policyName) : null) : scryName ? netOf(scryName) : scryNetOf(policyName);
+  const bnet = pf ? (pfs ? scryNetOf(policyName) : null) : /^s12(:|$)/.test(scryName || "") ? null : scryName ? netOf(scryName) : scryNetOf(policyName);
+  // "s12[:<net name>]" (16 Nov 2026): Scry 1.2 (scry12.mjs), the belief net on the raw record dealing whole hands; its net
+  // lab/zero/nets/<net name>-scry12.json (default: the policy's own name)
+  const s12 = /^s12(:|$)/.test(scryName || "");
+  if (s12) {
+    const nm = (scryName.split(":")[1] || policyName.replace(/-policy$/, "")) + "-scry12", net = netOf(nm);
+    const value = valueName && valueName.includes("+") ? valueName.split("+").map(netOf) : netOf(valueName);
+    return makeZero({ policy, qpolicy, scry: null, value }, { filterOf: me => new Scry12(me, net) });
+  }
   const filterOf = !pf ? null : (me, scry, tracker) => pfd ? new SlotFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt, ...(pfx && scry ? { net: s => scry(s, me, tracker()).slots } : {}) }) : new HandFilter(me, { policy, qpolicy, options: zeroOptions, qMarks: qMarksOf, ...opt, ...(pfs && scry ? { prior: (s, x) => scry(s, x, tracker()).slots } : {}) });
   // "<a>+<b>": the value nets' mean (an ensemble, 15 Nov 2026)
   const value = valueName && valueName.includes("+") ? valueName.split("+").map(netOf) : netOf(valueName);
