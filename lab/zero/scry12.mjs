@@ -106,9 +106,10 @@ export function input12(s, me, seen = seenBy(s, me), out = new Float32Array(BX12
  * filter for seat `me` in makeZero's filterOf: update after each move, belief(s) (counts, any), deal() a whole-hand dealer.
  */
 export class Scry12 {
-  constructor(me, net) {
+  /** hands: whole hands dealt a belief (HANDS; the packer may deal fewer, Fable 20:45Z: 256 packs four times as fast) */
+  constructor(me, net, { hands = HANDS } = {}) {
     const F = a => Float32Array.from(a);
-    this.me = me; this.n = net; this.rec = new Record12(me);
+    this.me = me; this.n = net; this.rec = new Record12(me); this.hands = hands;
     if (!net.honest || net.EV_N !== EV_N || net.BX !== BX12 || net.SB_N !== SB_N || net.NN !== NN) throw new Error("Scry 1.2: the net's sizes differ from the code's");
     for (const k of ["We", "be", "Wx", "Wa", "Wt", "Wb", "Ws", "Wc", "b1", "W2", "b2"]) this[k] = F(net[k]);
     this.D = net.D; this.H = net.H;
@@ -163,25 +164,34 @@ export class Scry12 {
   belief(s) {
     const seen = seenBy(s, this.me), ids = unknownSlots(s, this.me), g = this.base(s, seen);
     const p0 = this.card(g, null, seen.unseen), slots = ids.map(() => p0);
-    this.last = { s, seen, ids, g };
+    this.last = { s, seen, ids, g, memo: new Map() };
     const counts = Float32Array.from(seen.known), hit = new Float32Array(NN), rng = lcg(1 + this.rec.events.length);
     let land = 0;
-    if (ids.length) for (let h = 0; h < HANDS; h++) {
+    if (ids.length) for (let h = 0; h < this.hands; h++) {
       const d = this.hand(rng);
       let l = false;
-      for (let k = 0; k < NN; k++) if (d[k]) { counts[k] += d[k] / HANDS; hit[k] += 1 / HANDS; l ||= LAND[k]; }
-      if (l) land += 1 / HANDS;
+      for (let k = 0; k < NN; k++) if (d[k]) { counts[k] += d[k] / this.hands; hit[k] += 1 / this.hands; l ||= LAND[k]; }
+      if (l) land += 1 / this.hands;
     }
     const any = Float32Array.from(hit, (v, k) => (seen.known[k] > 0 ? 1 : v));
     return { slots, counts, any, hit, land, ...seen };
   }
+  /** The odds of the next card given the names dealt before it (d), at the last belief's position, kept for the position (Fable
+   *  20:45Z: most of the 1,024 hands share their first cards, so the net is asked once per distinct prefix; the same numbers). */
+  next(d, k) {
+    const L = this.last;
+    let p = L.memo.get(k);
+    if (!p) { p = this.card(L.g, d, L.seen.unseen); L.memo.set(k, p); }
+    return p;
+  }
   /** One whole hand of the unknown cards at the last belief's position, dealt card after card: counts by name. */
   hand(rng) {
     const L = this.last, d = new Float32Array(NN);
-    for (let j = 0; j < L.ids.length; j++) {
-      const p = this.card(L.g, d, L.seen.unseen);
+    let k = "";   // the names dealt so far, in order: the memo's key (the odds depend only on the counts, so an order-free key
+    for (let j = 0; j < L.ids.length; j++) {   // would share more, but this one costs nothing to build)
+      const p = this.next(d, k);
       let r = rng(), c = 0; while (c < NN - 1 && (r -= p[c]) > 0) c++;
-      d[c]++;
+      d[c]++; k += c + ".";
     }
     return d;
   }
@@ -190,8 +200,9 @@ export class Scry12 {
     const L = this.last;
     return (pool, n, rng) => {
       const left = pool.slice(), hand = [], dealt = new Float32Array(NN);
+      let dk = "";
       for (let j = 0; j < n && left.length; j++) {
-        const p = L && j < L.ids.length ? this.card(L.g, dealt, L.seen.unseen) : null;
+        const p = L && j < L.ids.length ? this.next(dealt, dk) : null;
         // a name by its odds among the names still in the pool, then one card of it
         const byName = new Map();
         left.forEach((id, i) => { const k = NAME_AT.get(DECK[id]) ?? -1; if (!byName.has(k)) byName.set(k, []); byName.get(k).push(i); });
@@ -199,7 +210,7 @@ export class Scry12 {
         let r = rng() * tot, c = 0;
         while (c < ks.length - 1 && (r -= w[c]) > 0) c++;
         const at = byName.get(ks[c]), i = at[Math.floor(rng() * at.length)];
-        hand.push(left[i]); if (ks[c] >= 0) dealt[ks[c]]++; left.splice(i, 1);
+        hand.push(left[i]); if (ks[c] >= 0) { dealt[ks[c]]++; dk += ks[c] + "."; } left.splice(i, 1);
       }
       for (let i = left.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [left[i], left[j]] = [left[j], left[i]]; }
       return [...hand, ...left];

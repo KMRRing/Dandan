@@ -6,6 +6,7 @@
 //   <dir>/v  value rows face up over the extended view alone (EXT_N a seat, lab/zero/value_np.py): won.f32 the game's result
 //            blended with the search's value at that position (VBLEND, default 0.5, where the position was searched), aux.f32
 //            whether that seat lost by drawing from an empty library (value_np.py --aux)
+// HANDS (env): the belief's dealt hands a decision (1,024 as in play; the training workflow packs at 256, Fable 20:45Z)
 // usage: node lab/zero/replay-pack2.mjs <dir> <zero-play job ids, comma-separated | file:<local output>> <Scry 1.2 file> [shard shards]
 import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
@@ -17,7 +18,7 @@ import { Scry12 } from "./scry12.mjs";
 import { input2, marks2, X2, MARK_N } from "./zero2.mjs";
 
 const [dir, ids, sfile] = process.argv.slice(2), SH = Number(process.argv[5] || 0), SHS = Number(process.argv[6] || 1);
-const VBLEND = Number(process.env.VBLEND ?? 0.5), net = JSON.parse(fs.readFileSync(sfile, "utf8").split("\n")[0]);
+const VBLEND = Number(process.env.VBLEND ?? 0.5), HANDS = Number(process.env.HANDS || 1024), net = JSON.parse(fs.readFileSync(sfile, "utf8").split("\n")[0]);
 const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random, key = m => JSON.stringify(m), other = x => 1 - x;
 function sink(sub, names) {
   fs.mkdirSync(`${dir}/${sub}`, { recursive: true });
@@ -84,7 +85,7 @@ function valueOld(s, d, played, explored) {
 function replay(game, decisions) {
   const seed = game.seed, x3 = game.explore3 ? game.explore3.i : null, hold = seed % 5 === 0;
   let G = newRecord(rules, { seats: 2, seed, now: 0 }), lastTurn = -1;
-  const F = [new Scry12(0, net), new Scry12(1, net)], vrows = [];
+  const F = [new Scry12(0, net, { hands: HANDS }), new Scry12(1, net, { hands: HANDS })], vrows = [];
   for (let i = 0; i < game.moves.length; i++) {
     const [who, m] = game.moves[i], s = rules.restore(J(G.state)), ds = decisions.get(i) || [];
     // the value rows: every turn's start and one position with priority in three besides (as replay-pack.mjs), after any
