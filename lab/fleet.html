@@ -656,7 +656,7 @@ const PLAN = { at: "16 Nov 2026, 18:10 (Kyiv)", steps: [
   { s: "later", t: "Zero 2: train and test", why: "Hand-built inputs cut, one policy for moves and answers, every target in full. Against today's design retrained the same way; bar 48%." },
   { s: "later", t: "Generality test: a second matchup in our engine", why: "Two new decks; only the card files may change. Anything else touched isn't general yet. One to two weeks." },
   { s: "later", t: "One net on card vectors", why: "The game as a graph of cards (MageZero's design), any deck without a new net shape; batched calls, ready for a GPU." },
-  { s: "later", t: "A real rules engine: MageZero's XMage fork", why: "Reproduce one of their matchups; check that a game's hidden cards can be dealt again." },
+  { s: "later", t: "A real rules engine: MageZero's XMage fork", why: "Their code read from a plain download, no fork or other GitHub footprint (Korbi). Reproduce one of their matchups; check that a game's hidden cards can be dealt again." },
   { s: "decide", t: "First real Magic matchup: Standard", why: "Two decks from MageZero's Standard pool. Korbi's call." },
 ], filler: "Idle cores play Zero self-play with the latest nets (g11w-C): games for the next training." };
 const PLAN_DOT = { done: "var(--good)", running: "var(--accent)", next: "var(--wait)", later: "var(--mute)", decide: "var(--bad)" };
