@@ -913,3 +913,10 @@ Restore list for the rest still in the 03:55Z entry; the deleted pools would nee
 - Item 1 (dealBy drew a name with many copies far too often): fixed dealer behind a flag (dealfix), item 2 (stack copies not counted) in the same arm. lab/zero/deal-check.mjs, 6,000 deals at 3 positions: old dealer up to 26.1 points off Scry's odds (Island 44.6% dealt where Scry said 18.4%), fixed 0.4. az-df1 queued (g9x-C, deeper 0.03, Quick, 500 pairs, fixed vs today), ahead of the filler. Bar: 48% or more to go live, else back to Korbi; then the filler takes the fixed dealer.
 - Items 6-7 measured: scry-arms.yml, Scry 1 retrained four ways on az-g12-c,c2 (today; without the asked-and-passed counters; the hand as a set; both). Nothing live.
 - Zero 2 training held until items 8-10 are in; Scry 1.2 (g12s) to be retrained after 6-7.
+
+## 2026-11-16 16:45Z exec: Fable on the 18:25 report
+- Scry arms (Scry 1 on az-g12-c,c2, 3.25M hidden cards, error a card; pool 2.777): today 2.550; without the asked-and-passed counters 2.555; the hand as a set 2.617; both 2.619. Following cards by id was ~30% of the edge; the pass counters ~2%. Worst case (inputs deleted), per Fable.
+- Scry 1.2 g12s (leaky): each card 2.492, whole hand 2.446 against the pool's 2.768.
+- Scry 1.2 honest built: passes from every priority point (dandan-rules.js keeps them on the state, out of its JSON), the hand as a set (hand-level facts, a this-turn window). tests/scry-honest.mjs: deal per slot 0.34 points (old 12.8); honest record the same asked or not (old differs). g12h training (12 epochs).
+- When az-df1 clears: fixed dealer and copy rule default everywhere, the switch deleted, one commit.
+- Acceptance, items 3-5: 3 same-picks test; 4 a match bundled with the root change; 5 a retrain (marks2 separates player, land, put-back order), no tie-break in the live line.
