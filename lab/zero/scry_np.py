@@ -12,7 +12,10 @@ import numpy as np
 
 ap = argparse.ArgumentParser()
 ap.add_argument("dir"); ap.add_argument("out")
-ap.add_argument("--init", default="")  # warm start from a Scry net of the same sizes (15 Nov 2026)
+ap.add_argument("--init", default="")
+# the arms of the hidden-information test (16 Nov 2026, Fable items 6-7, Korbi 17:57): inputs blanked before training
+ap.add_argument("--no-asked", action="store_true")  # the counters built from passes, which are only recorded when a seat was asked to act
+ap.add_argument("--as-set", action="store_true")    # no per-card history: the hand as a set, every unknown card alike  # warm start from a Scry net of the same sizes (15 Nov 2026)
 ap.add_argument("--h", type=int, default=64); ap.add_argument("--epochs", type=int, default=6)
 ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--batch", type=int, default=256); ap.add_argument("--seed", type=int, default=1)
 A = ap.parse_args()
@@ -26,6 +29,10 @@ for d in A.dir.split(","):
     SF.append(rd("sf.f32", np.float32).reshape(s, SN)); SY.append(rd("sy.i16", np.int16).astype(np.int64)); SR.append(rd("srow.i32", np.int32).astype(np.int64) + R)
     R += r; S += s
 X, U, HOLD, SF, SY, SR = (np.concatenate(a) for a in (X, U, HOLD, SF, SY, SR))
+TRACK0 = BX - 14   # the Tracker's 13 numbers sit after the extended view, before the unknown count
+if A.no_asked:   # declined with mana up (and its recent form), main phases passed with lands untapped (and its recent form); per card, the same since it arrived
+    X[:, [TRACK0 + 0, TRACK0 + 1, TRACK0 + 7, TRACK0 + 8]] = 0; SF[:, [6, 7]] = 0
+if A.as_set: SF[:] = 0
 LP = np.where(U > 0, np.log(np.maximum(U, 1e-9)), -1e9).astype(np.float32)
 LANDS = np.array(json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lands.json"))), bool) if os.path.exists(os.path.join(os.path.dirname(os.path.abspath(__file__)), "lands.json")) else np.zeros(NN, bool)
 sh = HOLD[SR]; tr, he = np.flatnonzero(~sh), np.flatnonzero(sh)

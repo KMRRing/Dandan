@@ -1,0 +1,37 @@
+# Scry's hidden-information test (16 Nov 2026, Fable's review items 6-7, Korbi 17:57): Scry 1 retrained four ways on the same
+# games, nothing committed. Arms: today's inputs; without the counters built from passes (recorded only when a seat was asked
+# to act); the hand as a set (no per-card history); both. Each arm's held-out error per card is set against the pool's odds.
+name: Scry (hidden-information arms)
+on:
+  workflow_dispatch:
+    inputs:
+      games: { description: "Zero game jobs, comma-separated", required: true, default: "az-g12-c,az-g12-c2" }
+permissions:
+  contents: read
+jobs:
+  arms:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Pack and train
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          pip install -q numpy
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          D="$RUNNER_TEMP/r"
+          for k in 0 1 2 3; do LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack.mjs "$D$k" "${{ inputs.games }}" scry - $k 4 > "$RUNNER_TEMP/s$k.txt" & done; wait
+          rm -f "$RUNNER_TEMP/key.json"
+          B="${D}0/b,${D}1/b,${D}2/b,${D}3/b"
+          for arm in "today:" "no-asked:--no-asked" "as-set:--as-set" "both:--no-asked --as-set"; do
+            name="${arm%%:*}"; flags="${arm#*:}"
+            echo "## arm $name" | tee -a "$GITHUB_STEP_SUMMARY"
+            python3 lab/zero/scry_np.py "$B" "$RUNNER_TEMP/$name.json" --h 64 $flags | tee "$RUNNER_TEMP/$name.txt"
+            { echo '```'; grep -iE "pool|held|best|epoch" "$RUNNER_TEMP/$name.txt" | tail -12; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          done
