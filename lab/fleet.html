@@ -419,7 +419,7 @@ const free = () => { const next = waiting.shift(); if (next) next(); else inFlig
 // ---------- off Claude (GitHub Pages): the lab as of the last snapshot ----------
 // .github/workflows/fleet.yml copies what this page reads onto the fleet-status branch every 10 minutes (12 Nov 2026, Korbi:
 // the connector's per-minute quota left the page behind). Here each gcloud command the page sends is answered from those files.
-// Times are moved forward by the snapshot's age, so "running in the last 6 minutes" means at the snapshot.
+// Times are moved forward by the snapshot's age, so "running in the last 11 minutes" means at the snapshot.
 const SNAP_BASE = "https://raw.githubusercontent.com/KMRRing/Dandan/fleet-status/";
 let SNAP = null, SNAP_AT = 0;
 // at most six fetches at once (a page that asks for hundreds at once runs the browser out of connections)
@@ -580,10 +580,10 @@ async function loadMain(pfx, { rows: wantRows = true } = {}) {
     if (!m || seen.has(m[2] + m[3] + m[4])) continue;
     seen.add(m[2] + m[3] + m[4]);
     if (m[2] === "results") (done[m[3]] ??= []).push(Date.parse(m[1]));
-    else { claims[m[3]] = (claims[m[3]] || 0) + 1; if (Date.now() - Date.parse(m[1]) < 6 * 60000) (live[m[3]] ??= new Set()).add(m[4]); }
+    else { claims[m[3]] = (claims[m[3]] || 0) + 1; if (Date.now() - Date.parse(m[1]) < 11 * 60000) (live[m[3]] ??= new Set()).add(m[4]); }
     if (m[2] === "results") (doneN[m[3]] ??= new Set()).add(m[4].replace(/^done-/, ""));
   }
-  // a core is busy on a shard whose claim was renewed in the last 6 minutes (every 2) and that has no done- file yet
+  // a core is busy on a shard whose claim was renewed in the last 11 minutes (every 5) and that has no done- file yet
   const busyNow = {};
   for (const [id, set] of Object.entries(live)) busyNow[id] = [...set].filter(sh => !doneN[id]?.has(sh)).length;
   if (agg) {
@@ -803,7 +803,7 @@ async function loadFleet() {
   const fresh = [];
   for (const line of lsTxt.split("\n")) {
     const m = line.match(/(\d{4}-\d\d-\d\dT[\d:]+Z)\s+(gs:\/\/\S+\.json)/);
-    if (m && Date.now() - Date.parse(m[1]) < 6 * 60000) fresh.push(m[2]);
+    if (m && Date.now() - Date.parse(m[1]) < 11 * 60000) fresh.push(m[2]);
   }
   const [catTxt, gceTxt] = await Promise.all([
     fresh.length ? gcloud(`gcloud storage cat ${fresh.map(u => `"${u}"`).join(" ")}`).then(r => r.out, () => "") : "",

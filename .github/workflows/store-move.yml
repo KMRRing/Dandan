@@ -1,0 +1,57 @@
+# The move of the lab's store to Backblaze B2 (16 Nov 2026, Korbi via ops; lab/store.mjs). One step at a time, by hand:
+#   check   B2 answers: a write, read, list and delete under _check/, and the bucket's objects counted by top folder
+#   copy    every object of the Google bucket but fleet/ copied to B2 (rclone; again later it copies only what is new or changed)
+#   config  fleet/store.json written on the Google bucket from the secrets: workers switch to B2 within 10 minutes, and every
+#           GitHub run after it reads and writes B2 (fleet/ stays on Google)
+#   verify  objects and bytes on both sides (fleet/ left out), objects missing or different on B2, and objects written to
+#           Google outside fleet/ in the last 30 minutes (none once every worker has switched)
+# The B2 key comes from the secrets LAB_B2_KEY_ID, LAB_B2_KEY, LAB_B2_ENDPOINT and is never printed; nothing here echoes it.
+name: Store move (Google to B2)
+on:
+  workflow_dispatch:
+    inputs:
+      step: { description: "check, copy, config or verify", required: true, default: "check" }
+permissions:
+  contents: read
+jobs:
+  move:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    env:
+      LAB_BUCKET: dandan-lab-807207481983
+      LAB_B2_BUCKET: ML-queue
+      LAB_B2_KEY_ID: "${{ secrets.LAB_B2_KEY_ID }}"
+      LAB_B2_KEY: "${{ secrets.LAB_B2_KEY }}"
+      LAB_B2_ENDPOINT: "${{ secrets.LAB_B2_ENDPOINT }}"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: rclone
+        if: inputs.step == 'copy' || inputs.step == 'verify'
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash > /dev/null && rclone version | head -1
+      - name: Run the step
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_QUEUE_KEY: "${{ secrets.LAB_QUEUE_KEY }}"
+        run: |
+          set -euo pipefail
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/rkey.json"; printf '%s' "$LAB_QUEUE_KEY" > "$RUNNER_TEMP/wkey.json"; chmod 600 "$RUNNER_TEMP"/*key.json
+          # rclone's two stores, from the environment (no config file): gcs the Google bucket (read key), b2 the S3 store, path-style
+          export RCLONE_CONFIG_GCS_TYPE="google cloud storage" RCLONE_CONFIG_GCS_SERVICE_ACCOUNT_FILE="$RUNNER_TEMP/rkey.json" RCLONE_CONFIG_GCS_BUCKET_POLICY_ONLY=true
+          export RCLONE_CONFIG_B2_TYPE=s3 RCLONE_CONFIG_B2_PROVIDER=Other RCLONE_CONFIG_B2_ACCESS_KEY_ID="$LAB_B2_KEY_ID" RCLONE_CONFIG_B2_SECRET_ACCESS_KEY="$LAB_B2_KEY"
+          export RCLONE_CONFIG_B2_ENDPOINT="$LAB_B2_ENDPOINT" RCLONE_CONFIG_B2_FORCE_PATH_STYLE=true RCLONE_CONFIG_B2_NO_CHECK_BUCKET=true
+          export RCLONE_CONFIG_B2_REGION="$(printf '%s' "$LAB_B2_ENDPOINT" | sed -E 's#^(https?://)?s3\.([^.]+)\..*#\2#')"
+          R="--exclude fleet/** --exclude _check/** --fast-list --retries 10 --low-level-retries 30 --stats 120s --stats-one-line --stats-log-level NOTICE"
+          case "${{ inputs.step }}" in
+            check)  node lab/store-check.mjs ;;
+            copy)   rclone copy "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --transfers 96 --checkers 96 --size-only 2>&1 | tail -40 ;;
+            config) LAB_KEY="$RUNNER_TEMP/wkey.json" node lab/store-check.mjs --config ;;
+            verify)
+              echo "## Google (fleet/ left out)"; rclone size "gcs:$LAB_BUCKET" $R --json
+              echo "## B2"; rclone size "b2:$LAB_B2_BUCKET" $R --json
+              echo "## missing or different on B2"; rclone check "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --one-way --size-only 2>&1 | tail -5 || true
+              echo "## written to Google outside fleet/ in the last 30 minutes"; rclone lsf "gcs:$LAB_BUCKET" $R -R --files-only --max-age 30m | wc -l ;;
+            *) echo "unknown step"; exit 1 ;;
+          esac
+          rm -f "$RUNNER_TEMP"/*key.json

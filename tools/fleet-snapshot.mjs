@@ -13,12 +13,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createSign } from "node:crypto";
+import { openStore } from "../lab/store.mjs";
 
 const BUCKET = process.env.LAB_BUCKET || "dandan-lab-807207481983";
 const PROJECT = process.env.LAB_PROJECT || "project-b753c78c-ef88-46f1-b37";
 const out = path.resolve(process.argv[2] || "fleet-status"), cache = path.resolve(process.argv[3] || "fleet-cache");
 const KEEP = /^(fleet\/[^/]+\.json|jobs\/[^/]+\.json|workers\/[^/]+\.json|claims\/[^/]+\/[^/]+|results\/[^/]+\/(done-\d+|part-\d+\.jsonl|stdout-0\.txt))$/;
 const STDOUT_MAX = 2 << 20;
+// a worker's report and a claim are rewritten every 5 minutes (lab/worker.mjs BEAT_MS, 16 Nov 2026): fresh if written in the last 11
+const FRESH_S = 11 * 60;
 
 async function token() {
   const key = JSON.parse(fs.readFileSync(process.env.LAB_KEY, "utf8")), now = Math.floor(Date.now() / 1000);
@@ -37,17 +40,11 @@ async function get(url, tries = 5) {
   }
 }
 
+// the lab's store (lab/store.mjs): fleet/ on the Google bucket, the rest wherever fleet/store.json says (B2 from 16 Nov 2026)
+process.env.LAB_BUCKET ||= BUCKET;
+const store = await openStore();
 /** Every object under a prefix: [name, updated seconds]. */
-async function list(prefix) {
-  const all = [];
-  for (let page = ""; ;) {
-    const r = await get(`https://storage.googleapis.com/storage/v1/b/${BUCKET}/o?prefix=${encodeURIComponent(prefix)}&maxResults=5000&fields=items(name,updated),nextPageToken${page ? "&pageToken=" + encodeURIComponent(page) : ""}`);
-    if (!r.ok) throw new Error(`list ${prefix}: ${r.status} ${await r.text()}`);
-    const j = await r.json();
-    for (const o of j.items || []) if (KEEP.test(o.name)) all.push([o.name, Math.floor(Date.parse(o.updated) / 1000)]);
-    if (!(page = j.nextPageToken)) return all;
-  }
-}
+const list = async prefix => (await store.list(prefix)).filter(o => KEEP.test(o.name)).map(o => [o.name, Math.floor(o.t / 1000)]);
 
 const at = Date.now();
 const objects = (await Promise.all(["fleet/", "jobs/", "workers/", "claims/", "results/"].map(list))).flat().sort((a, b) => (a[0] < b[0] ? -1 : 1));
@@ -58,7 +55,7 @@ const want = new Map();
 for (const [n, t] of objects) if (n.startsWith("jobs/")) want.set(n, t);
 let prev = {};
 try { prev = JSON.parse(fs.readFileSync(path.join(cache, "updated.json"), "utf8")); } catch {}
-const fetchText = async n => { const r = await get(`https://storage.googleapis.com/storage/v1/b/${BUCKET}/o/${encodeURIComponent(n)}?alt=media`); return r.ok ? r.text() : null; };
+const fetchText = n => store.get(n);
 const isPart = n => /\/part-\d+\.jsonl$/.test(n);
 const keep = async (n, t, cap) => {
   const f = path.join(isPart(n) ? cache : out, "o", n);
@@ -80,7 +77,7 @@ for (const [n, t] of objects) {
   if (m) {
     const j = specs[m[1]];
     if (m[2] === "done-0" || (j && m[2].startsWith("part-") && kind(j) === "match") || (j && m[2] === "stdout-0.txt" && kind(j) !== "selfplay")) files.push([n, t]);
-  } else if ((n.startsWith("workers/") && at / 1000 - t < 6 * 60) || n.startsWith("fleet/")) files.push([n, t]);
+  } else if ((n.startsWith("workers/") && at / 1000 - t < FRESH_S) || n.startsWith("fleet/")) files.push([n, t]);
 }
 await pool(files, 24, ([n, t]) => keep(n, t, n.endsWith("stdout-0.txt") ? STDOUT_MAX : 0));
 
@@ -114,7 +111,7 @@ const updated = Object.fromEntries(files.concat([...want]).map(([n, t]) => [n, t
 fs.mkdirSync(cache, { recursive: true });
 fs.writeFileSync(path.join(cache, "updated.json"), JSON.stringify(updated));
 // list.json slim (15 Nov 2026: 706,000 names, 28 MB, crashed the page on the phone): per-shard done and claim files go into
-// `jobs` instead ({ id: { d: done times as seconds, first then gaps, c: claims, b: shards claimed in the last 6 minutes with
+// `jobs` instead ({ id: { d: done times as seconds, first then gaps, c: claims, b: shards claimed in the last FRESH_S with
 // no done file, l: claims lapsed } }); the listing keeps done-0, claims of the last 10 minutes and one claim a folder (the page reads folder names)
 const agg = {}, a0 = id => (agg[id] ??= { d: [], c: 0, b: 0, cl: new Set(), old: new Set(), dn: new Set() }), lastClaim = new Map(), slim = [];
 for (const [n, t] of objects) {
@@ -122,7 +119,7 @@ for (const [n, t] of objects) {
   if ((m = n.match(/^results\/([^/]+)\/done-(\d+)$/))) { const g = a0(m[1]); g.d.push(t); g.dn.add(m[2]); if (m[2] !== "0") continue; }
   else if (/^results\/[^/]+\/part-\d+\.jsonl$/.test(n)) continue;
   else if ((m = n.match(/^claims\/([^/]+)\/(\d+)$/))) {
-    const g = a0(m[1]); g.c++; if (at / 1000 - t < 6 * 60) g.cl.add(m[2]); else if (at / 1000 - t > 15 * 60) g.old.add(m[2]);
+    const g = a0(m[1]); g.c++; if (at / 1000 - t < FRESH_S) g.cl.add(m[2]); else if (at / 1000 - t > 15 * 60) g.old.add(m[2]);
     if (!lastClaim.has(m[1]) || lastClaim.get(m[1])[1] < t) lastClaim.set(m[1], [n, t]);
     if (at / 1000 - t >= 10 * 60) continue;
   }
@@ -135,6 +132,6 @@ for (const [id, g] of Object.entries(agg)) {
   // l: claims past the worker's 15-minute lease with no done file (lapsed: tools/fleet-summary.mjs puts the job back on the open list)
   jobsAgg[id] = { d, c: g.c, b: [...g.cl].filter(k => !g.dn.has(k)).length, l: [...g.old].filter(k => !g.dn.has(k)).length };
 }
-fs.writeFileSync(path.join(out, "list.json"), JSON.stringify({ at, bucket: BUCKET, objects: slim, joined, jobs: jobsAgg }));
+fs.writeFileSync(path.join(out, "list.json"), JSON.stringify({ at, bucket: BUCKET, store: store.kind, objects: slim, joined, jobs: jobsAgg }));
 const bytes = walk(out).reduce((s, f) => s + fs.statSync(f).size, 0);
 console.log(`${objects.length} objects listed, ${files.length + want.size} kept, ${(bytes / 1e6).toFixed(1)} MB in ${out}, ${((Date.now() - at) / 1000).toFixed(0)} s`);

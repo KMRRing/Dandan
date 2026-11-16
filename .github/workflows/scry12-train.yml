@@ -20,6 +20,13 @@ jobs:
         with: { node-version: 22 }
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
+      # the packed records kept between runs (16 Nov 2026, ops: a run pulled its games at ~6.7 GB an hour): the same games packed by
+      # the same code give the same files, so a run on games already packed reads none (a set still being played is packed as it was)
+      - name: Packed records from an earlier run
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/s*
+          key: scry12-pack-${{ hashFiles('lab/zero/scry12.mjs', 'lab/zero/scry12-pack.mjs', 'lab/zero/zero-view.mjs', 'dandan-*.js', 'seats.js') }}-${{ inputs.games }}
       - name: Train
         env:
           LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
@@ -29,7 +36,7 @@ jobs:
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
           mkdir -p lab/zero/nets
           N="${{ inputs.name }}"; D="$RUNNER_TEMP/s"
-          for k in 0 1 2 3; do LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/scry12-pack.mjs "$D$k" "${{ inputs.games }}" $k 4 > "$RUNNER_TEMP/p$k.txt" & done; wait
+          for k in 0 1 2 3; do if [ -f "$D$k/meta.json" ]; then echo "packed already (cache): $(cat "$D$k/meta.json")" > "$RUNNER_TEMP/p$k.txt"; else LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/scry12-pack.mjs "$D$k" "${{ inputs.games }}" $k 4 > "$RUNNER_TEMP/p$k.txt" & fi; done; wait
           rm -f "$RUNNER_TEMP/key.json"
           tail -n 1 "$RUNNER_TEMP"/p?.txt | tee -a "$GITHUB_STEP_SUMMARY"
           python3 lab/zero/scry12_np.py "${D}0,${D}1,${D}2,${D}3" "lab/zero/nets/$N-scry12.json" ${{ inputs.args }} | tee "$RUNNER_TEMP/log.txt"

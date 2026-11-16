@@ -4,7 +4,10 @@
 // secret: on a Google machine it works as the machine's own service account (the metadata server), and the code comes from
 // the public repo. A session queues work and reads results with `gcloud storage` (see lab/README or the notes at the end).
 //
-//   bucket layout
+//   the store (16 Nov 2026, lab/store.mjs): fleet/ (the open list, the filler's spec, store.json…) on the Google bucket, the rest on
+//   Backblaze B2 once fleet/store.json names it; B2's claims are advisory (written, then read back), so a shard can now and then
+//   be played twice, which is harmless: its output is fixed by its job, shard and seed
+//   layout
 //     jobs/<id>.json            { id, script, args, shards, ref, repo?, timeoutMin? }  args: {shard} {shards} {out} filled in
 //     claims/<id>/<shard>       who is running it and when it last said so (made only if absent: the claim is atomic;
 //                               a claim not renewed for LEASE is taken over, so a machine that is gone (Spot) loses its shards)
@@ -29,91 +32,46 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn, execFileSync } from "node:child_process";
-import { googleToken } from "./lib.mjs";
+import { openStore, dataStoreOf, REQ } from "./store.mjs";
 import { readOpen, editOpen, OPEN_STALE_MS } from "./open-list.mjs";
 
 const env = process.env;
 const SLOTS = Number(env.LAB_SLOTS) || os.cpus().length, WORK = env.LAB_WORK || "/tmp/lab-work";
 const IDLE_MS = (Number(env.LAB_IDLE_MIN) || 15) * 60000, POLL_MS = (Number(env.LAB_POLL_SEC) || 15) * 1000, MAX_MS = (Number(env.LAB_MAX_HOURS) || 8) * 3600000;
 const REPO = env.LAB_REPO || "https://github.com/KMRRing/Dandan.git";
-const LEASE_MS = 15 * 60000, BEAT_MS = 2 * 60000, NAME = `${os.hostname()}-${process.pid}`, T0 = Date.now();
+const LEASE_MS = 15 * 60000, BEAT_MS = 5 * 60000, NAME = `${os.hostname()}-${process.pid}`, T0 = Date.now();
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
-// ---------- the bucket (or a folder that works like one) ----------
-/** A store: list(prefix) → [{ name, generation, t (ms, when last written) }], get(name) → text or null, put(name, text, { ifAbsent, ifGeneration }) → whether it was written. */
-function folderStore(root) {
-  const file = n => path.join(root, n), gen = f => String(fs.statSync(f).mtimeMs);
-  return {
-    async list(prefix) {
-      REQ.list++;
-      const out = [];
-      const walk = d => { for (const e of fs.existsSync(d) ? fs.readdirSync(d, { withFileTypes: true }) : []) { const f = path.join(d, e.name); if (e.isDirectory()) walk(f); else out.push({ name: path.relative(root, f), generation: gen(f), t: fs.statSync(f).mtimeMs }); } };
-      walk(root);
-      return out.filter(o => o.name.startsWith(prefix));
-    },
-    async get(name) { REQ.read++; return fs.existsSync(file(name)) ? fs.readFileSync(file(name), "utf8") : null; },
-    async getG(name) { REQ.read++; return fs.existsSync(file(name)) ? { text: fs.readFileSync(file(name), "utf8"), generation: gen(file(name)) } : null; },
-    async put(name, body, { ifAbsent, ifGeneration } = {}) {
-      REQ.write++;
-      const f = file(name);
-      fs.mkdirSync(path.dirname(f), { recursive: true });
-      if (ifAbsent) { try { fs.writeFileSync(f, body, { flag: "wx" }); return true; } catch (e) { if (e.code === "EEXIST") return false; throw e; } }
-      if (ifGeneration && (!fs.existsSync(f) || gen(f) !== ifGeneration)) return false;
-      fs.writeFileSync(f, body); return true;
-    },
-    async del(name) { fs.rmSync(file(name), { force: true }); },
-  };
+// ---------- the store (lab/store.mjs): fleet/ on the Google bucket, the rest on B2 once fleet/store.json names it ----------
+const store = await openStore(env);
+/** The store's data side follows fleet/store.json (16 Nov 2026, the move to B2): looked at every 10 minutes, and when it changes
+ *  the worker writes there from then on, shards in hand included (their claims carry over at the next beat). */
+let storeCfg = env.LAB_DIR || env.LAB_B2_KEY_ID ? null : await store.get("fleet/store.json").catch(() => null);
+async function followStore() {
+  if (env.LAB_DIR || env.LAB_B2_KEY_ID) return;
+  const t = await store.get("fleet/store.json").catch(() => undefined);
+  if (t === undefined || t === storeCfg) return;
+  storeCfg = t;
+  store.set(t ? await dataStoreOf({ get: async () => t }) : null);
+  log(`store: ${store.kind}`);
 }
-function bucketStore(bucket) {
-  const token = googleToken;   // the machine's own account on Google, a service-account key (LAB_KEY) elsewhere
-  const call = async (url, init = {}) => {
-    for (let tries = 0; ; tries++) {
-      try {
-        const r = await fetch(url, { ...init, headers: { ...(init.headers || {}), Authorization: `Bearer ${await token()}` } });
-        if ((r.status === 429 || r.status >= 500) && tries < 5) { await sleep(1000 * 2 ** tries); continue; }
-        return r;
-      } catch (e) { if (tries >= 5) throw e; await sleep(1000 * 2 ** tries); }
-    }
-  };
-  const api = `https://storage.googleapis.com/storage/v1/b/${bucket}/o`, up = `https://storage.googleapis.com/upload/storage/v1/b/${bucket}/o`;
-  return {
-    async list(prefix) {
-      const out = []; let page;
-      do {
-        REQ.list++;
-        const q = new URLSearchParams({ prefix, maxResults: "1000", fields: "items(name,generation,updated),nextPageToken" }); if (page) q.set("pageToken", page);
-        const r = await call(`${api}?${q}`); if (!r.ok) throw new Error("list " + r.status + " " + await r.text());
-        const j = await r.json(); out.push(...(j.items || []).map(o => ({ ...o, t: Date.parse(o.updated) }))); page = j.nextPageToken;
-      } while (page);
-      return out;
-    },
-    async get(name) {
-      REQ.read++;
-      const r = await call(`${api}/${encodeURIComponent(name)}?alt=media`);
-      if (r.status === 404) return null;
-      if (!r.ok) throw new Error("get " + r.status); return r.text();
-    },
-    async getG(name) {
-      REQ.read++;
-      const r = await call(`${api}/${encodeURIComponent(name)}?alt=media`);
-      if (r.status === 404) return null;
-      if (!r.ok) throw new Error("get " + r.status); return { text: await r.text(), generation: r.headers.get("x-goog-generation") };
-    },
-    async put(name, body, { ifAbsent, ifGeneration } = {}) {
-      REQ.write++;
-      const q = new URLSearchParams({ uploadType: "media", name }); if (ifAbsent) q.set("ifGenerationMatch", "0"); else if (ifGeneration) q.set("ifGenerationMatch", ifGeneration);
-      const r = await call(`${up}?${q}`, { method: "POST", headers: { "Content-Type": "application/octet-stream" }, body });
-      if (r.status === 412) return false;
-      if (!r.ok) throw new Error("put " + r.status + " " + await r.text()); return true;
-    },
-    async del(name) { REQ.write++; await call(`${api}/${encodeURIComponent(name)}`, { method: "DELETE" }); },
-  };
+setInterval(followStore, 10 * 60000).unref();
+// the requests since the worker began (each beat's report carries those since the one before: lab/store.mjs REQ)
+const REQ_ALL = { list: 0, write: 0, read: 0 };
+/**
+ * One listing a machine a cycle (14 Nov trim, Korbi 11:27Z): a job's claims and done marks, listed once and shared by every slot
+ * of this machine for LIST_MS. A slot's own claims since are kept here too (MINE), so the slots don't try for each other's shards;
+ * another machine's claim made meanwhile is caught by the claim itself (made only if absent).
+ */
+const LIST_MS = 60000, lists = new Map(), MINE = new Set();
+function shared(prefix) {
+  const c = lists.get(prefix), now = Date.now();
+  if (c && now - c.at < LIST_MS) return c.p;
+  const p = store.list(prefix).catch(e => { lists.delete(prefix); throw e; });
+  lists.set(prefix, { at: now, p });
+  return p;
 }
-// the bucket requests this worker made (13 Nov, the fleet director): lists and writes are Google's class A (about $0.005 a
-// thousand), reads class B (about $0.0004); each report carries the counts since the one before
-const REQ = { list: 0, write: 0, read: 0 }, REQ_ALL = { list: 0, write: 0, read: 0 };
-const store = env.LAB_DIR ? folderStore(path.resolve(env.LAB_DIR)) : bucketStore(env.LAB_BUCKET || (() => { throw new Error("set LAB_BUCKET (or LAB_DIR to try it in a folder)"); })());
 
 // ---------- finding a shard to run ----------
 const claimBody = () => JSON.stringify({ by: NAME, t: Date.now() });
@@ -202,7 +160,7 @@ async function scan(ids, open) {
     if (found) { if (!ids) seen.set(id, true); continue; }
     const spec = await specOf(o).catch(() => null);
     if (!spec?.shards) { seen.set(id, false); continue; }
-    const [claims, results] = await Promise.all([store.list(`claims/${id}/`), store.list(`results/${id}/done-`)]);
+    const [claims, results] = await Promise.all([shared(`claims/${id}/`), shared(`results/${id}/done-`)]);
     const done = new Set(results.map(r => path.basename(r.name)).filter(n => /^done-\d+$/.test(n)).map(n => Number(n.slice(5))));
     if (done.size >= spec.shards) { finished.add(id); seen.set(id, false); continue; }
     const claimed = new Map(claims.map(c => [Number(path.basename(c.name)), c]));
@@ -210,6 +168,7 @@ async function scan(ids, open) {
     for (let k = 0; k < spec.shards; k++) {
       if (done.has(k)) continue;
       const c = claimed.get(k);
+      if (MINE.has(`${id}/${k}`)) continue;
       if (!c) free.push(k); else if (now - c.t > LEASE_MS) lapsed.push(c);
     }
     if (!free.length && !lapsed.length) { fullUntil.set(id, now + FULL_MS); seen.set(id, false); continue; }
@@ -220,12 +179,14 @@ async function scan(ids, open) {
     for (let k = 0; k < free.length && !found; k++) {
       const shard = free[(start + k) % free.length];
       if (await store.put(`claims/${id}/${shard}`, claimBody(), { ifAbsent: true })) found = { spec, shard, left: free.length - 1 + lapsed.length };
+      else lists.delete(`claims/${id}/`);   // someone else's: this machine's listing is out of date
     }
     // the claim's age from the listing (13 Nov, Fable): its holder rewrites it every BEAT_MS, so its last write is its last beat
     for (const c of lapsed) {
       if (found) break;
       if (await store.put(c.name, claimBody(), { ifGeneration: c.generation })) { log(`took over ${c.name} (silent ${Math.round((now - c.t) / 60000)} min)`); found = { spec, shard: Number(path.basename(c.name)), left: lapsed.length - 1 }; }
     }
+    if (found) MINE.add(`${id}/${found.shard}`);
     seen.set(id, found ? found.left > 0 : false);
     if (!found) fullUntil.set(id, now + FULL_MS);   // every free shard was taken by others while this worker tried
   }
@@ -364,7 +325,7 @@ async function slotLoop(slot) {
       if (polling) { polling = false; openGate(); } else backoff = POLL_MS;
       BUSY.set(slot, `${work.spec.id}/${work.shard}`); beatWorker();
       try { await runShard(slot, work.spec, work.shard); } catch (e) { log(`slot ${slot}: ${work.spec.id}/${work.shard} failed to run:`, e.message); await store.put(`results/${work.spec.id}/done-${work.shard}`, JSON.stringify({ code: "worker error", error: String(e.message), by: NAME })).catch(() => {}); }
-      BUSY.delete(slot);
+      BUSY.delete(slot); MINE.delete(`${work.spec.id}/${work.shard}`);
       idleSince = Date.now();
       continue;
     }
@@ -413,7 +374,7 @@ const beatWorker = () => {
 const workerBeat = setInterval(beatWorker, BEAT_MS);
 beatWorker();
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { store.del(`workers/${NAME}.json`).catch(() => {}); });
-log(`worker ${NAME}: ${SLOTS} slots, ${env.LAB_DIR ? "folder " + env.LAB_DIR : "bucket " + env.LAB_BUCKET}`);
+log(`worker ${NAME}: ${SLOTS} slots, ${env.LAB_DIR ? "folder " + env.LAB_DIR : "bucket " + env.LAB_BUCKET}, store ${store.kind}`);
 grow();
 for (let n = 0; n < loops.length; ) { n = loops.length; await Promise.all(loops); }   // a slot added while waiting is waited for too
 clearInterval(workerBeat);

@@ -31,7 +31,7 @@ for (const f of fs.existsSync(dir) ? fs.readdirSync(dir) : []) { try { ws.push(J
 const groups = {}, unmapped = new Set(), shardMin = {};
 let stale = 0;
 for (const w of ws) {
-  if (now - w.t > 5 * M) { stale++; continue; }
+  if (now - w.t > 11 * M) { stale++; continue; }   // reports every 5 minutes (lab/worker.mjs BEAT_MS)
   const [where, kind] = region(w), cores = w.hw?.present || w.slots;
   if (where.startsWith("unmapped")) unmapped.add(where.slice(9));
   const g = (groups[`${where}|${kind}|${cores}`] ||= { where, kind, cores, machines: 0, slots: 0, busy: 0, fin10: 0, fin60: 0, oldest: now, listH: 0, writeH: 0, readH: 0 });
