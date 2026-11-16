@@ -15,7 +15,8 @@ import { DECK, NAMES } from "../../dandan-cards.js";
 import { NN, seenBy, unknownSlots } from "./zero-view.mjs";
 import { Record12, input12, EV_N, BX12, SB_N } from "./scry12.mjs";
 
-const [dir, ids] = process.argv.slice(2), SH = Number(process.argv[4] || 0), SHS = Number(process.argv[5] || 1), EVERY = 6;
+// HONEST=1 (env, 16 Nov 2026, Fable items 6-7): the record from every priority point and the hand as a set (Record12 honest)
+const HONEST = process.env.HONEST === "1", [dir, ids] = process.argv.slice(2), SH = Number(process.argv[4] || 0), SHS = Number(process.argv[5] || 1), EVERY = 6;
 const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random, NAME_AT = new Map(NAMES.map((n, k) => [n, k]));
 fs.mkdirSync(dir, { recursive: true });
 const files = ["ev.u8", "x.f32", "u.f32", "hold.u8", "win.i32", "sb.f32", "sa.i32", "sy.i16", "srow.i32"];
@@ -26,7 +27,7 @@ let nev = 0, rows = 0, slots = 0, games = 0, broken = 0;
 function replay(game) {
   const seed = game.seed, hold = seed % 5 === 0;
   let G = newRecord(rules, { seats: 2, seed, now: 0 });
-  const R = [new Record12(0), new Record12(1)], pend = [[], []];   // each seat's sampled positions, written once its block's start is known
+  const R = [new Record12(0, { honest: HONEST }), new Record12(1, { honest: HONEST })], pend = [[], []];   // each seat's sampled positions, written once its block's start is known
   for (let i = 0; i < game.moves.length; i++) {
     const [who, m] = game.moves[i], s = rules.restore(J(G.state));
     if (seeded(mix(seed, 31337 + i))() < 1 / EVERY) for (const me of [0, 1]) {
@@ -63,5 +64,5 @@ for (const name of parts) {
   for (const line of text.split("\n")) if (line.startsWith('{"game"')) replay(JSON.parse(line));
 }
 for (const f of Object.values(fd)) fs.closeSync(f);
-fs.writeFileSync(`${dir}/meta.json`, JSON.stringify({ EV_N, BX: BX12, SB_N, NN, events: nev, rows, slots, games }));
+fs.writeFileSync(`${dir}/meta.json`, JSON.stringify({ EV_N, BX: BX12, SB_N, NN, events: nev, rows, slots, games, honest: HONEST }));
 console.log(`scry12-pack: ${games} games (${broken} not the same), ${nev} events, ${rows} positions, ${slots} unknown cards`);

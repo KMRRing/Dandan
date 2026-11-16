@@ -18,7 +18,11 @@ export const rules = {
   act: (s, seat, move, ctx) => {
     const turn = s.turn, r = act(s, seat, move, ctx);
     if (typeof r !== "string" && !ctx?.quiet) {
-      if (passPoints.length) notePasses(r, passPoints.splice(0));
+      // the priority points a move led to, asked or not (16 Nov 2026, Fable's review item 6): kept on the new state, out of its
+      // JSON (not enumerable), for a belief that reads every such point the same whether the seat was asked there or not
+      const pts = passPoints.splice(0);
+      Object.defineProperty(r, "passPoints", { value: pts, enumerable: false, configurable: true, writable: true });
+      if (pts.length) notePasses(r, pts);
       // a turn has begun: the judge's chance at its start, for the review at the end (a game ended in it has its result)
       if (r.turn !== turn && !r.over) noteTurn(r);
     }

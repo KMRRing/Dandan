@@ -57,28 +57,51 @@ export function eventOf(s, who, m, after, me, out = new Float32Array(EV_N)) {
  * index it arrived at with its arrival facts. Indices are counts of events, so a window is [from, length).
  */
 export class Record12 {
-  constructor(me) { this.me = me; this.events = []; this.turnAt = []; this.turn = -1; this.arrived = new Map(); this.mulls = 0; }
+  // honest (16 Nov 2026, Fable's review items 6-7): no move-by-move passes (a pass is only recorded when the seat was asked to
+  // act); instead one pass event at every priority point the rules note, asked or not (the state's passPoints, dandan-rules.js).
+  // And the hand as a set: no card followed by its id; every unknown card gets the same hand-level facts (cards they drew this
+  // turn and last, hand size, cards they played this turn, mulligans) and the window "since it arrived" becomes "this turn".
+  constructor(me, { honest = false } = {}) {
+    this.me = me; this.honest = honest; this.events = []; this.turnAt = []; this.turn = -1; this.arrived = new Map(); this.mulls = 0;
+    this.drawn = [0, 0]; this.lastDraws = 0; this.played = 0; this.draws0 = 0;
+  }
   update(s, who, m, after) {
     const them = other(this.me);
     if (m.t === "mull" && who === them) this.mulls++;
-    this.events.push(eventOf(s, who, m, after, this.me));
-    if (after.turn !== this.turn) { this.turn = after.turn; this.turnAt.push(this.events.length); }
+    if (!this.honest || m.t !== "pass") this.events.push(eventOf(s, who, m, after, this.me));
+    if (this.honest) for (const p of after.passPoints || []) this.events.push(eventOf(p.s, p.seat, { t: "pass" }, p.s, this.me));
+    if (who === them && (m.t === "land" || (m.t === "cast" && m.from === "hand") || m.t === "cycle")) this.played++;
+    const d = (after.draws || [0, 0])[them] || 0;
+    if (after.turn !== this.turn) {
+      this.turn = after.turn; this.turnAt.push(this.events.length);
+      this.drawn = [d - this.draws0, this.drawn[0]]; this.draws0 = d; this.played = 0;
+    }
+    this.lastDraws = d - this.draws0;
+    if (this.honest) return;
     const opening = !(after.mull?.done?.[0] && after.mull?.done?.[1]), now = new Set(after.hand[them]);
     for (const id of [...this.arrived.keys()]) if (!now.has(id)) this.arrived.delete(id);
     for (const id of after.hand[them]) if (!this.arrived.has(id) || opening) this.arrived.set(id, { at: opening ? 0 : this.events.length, open: opening, mulls: this.mulls, draw: after.step === "draw", turn: after.turn });
   }
   /** Where the last two turns began. */
   recent() { const n = this.turnAt.length; return n >= 2 ? this.turnAt[n - 2] : 0; }
-  /** A card's arrival facts (SB_N): opening hand, mulligans before, drawn in the draw step, turns held, came this turn. */
+  /** A card's arrival facts (SB_N): opening hand, mulligans before, drawn in the draw step, turns held, came this turn; honest:
+   *  the hand's facts, the same for every unknown card. */
   slotFacts(id, s, out = new Float32Array(SB_N)) {
-    const a = this.arrived.get(id);
     out.fill(0);
+    if (this.honest) {
+      const them = other(this.me);
+      out[0] = Math.min(4, this.lastDraws) / 4; out[1] = Math.min(4, Math.max(0, this.drawn[1])) / 4; out[2] = Math.min(10, s.hand[them].length) / 10;
+      out[3] = Math.min(4, this.played) / 4; out[4] = Math.min(3, this.mulls) / 3;
+      return out;
+    }
+    const a = this.arrived.get(id);
     if (!a) return out;
     out[0] = a.open ? 1 : 0; out[1] = Math.min(3, a.mulls) / 3; out[2] = a.draw ? 1 : 0;
     out[3] = Math.min(6, Math.max(0, (s.turn || 0) - (a.turn || 0))) / 6; out[4] = a.turn === s.turn ? 1 : 0;
     return out;
   }
-  arrivalOf(id) { return this.arrived.get(id)?.at ?? 0; }
+  /** The start of a card's own window: when it arrived; honest: this turn's start, the same for every card. */
+  arrivalOf(id) { return this.honest ? (this.turnAt[this.turnAt.length - 1] ?? 0) : this.arrived.get(id)?.at ?? 0; }
 }
 
 /** The position's own input (BX12): the extended view with only what `me` knows of the other hand, and the unknown count. */
@@ -95,7 +118,7 @@ export function input12(s, me, seen = seenBy(s, me), out = new Float32Array(BX12
 export class Scry12 {
   constructor(me, net) {
     const F = a => Float32Array.from(a);
-    this.me = me; this.n = net; this.rec = new Record12(me);
+    this.me = me; this.n = net; this.rec = new Record12(me, { honest: !!net.honest });
     if (net.EV_N !== EV_N || net.BX !== BX12 || net.SB_N !== SB_N || net.NN !== NN) throw new Error("Scry 1.2: the net's sizes differ from the code's");
     for (const k of ["We", "be", "Wx", "Wa", "Wt", "Wb", "Ws", "Wc", "b1", "W2", "b2"]) this[k] = F(net[k]);
     this.D = net.D; this.H = net.H;

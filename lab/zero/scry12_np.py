@@ -33,7 +33,7 @@ for d in A.dir.split(","):
     U.append(rd("u.f32", np.float32).reshape(-1, NN)); HOLD.append(rd("hold.u8", np.uint8) > 0)
     WIN.append(rd("win.i32", np.int32).reshape(-1, 3).astype(np.int64) + ne); SB.append(rd("sb.f32", np.float32).reshape(-1, SBN))
     SA.append(rd("sa.i32", np.int32).astype(np.int64) + ne); SY.append(rd("sy.i16", np.int16).astype(np.int64)); SR.append(rd("srow.i32", np.int32).astype(np.int64) + nr)
-    ne += m["events"]; nr += m["rows"]
+    ne += m["events"]; nr += m["rows"]; HONEST = m.get("honest", False)
 EV = np.concatenate(EV); U = np.concatenate(U); HOLD = np.concatenate(HOLD); WIN = np.concatenate(WIN)
 SB = np.concatenate(SB); SA = np.concatenate(SA); SY = np.concatenate(SY); SR = np.concatenate(SR)
 XS = X; XOFF = np.cumsum([0] + [len(x) for x in X])
@@ -152,7 +152,7 @@ for ep in range(1, A.epochs + 1):
     lr *= 0.8
 P = best[1]
 say(f"kept epoch {best[2]}: whole hand {best[0]:.4f} nats a card")
-out = {"D": D, "H": H, "EV_N": EVN, "BX": BX, "SB_N": SBN, "NN": NN, **{k: np.round(v.astype(np.float64).ravel(), 5).tolist() for k, v in P.items()}}
+out = {"honest": bool(HONEST), "D": D, "H": H, "EV_N": EVN, "BX": BX, "SB_N": SBN, "NN": NN, **{k: np.round(v.astype(np.float64).ravel(), 5).tolist() for k, v in P.items()}}
 os.makedirs(os.path.dirname(os.path.abspath(A.out)), exist_ok=True)
 json.dump(out, open(A.out, "w"), separators=(",", ":"))
 say(f"wrote {A.out}")
