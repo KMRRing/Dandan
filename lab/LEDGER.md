@@ -1020,3 +1020,9 @@ zps003 (half its parts, fixed dealer), 135 games: 14.8%, acts 32.1%, the same 82
 Reading: the waste is real (a sixth of all searches), but the fixtures' 10 of 11 was high: about one act in five at the re-think
 is not the earlier best move, and two re-thinks in three end in another pass. The best non-pass option is only a proxy for what the
 first search's look-ahead would play next, which no line stores.
+
+## 16 Nov 23:55Z — target Modern (Korbi); the belief takes a weighted set of decklists (Fable)
+Korbi wants Modern. Order: one fixed Modern matchup; his deck against the 5-10 most played; the field with deck naming; sideboards.
+Stage 3 contract change now: the belief interface takes a weighted set of candidate decklists (one list today). Each dealt world
+picks a list, then a hand from it. The deck layer above Scry comes after the card-vector net and the automatic loop. Data source
+(Magic Online published results) and its terms for Modern still to check. XMage cloned to read (plain clone, no footprint).
