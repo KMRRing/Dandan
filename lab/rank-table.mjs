@@ -23,13 +23,14 @@ outer: for (const id of ids.split(",")) for (const name of (await store.list(`re
     const d = JSON.parse(line);
     if (!d.hold || !d.deep || d.c.length < 2 || d.pick == null || d.pick < 0) continue;
     if (++seen > Number(most)) break outer;
-    const qp = d.c[d.pick].q, kind = KINDS[d.c[d.pick].m[0]] || "pass";
+    // the final means (a line from 16 Nov on: q is the first look's, d the deeper look's where it re-weighed the option)
+    const fin = c => c.d ?? c.q, qp = fin(d.c[d.pick]), kind = KINDS[d.c[d.pick].m[0]] || "pass";
     for (const [n, f] of rankers) {
       const s = f(d), order = s.map((v, k) => [v, k]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).map(p => p[1]);
       const at = order.indexOf(d.pick), t = T[n];
       t.n++; t.kind[kind].n++;
       for (let r = 0; r < 4; r++) if (at <= r) { t.top[r]++; t.kind[kind].top[r]++; }
-      for (let r = 1; r < 4 && r < order.length; r++) { t.behind[r - 1] += qp - d.c[order[r]].q; t.bn[r - 1]++; }
+      for (let r = 1; r < 4 && r < order.length; r++) { t.behind[r - 1] += qp - fin(d.c[order[r]]); t.bn[r - 1]++; }
     }
   }
 }

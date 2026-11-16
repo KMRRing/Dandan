@@ -33,7 +33,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - name: rclone
-        if: inputs.step == 'copy' || inputs.step == 'verify'
+        if: inputs.step != 'check' && inputs.step != 'config'
         run: curl -fsSL https://rclone.org/install.sh | sudo bash > /dev/null && rclone version | head -1
       - name: Run the step
         env:
@@ -59,15 +59,21 @@ jobs:
             verify)
               echo "## Google (fleet/ left out)"; rclone size "gcs:$LAB_BUCKET" $R --json
               echo "## B2"; rclone size "b2:$LAB_B2_BUCKET" $R --json
-              rclone check "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --one-way --size-only --missing-on-dst "$RUNNER_TEMP/miss.txt" --differ "$RUNNER_TEMP/diff.txt" > /dev/null 2>&1 || true
+              # (Fable 20:10Z) every Google object must land in one of the three lists, so a check that failed to list B2 can't pass
+              : > "$RUNNER_TEMP/match.txt"; : > "$RUNNER_TEMP/miss.txt"; : > "$RUNNER_TEMP/diff.txt"
+              rclone check "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --one-way --size-only --match "$RUNNER_TEMP/match.txt" --missing-on-dst "$RUNNER_TEMP/miss.txt" --differ "$RUNNER_TEMP/diff.txt" > "$RUNNER_TEMP/check.txt" 2>&1 || true
+              tail -3 "$RUNNER_TEMP/check.txt"
               by() { cut -d/ -f1 "$1" | sort | uniq -c | sort -rn; }
               echo "## missing on B2, by top folder"; by "$RUNNER_TEMP/miss.txt"
               echo "## different size on B2, by top folder (claims/, workers/ and done marks differ by design)"; by "$RUNNER_TEMP/diff.txt"
               quiet=$(rclone lsf "gcs:$LAB_BUCKET" $R -R --files-only --max-age 30m | wc -l)
-              missing=$(grep -v -E '^(claims|workers)/' "$RUNNER_TEMP/miss.txt" | wc -l)
+              missing=$({ grep -v -E '^(claims|workers)/' "$RUNNER_TEMP/miss.txt" || true; } | wc -l)
+              google=$(rclone lsf "gcs:$LAB_BUCKET" $R -R --files-only | wc -l)
+              seen=$(( $(wc -l < "$RUNNER_TEMP/match.txt") + $(wc -l < "$RUNNER_TEMP/miss.txt") + $(wc -l < "$RUNNER_TEMP/diff.txt") ))
+              echo "## Google objects: $google; matching + missing + different: $seen"
               echo "## written to Google outside fleet/ in the last 30 minutes: $quiet"
               echo "## missing on B2 outside claims/ and workers/: $missing"
-              if [ "$quiet" = 0 ] && [ "$missing" = 0 ]; then echo "VERIFY: passed (if a catch-up ran after Google went quiet)"; else echo "VERIFY: not yet"; fi ;;
+              if [ "$quiet" = 0 ] && [ "$missing" = 0 ] && [ "$seen" = "$google" ]; then echo "VERIFY: passed (if a catch-up ran after Google went quiet)"; else echo "VERIFY: not yet"; fi ;;
             *) echo "unknown step"; exit 1 ;;
           esac
           rm -f "$RUNNER_TEMP"/*key.json

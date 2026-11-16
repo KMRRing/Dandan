@@ -39,7 +39,7 @@ for (const id of ids.split(",")) {
       flags[i] = (d.hold ? 1 : 0) | (d.deep ? 2 : 0) | (d.every ? 4 : 0) | (d.off ? 8 : 0);
       for (const cc of d.c) {
         if (!cc.m.length) throw new Error(`${name}: a candidate with no marks`);
-        q[c] = cc.q; mark[c] = K + k; c++;
+        q[c] = cc.q; mark[c] = K + k; c++;   // the soft targets: on a line from 16 Nov on, every option's first-look mean
         for (const m of cc.m) marks[k++] = m;
       }
     });

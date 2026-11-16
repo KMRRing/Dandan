@@ -78,7 +78,7 @@ function putDecision(s, d, o, x, p) {
 function valueOld(s, d, played, explored) {
   const o = options(s, d, played, explored);
   if (!o) return null;
-  const p = explored ? d.pick : o.ms.findIndex(m => key(m) === key(played)), js = o.groups.find(g => g.includes(p)) || [p];
+  const at = explored ? -1 : o.ms.findIndex(m => key(m) === key(played)), p = at >= 0 ? at : d.pick, js = o.groups.find(g => g.includes(p)) || [p];   // the line's pick when the move played isn't among them (Fable 20:10Z)
   return js.reduce((a, j) => a + d.c[j].q, 0) / js.length;
 }
 function replay(game, decisions) {

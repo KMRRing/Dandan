@@ -43,6 +43,7 @@ function putDecision(which, d, x) {
   S.put("x.f32", Float32Array.from(x)); S.put("cand.i32", Int32Array.of(c.C)); S.put("pick.i16", Int16Array.of(p)); S.put("med.i16", Int16Array.of(0));
   S.put("flags.u8", Uint8Array.of((d.hold ? 1 : 0) | (d.deep ? 2 : 0) | (d.every ? 4 : 0)));
   const q = new Float32Array(d.c.length), mark = new Int32Array(d.c.length), marks = [];
+  // q: the soft targets; on a line from 16 Nov on (lab/zero/zero-lib.mjs decisionLine) every option's first-look mean, one depth
   d.c.forEach((cc, j) => { q[j] = cc.q; mark[j] = c.K + marks.length; marks.push(...cc.m); });
   S.put("q.f32", q); S.put("mark.i32", mark); S.put("marks.u8", Uint8Array.from(marks));
   c.D++; c.C += d.c.length; c.K += marks.length;
