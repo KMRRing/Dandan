@@ -62,11 +62,18 @@ export function valueRow(s, me) {
 const SPELLS_N = 17;   // dandan-eval.js SPELLS.length: (N − 3 − 17) / 2 = 40 numbers a seat
 /** A searched decision as lab/export.mjs writes one (so lab/fetch-ex.mjs and lab/policy_np.py read it unchanged): the view, each
  *  option's marks and the search's value, the search's pick, every legal move weighed, Deep when 1,024 deals. */
+/**
+ * A searched decision as Zero's trainers read it. Each option: m its marks (the old policy's encoding), mv the move itself (Fable's
+ * review, item 8: the packers take the options and the pick from the moves, never by matching marks, which twins share), q its
+ * mean from the first look (item 9: every soft target from the same depth; the deeper look's mean, where it re-weighed the
+ * option, is d), se and n. v: the picked option's final mean, the value target for this position (item 9).
+ */
 export function decisionLine(s, seat, g, i, res, pick, deals, hold, x3) {
-  const q = !!s.pending, mk = q ? qMarksOf : marksOf;
+  const q = !!s.pending, mk = q ? qMarksOf : marksOf, r4 = v => +v.toFixed(4);
   return {
     g, i, seat, deep: deals >= 1024 ? 1 : 0, deals, x: viewOf(s, seat),
-    c: res.list.map(c => ({ m: mk(s, seat, c.move), s: 0, q: +c.mean.toFixed(4), se: +c.se.toFixed(4), n: c.n })),
+    c: res.list.map(c => ({ m: mk(s, seat, c.move), mv: c.move, s: 0, q: r4(c.first ?? c.mean), ...(c.first != null ? { d: r4(c.mean) } : {}), se: r4(c.se), n: c.n })),
+    v: pick >= 0 ? r4(res.list[pick].mean) : null,
     med: 0, pick, every: 1, ...(q ? { qd: 1 } : {}), ...(hold ? { hold: 1 } : {}), ...(x3 != null ? { x3 } : {}),
   };
 }

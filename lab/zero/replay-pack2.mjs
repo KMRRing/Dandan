@@ -10,8 +10,7 @@
 import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
-import { marksOf } from "../../dandan-netpolicy.js";
-import { zeroOptions, qMarksOf } from "../../dandan-zero.js";
+import { zeroOptions } from "../../dandan-zero.js";
 import { ext, handCounts, EXT_N } from "./zero-view.mjs";
 import { Scry12 } from "./scry12.mjs";
 import { input2, marks2, X2, MARK_N } from "./zero2.mjs";
@@ -26,24 +25,31 @@ function sink(sub, names) {
 }
 const A = sink("a", ["x.f32", "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8"]), PC = { D: 0, C: 0, K: 0, Q: 0 };
 const V = sink("v", ["mine.f32", "theirs.f32", "won.f32", "aux.f32", "hold.u8"]);
-let nv = 0, games = 0, broken = 0, unmatched = 0, skipped = 0;
+let nv = 0, games = 0, broken = 0, unmatched = 0, skipped = 0, old = 0, pickOff = 0, twins = 0;
 
-// a decision line's options (its c, in the search's list order, which is sorted) matched to zeroOptions' moves by the marks the
-// line carries: each entry takes the first unused move with the same marks (moves alike in marks score alike); a line with an
-// entry no move matches is left out rather than mislabelled
+// a decision line's options are its moves (Fable's review, item 8: zero-play stores each, mv), checked against zeroOptions; a line
+// from before (no moves) or with a move the position doesn't offer is left out rather than guessed at
 function options(s, d) {
-  const ms = zeroOptions(s, d.seat), mk = s.pending ? qMarksOf : marksOf, by = new Map();
-  ms.forEach(m => { const k = key(mk(s, d.seat, m)); if (!by.has(k)) by.set(k, []); by.get(k).push(m); });
-  const out = [];
-  for (const c of d.c) { const q = by.get(key(c.m)); if (!q?.length) return null; out.push(q.shift()); }
-  return out;
+  if (!d.c.every(c => c.mv)) { old++; return null; }
+  const offered = new Set(zeroOptions(s, d.seat).map(key));
+  return d.c.every(c => offered.has(key(c.mv))) ? d.c.map(c => c.mv) : null;
 }
-function putDecision(s, d, ms, x) {
-  const p = d.pick != null && d.pick >= 0 && d.pick < d.c.length ? d.pick : d.c.reduce((b, cc, j) => (cc.q > d.c[b].q ? j : b), 0);
+/** The pick is the move the game played (item 8), but at the one decision explore3 played at random: there the search's own. */
+function pickOf(d, ms, played, explored) {
+  if (explored) return d.pick;
+  const p = ms.findIndex(m => key(m) === key(played));
+  if (p < 0 || p !== d.pick) pickOff++;
+  return p >= 0 ? p : d.pick;
+}
+function putDecision(s, d, ms, x, p) {
   A.put("x.f32", x); A.put("cand.i32", Int32Array.of(PC.C)); A.put("pick.i16", Int16Array.of(p)); A.put("med.i16", Int16Array.of(0));
   A.put("flags.u8", Uint8Array.of((d.hold ? 1 : 0) | (d.deep ? 2 : 0) | 4));
+  // twins (options the net reads alike: the same marks2) get their group's mean, as the net can't tell them apart
+  const mk = ms.map(m => marks2(s, d.seat, m)), grp = new Map();
+  mk.forEach((k, j) => { const g = key(k); if (!grp.has(g)) grp.set(g, []); grp.get(g).push(j); });
   const q = new Float32Array(ms.length), mark = new Int32Array(ms.length), marks = [];
-  ms.forEach((m, j) => { q[j] = d.c[j].q; mark[j] = PC.K + marks.length; marks.push(...marks2(s, d.seat, m)); });
+  for (const js of grp.values()) { const m = js.reduce((a, j) => a + d.c[j].q, 0) / js.length; for (const j of js) q[j] = m; if (js.length > 1) twins += js.length; }
+  ms.forEach((m, j) => { mark[j] = PC.K + marks.length; marks.push(...mk[j]); });
   A.put("q.f32", q); A.put("mark.i32", mark); A.put("marks.u8", Uint8Array.from(marks));
   PC.D++; PC.C += ms.length; PC.K += marks.length; if (s.pending) PC.Q++;
 }
@@ -61,16 +67,17 @@ function replay(game, decisions) {
     if (!s.pending && (turnStart || seeded(mix(seed, 4242 + i))() < 1 / 3)) {
       if (x3 != null && i <= x3) skipped += 2;
       else {
-        const d = ds.find(x => x.c?.length), vs = d ? Math.max(...d.c.map(c => c.q)) : null;
+        // the value target: the picked option's final mean (item 9), not the best of the first look's
+        const d = ds.find(x => x.c?.length && x.v != null), vs = d ? d.v : null;
         for (const me of [0, 1]) vrows.push({ me, f: ext(s, me, handCounts(s, other(me))), g: ext(s, other(me), handCounts(s, me)), v: vs == null ? null : me === d.seat ? vs : 1 - vs });
       }
     }
     for (const d of ds) {
       if (d.seat !== who || !(d.qd || d.every)) continue;
       const ms = options(s, d);
-      if (!ms) { unmatched++; continue; }
+      if (!ms) { if (d.c.every(c => c.mv)) unmatched++; continue; }
       const b = F[who].belief(s);
-      putDecision(s, d, ms, input2(s, who, b.counts, b.any));
+      putDecision(s, d, ms, input2(s, who, b.counts, b.any), pickOf(d, ms, m, x3 === i));
     }
     Math.random = seeded(mix(seed, i + 1));
     const r = applyMove(rules, G, who, m, 0);
@@ -104,4 +111,4 @@ for (const name of parts) {
 A.put("cand.i32", Int32Array.of(PC.C)); A.put("mark.i32", Int32Array.of(PC.K)); A.close(); V.close();
 fs.writeFileSync(`${dir}/a/meta.json`, JSON.stringify({ XN: X2, decisions: PC.D, candidates: PC.C, marks: PC.K, markN: MARK_N, questions: PC.Q, exports: ids, every: true }));
 fs.writeFileSync(`${dir}/v/meta.json`, JSON.stringify({ N: EXT_N, rows: nv, skipped, ids, aux: true }));
-console.log(`replay-pack2: ${games} games (${broken} not the same); decisions ${PC.D} (questions ${PC.Q}, ${unmatched} unmatched); value rows ${nv} (${skipped} before a random move skipped)`);
+console.log(`replay-pack2: ${games} games (${broken} not the same); decisions ${PC.D} (questions ${PC.Q}, ${unmatched} unmatched, ${old} from before moves were stored, ${pickOff} picks not the move played, ${twins} options in twin groups); value rows ${nv} (${skipped} before a random move skipped)`);
