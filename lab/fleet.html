@@ -1726,7 +1726,18 @@ function buildGraph(d, fable = false) {
     Z("set:zg12", "set", "Generation 12's games (g11w-C)", "256 deals, the variable look-ahead, 4,800 games a set. Held for the last wave's training.", ["policy:zg11"], ok("Played"), ["az-g12-c", "az-g12-c2"]);
     Z("set:zfill", "set", "Filler: Zero self-play with the latest nets (zps)", "What idle machines play when the queue is empty (since 16 Nov 14:30Z, Korbi): Monte Scry Zero with g11w-C's nets against itself, 256 deals, close calls three turns ahead, 4 games a shard, 1,200 shards a batch. More games for the last wave's training. Replaces the old Hard S5 filler (sps), retired.", ["policy:zg11"], { v: "running", label: "Filler" }, ["zps001"]);
     Z("check:zscramble", "check", "Which inputs the nets lean on (scramble test)", "Each input group shuffled across 120 held-out games. Value net: the 132 hand-built features carry it (+0.72 loss scrambled, the raw 533 only +0.05); the clock +0.22-0.25, squeeze +0.11-0.13. Policy and question head use both halves about equally. Scry: each card's 12-feature history about as much as the whole raw view. Unused, to drop at the next training: hand summaries, the library-12 flag, the unknown-card count.", ["policy:zg11"], ok("Done"));
-    Z("check:zhold", "check", "Hold: the changes before the last Dandan wave", "No new fleet compute until these are built (Korbi, 16 Nov 10:49). Scry: filter fix 1 (their belief about our hand), fix 2 (calibrated policy chances), the hand generator 2b, library cards only the opponent knows as candidates, put-backs judged from their view of us, autoregressive Scry 1 (whole hands), the fusion without counting evidence twice. Search: paired deals for questions, the question head's prior. Nets: question head merged into the policy, value targets from search values, match games into training, a raw-input value net, the unused inputs dropped. Tests: the puzzle suite, the cross-player Scry test. Then one wave, then the choice: a third Dandan net (true incremental AlphaZero) or a real MTG matchup.", ["check:zscramble", "match:zfree", "engine:zlive"], next("Plan"));
+    Z("check:zhold", "check", "Hold (16 Nov 10:49): replaced by the path to the general solution", "The hold asked for the conceptual changes before more compute, then one last Dandan wave and the choice. At 16:48 Korbi replaced the last wave with the path to the general solution (doc: Monte: the path to the general solution): cut the hand-built inputs and build the general pieces on Dandan (stages 1-2, one bundle), the general structure (stage 3), the automated loop (stage 4), then acceptance and a real Magic matchup.", ["check:zscramble", "match:zfree", "engine:zlive"], ok("Replaced"));
+    Z("match:zkf1", "match", "Passing rule removed from Zero's search", "The search kept its first-listed option (for Zero: passing, or attacking with nothing) unless beaten by the noise plus half a point; a Medium-era rule. Now Medium's lists only, live since 16 Nov. The live nets with the fix against the same engine with the old rule, Quick, 500 pairs.", ["engine:zlive"], null, ["az-kf1"]);
+    Z("belief:scry12", "belief", "Scry 1.2: the belief net on the raw record", "Each move an event of raw facts, read through three windows (the whole game, the last two turns, since this card arrived); whole hands dealt card after card (autoregressive). Replaces Scry 1's 25 hand-built numbers. First net g12s training on generations 11-12 (GitHub).", ["check:zhold"], { v: "running", label: "Training" });
+    Z("engine:z2", "engine", "Zero 2: stages 1-2 in one bundle", "Scry 1.2; one policy for moves and answers with every target in full; the policy on rules facts and the raw view; the value net on the raw view with the search's values in its targets and a deck-out output; soft targets. Against today's design retrained from scratch on the same games (g12r-C, training), 500 pairs at Quick, bar 48%.", ["belief:scry12", "check:zhold"], { v: "running", label: "Training" });
+    Z("engine:zstage3", "engine", "Stage 3: the general structure", "Cards as data on a generic rules core; card rows (entity encoder) and pointer actions; two decks and two libraries; Scry 1.2 on card rows; batched net calls; rules tests per card. Proven on Dandan against Zero 2's winner.", ["engine:z2"], null, ["z-stage3"]);
+    Z("check:zstage4", "check", "Stage 4: the automated loop", "Self-play feeds training as games finish; short warm-started rounds published automatically; a fixed yardstick panel; a safety stop. Anything for the app stays Korbi's call.", ["engine:zstage3"], null, ["z-stage4"]);
+    Z("match:zaccept", "match", "Stage 5: acceptance", "The general system from scratch on Dandan for a fixed budget (about generations 0-6), its learning curve against the original line's; and a second small matchup (the Forgetful Fish list) run with nothing changed.", ["check:zstage4"], null, ["z-accept"]);
+    Z("check:zmtg", "check", "A real Magic matchup (Korbi's call)", "Two fixed, known decklists; Forge or XMage as the rules reference and the first opponent. Sideboards, what-if scenarios and deck building later.", ["match:zaccept"], null, ["z-mtg"]);
+    // the old monte-plan (Fable, 11 Nov): stage 1 stopped on 11 Nov (45.6%), stages 2 and 3 overtaken by Zero (fleet director, 16 Nov)
+    for (const k of ["check:speed", "set:export2", "engine:model2", "judge:next", "check:crown", "set:round", "engine:model-r", "judge:value-r", "check:screen-r", "match:gate-r", "engine:rl", "judge:belief", "engine:search3", "match:gate3"]) {
+      const n = N.get(k); if (n) { n.superseded = true; n.jobs = []; n.local = { v: "idle", label: "Superseded by Zero" }; }
+    }
     // the first round's S1 and S2 learned from the Deep games; S1′ and S2′ are their second rounds
     J("set:deep", "judge:job:aa-g3-s1#best", "judge:job:aa-g3-s2#best"); J("judge:job:aa-g3-s1#best", "judge:job:aa-g8-s1#best"); J("judge:job:aa-g3-s2#best", "judge:job:aa-g8-s2#best");
     // an averaged judge (avg(@a,@b)) is made from the nets it averages
@@ -1965,6 +1976,7 @@ function drawDetail() {
 function nodeStatus(n, d, G) {
   const inputsOf = k => G.edges.filter(e => e[1] === k).map(e => G.nodes.find(x => x.key === e[0]));
   if ((n.jobs || []).length && n.jobs.every(j => j.planned)) return { cls: "idle", label: "Planned", rows: [] };
+  if (n.local) return { cls: n.local.v, label: n.local.label, rows: [] };   // a box that carries its own state (Zero's, superseded plans)
   if (n.t === "medium" && !n.model) return { cls: "good", label: "Ready" };
   if (n.t === "engine") {
     const js = inputsOf(n.key).filter(x => x.t === "judge").map(x => nodeStatus(x, d, G));
@@ -2085,10 +2097,11 @@ function timesOf(G, d) {
 // what matters now: work running, waiting or queued; the next two planned steps; the live net; what finished in the last 12 hours
 const RECENT = 12 * HOUR;
 function relevantKeys(G, d) {
-  const t = timesOf(G, d), active = /Running|Training|Waiting|Queued|Live/;
+  const t = timesOf(G, d), active = /Running|Training|Waiting|Queued|Live|Filler/;
   return new Set(G.nodes.filter(n => {
     const st = nodeStatus(n, d, G), x = t[n.key];
-    return n.zero || active.test(st.label) || (x?.plan && x.rank <= 2) || (x && !x.plan && Date.now() - x.at < RECENT);
+    // Zero's boxes only when running, waiting, planned or recent, as every other box (fleet director, 16 Nov); superseded plans never
+    return !n.superseded && (active.test(st.label) || (x?.plan && x.rank <= 2) || (x && !x.plan && Date.now() - x.at < RECENT));
   }).map(n => n.key));
 }
 // rows of time (an hour each, only the hours something happened in), then "now", then the planned steps; one column a kind of
