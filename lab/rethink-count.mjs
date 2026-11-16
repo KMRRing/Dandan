@@ -4,15 +4,18 @@
 // table (tapped included), stack, graveyards, exile, library sizes, life, mana pool, land played, what is pending, what is shown.
 // For each: does the mover then act, is that act the earlier search's best option other than pass, and had that option exactly
 // pass's value at the earlier search (the look-ahead playing it one step later, the tie going to pass). Held-out games only
-// (every fifth seed); needs the decision lines with each option's move (zps003 on).
+// (every fifth seed). Lines with each option's move compare moves; older lines compare by the old marks (twins alike count as the
+// same move).
 // usage: node lab/rethink-count.mjs <shard> <shards> <out> <zero-play jobs, comma-separated | file:<output>>
 import fs from "node:fs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../seats.js";
+import { marksOf } from "../dandan-netpolicy.js";
+import { PASS } from "../dandan-zero.js";
 
 const [SH, SHS, OUT, ids] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5]];
 const J = x => JSON.parse(JSON.stringify(x)), key = x => JSON.stringify(x), real = Math.random;
-const isPass = mv => mv && mv.t === "pass";
+const isPass = mv => mv && mv.t === PASS.t;
 const seen = s => key([s.turn, s.active, s.lib.length, s.yard, s.exile, s.hand, s.bf, s.stack, s.life, s.pool, s.played, s.pending, s.shown, s.reveal]);
 const T = { searches: 0, games: 0, broken: 0, old: 0, again: 0, acted: 0, same: 0, checked: 0, tie: 0, byStep: {} };
 
@@ -25,19 +28,22 @@ function replay(game, decisions) {
     for (const d of decisions.get(i) || []) {
       if (d.seat !== who || !d.c || d.c.length < 2) continue;
       T.searches++;
-      if (d.c.some(c => !c.mv)) { T.old++; continue; }
+      const old = d.c.some(c => !c.mv);
+      if (old) T.old++;
+      // each option as something comparable across steps: its move, or on old lines its marks
+      const id = old ? c => key(c.m) : c => key(c.mv), passId = old ? key(marksOf(s, who, PASS)) : key(PASS), idOf = old ? mv => key(marksOf(s, who, mv)) : key;
       const fp = seen(s), L = last[who];
-      if (!d.qd && L && L.turn === s.turn && isPass(L.pick) && L.fp === fp) {
+      if (!d.qd && L && L.turn === s.turn && L.passed && L.fp === fp) {
         T.again++; const k = `${L.step} → ${s.step}`; T.byStep[k] = (T.byStep[k] || 0) + 1;
         if (!isPass(m)) {
           T.acted++;
-          if (L.best) { T.checked++; if (key(L.best.mv) === key(m)) T.same++; }
+          if (L.best) { T.checked++; if (L.best.id === idOf(m)) T.same++; }
         }
         if (L.best && L.passC && L.best.q === L.passC.q && L.best.se === L.passC.se) T.tie++;
       }
       if (!d.qd) {
-        const pick = d.c[d.pick]?.mv, rest = d.c.filter(c => !isPass(c.mv)).sort((a, b) => b.q - a.q);
-        last[who] = { turn: s.turn, step: s.step, fp, pick, best: rest[0] || null, passC: d.c.find(c => isPass(c.mv)) || null };
+        const rest = d.c.filter(c => id(c) !== passId).sort((a, b) => b.q - a.q), best = rest[0] ? { ...rest[0], id: id(rest[0]) } : null;
+        last[who] = { turn: s.turn, step: s.step, fp, passed: d.c[d.pick] && id(d.c[d.pick]) === passId && isPass(m), best, passC: d.c.find(c => id(c) === passId) || null };
       }
     }
     Math.random = seeded(mix(game.seed, i + 1));
@@ -65,7 +71,7 @@ for (const name of parts) {
   }
 }
 const pc = (a, b) => `${a} of ${b} (${(100 * a / Math.max(1, b)).toFixed(1)}%)`;
-console.log([`${T.games} held-out games (${T.broken} not the same, ${T.old} searches from before moves were stored, skipped)`,
+console.log([`${T.games} held-out games (${T.broken} not the same, ${T.old} searches from before moves were stored, compared by the old marks)`,
   `  re-thinks of an unchanged position after the mover's own pass this turn: ${pc(T.again, T.searches)} of all searches`,
   `  the mover then acted: ${pc(T.acted, T.again)}; that act the earlier search's best non-pass option: ${pc(T.same, T.checked)}`,
   `  at the earlier search that option had exactly pass's value (mean and se): ${pc(T.tie, T.again)}`,
