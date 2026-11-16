@@ -908,3 +908,8 @@ Restore list for the rest still in the 03:55Z entry; the deleted pools would nee
 - az-yd11: g11w-C at Deep vs the benchmark 64.8% (58.8-70.8) over 186 of 200. az-dd9: Deepest vs Deep 53.3% (47.6-59.0) over 196 of 200. az-g12-c/c2 played (nothing open but the filler).
 - Filler: Zero self-play with g11w-C (zps, 256 deals, deeper 0.03), from 12:25Z (Korbi 14:21 local); sps119 (Hard S5 filler) retired.
 - Passing rule: think()'s first-option protection only for Medium's candidates (Zero's first option is the pass; Korbi 14:37 local "fix now"); live. az-kf1 (fixed vs keepfirst, g9x-C, Quick): 53.0% ± 4.6 (48.4-57.5) over 355 of 500.
+
+## 2026-11-16 16:10Z exec: Fable's review, first items (Korbi 17:57 local)
+- Item 1 (dealBy drew a name with many copies far too often): fixed dealer behind a flag (dealfix), item 2 (stack copies not counted) in the same arm. lab/zero/deal-check.mjs, 6,000 deals at 3 positions: old dealer up to 26.1 points off Scry's odds (Island 44.6% dealt where Scry said 18.4%), fixed 0.4. az-df1 queued (g9x-C, deeper 0.03, Quick, 500 pairs, fixed vs today), ahead of the filler. Bar: 48% or more to go live, else back to Korbi; then the filler takes the fixed dealer.
+- Items 6-7 measured: scry-arms.yml, Scry 1 retrained four ways on az-g12-c,c2 (today; without the asked-and-passed counters; the hand as a set; both). Nothing live.
+- Zero 2 training held until items 8-10 are in; Scry 1.2 (g12s) to be retrained after 6-7.
