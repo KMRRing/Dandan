@@ -1006,3 +1006,7 @@ lab/qhead-agree.mjs over az-g12-c + az-g12-c2 held-out games (1,917 games, 0 not
 own pick higher by 1.8 (discard) to 6.4 (mull) points on its first look (noisy: each first look has its own se). So inside every
 look-ahead about half the mover's discards and three quarters of its put-backs are not what a search would choose: the defect in
 Korbi's game is common, not a corner. Next: the arm (the root player's own questions to the end of its turn searched in the tree).
+Fable (23:13): the "mean loss where it differs" column overstates the cost: the search's pick is the best of several noisy first
+looks, so its edge over any other option is biased up (winner's curse). The agreement rates stand; the match is the measure.
+Plan split at Fable's word: defect fixes (questions searched to end of turn + review item 3 twin classes) one match at bar 48%;
+the in-tree belief its own arm that must win; 6a second game from Dandan's cards before 6b; XMage probe before any real card.
