@@ -1,0 +1,27 @@
+# The XMage probe (17 Nov 2026, Fable's stage 3 brief): XMage read from a plain clone (no fork, no account, no other footprint:
+# Korbi), built here, lab/xmage/ProbeTest.java dropped into its test tree and run. Prints copy speed of a mid-game Modern
+# position and its Monte Carlo player's play-outs a second. Nothing is pushed anywhere.
+name: XMage probe
+on: workflow_dispatch
+permissions: { contents: read }
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "17" }
+      - name: Clone XMage
+        run: git clone -q --depth 1 https://github.com/magefree/mage.git xmage && git -C xmage log -1 --format='%H %cd'
+      - uses: actions/cache@v4
+        with: { path: ~/.m2/repository, key: xmage-m2-v1 }
+      - name: Build what the tests need
+        working-directory: xmage
+        run: MAVEN_OPTS="-Xmx6g" mvn -B -q -T 1C -DskipTests -Dmaven.javadoc.skip=true install -pl Mage.Tests -am
+      - name: Run the probe
+        working-directory: xmage
+        run: |
+          mkdir -p Mage.Tests/src/test/java/org/mage/test/probe
+          cp ../lab/xmage/ProbeTest.java Mage.Tests/src/test/java/org/mage/test/probe/
+          MAVEN_OPTS="-Xmx6g" mvn -B -pl Mage.Tests test -Dtest=ProbeTest -Dsurefire.failIfNoSpecifiedTests=false 2>&1 | tee probe.log | grep -E "PROBE|Simulated|nodes in tree|Tests run|ERROR" | head -60
