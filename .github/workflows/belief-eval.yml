@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       games: { description: "Zero game jobs (their every fifth game, held out by every trainer)", required: true, default: "az-g12-c,az-g12-c2" }
-      beliefs: { description: "Beliefs, space-separated", required: true, default: "pool s1:g11w-C s1:g12r-C old12:./scry12-g12s.mjs:g12s s12:g12h2" }
+      beliefs: { description: "Beliefs, space-separated", required: true, default: "pool s1:g9x-C s1:g11w-C s1:g12r-C old12:./scry12-g12s.mjs:g12s s12:g12h2" }
 permissions:
   contents: read
 jobs:

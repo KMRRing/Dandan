@@ -145,7 +145,6 @@ export function zeroPlayer(policy, qpolicy = null, ctx = null) {
 export function makeZero({ policy = null, qpolicy = null, scry: bnet = null, value = null } = {}, { filterOf = null, scryAlso = false } = {}) {
   const pf = !!filterOf;
   const ctx = { counts: [new Float32Array(NN), new Float32Array(NN)], any: [null, null] }, player = zeroPlayer(policy, qpolicy, ctx);
-  // fix (16 Nov 2026, Fable's review, items 1-2): the fixed dealer and the stack copies not counted; off until its match clears
   const scry = (!pf || scryAlso) && (bnet || player.wide) ? scryOf(bnet) : null, judge = valueJudge(value);
   let tracker = new Tracker(), filters = pf ? [filterOf(0, scry, () => tracker), filterOf(1, scry, () => tracker)] : null;
   return {

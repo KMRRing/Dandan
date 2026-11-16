@@ -26,7 +26,8 @@ const TYPES = ["pass", "cast", "land", "cycle", "ability", "attack", "block", "m
 const TYPE_AT = { pass: 0, cast: 1, land: 2, cycle: 3, ability: 4, attack: 5, block: 6, mull: 7, keep: 8, putback: 9, bottom: 9, discard: 9, draw: 11 };
 const CTX = 11, T0 = 1, S0 = T0 + TYPES.length, C0 = S0 + STEPS.length, N0 = C0 + CTX;
 export const EV_N = N0 + NN + 2;    // 1 + 12 + 10 + 11 + 25 + 2 = 61
-export const BX12 = EXT_N + 1, SB_N = 5;
+export const BX12 = EXT_N + 1, SB_N = 5, HANDS = 48;
+const lcg = x => () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296);
 const untapped = (s, x) => s.bf.reduce((a, p) => a + (p.ctl === x && !p.tapped && p.id < DECK.length && isLandId(p.id) ? 1 : 0), 0);
 const nameOf = id => (id != null && id >= 0 && id < DECK.length ? NAME_AT.get(DECK[id]) ?? -1 : -1);
 const played = m => m.t === "land" || (m.t === "cast" && m.from === "hand") || m.t === "cycle";
@@ -151,15 +152,33 @@ export class Scry12 {
     for (let k = 0; k < NN; k++) z[k] = sum ? z[k] / sum : 1 / NN;
     return z;
   }
-  /** Each unknown card's odds with nothing dealt before it, and from them the expected counts and the chance of at least one. */
+  /**
+   * The belief the policy reads (Fable's review, item 10): the expected counts by name and the chance of at least one of each,
+   * from HANDS whole hands dealt card after card (each card's odds given those dealt before it), so "at least one counter" holds
+   * for the hand and not card by card. slots: each card's odds with nothing dealt before it (the scorecard's marginals).
+   * The deals use a stream fixed by the record's length, so a position gives the same belief however often it is asked.
+   */
   belief(s) {
     const seen = seenBy(s, this.me), ids = unknownSlots(s, this.me), g = this.base(s, seen);
     const p0 = this.card(g, null, seen.unseen), slots = ids.map(() => p0);
-    const counts = Float32Array.from(seen.known), none = new Float32Array(NN).fill(1);
-    for (const p of slots) for (let k = 0; k < NN; k++) { counts[k] += p[k]; none[k] *= 1 - p[k]; }
-    const any = Float32Array.from(none, (v, k) => (seen.known[k] > 0 ? 1 : 1 - v));
     this.last = { s, seen, ids, g };
+    const counts = Float32Array.from(seen.known), hit = new Float32Array(NN), rng = lcg(1 + this.rec.events.length);
+    if (ids.length) for (let h = 0; h < HANDS; h++) {
+      const d = this.hand(rng);
+      for (let k = 0; k < NN; k++) if (d[k]) { counts[k] += d[k] / HANDS; hit[k] += 1 / HANDS; }
+    }
+    const any = Float32Array.from(hit, (v, k) => (seen.known[k] > 0 ? 1 : v));
     return { slots, counts, any, ...seen };
+  }
+  /** One whole hand of the unknown cards at the last belief's position, dealt card after card: counts by name. */
+  hand(rng) {
+    const L = this.last, d = new Float32Array(NN);
+    for (let j = 0; j < L.ids.length; j++) {
+      const p = this.card(L.g, d, L.seen.unseen);
+      let r = rng(), c = 0; while (c < NN - 1 && (r -= p[c]) > 0) c++;
+      d[c]++;
+    }
+    return d;
   }
   /** A dealer for determinize: the other hand's unknown cards one after another, each by its odds given those dealt before it. */
   deal() {
@@ -185,18 +204,11 @@ export class Scry12 {
    *  chance that at least k of them are lands, from whole hands dealt card after card. */
   marginals(s) { const b = this.belief(s), p = new Float32Array(NN); for (const q of b.slots) for (let k = 0; k < NN; k++) p[k] += q[k]; return { p, u: b.slots.length }; }
   landsAtLeast(k, LANDS, s, n = 200) {
-    const b = this.belief(s), L = this.last, rng = (x => () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296))(12345);
+    const b = this.belief(s), rng = lcg(12345);
+    if (!b.slots.length) return 0;
     let hit = 0;
-    for (let t = 0; t < n; t++) {
-      const dealt = new Float32Array(NN); let lands = 0;
-      for (let j = 0; j < L.ids.length; j++) {
-        const p = this.card(L.g, dealt, L.seen.unseen);
-        let r = rng(), c = 0; while (c < NN - 1 && (r -= p[c]) > 0) c++;
-        dealt[c]++; if (LANDS[c]) lands++;
-      }
-      if (lands >= k) hit++;
-    }
-    return b.slots.length ? hit / n : 0;
+    for (let t = 0; t < n; t++) { const d = this.hand(rng); let lands = 0; for (let c = 0; c < NN; c++) if (LANDS[c]) lands += d[c]; if (lands >= k) hit++; }
+    return hit / n;
   }
   /** The chance of the true hidden cards, as a chain (whole hand) and card by card (the scorecard's two numbers, in nats). */
   score(s, truthIds) {
