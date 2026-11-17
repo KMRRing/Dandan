@@ -1089,3 +1089,5 @@ three generations behind. Zero's loop runs the suite on every new generation and
   Self-play zps003-004 (doomed-count, by land type): 3,200 games, a Dandân cast with no Island of its own 400 of 38,253 casts
   (1.0%), 348 of them with an Island in hand and the land drop unused; a turn ends with a land held 21.1% (an Island 17.6%).
   Suite, g12r-C: 4 of 5 at 256 deals (1 null pick), 5 of 5 at 2,048 (Monte's Deepest), mean margin 4.4 points.
+- 11:15Z Korbi 13:09: "matches are for training not for demonstrating competence": no yardstick (zy-g12r-C never queued; the
+  loop's yardEvery 0). Each generation is measured by the suite and the null-move rate, which play no games.

@@ -6,9 +6,9 @@
 //   train  zero-train-ext.yml, warm from the latest nets (training carries on from them: the net grows cumulatively), on
 //          the games of this generation and the one before (the window, at most maxWindow games)
 //   next   no gate (Korbi, 17 Nov 11:46: "no gates. it will always be the most recent model playing"; AlphaZero's way): once
-//          the nets are in, the filler plays them from its next batch and the open batch is closed. Every `yardEvery`
-//          generations a yardstick match (the latest against a fixed opponent, `yard`) is queued, to show the line climbs;
-//          it decides nothing
+//          the nets are in, the filler plays them from its next batch and the open batch is closed. No yardstick match
+//          (Korbi, 17 Nov 13:09: "matches are for training not for demonstrating competence"; yardEvery 0): each
+//          generation is measured for free by Monte's test suite and the null-move rate of its games
 //
 // Lab only: a crowned net is the lab's champion, never the game's; the game's Monte changes only on Korbi's word.
 // It prints what it did; lines "DISPATCH <workflow> <key=value>…" are for the workflow to run.
