@@ -1150,3 +1150,10 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   likelihood itself points the right way (the true hand's beats the median world's at every check), the wall's search over
   hands doesn't find it reliably, and worlds still die at rare plays (an empty wall leaves the search to Scry). Off by default;
   not in the loop.
+- 14:30Z Korbi 15:42-15:47: repairs out (a world is changed only where no decision can have depended on it: a library card
+  neither player has seen, or before the other player's first decision; else it dies); worlds built by re-dealing (build:
+  where a world dies for a card the real game shows, that card exchanged at the last move both cards lay unseen in the library,
+  or at the deal, and the world played again from the deal). Found: without repairs almost no random world survives a whole
+  game (0 of 20 built on two test games, up to 12 re-deals each): every card the other player shows needs its own re-deal, each
+  a full replay. Asked Korbi before going further (see the chat): replayed whole histories vs current-hand worlds with the past
+  weighed from the stored views.

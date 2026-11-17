@@ -17,9 +17,9 @@
 //
 // The real game stops only where a player has something to do, which hangs on their hand; the world's rules stop at every
 // priority and the world is played on, each passing, to where the real game stands (the world never learns from where the real
-// game stopped). A card the real game shows that a world can't put there (a card cast from their hand that it doesn't hold, a
-// searched list without it) is repaired in from a card nobody knows, the world's weight kept (approximate: the plays it weighed
-// were made, mostly, on the cards it kept).
+// game stopped). A card is exchanged in a world only for one no decision can have depended on (a library card neither player
+// has seen, or any card before the other player's first decision); a world that can't show what the real game shows any other
+// way is impossible, and dies (Korbi 15:42: no repairs: the dealer deals new worlds instead).
 //
 // Before each search (ensure): the wall resampled when it thins (equal weights), then moved by Metropolis-Hastings (`moves`):
 // a whole-hand move (the dealer deals the other hand's hidden cards; the world played again from the deal with the same chance
@@ -92,29 +92,18 @@ export class Wall {
     return out;
   }
   /**
-   * A card a question lists in the real game (a search of the library, the top cards to order) that the world's question lacks
-   * (a repair). `need`: the names the list must hold. A listed card the list doesn't need is exchanged for a copy of `name` (one
-   * nobody knows from the library, else one of the other hand's hidden cards); with none to spare (a search's list, shorter), a
-   * copy from the other hand goes to the library for a card nobody knows that the question doesn't list, and is listed.
+   * A card a question lists in the real game (a search of the library, the top cards to order) that the world's question lacks:
+   * a listed card the list doesn't need (`need`: the names it must hold) exchanged for a copy of `name` from the library that
+   * neither player has seen (the question being the first decision on those cards). False if there is none: the world dies.
    */
-  relist(p, v, name, need = null) {
+  relist(p, v, name, need) {
     const q = p.s.pending, list = q && this.listOf(q);
     if (!list) return false;
     const vis = this.visible(v), listed = new Set(list), opp = other(this.me), kn = new Map(p.s.kn), pick = a => a[Math.floor(p.rng() * a.length)];
-    const loose = p.s.lib.filter((id, i) => v.lib[i] === HIDDEN && !listed.has(id) && !((kn.get(id) || 0) & (1 << opp)));
-    const spare = need ? list.filter(id => !vis.has(id) && !need.has(this.E.nameOf(id))) : [];
-    const lib = loose.filter(id => this.E.nameOf(id) === name), hand = this.inHand(p, v, name);
-    if (spare.length && (lib.length || hand.length)) {
-      if (!lib.length) p.repairs = (p.repairs || 0) + 1;
-      this.swap(p, pick(spare), pick(lib.length ? lib : hand));
-      return true;
-    }
-    const names = new Set(list.map(id => this.E.nameOf(id))), e = loose.filter(id => !names.has(this.E.nameOf(id)));
-    if (!hand.length || !e.length) return false;
-    const x = pick(hand);
-    this.swap(p, x, pick(e));   // x to the library, the other to their hand
-    list.push(x);
-    p.repairs = (p.repairs || 0) + 1;
+    const lib = p.s.lib.filter((id, i) => v.lib[i] === HIDDEN && !listed.has(id) && !((kn.get(id) || 0) & (1 << opp)) && this.E.nameOf(id) === name);
+    const spare = list.filter(id => !vis.has(id) && !need.has(this.E.nameOf(id)));
+    if (!spare.length || !lib.length) return false;
+    this.swap(p, pick(spare), pick(lib));
     return true;
   }
   /** A question's card lists with the cards the seat can't see as names, sorted. */
@@ -173,22 +162,14 @@ export class Wall {
     if (p.fresh) for (const id of this.hiddenIn(p, v)) if (!p.keep?.has(id) && this.E.nameOf(id) === name) out.push(id);
     return out;
   }
-  /** The other hand's cards the seat can't see, of a name (a repair: see step). */
-  inHand(p, v, name) { return this.hiddenIn(p, v).filter(id => this.E.nameOf(id) === name); }
   /** The world's cards in the other hand that the seat doesn't know are there (the hand a set: v's known cards aside). */
   hiddenIn(p, v) { const opp = other(this.me), known = new Set(v.hand[opp].filter(id => id >= 0)); return p.s.hand[opp].filter(id => !known.has(id)); }
-  /**
-   * A repair (Korbi: "if it's not a possible hand … gibbs … on survivors"): the other player shows a card (`name`) their hand
-   * holds in the real game but not in this world; one of the world's hidden cards in that hand, at random, is exchanged for a
-   * copy nobody knows. The world's weight stands as it was: the plays it has weighed were made, mostly, on the cards it kept;
-   * the plays to come weigh the change. False if no copy is free.
-   */
-  repair(p, v, name) {
-    const hand = this.hiddenIn(p, v), f = this.free(p, v, name);
-    if (!hand.length || !f.length) return false;
-    this.swap(p, hand[Math.floor(p.rng() * hand.length)], f[Math.floor(p.rng() * f.length)]);
-    p.repairs = (p.repairs || 0) + 1;
-    return true;
+  /** Whether a card lies in the world's library where neither player knows it (v: what the seat sees there). */
+  isFree(p, v, id) {
+    const i = p.s.lib.indexOf(id);
+    if (i < 0 || v.lib[i] !== HIDDEN) return false;
+    const e = p.s.kn.find(x => x[0] === id);
+    return !e || !(e[1] & (1 << other(this.me)));
   }
   /** The world made to show what the seat sees in `v`: false if it can't be. */
   reconcile(p, v) {
@@ -200,21 +181,18 @@ export class Wall {
       const here = slots(p.s)[j], d = here[0]();
       if (d === c) continue;
       if (this.E.nameOf(d) !== this.E.nameOf(c)) {
-        let f = this.free(p, v, this.E.nameOf(c));
-        if (!f.length) { f = this.inHand(p, v, this.E.nameOf(c)); if (f.length) p.repairs = (p.repairs || 0) + 1; }   // the repair below
-        if (!f.length) { if (this.debug) this.why2 = `no ${this.E.nameOf(c)} for ${here[2]} ${here[3]}`; return false; }
+        const f = this.free(p, v, this.E.nameOf(c));
+        if (!f.length) { this.missing = { mine: this.E.nameOf(c), d }; if (this.debug) this.why2 = `no ${this.E.nameOf(c)} for ${here[2]} ${here[3]}`; return false; }
         this.swap(p, d, f[Math.floor(p.rng() * f.length)]);
       }
       this.swap(p, here[0](), c);   // the same card: only which copy
     }
-    // the other hand as a set: each card the seat knows there, there in the world (a copy of it renamed, else repaired in)
+    // the other hand as a set: each card the seat knows there, there in the world (a copy of it there renamed)
     for (const c of v.hand[opp]) {
       if (c < 0 || p.s.hand[opp].includes(c)) continue;
       const hid = this.hiddenIn(p, v).filter(id => this.E.nameOf(id) === this.E.nameOf(c));
       if (hid.length) { this.swap(p, hid[0], c); continue; }
-      // the card itself (or a copy) where the seat can't see in the world: brought into their hand for one of its hidden cards
-      const lib = p.s.lib.filter((id, i) => v.lib[i] === HIDDEN && this.E.nameOf(id) === this.E.nameOf(c)), mine = this.hiddenIn(p, v);
-      if (lib.length && mine.length) { this.swap(p, mine[Math.floor(p.rng() * mine.length)], lib[0]); this.swap(p, lib[0], c); p.repairs = (p.repairs || 0) + 1; continue; }
+      this.missing = { theirs: [this.E.nameOf(c)] };
       if (this.debug) this.why2 = `their hand lacks ${this.E.nameOf(c)}`;
       return false;
     }
@@ -225,19 +203,17 @@ export class Wall {
       const need = new Map(); for (const n of real) need.set(n, (need.get(n) || 0) + 1);
       const extra = [];
       for (const id of mine) { const n = this.E.nameOf(id); if (need.get(n) > 0) need.set(n, need.get(n) - 1); else extra.push(id); }
+      const needs = new Set(real);
       for (const [n, k] of need) for (let t = 0; t < k; t++) {
-        // a card of the name the real list has and the world's lacks, from the other hand (a repair): for one the world lists too
-        // many, or for one it doesn't list
-        const f = this.inHand(p, v, n), e = extra.pop();
-        if (e != null && f.length) { this.swap(p, e, f[0]); p.repairs = (p.repairs || 0) + 1; continue; }
-        if (e != null) extra.push(e);
-        if (!this.relist(p, v, n)) { if (this.debug) this.why2 = `the question lists no ${n}`; return false; }
+        // a card of the name the real list has and the world's lacks: from the library cards neither player has seen
+        if (!this.relist(p, v, n, needs)) { this.missing = { listed: n, names: real }; if (this.debug) this.why2 = `the question lists no ${n}`; return false; }
       }
       if (extra.length) { if (this.debug) this.why2 = "the question lists more"; return false; }
     }
     // cards shown and gone back (a free mulligan's hand, now in the library): the same names, swapped in from cards nobody knows
     if (v.reveal) {
       if (!p.s.reveal || p.s.reveal.cards.length !== v.reveal.cards.length) return false;
+      if (!p.fresh && v.reveal.cards.some((id, i) => this.E.nameOf(id) !== this.E.nameOf(p.s.reveal.cards[i]))) return false;
       for (let i = 0; i < v.reveal.cards.length; i++) {
         const want = this.E.nameOf(v.reveal.cards[i]), d = p.s.reveal.cards[i];
         if (this.E.nameOf(d) === want) continue;
@@ -302,23 +278,28 @@ export class Wall {
     let ms = E.options(p.s, who);
     let cands = ms.filter(o => this.same(ev.m, o, ev.before));
     if (who === me && !cands.length) cands = [ev.m];   // a move of the seat's the options don't list (a concession): as it was
-    if (who !== me && !cands.length) {
-      // a card shown from their hand that this world doesn't put there: repaired in (once a name), then the play looked for again
+    if (who !== me && !cands.length && p.s.pending && this.listOf(p.s.pending)) {
+      // a question of theirs listing cards (the top cards they look at) that lacks a card the real play shows: the listed cards
+      // are exchanged for library cards neither has seen, when the question is the first decision on them
       const shown = new Set(), walk = (x, idk) => Array.isArray(x) ? x.forEach(y => walk(y, idk)) : x && typeof x === "object" ? Object.entries(x).forEach(([k, y]) => walk(y, idk || this.IDK.has(k))) : idk && typeof x === "number" && x >= 0 && !ev.before.has(x) && shown.add(x);
       walk(ev.m, false);
-      let fixed = false;
       const need = new Set([...shown].map(id => E.nameOf(id)));
-      for (const id of shown) {
-        const nm = E.nameOf(id), list = p.s.pending && this.listOf(p.s.pending);
-        if (list) { if (!list.some(x => E.nameOf(x) === nm) && this.relist(p, this.lastView, nm, need)) fixed = true; }   // a question of theirs listing cards
-        else if (!this.inHand(p, this.lastView, nm).length && this.repair(p, this.lastView, nm)) fixed = true;
-      }
+      let fixed = false;
+      for (const id of shown) { const nm = E.nameOf(id); if (!this.listOf(p.s.pending).some(x => E.nameOf(x) === nm) && this.relist(p, this.lastView, nm, need)) fixed = true; }
       if (fixed) { ms = E.options(p.s, who); cands = ms.filter(o => this.same(ev.m, o, ev.before)); }
     }
-    if (!cands.length) { this.why = "no such play there"; return false; }
+    if (!cands.length) {
+      this.why = "no such play there";
+      // the cards the play shows that the world's other hand lacks (a world built again puts them there: build)
+      const shown = [], walk = (x, idk) => Array.isArray(x) ? x.forEach(y => walk(y, idk)) : x && typeof x === "object" ? Object.entries(x).forEach(([k, y]) => walk(y, idk || this.IDK.has(k))) : idk && typeof x === "number" && x >= 0 && !ev.before.has(x) && shown.push(E.nameOf(x));
+      walk(ev.m, false);
+      const held = this.hiddenIn(p, this.lastView).map(id => E.nameOf(id));
+      this.missing = { theirs: shown.filter(n => !held.includes(n)) };
+      return false;
+    }
     const P = who !== me && ms.length >= 2 ? this.chances(p.s, who, ms) : null, ok = [];
     for (const o of cands) {
-      const c = { s: E.copy(p.s), fill: new Map(p.fill), rng: p.rng, seed: p.seed, keep: p.keep, fresh: p.fresh, repairs: p.repairs, ll: 0 };
+      const c = { s: E.copy(p.s), fill: new Map(p.fill), rng: p.rng, seed: p.seed, keep: p.keep, fresh: p.fresh, ll: 0 };
       const r = E.act(c.s, who, o, this.chance(p, i, 0));
       if (typeof r === "string" || !r) { this.why = `illegal: ${r}`; continue; }
       c.s = r;
@@ -335,7 +316,7 @@ export class Wall {
     let pick = ok[k];
     if (force) pick = ok.find(x => JSON.stringify(x.o) === JSON.stringify(force)) || pick;   // the lab's test: the true play
     p.logl += this.beta * Math.log(L);
-    p.s = pick.c.s; p.fill = pick.c.fill; p.repairs = pick.c.repairs;
+    p.s = pick.c.s; p.fill = pick.c.fill;
     (p.trace ||= [])[i] = pick.o;
     return true;
   }
@@ -371,15 +352,67 @@ export class Wall {
     return false;
   }
   /** A world from the deal through every move so far, its hidden cards `ids`; null if it dies on the way. */
-  replay(ids, keep = null, forced = null, seed = null) {
+  replay(ids, keep = null, forced = null, seed = null, ex = null, probe = null) {
     const p = this.world(ids, seed ?? Math.floor(this.rng() * 2 ** 31));
-    p.keep = keep;
-    for (let i = 0; i < this.events.length; i++) if (!this.step(p, this.events[i], i, forced?.[i])) return null;
+    p.keep = keep; p.ex = ex;
+    this.missing = null;
+    for (let i = 0; i < this.events.length; i++) {
+      const v = i > 0 ? this.events[i - 1].view : this.v0;
+      if (probe) probe(p, v, i);
+      // the world's exchanges at this move: two cards neither player had seen, swapped (a re-deal of the unseen library there)
+      for (const [a, b] of ex?.get(i) || []) { if (!this.isFree(p, v, a) || !this.isFree(p, v, b)) { this.dead = { p, i }; this.missing = null; return null; } this.swap(p, a, b); }
+      if (!this.step(p, this.events[i], i, forced?.[i])) { this.dead = { p, i }; return null; }
+    }
     delete p.keep;
     return p;
   }
 
   // ---------- new worlds ----------
+  /**
+   * A world built (Korbi: "if it's not a possible hand, try a few more times"): played from the deal `ids`; where it dies for a
+   * card the real game shows and the world doesn't have where it's shown (a card cast from their hand, a card drawn), that card's
+   * place at the deal is exchanged with that of a card the world did have there, and the world is played again from the deal,
+   * up to `tries` × 4 times. The world that survives has earned its weight: every play weighed on its own cards.
+   */
+  build(ids, seed = null) {
+    ids = ids.slice();
+    const ex = new Map(), sd = seed ?? Math.floor(this.rng() * 2 ** 31);
+    for (let t = 0; t < this.tries * 4; t++) {
+      const p = this.replay(ids, null, null, sd, ex);
+      if (p) { p.ex = ex; return p; }
+      const m = this.missing, d = this.dead;
+      if (!d) return null;
+      if (!m) { if (d.i < 4) { ids = this.shuffled(); ex.clear(); continue; } return null; }   // at the start: another deal
+      const v = d.i > 0 ? this.events[d.i - 1].view : this.v0, held = this.hiddenIn(d.p, v), pick = a => a[Math.floor(this.rng() * a.length)];
+      const vis = this.visible(v), hiddenNow = id => !vis.has(id);
+      let x = null, y = null;
+      if (m.theirs?.length) {
+        // a copy of the card shown, from wherever it lay hidden, for one the other hand held
+        const name = m.theirs[0], copies = this.allIds.filter(id => this.E.nameOf(id) === name && !held.includes(id) && hiddenNow(id));
+        if (!copies.length || !held.length) return null;
+        x = pick(copies); y = pick(held);
+      } else if (m.mine) {
+        // the card the seat drew, from the other hand where the world had it, for the one the world gave the seat
+        const copies = held.filter(id => this.E.nameOf(id) === m.mine);
+        if (!copies.length) return null;
+        x = pick(copies); y = m.d;
+      } else if (m.listed) {
+        // a card the seat's search lists, from the other hand, for a library card the search doesn't list
+        const copies = held.filter(id => this.E.nameOf(id) === m.listed);
+        if (!copies.length) return null;
+        const names = new Set(m.names), lib = d.p.s.lib.filter((id, i) => v.lib[i] === HIDDEN && !names.has(this.E.nameOf(id)));
+        if (!lib.length) return null;
+        x = pick(copies); y = pick(lib);
+      } else return null;
+      // when: the last move before which both lay in the library unseen by either (the world played again, watched); else at the deal
+      let k = -1;
+      this.replay(ids, null, null, sd, ex, (w, vv, i) => { if (i <= d.i && this.isFree(w, vv, x) && this.isFree(w, vv, y)) k = i; });
+      if (k >= 0) { if (!ex.has(k)) ex.set(k, []); ex.get(k).push([x, y]); }
+      else { const ix = ids.indexOf(x), iy = ids.indexOf(y); if (ix < 0 || iy < 0) return null; [ids[ix], ids[iy]] = [ids[iy], ids[ix]]; }
+      this.stats.rebuilt = (this.stats.rebuilt || 0) + 1;
+    }
+    return null;
+  }
   /** The hidden cards at the deal in random places. */
   shuffled() {
     const ids = this.hidden0.map(j => slots(this.base)[j][0]());
@@ -419,7 +452,7 @@ export class Wall {
       }
       lw = prior - logsumexp([Math.log(this.lambda) + prior, Math.log(1 - this.lambda) + qg]);
     }
-    const keep = dest ? new Set(dest.map(q => ids[q])) : null, p = this.replay(ids, keep);
+    const p = this.build(ids);
     if (!p) return null;
     p.logw = (this.mode === "poe" ? 0 : lw) + p.logl;
     return p;
@@ -443,7 +476,7 @@ export class Wall {
   ensure() {
     if (!this.base) return;
     if (!this.parts.length) {
-      for (let t = 0; t < this.N * this.tries && this.parts.length < this.N; t++) { const p = this.replay(this.shuffled()); if (p) { p.logw = p.logl; this.parts.push(p); this.stats.born++; } }
+      for (let t = 0; t < this.N * this.tries && this.parts.length < this.N; t++) { const p = this.build(this.shuffled()); if (p) { p.logw = p.logl; this.parts.push(p); this.stats.born++; } }
       if (this.parts.length) { this.parts = this.resample(this.parts, this.N); this.moveAll(); }
       return;
     }

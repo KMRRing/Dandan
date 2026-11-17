@@ -15,7 +15,7 @@ const ok = (c, msg) => { if (c) pass++; else { fail++; console.log("FAIL", msg);
 const t0 = Date.now();
 for (const seed of [11, 12]) {
   let G = newRecord(rules, { seats: 2, seed, now: 0 });
-  const s0 = JSON.parse(JSON.stringify(G.state)), wall = new Wall(0, dandanEngine(), { n: 8, seed, rngOf: i => seeded(mix(seed, i + 1)) });
+  const s0 = JSON.parse(JSON.stringify(G.state)), wall = new Wall(0, dandanEngine(), { n: 4, tries: 1, seed, rngOf: i => seeded(mix(seed, i + 1)) });
   let checks = 0, withWorlds = 0;
   const played = [];
   for (let i = 0; i < 160 && !rules.over(G.state); i++) {
