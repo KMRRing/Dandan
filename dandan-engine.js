@@ -10,7 +10,7 @@
 import { CARDS, DECK, HALVES, NAMES, BASICS, parseCost } from "./dandan-cards.js";
 import { shuffle } from "./seats.js";
 import {
-  LIFE, HAND, inHead, other, list, withRng, say, nm, isLandId, perm, isLand, isCreature, pt, canAttack, unblockable, fetchTypes, typesOf, needType,
+  LIFE, HAND, other, list, withRng, say, nm, isLandId, perm, isLand, isCreature, pt, canAttack, unblockable, fetchTypes, typesOf, needType,
   payPlan, payFrom, pay, manaAlts, draw, shuffleLib, pushItem, itemOf, leaveStack, enterBf, leaveBf, toGrave, toLib, toYard, fromYard, fromLib, fromHand,
   mill, lands, permToLib, bounce, emptyPools, handToLib, toHandOpen, topKnown, isSpellCard, affords, tellsOf, freshTells, hushed, khOf, knOf, points, notePoint,
 } from "./dandan-core.js";
@@ -277,7 +277,7 @@ export function fullStops(on) { const was = FULL_STOPS; FULL_STOPS = !!on; retur
 export function wants(s, seat) {
   if (FULL_STOPS) return hasMove(s, seat) || (s.stack.length > 0 && !!s.stack[s.stack.length - 1].stop && s.stack[s.stack.length - 1].ctl === seat && s.prio === seat);
   if (s.stack.length) { const top = s.stack[s.stack.length - 1]; return hasMove(s, seat) || (!!top.stop && top.ctl === seat && s.prio === seat); }
-  if (s.step === "upkeep") return upkeepStop(s, seat) || (inHead() ? predrawMove(s, seat) : fetchWindow(s, seat) || anyUpkeepMove(s, seat));
+  if (s.step === "upkeep") return upkeepStop(s, seat) || (hushed() ? predrawMove(s, seat) : fetchWindow(s, seat) || anyUpkeepMove(s, seat));
   if (!(seat === s.active ? MY_STOPS : THEIR_STOPS).has(s.step)) return false;
   return hasMove(s, seat, s.step === "attackers" || s.step === "blockers" ? COMBAT : null);
 }
@@ -379,8 +379,8 @@ export function settle(s, shown = -1) {
     if (s.adv && !hushed()) noteAction(s, s.by ?? 0, turnAt);   // an action has settled: a dot on the end-of-game chart
     if (wants(s, s.prio)) return;
     if (shown >= 0 && showStop(s, shown)) return;
-    if (s.cover != null && !inHead() && coverStop(s)) return;
-    if (stopAll && !inHead()) return;
+    if (s.cover != null && !hushed() && coverStop(s)) return;
+    if (stopAll && !hushed()) return;
     passPriority(s);
   }
   throw new Error("dandan: the game didn't settle");
@@ -820,10 +820,9 @@ function tapForMana(s, seat, m) {
  * A seat's move made on a game (the runner hands in a copy and keeps it if this returns one). quiet: no log (a game
  * played out in the computer's head). show: the seat's spell stays on the stack to be seen by a player who can't
  * answer it (settle). A seat may concede ({ t: "concede" }) whoever's decision it is, as in Magic a
- * player may at any time: the game is lost there and then (Korbi, October 2026). real: with quiet, a real game's move played
- * again (lab/zero/wall.mjs): no log, nothing noted, the real game's stops.
+ * player may at any time: the game is lost there and then (Korbi, October 2026).
  */
-export function act(s, seat, m, { rng, quiet = false, show = false, real = false } = {}) {
+export function act(s, seat, m, { rng, quiet = false, show = false } = {}) {
   if (!quiet) passPoints.length = 0;
   turnAt = -1;
   return withRng(rng, () => {
@@ -833,9 +832,9 @@ export function act(s, seat, m, { rng, quiet = false, show = false, real = false
     if (m?.t !== "pass" && !s.stack.length) s.by = seat;   // a move with nothing on the stack begins an action (an answer or a pass carries one on)
     const err = s.pending ? (s.pending.seat === seat ? answer(s, seat, m) : "It isn't your turn") : (s.prio === seat ? priorityMove(s, seat, m) : "You don't have priority");
     if (err) return err;
-    settle(s, show && (!quiet || real) ? seat : -1);
+    settle(s, show && !quiet ? seat : -1);
     return s;
-  }, quiet, real);
+  }, quiet);
 }
 export const toMove = s => (s.over ? null : s.pending ? s.pending.seat : s.prio);
 

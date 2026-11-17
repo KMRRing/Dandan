@@ -13,22 +13,21 @@ const W = Object.fromEntries(more.map(kv => kv.split("=")).map(([k, v]) => [k, N
 const games = fs.readFileSync(file, "utf8").trim().split("\n").map(l => JSON.parse(l)).filter(o => o.game != null);
 let wallLoss = 0, scryLoss = 0, cards = 0, asked = 0, withWorlds = 0, ms = 0;
 for (const g of games) {
-  const brain = await generalBrain(nets, { wall: { n: Number(nArg || 32), ...W } });
+  const brain = await generalBrain(nets, { wall: { n: Number(nArg || 1024), ...W } });
   let G = newRecord(rules, { seats: 2, seed: g.seed, now: 0 }), k = 0;
   for (const [who, m] of g.moves) {
     const s = G.state;
     if (who === me && !s.pending && k++ % every === 0) {
       const t0 = Date.now(); brain.root(s, me); ms += Date.now() - t0;
-      const wall = brain.walls()[me], scry = brain.filters()[me], hidden = new Set(wall.heldNow({ s: wall.E.copy(s) }));
-      const truth = s.hand[1 - me].filter(id => hidden.has(id) || !wall.view.hand[1 - me].includes(id));
+      const wall = brain.walls()[me], scry = brain.filters()[me], v = wall.view;
+      const known = new Set(v.hand[1 - me].filter(id => id >= 0)), truth = s.hand[1 - me].filter(id => !known.has(id));
       asked++;
-      if (truth.length) {
-        const c = wall.counts(), n = truth.length, tot = [...c.values()].reduce((a, b) => a + b, 0);
-        if (!(tot > 0)) continue;   // no worlds: the search deals from Scry; both measured where the wall has worlds
+      const c = wall.counts(), tot = [...c.values()].reduce((a, b) => a + b, 0);
+      if (truth.length && tot > 0) {
         withWorlds++;
         const sc = scry.score(s, truth);
-        for (const id of truth) { const p = tot > 0 ? (c.get(wall.E.nameOf(id)) || 0) / tot : 0; wallLoss -= Math.log(0.98 * p + 0.02 / 25); }
-        scryLoss += sc.each; cards += n;
+        for (const id of truth) { const p = (c.get(wall.E.nameOf(id)) || 0) / tot; wallLoss -= Math.log(0.98 * p + 0.02 / 25); }
+        scryLoss += sc.each; cards += truth.length;
       }
     }
     const r = applyMove(rules, G, who, m, 0);

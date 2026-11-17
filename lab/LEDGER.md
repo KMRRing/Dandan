@@ -1157,3 +1157,12 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   game (0 of 20 built on two test games, up to 12 re-deals each): every card the other player shows needs its own re-deal, each
   a full replay. Asked Korbi before going further (see the chat): replayed whole histories vs current-hand worlds with the past
   weighed from the stored views.
+- 15:10Z Korbi 15:57 ("start with the current game state, identify the cards that you don't yet know, and think what could they
+  be"): the wall rebuilt on current hands (lab/zero/wall.mjs; the replayed-history wall and the engine's `real` flag removed).
+  A world: the names of the other hand's hidden cards (the library: the rest of the unseen, shuffled afresh at every deal).
+  Before each search: worlds follow (shown cards leave, unseen draws join at random, a world lacking a shown card goes), are
+  judged on the other player's last `window` (40) decisions (the position as seen, their hidden cards filled from the world's
+  hand, the policy's chance of the play made, eps 0.05, beta 1), worlds under 1% of the heaviest replaced by Scry 1.2's deals.
+  lab/wall-check.mjs (per-card −log chance of the true hidden cards, lower better), 256 worlds: gm1 game seat 0 2.52 vs Scry
+  2.65, seat 1 3.22 vs 3.09, g12r-C game seat 0 2.53 vs 2.58, seat 1 2.69 vs 2.83; 1,024 worlds (gm1 seat 0) 2.49 vs 2.65.
+  Cost: 0.5-5.6 s a search at 256 worlds, 2.4 s at 1,024 (the judging of new worlds). Off by default; not in the loop.
