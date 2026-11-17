@@ -154,6 +154,29 @@ export function mediumView(s, seat, rng = Math.random) {
  */
 export function freeScorer(model) {
   const n = model.net, H1 = n.H1, H2 = n.H2, XN = n.XN;
+  // form "head2" (17 Nov 2026, Fable: a hidden layer on the move scorer): the trunk as "head"; then trunk · W3 + c3 once (H3), each
+  // move's marks' rows of E3 added, ReLU, w4, plus the marks' biases eb (lab/policy_np.py --form head2)
+  if (model.form === "head2") {
+    const H3 = n.H3, W1 = Float32Array.from(n.W1), c1 = Float32Array.from(n.c1), W2 = Float32Array.from(n.W2), c2 = Float32Array.from(n.c2);
+    const W3 = Float32Array.from(n.W3), c3 = Float32Array.from(n.c3), E3 = Float32Array.from(n.E3), w4 = Float32Array.from(n.w4), eb = Float32Array.from(n.eb);
+    const a1 = new Float32Array(H1), z = new Float32Array(H2), A3 = new Float32Array(H3), h = new Float32Array(H3);
+    return (x, marks) => {
+      a1.set(c1);
+      for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H1; for (let o = 0; o < H1; o++) a1[o] += v * W1[r + o]; }
+      z.set(c2);
+      for (let o = 0; o < H1; o++) { const v = a1[o]; if (v <= 0) continue; const r = o * H2; for (let o2 = 0; o2 < H2; o2++) z[o2] += v * W2[r + o2]; }
+      A3.set(c3);
+      for (let o2 = 0; o2 < H2; o2++) { const v = z[o2]; if (v <= 0) continue; const r = o2 * H3; for (let o3 = 0; o3 < H3; o3++) A3[o3] += v * W3[r + o3]; }
+      return marks.map(ms => {
+        h.set(A3);
+        let b = 0;
+        for (const i of ms) { b += eb[i]; const r = i * H3; for (let o3 = 0; o3 < H3; o3++) h[o3] += E3[r + o3]; }
+        let v = b;
+        for (let o3 = 0; o3 < H3; o3++) if (h[o3] > 0) v += h[o3] * w4[o3];
+        return v;
+      });
+    };
+  }
   if (model.form === "head") {
     const W1 = Float32Array.from(n.W1), c1 = Float32Array.from(n.c1), W2 = Float32Array.from(n.W2), c2 = Float32Array.from(n.c2);
     const E = Float32Array.from(n.E), eb = Float32Array.from(n.eb), a1 = new Float32Array(H1), z = new Float32Array(H2);

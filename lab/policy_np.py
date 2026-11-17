@@ -7,6 +7,9 @@ to pick the search's move among passing and every legal move (target "pick": cro
         rows of wm added, ReLU, a second layer (H2, ReLU) and w3. Its cost grows with the moves: the second layer runs once each.
   head  a policy head: a trunk reads the position once (XN -> H1 -> H2, ReLU both), each mark has a learned vector of H2 numbers
         (E) and a bias (eb); a move scores trunk · (sum of its marks' vectors) + the sum of its marks' biases.
+  head2 (17 Nov 2026, Fable: a hidden layer on the move scorer, stage 3): the same trunk; the position's part of a hidden layer
+        once (trunk · W3 + c3, H3), each move's marks' rows of E3 added, ReLU, then w4, plus the marks' biases. A move's score is
+        no longer linear in its marks: two marks can matter only together (this card, at that target).
 
 Adam (lr 1e-3), batches of 64, a Deep decision at weight 1 and any other at --light (1 by default, the JavaScript trainer's
 light 1; No. 7 point 7's Deep retrains 0.3), 6 epochs; the held-out decisions
@@ -24,7 +27,8 @@ import numpy as np
 
 ap = argparse.ArgumentParser()
 ap.add_argument("dir"); ap.add_argument("out")
-ap.add_argument("--form", default="mlp", choices=["mlp", "head"])
+ap.add_argument("--form", default="mlp", choices=["mlp", "head", "head2"])
+ap.add_argument("--h3", type=int, default=64)
 ap.add_argument("--h1", type=int, default=128); ap.add_argument("--h2", type=int, default=64)
 ap.add_argument("--epochs", type=int, default=6); ap.add_argument("--lr", type=float, default=1e-3)
 ap.add_argument("--batch", type=int, default=64); ap.add_argument("--seed", type=int, default=1)
@@ -82,12 +86,16 @@ H1, H2 = A.h1, A.h2
 if A.form == "mlp":   # policy-train.mjs's start: w3 at zero
     P = dict(wx=U((XN, H1), np.sqrt(1 / XN)), wm=U((MOVE_N, H1), np.sqrt(1 / 8)), b1=np.zeros(H1),
              w2=U((H1, H2), np.sqrt(2 / H1)), b2=np.zeros(H2), w3=np.zeros(H2))
-else:
+elif A.form == "head":
     P = dict(W1=U((XN, H1), np.sqrt(6 / XN)), c1=np.zeros(H1), W2=U((H1, H2), np.sqrt(6 / H1)), c2=np.zeros(H2),
              E=U((MOVE_N, H2), 0.05), eb=np.zeros(MOVE_N))
+else:
+    H3 = A.h3
+    P = dict(W1=U((XN, H1), np.sqrt(6 / XN)), c1=np.zeros(H1), W2=U((H1, H2), np.sqrt(6 / H1)), c2=np.zeros(H2),
+             W3=U((H2, H3), np.sqrt(6 / H2)), c3=np.zeros(H3), E3=U((MOVE_N, H3), 0.1), w4=np.zeros(H3), eb=np.zeros(MOVE_N))
 if A.init:
     net0 = json.load(open(A.init))["net"]
-    if (net0["XN"], net0["H1"], net0["H2"]) != (XN, H1, H2): sys.exit(f"--init {A.init}: sizes {net0['XN']}·{net0['H1']}·{net0['H2']}, not {XN}·{H1}·{H2}")
+    if (net0["XN"], net0["H1"], net0["H2"], net0.get("H3", 0)) != (XN, H1, H2, H3 if A.form == "head2" else net0.get("H3", 0)): sys.exit(f"--init {A.init}: sizes {net0['XN']}·{net0['H1']}·{net0['H2']}, not {XN}·{H1}·{H2}")
     for k in P: P[k] = np.asarray(net0[k], dtype=P[k].dtype).reshape(P[k].shape)
 M = {k: np.zeros_like(v) for k, v in P.items()}
 V = {k: np.zeros_like(v) for k, v in P.items()}
@@ -105,6 +113,11 @@ def forward(g):
         return f, dict(x=x, pre1=pre1, h1=h1, pre2=pre2, h2=h2)
     a1 = np.maximum(x @ P["W1"] + P["c1"], 0)
     z = np.maximum(a1 @ P["W2"] + P["c2"], 0)
+    if A.form == "head2":
+        pre = (z @ P["W3"] + P["c3"])[g["dec"]] + np.add.reduceat(P["E3"][g["rows"]], g["mstart"], axis=0)
+        h = np.maximum(pre, 0)
+        f = h @ P["w4"] + np.add.reduceat(P["eb"][g["rows"]], g["mstart"])
+        return f, dict(x=x, a1=a1, z=z, pre=pre, h=h)
     ev = np.add.reduceat(P["E"][g["rows"]], g["mstart"], axis=0)
     f = (z[g["dec"]] * ev).sum(1) + np.add.reduceat(P["eb"][g["rows"]], g["mstart"])
     return f, dict(x=x, a1=a1, z=z, ev=ev)
@@ -144,9 +157,17 @@ def step(g, t):
         db = np.add.reduceat(d1, g["cstart"], axis=0)
         G["wx"] = c["x"].T @ db; G["b1"] = db.sum(0)
     else:
-        dz = np.add.reduceat(df[:, None] * c["ev"], g["cstart"], axis=0) * (c["z"] > 0)
-        dev = df[:, None] * c["z"][g["dec"]]
-        G["E"] = np.zeros_like(P["E"]); np.add.at(G["E"], g["rows"], dev[g["mcand"]])
+        if A.form == "head2":
+            G["w4"] = c["h"].T @ df
+            dpre = np.outer(df, P["w4"]) * (c["pre"] > 0)
+            G["E3"] = np.zeros_like(P["E3"]); np.add.at(G["E3"], g["rows"], dpre[g["mcand"]])
+            dA = np.add.reduceat(dpre, g["cstart"], axis=0)
+            G["W3"] = c["z"].T @ dA; G["c3"] = dA.sum(0)
+            dz = (dA @ P["W3"].T) * (c["z"] > 0)
+        else:
+            dz = np.add.reduceat(df[:, None] * c["ev"], g["cstart"], axis=0) * (c["z"] > 0)
+            dev = df[:, None] * c["z"][g["dec"]]
+            G["E"] = np.zeros_like(P["E"]); np.add.at(G["E"], g["rows"], dev[g["mcand"]])
         G["eb"] = np.bincount(g["rows"], weights=df[g["mcand"]], minlength=MOVE_N)
         G["W2"] = c["a1"].T @ dz; G["c2"] = dz.sum(0)
         da = (dz @ P["W2"].T) * (c["a1"] > 0)
@@ -218,9 +239,12 @@ r5 = lambda a: [round(float(v), 5) for v in np.asarray(a, dtype=np.float64).rave
 if A.form == "mlp":   # dandan-netpolicy.js's layout: wx[i·H1 + o], wm[mark·H1 + o], w2[o·H2 + o2]; no Medium-score weights
     net = dict(XN=XN, H1=H1, H2=H2, wx=r5(bestP["wx"]), wm=r5(bestP["wm"]), ws=[0] * H1, b1=r5(bestP["b1"]), w2=r5(bestP["w2"]),
                b2=r5(bestP["b2"]), w3=r5(bestP["w3"]))
-else:
+elif A.form == "head":
     net = dict(XN=XN, H1=H1, H2=H2, W1=r5(bestP["W1"]), c1=r5(bestP["c1"]), W2=r5(bestP["W2"]), c2=r5(bestP["c2"]), E=r5(bestP["E"]),
                eb=r5(bestP["eb"]))
+else:   # head2: dandan-netpolicy.js freeScorer reads W3[o2·H3 + o3], E3[mark·H3 + o3]
+    net = dict(XN=XN, H1=H1, H2=H2, H3=H3, W1=r5(bestP["W1"]), c1=r5(bestP["c1"]), W2=r5(bestP["W2"]), c2=r5(bestP["c2"]), W3=r5(bestP["W3"]),
+               c3=r5(bestP["c3"]), E3=r5(bestP["E3"]), w4=r5(bestP["w4"]), eb=r5(bestP["eb"]))
 # the held-out Deep decisions on their own (No. 7 point 7: agreement on held-out Deep decisions beside Medium's), at the best epoch
 P.update(bestP)
 deep_held = held_idx[(flags[held_idx] & 2) > 0]
@@ -228,6 +252,6 @@ deep = measure(deep_held) if len(deep_held) else dict(decisions=0)
 g0 = 1 - best["modelGivesUp"] / best["mediumGivesUp"] if best["mediumGivesUp"] > 0 else 0
 metrics = dict(best, every=dict(best), deep=deep, games=None, train=int(len(train_idx)), held=int(len(held_idx)), g0Reduction=round(g0, 4), g0Pass=g0 >= 0.25,
                trainer="policy_np.py", form=A.form)
-out = dict(alpha=0, beta=0, medium=False, **({"form": "head"} if A.form == "head" else {}), net=net, metrics=metrics)
+out = dict(alpha=0, beta=0, medium=False, **({"form": A.form} if A.form != "mlp" else {}), net=net, metrics=metrics)
 open(A.out, "w").write(json.dumps(out) + "\n")
 say(f"best epoch {best['epoch']}: {json.dumps(best)}")
