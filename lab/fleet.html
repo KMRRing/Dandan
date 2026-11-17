@@ -318,7 +318,7 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
 <body>
 <div id="app">
   <header id="ribbon">
-    <nav class="tabs" aria-label="Views"><a href="#fable" id="tab-fable">Fable plan</a><a href="#pipeline" id="tab-pipeline">Pipeline</a><a href="#now" id="tab-now">Now</a><a href="#matches" id="tab-matches">Matches</a><a href="#jobs" id="tab-jobs">All jobs</a></nav>
+    <nav class="tabs" aria-label="Views"><a href="#fable" id="tab-fable">Fable plan</a><a href="#pipeline" id="tab-pipeline">Pipeline</a><a href="#loop" id="tab-loop">Loop</a><a href="#now" id="tab-now">Now</a><a href="#matches" id="tab-matches">Matches</a><a href="#jobs" id="tab-jobs">All jobs</a></nav>
     <div id="mapTools" class="rb-tools"></div>
     <div class="rb-right"><span class="fresh" id="fresh" title="When the lab was read, and (in brackets) minutes to the next read">Connecting…</span>
       <button class="tiny" id="refreshNow" title="Read the lab now" aria-label="Refresh">↻</button>
@@ -351,6 +351,7 @@ table.dt tr.best td{background:color-mix(in srgb,var(--good) 10%,transparent)}
     <div id="msg"></div>
     <div id="sections"></div>
     <div id="canvasView"></div>
+    <div id="loopView" class="secs" hidden></div>
     <div id="nowView" class="secs" hidden></div>
     <div id="matchesView" class="secs" hidden></div>
   </section>
@@ -1234,7 +1235,7 @@ function render({ jobs, done, claims, ended, rows, at }) {
 
 
 // ---------- views ----------
-const VIEWS = ["fable", "pipeline", "now", "matches", "jobs"];
+const VIEWS = ["fable", "pipeline", "loop", "now", "matches", "jobs"];
 const view = () => { const h = location.hash.slice(1); return VIEWS.includes(h) ? h : "fable"; };
 const TYPES = {
   set: ["Training set", "games kept to train a value network on"],
@@ -2521,6 +2522,38 @@ function describe(j) {
   if (/^judge-/.test(j.script)) return "Training a value network";
   return "Check: " + j.script.replace(".mjs", "");
 }
+// ---------- the Loop view (17 Nov 2026, Korbi: "I want to see metrics and the improvement loop"): Zero's loop as it stands, read
+// from lab/zero/loop.json on main (the loop's own state, committed every step), every generation's measures, the current one's pace
+const LOOP_URL = "https://raw.githubusercontent.com/KMRRing/Dandan/main/lab/zero/loop.json";
+let loopTimer = null;
+async function renderLoop() {
+  clearTimeout(loopTimer); loopTimer = setTimeout(() => { if (view() === "loop") renderLoop(); }, 5 * 60e3);
+  let L;
+  try { L = await fetch(LOOP_URL + "?v=" + Date.now(), { cache: "no-store" }).then(r => r.json()); }
+  catch { $("loopView").innerHTML = `<section><h2>Zero's loop</h2><p class="err">Couldn't read the loop's state.</p></section>`; return; }
+  const P = L.progress || {}, hist = L.history || [], pace = P.pace || [];
+  const hrs = pace.length > 1 ? (Date.parse(pace.at(-1)[0]) - Date.parse(pace[0][0])) / 3600e3 : 0, rate = hrs > 0 ? (pace.at(-1)[1] - pace[0][1]) / hrs : 0;
+  const left = Math.max(0, (P.of || L.games) - (P.games || 0)), eta = rate > 0 ? left / rate : null;
+  const pct = Math.min(100, (100 * (P.games || 0)) / (P.of || L.games || 1));
+  const steps = [["play", "Self-play", `the latest nets (${esc(L.champion)}) against themselves, ${L.games} games; 1 in ${L.vsEvery} against ${esc(L.previous || "the previous")}`],
+    ["train", "Train", "policy and value warm from the latest, on this generation and the last"], ["next", "Next", "the new nets play from the next batch; the suite and the null-move rate measured"]];
+  const strip = `<div class="now">${steps.map(([k, t, w]) => `<div class="item"><span class="dot${L.phase === k ? " live" : ""}" style="background:${L.phase === k ? "var(--accent)" : "var(--mute)"}"></span><h4>${t}</h4><span class="count">${L.phase === k ? "now" : ""}</span><p>${w}</p></div>`).join("")}</div>`;
+  const bar = `<div style="height:10px;background:var(--grid);border-radius:5px;overflow:hidden"><div style="width:${pct.toFixed(1)}%;height:100%;background:var(--accent)"></div></div>`;
+  const tiles = [["Generation", `${L.gen}`, `playing ${esc(L.champion)}`], ["Games this generation", `${(P.games || 0).toLocaleString()} / ${(P.of || L.games).toLocaleString()}`, P.at ? `read ${new Date(P.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "not read yet"],
+    ["Pace", rate ? `${Math.round(rate).toLocaleString()} an hour` : "—", rate ? `training in about ${eta < 1 ? Math.round(eta * 60) + " min" : eta.toFixed(1) + " h"}` : "after two readings"],
+    ["Latest strength", hist.at(-1)?.reading ? `${(100 * hist.at(-1).reading.score).toFixed(1)}%` : "—", hist.at(-1)?.reading ? `against ${esc(hist.at(-1).reading.against)}, ${hist.at(-1).reading.n} games` : "read when the generation ends"]];
+  const strip2 = `<div class="strip">${tiles.map(([b, v, e]) => `<div><b>${b}</b><span>${v}</span><em>${e}</em></div>`).join("")}</div>`;
+  // strength and the suite over the generations
+  const pts = hist.filter(h => h.reading).map(h => [h.gen, 100 * h.reading.score]), W = 640, H = 180, x0 = 40, y0 = 16;
+  const gx = g => x0 + ((g - (hist[0]?.gen || 0)) / Math.max(1, (hist.at(-1)?.gen || 1) - (hist[0]?.gen || 0))) * (W - x0 - 16), gy = v => y0 + (1 - v / 100) * (H - y0 - 24);
+  const chart = pts.length ? `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px" role="img" aria-label="Strength against the previous generation"><line x1="${x0}" x2="${W - 16}" y1="${gy(50)}" y2="${gy(50)}" stroke="var(--mute)" stroke-dasharray="4 4"/><text x="${x0 - 6}" y="${gy(50) + 4}" text-anchor="end" font-size="11" fill="var(--mute)">50%</text>${pts.length > 1 ? `<polyline fill="none" stroke="var(--accent)" stroke-width="2" points="${pts.map(([g, v]) => `${gx(g)},${gy(v)}`).join(" ")}"/>` : ""}${pts.map(([g, v]) => `<circle cx="${gx(g)}" cy="${gy(v)}" r="4" fill="var(--accent)"/><text x="${gx(g)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--mute)">${g}</text>`).join("")}</svg>` : `<p>No generation has been measured against its predecessor yet: the first reading comes when generation ${L.gen} ends (about 480 of its games are against ${esc(L.previous || "the previous nets")}).</p>`;
+  const rows = hist.slice().reverse().map(h => `<tr><td>${h.gen}</td><td>${esc(h.nets)}</td><td>${esc(h.from || "")}</td><td>${h.reading ? `${(100 * h.reading.score).toFixed(1)}% <span style="color:var(--mute)">(${h.reading.n} vs ${esc(h.reading.against)})</span>` : "—"}</td><td>${esc(h.suite || "—")}</td><td>${(h.window || []).length} batches</td><td>${h.at ? new Date(h.at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</td></tr>`).join("");
+  const table = `<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="text-align:left;color:var(--mute)"><th>Gen</th><th>Nets</th><th>From</th><th>Strength vs previous</th><th>Suite (5)</th><th>Trained on</th><th>Live since</th></tr></thead><tbody>${rows || `<tr><td colspan="7">none yet</td></tr>`}</tbody></table>`;
+  $("loopView").innerHTML = `<section><h2>Zero's loop<span class="count">${L.on ? "on" : "off"}</span></h2><p>No gates: each generation trains on from the last, and the latest nets always play. Strength is the share of points the new nets take from the previous ones in the 1-in-${L.vsEvery} games (50% = no change); the suite is the five no-Island Dandân positions.</p>${strip}</section>`
+    + `<section><h2>Now</h2>${strip2}${bar}</section>`
+    + `<section><h2>Strength over generations</h2><p>Read the trend, not one generation: about ${Math.round(L.games / L.vsEvery)} games each.</p>${chart}</section>`
+    + `<section><h2>Generations<span class="count">${hist.length}</span></h2>${table}</section>`;
+}
 function renderNow(d) {
   $("nowView").innerHTML = `<section><h2>The plan, in order</h2><p>What happens next and why (as of ${esc(PLAN.at)}). The full map is under Pipeline.</p>${planHtml(true)}</section>` + `<section><h2>Working on now<span class="count">${nowList.length}</span></h2><p>Everything the workers are running this minute.</p>${
     nowList.length ? `<div class="now">${nowList.map(x => `<div class="item"><span class="dot live"></span><h4>${esc(x.title)}</h4><span class="count">${x.running} of ${x.shards} live</span><p>${esc(x.id)}${x.filler ? " · filler: runs whenever the queue is empty" : ""}</p></div>`).join("")}</div>`
@@ -2586,6 +2619,7 @@ function showView() {
   const v = view();
   for (const x of VIEWS) $("tab-" + x).setAttribute("aria-current", v === x ? "page" : "false");
   $("canvasView").hidden = v !== "pipeline" && v !== "fable"; $("nowView").hidden = v !== "now"; $("matchesView").hidden = v !== "matches";
+  $("loopView").hidden = v !== "loop"; if (v === "loop") renderLoop();
   $("sections").hidden = v !== "jobs"; $("jobsTop").hidden = v !== "jobs";
   const map = v === "pipeline" || v === "fable";
   $("view").classList.toggle("map", map); $("mapTools").hidden = !map; if (!map) $("chooser").hidden = true;

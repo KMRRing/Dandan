@@ -68,6 +68,9 @@ function queueYard(id) {
 if (L.phase === "play") {
   const got = await games(L.genFrom), total = got.reduce((a, b) => a + b.games, 0);
   say(`generation ${L.gen}: ${total} of ${L.games} games in (${got.map(b => `${b.id} ${b.games}`).join(", ") || "none yet"})`);
+  // the Fleet page's Loop view reads this: games in now, and the pace (the last 24 readings, one a step)
+  const pace = (L.progress?.gen === L.gen ? L.progress.pace || [] : []).concat([[now, total]]).slice(-24);
+  L.progress = { gen: L.gen, games: total, of: L.games, at: now, nets: L.champion, pace };
   if (total >= L.games) {
     // the reading: the nets that played this generation against the ones before them
     if (L.vsEvery) { const v = await vsScore(L.genFrom); if (v.n) { log(`generation ${L.gen}: ${L.champion} against ${L.previous || "?"}: ${(100 * v.score).toFixed(1)}% over ${v.n} games`); L.reading = { nets: L.champion, against: L.previous, ...v }; } }

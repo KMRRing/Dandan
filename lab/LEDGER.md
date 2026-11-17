@@ -1200,3 +1200,8 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
 - 15:15Z Store copy 44052438569 cut by GitHub at 15:06Z (the third cut). Korbi 17:12 (Fable 15:10Z): the loop on now, on Google
   (loop.json on: true); the store moves to B2 between generations, in ops' tiers (live set first). The loop's first step crowns
   gm1: the filler plays gen:gm1, 1 game in 10 against g12r-C.
+- 15:30Z Korbi 17:22 ("I want to see metrics and the improvement loop"): the Fleet page's Loop tab (lab/fleet.html renderLoop):
+  reads lab/zero/loop.json on main every 5 minutes; the loop's three steps with the current one lit, the generation, games in
+  of 4,800 with a bar, the pace (games an hour, time to training), the latest strength against the previous nets, a chart of
+  strength over generations (50% = no change), and every generation's row (nets, from, strength, suite, window, time). loop.mjs
+  now records progress (games in, the last 24 readings) each play step.
