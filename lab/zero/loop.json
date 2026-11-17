@@ -13,9 +13,10 @@
   "genFrom": 6,
   "windowFrom": 6,
   "nextFrom": 6,
-  "phase": "play",
+  "phase": "train",
   "log": [
-    "2026-11-17T15:10:53.743Z generation 13: gm1 (warm from g12r-C) plays from the filler's next batch"
+    "2026-11-17T15:10:53.743Z generation 13: gm1 (warm from g12r-C) plays from the filler's next batch",
+    "2026-11-17T16:10:40Z generation 14: gm2 (gm1 grown to view 2, 2602 inputs, with the general dealer sg1: Korbi 17:27, full general) to be crowned by the next step; the belief from here on is scryg"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -35,7 +36,7 @@
       "zps003",
       "zps004"
     ],
-    "at": "2026-11-17T11:55:30Z"
+    "at": "2026-11-17T16:10:40Z"
   },
   "history": [
     {
@@ -72,5 +73,7 @@
         12
       ]
     ]
-  }
+  },
+  "belief": "scryg",
+  "challenger": "gm2"
 }
