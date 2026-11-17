@@ -1,0 +1,60 @@
+# Scry G, the general dealer (17 Nov 2026, Korbi 16:29; lab/zero/scryg.mjs): Zero's stored games replayed and packed
+# (lab/zero/scryg-pack.mjs: each seat's record as it saw it, positions with the true cards), trained card by card
+# (lab/zero/scryg_torch.py, CPU torch), the held-out chain, single-card loss and calibration in the summary. Committed as
+# lab/zero/nets/<name>-scryg.json, with its measures as <name>-scryg.json.log.json.
+name: Scry G (train)
+on:
+  workflow_dispatch:
+    inputs:
+      games: { description: "Zero game jobs to learn from, comma-separated", required: true }
+      name: { description: "Name of the nets (lab/zero/nets/<name>-scryg.json)", required: true }
+      most: { description: "Most games a pack shard replays (16 shards)", required: false, default: "750" }
+      args: { description: "More scryg_torch.py arguments", required: false, default: "--epochs 4 --d 32 --a 32 --h 128 --bs 128" }
+      init: { description: "Warm start: an earlier Scry G (lab/zero/nets/<init>-scryg.json); empty fresh", required: false, default: "" }
+permissions:
+  contents: write
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy: { matrix: { part: [0, 1, 2, 3] } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Pack
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          D="$RUNNER_TEMP/r"; P=${{ matrix.part }}
+          for k in 0 1 2 3; do LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/scryg-pack.mjs "$D/$k" "${{ inputs.games }}" $((P * 4 + k)) 16 "${{ inputs.most }}" > "$RUNNER_TEMP/t$k.txt" & done; wait
+          rm -f "$RUNNER_TEMP/key.json"
+          tail -n 1 "$RUNNER_TEMP"/t?.txt | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with: { name: "pack-${{ matrix.part }}", path: "${{ runner.temp }}/r", retention-days: 2, compression-level: 1 }
+  train:
+    needs: pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/download-artifact@v4
+        with: { path: "${{ runner.temp }}/in" }
+      - name: Train
+        run: |
+          pip install -q numpy torch --index-url https://download.pytorch.org/whl/cpu
+          N="${{ inputs.name }}"; I="${{ inputs.init }}"
+          python3 lab/zero/scryg_torch.py "lab/zero/nets/$N-scryg.json" $(ls -d "${{ runner.temp }}"/in/pack-*/[0-9] | sort) ${{ inputs.args }} ${I:+--init lab/zero/nets/$I-scryg.json} | tee "$RUNNER_TEMP/log.txt"
+          { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the net
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lab/zero/nets/
+          git commit -q -m "Scry G trained on GitHub: ${{ inputs.name }}" || exit 0
+          for i in 1 2 3 4 5 6 7 8; do if git pull -q --rebase origin main && git push -q origin HEAD:main; then exit 0; fi; git rebase --abort 2>/dev/null || true; sleep $((5 + RANDOM % 20)); done
+          echo "::error::the net could not be pushed"; exit 1

@@ -18,6 +18,7 @@ on:
       value_args: { description: "More value_np.py arguments", required: false, default: "--lr 3e-4 --wd 0.1 --aux 0.1 --epochs 8" }
       policy_args: { description: "More policy_np.py arguments", required: false, default: "--h1 128 --h2 64 --epochs 8 --decay 0.9 --soft 0.02" }
       vblend: { description: "Share of the search's value in the value targets", required: false, default: "0.5" }
+      belief: { description: "The belief the pack reads: scry12 (Scry 1.2) or scryg (the general dealer, lab/zero/nets/<scry>-scryg.json)", required: false, default: "scry12" }
       init: { description: "Warm start: the general nets to begin from (lab/zero/nets/<init>-gpolicy, -gvalue), same sizes; empty fresh", required: false, default: "" }
       hands: { description: "Scry 1.2's dealt hands a decision in the pack (1,024 in play; 256 packs four times as fast)", required: false, default: "256" }
 permissions:
@@ -37,7 +38,7 @@ jobs:
           LAB_BUCKET: dandan-lab-807207481983
         run: |
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
-          S="lab/zero/nets/${{ inputs.scry }}-scry12.json"; D="$RUNNER_TEMP/r"; P=${{ matrix.part }}
+          S="lab/zero/nets/${{ inputs.scry }}-${{ inputs.belief }}.json"; D="$RUNNER_TEMP/r"; P=${{ matrix.part }}
           for k in 0 1 2 3; do ENC=general KEEP="${{ inputs.keep }}" VKEEP="${{ inputs.vkeep }}" VBLEND="${{ inputs.vblend }}" HANDS="${{ inputs.hands }}" LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D/$k" "${{ inputs.games }}" "$S" $((P * 4 + k)) 16 > "$RUNNER_TEMP/t$k.txt" & done; wait
           rm -f "$RUNNER_TEMP/key.json"
           tail -n 1 "$RUNNER_TEMP"/t?.txt | tee -a "$GITHUB_STEP_SUMMARY"
@@ -57,7 +58,7 @@ jobs:
       - name: Train
         run: |
           pip install -q numpy
-          N="${{ inputs.name }}"; S="lab/zero/nets/${{ inputs.scry }}-scry12.json"; D="$RUNNER_TEMP/r"; I="$RUNNER_TEMP/in"
+          N="${{ inputs.name }}"; B="${{ inputs.belief }}"; S="lab/zero/nets/${{ inputs.scry }}-$B.json"; D="$RUNNER_TEMP/r"; I="$RUNNER_TEMP/in"
           # (Fable 20:45Z) no training on a pack that guessed: every decision matched, every pick among the options, every game the same
           bad=$(cat "$I"/pack-*/t?.txt | grep -oE '\(([0-9]+) not the same|([0-9]+) unmatched|([0-9]+) picks not among' | grep -oE '[0-9]+' | paste -sd+ | bc)
           if [ "${bad:-1}" != 0 ]; then echo "::error::the pack has $bad games not the same, unmatched decisions or picks not among the options: not trained"; exit 1; fi
@@ -66,7 +67,7 @@ jobs:
           W="${{ inputs.init }}"; ini() { [ -z "$W" ] || echo "--init lab/zero/nets/$W-$1.json"; }
           python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$N-gvalue.json" --shape "${{ inputs.value }}" $(ini gvalue) ${{ inputs.value_args }} | tee -a "$RUNNER_TEMP/log.txt"
           python3 lab/policy_np.py "$D/a" "lab/zero/nets/$N-gpolicy.json" --form head $(ini gpolicy) ${{ inputs.policy_args }} | tee -a "$RUNNER_TEMP/log.txt"
-          [ "$S" = "lab/zero/nets/$N-scry12.json" ] || cp "$S" "lab/zero/nets/$N-scry12.json"
+          [ "$S" = "lab/zero/nets/$N-$B.json" ] || cp "$S" "lab/zero/nets/$N-$B.json"
           { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the nets
         run: |

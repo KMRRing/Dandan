@@ -7,6 +7,8 @@ import { think } from "../../dandan-think.js";
 import { zeroOptions, PASS } from "../../dandan-zero.js";
 import { generalView, valueView, generalMarks, onPool, viewSize, POOL } from "../../dandan-general.js";
 import { Scry12 } from "./scry12.mjs";
+import { ScryG } from "./scryg.mjs";
+import { determinize } from "../../dandan-think.js";
 import { Wall } from "./wall.mjs";
 import { DECK } from "../../dandan-cards.js";
 import { NN } from "../../dandan-zeroview.js";   // the app's own: the page loads this file (no node modules)
@@ -79,29 +81,33 @@ export const dandanEngine = () => ({ options: zeroOptions, nameOf: id => DECK[id
 // wall (17 Nov 2026, Korbi: the particle wall): the worlds the search deals come from lab/zero/wall.mjs, Scry 1.2 its proposal;
 // { n, eps, beta, … } its settings, true the defaults. The other player's belief (the policy's input when it plays them) is then
 // read in a world drawn from the wall, not in the real game, where it would see their real hand.
-export function makeGeneral({ policy = null, value = null, scry12 = null, wall = null } = {}) {
+// scryg (17 Nov 2026, Korbi 16:29: the general dealer, lab/zero/scryg.mjs): the belief, when given, in place of Scry 1.2; its
+// counts are on the pool already. The other player's belief (the policy's input when it plays them in the search) is read in a
+// world dealt from the seat's own belief, never in the real game (where it would read their real hand).
+export function makeGeneral({ policy = null, value = null, scry12 = null, scryg = null, wall = null } = {}) {
   const ctx = { counts: [new Float32Array(POOL.V), new Float32Array(POOL.V)], any: [null, null] }, player = generalPlayer(policy, ctx), judge = generalJudge(value);
   const W = wall ? (wall === true ? {} : wall) : null, engine = W ? dandanEngine() : null;
   let filters = null, walls = null;
   const fresh = () => {
-    filters = scry12 ? [new Scry12(0, scry12), new Scry12(1, scry12)] : null;
+    filters = scryg ? [new ScryG(0, scryg), new ScryG(1, scryg)] : scry12 ? [new Scry12(0, scry12), new Scry12(1, scry12)] : null;
     walls = W ? [0, 1].map(x => new Wall(x, engine, { ...W, seed: (W.seed || 1) + x, policy: player.probs, dealer: filters ? filters[x] : null })) : null;
   };
   fresh();
   return {
-    player, judge, wide: true, dealing: !!scry12, filters: () => filters, walls: () => walls, scry: null,
+    player, judge, wide: true, dealing: !!(scry12 || scryg), filters: () => filters, walls: () => walls, scry: null,
     reset: fresh,
     tracker: () => null,
     seen(s, who, m, after) { if (filters) for (const f of filters) f.update(s, who, m, after); if (walls) for (const w of walls) w.seen(s, who, m, after); },
     root(s, seat) {
       if (!filters) return {};
-      const mine = filters[seat].belief(s), o = 1 - seat;
+      const mine = filters[seat].belief(s), o = 1 - seat, on = scryg ? x => x : onPool;
+      const sd = filters[seat].deal(), wd = walls ? walls[seat].deal() : null;
       let world = null;
       if (walls) { walls[seat].ensure(); world = walls[seat].sample(Math.random); }
-      const theirs = filters[o].belief(world || s);
-      ctx.counts[seat] = onPool(mine.counts); ctx.any[seat] = onPool(mine.any);
-      ctx.counts[o] = onPool(theirs.counts); ctx.any[o] = onPool(theirs.any);
-      const sd = filters[seat].deal(), wd = walls ? walls[seat].deal() : null;
+      if (!world) world = determinize(s, seat, Math.random, false, false, (pool, n, rng) => sd(pool, n, rng) || pool);
+      const theirs = filters[o].belief(world);
+      ctx.counts[seat] = on(mine.counts); ctx.any[seat] = on(mine.any);
+      ctx.counts[o] = on(theirs.counts); ctx.any[o] = on(theirs.any);
       return { deal: wd ? (pool, n, rng) => wd(pool, n, rng) || sd(pool, n, rng) : sd };
     },
     think(s, seat, deals, extra = {}) {

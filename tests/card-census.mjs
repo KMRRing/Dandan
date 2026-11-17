@@ -7,7 +7,7 @@ import { NAMES } from "../dandan-cards.js";
 
 const ALLOWED = {   // 16 Nov 2026, 21:00Z
   "dandan-netpolicy.js": 28, "dandan-think.js": 4, "dandan-zero.js": 2, "dandan-zeroview.js": 0,
-  "lab/zero/zero2.mjs": 2, "dandan-general.js": 0, "dandan-view.js": 0, "lab/zero/general.mjs": 0, "lab/zero/scry12.mjs": 0, "lab/zero/zero-view.mjs": 0, "lab/zero/zero-lib.mjs": 0, "lab/zero/replay-pack2.mjs": 0,
+  "lab/zero/zero2.mjs": 2, "dandan-general.js": 0, "dandan-view.js": 0, "lab/zero/general.mjs": 0, "lab/zero/scry12.mjs": 0, "lab/zero/scryg.mjs": 0, "lab/zero/wall.mjs": 0, "lab/zero/zero-view.mjs": 0, "lab/zero/zero-lib.mjs": 0, "lab/zero/replay-pack2.mjs": 0,
 };
 const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), quoted = new RegExp(`["'\`](${NAMES.map(esc).join("|")})["'\`]`, "g");
 /** The source without its comments, strings kept whole ("Commit // Memory" is a card name, not a comment). Regex literals are

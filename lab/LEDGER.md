@@ -1171,3 +1171,13 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   cards the seat sees (an entry for a hidden card named it). Views unchanged (tests: observe, zero-pack, scry-honest). The wall's
   worlds name those places too (drawn with the hand, not from the unseen pool). Korbi 16:15 asked whether to drop the wall for a
   trained belief net alone; exec recommends yes: the wall parked (off; lab/zero/wall.mjs kept), the work to the general dealer.
+- 15:50Z Korbi 16:15-16:29 (belief net → policy, the belief sets the value net's world; "the most general solution possible"):
+  Scry G, the general dealer (lab/zero/scryg.mjs; packer scryg-pack.mjs; trainer scryg_torch.py, CPU torch; workflow
+  scryg-train.yml). Guesses the cards the other player knows and the seat doesn't (hidden hand + theirLib places), card by card:
+  the position (generalView with no belief, the unseen copies as input and as the output's counting mask, the cards to guess),
+  the record (every move as seen, by its general marks with unseen cards blanked; every priority point and draw; embedded, read
+  by attention from the position with keys aged by turns back, and the record's mean). No card named (census 0). JS and torch
+  agree (worst 1.5e-6 on 93 positions). tests/scryg.mjs: the same belief with hidden cards dealt again, no card dealt with no copy
+  left, a guess's chance the product of its cards', untrained = the unseen odds. The general Monte takes it (makeGeneral scryg:,
+  generalBrain loads <name>-scryg when there is one), and reads the other player's belief in a world dealt from the seat's own
+  (it was read in the real game: their real hand in its input). replay-pack2 packs with it; general-train.yml `belief` input.

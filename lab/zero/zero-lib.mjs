@@ -82,5 +82,7 @@ export function decisionLine(s, seat, g, i, res, pick, deals, hold, x3) {
  *  -scry12 (the belief it was packed with). */
 export async function generalBrain(name, extra = {}) {
   const { makeGeneral } = await import("./general.mjs");
-  return makeGeneral({ policy: netOf(`${name}-gpolicy`), value: netOf(`${name}-gvalue`), scry12: netOf(`${name}-scry12`), ...extra });
+  // the belief: the general dealer (<name>-scryg) when there is one, else Scry 1.2 (<name>-scry12)
+  const g = fs.existsSync(new URL(`./nets/${name}-scryg.json`, import.meta.url)) ? netOf(`${name}-scryg`) : null;
+  return makeGeneral({ policy: netOf(`${name}-gpolicy`), value: netOf(`${name}-gvalue`), ...(g ? { scryg: g } : { scry12: netOf(`${name}-scry12`) }), ...extra });
 }

@@ -17,6 +17,7 @@ import { marksOf } from "../../dandan-netpolicy.js";
 import { zeroOptions, qMarksOf } from "../../dandan-zero.js";
 import { ext, handCounts, EXT_N } from "./zero-view.mjs";
 import { Scry12 } from "./scry12.mjs";
+import { ScryG } from "./scryg.mjs";
 import { input2, marks2, X2, MARK_N } from "./zero2.mjs";
 import { generalView, valueView, generalMarks, onPool, viewSize, POOL } from "../../dandan-general.js";
 
@@ -33,7 +34,8 @@ function half(v) {   // a float32 as IEEE 754 binary16, rounded to nearest
 }
 const halves = a => { const o = new Uint16Array(a.length); for (let i = 0; i < a.length; i++) o[i] = a[i] ? half(a[i]) : 0; return o; };
 const XN = GEN ? viewSize() : X2, MN = GEN ? POOL.MARK_N : MARK_N, VN = GEN ? viewSize() : EXT_N;
-const inputOf = GEN ? (s, who, counts, any) => generalView(s, who, onPool(counts), onPool(any)) : input2;
+// the belief file: Scry 1.2's, or the general dealer's (17 Nov 2026: { scryg: 1 }, its counts on the pool already)
+const inputOf = GEN ? (s, who, counts, any) => (net.scryg ? generalView(s, who, counts, any) : generalView(s, who, onPool(counts), onPool(any))) : input2;
 const marksAt = GEN ? generalMarks : marks2;
 const valueOf = GEN ? (s, me) => valueView(s, me) : (s, me) => ext(s, me, handCounts(s, 1 - me));
 
@@ -105,7 +107,7 @@ function valueOld(s, d, played, explored) {
 function replay(game, decisions) {
   const seed = game.seed, x3 = game.explore3 ? game.explore3.i : null, hold = seed % 5 === 0;
   let G = newRecord(rules, { seats: 2, seed, now: 0 }), lastTurn = -1;
-  const F = [new Scry12(0, net, { hands: HANDS }), new Scry12(1, net, { hands: HANDS })], vrows = [];
+  const F = net.scryg ? [new ScryG(0, net), new ScryG(1, net)] : [new Scry12(0, net, { hands: HANDS }), new Scry12(1, net, { hands: HANDS })], vrows = [];
   for (let i = 0; i < game.moves.length; i++) {
     const [who, m] = game.moves[i], s = rules.restore(J(G.state)), ds = decisions.get(i) || [];
     // the value rows: every turn's start and one position with priority in three besides (as replay-pack.mjs), after any
