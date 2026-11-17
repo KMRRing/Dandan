@@ -10,6 +10,8 @@ on:
       every: { description: "One searched decision in", required: true, default: "15" }
       most: { description: "Decisions a process", required: true, default: "40" }
       variants: { description: "Variants, space-separated", required: true, default: "cut=0 cut=2 cut=4 cut=8 mass=0.8 most=3 deals=64 deals=128 nodeeper" }
+      ref: { description: "The referee in place of the loop's search (empty: the loop's), e.g. deals=1024+deepmax=4", required: false, default: "" }
+      hard: { description: "Only the decisions the loop's search finds hard (best two within 3 pts, or 6+ options)", type: boolean, default: false }
 permissions:
   contents: read
 jobs:
@@ -28,6 +30,8 @@ jobs:
           LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
           LAB_BUCKET: dandan-lab-807207481983
           SHAPE_MAX: "${{ inputs.most }}"
+          SHAPE_REF: "${{ inputs.ref }}"
+          SHAPE_HARD: "${{ inputs.hard && '1' || '' }}"
         run: |
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
           mkdir -p out

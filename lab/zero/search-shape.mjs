@@ -72,15 +72,18 @@ if (process.argv[2] === "--sum") {
 }
 
 const [ids, SH, SHS, NETS, EVERY] = process.argv.slice(2, 7), VARIANTS = process.argv.slice(7);
-const REF = { deals: 256, deeper: { gap: 0.03 } };
-const parse = spec => {
-  const o = { ...REF, extra: {} };
+const LOOP = { deals: 256, deeper: { gap: 0.03 } };
+const parse = (spec, base = LOOP) => {
+  const o = { ...base, extra: { ...(base.extra || {}) } };
   for (const part of spec.split("+")) {
     const [k, v] = part.split("=");
     if (k === "cut") o.extra.cut = Number(v);
     else if (k === "mass") o.mass = Number(v);
     else if (k === "most") o.most = Number(v);
     else if (k === "deals") o.deals = Number(v);
+    else if (k === "turns") o.extra.turns = Number(v);
+    else if (k === "deepmax") o.deeper = { ...(o.deeper || { gap: 0.03 }), max: Number(v) };
+    else if (k === "loop") {}
     else if (k === "nodeeper") o.deeper = null;
     else if (k === "seed") o.extra.salt = Number(v);   // the reference again on other deals: the noise floor
     else if (k === "early") { const [at, gap] = v.split(":").map(Number); o.extra.early = { at, gap }; }
@@ -88,6 +91,10 @@ const parse = spec => {
   }
   return o;
 };
+// SHAPE_REF: the referee in place of the loop's search (a stronger one, to judge whether more search helps: e.g.
+// deals=1024+deepmax=4); SHAPE_HARD: only the decisions the loop's search finds hard (its best two within 3 pts, or 6+ options),
+// the loop's search then run first to find them
+const REF = process.env.SHAPE_REF ? parse(process.env.SHAPE_REF) : LOOP, HARD = !!process.env.SHAPE_HARD;
 const specs = VARIANTS.map(v => [v, parse(v)]);
 const brain = await generalBrain(NETS);
 const local = ids.startsWith("file:");
@@ -113,8 +120,10 @@ outer: for (const p of parts) {
     for (let i = 0; i < game.moves.length; i++) {
       const [who, m] = game.moves[i], s = rules.restore(J(G.state));
       if (zeroOptions(s, who).length > 1 && seeded(mix(seed, 4242 + i))() < 1 / Number(EVERY)) {
-        const trace = [], ref = search(s, who, REF, seed, i, trace);
-        if (!ref.r.only) {
+        let hard = true;
+        if (HARD) { const l = search(s, who, LOOP, seed, i).r, ms = l.list.map(c => c.mean).sort((a, b) => b - a); hard = !l.only && (ms[0] - (ms[1] ?? ms[0]) < 0.03 || l.list.length >= 6); }
+        const trace = [], ref = hard ? search(s, who, REF, seed, i, trace) : null;
+        if (ref && !ref.r.only) {
           const means = Object.fromEntries(ref.r.list.map(c => [key(c.move), c.mean])), sorted = ref.r.list.map(c => c.mean).sort((a, b) => b - a);
           const v = {};
           for (const [name, o] of specs) { const x = search(s, who, o, seed, i); v[name] = { best: key(x.r.best), ms: x.ms }; }
