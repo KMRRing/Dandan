@@ -50,13 +50,17 @@ jobs:
           # progress every minute in the live log (ops 19:50Z); many small objects, so wide parallelism: per-object latency is the limit
           R="--exclude fleet/** --exclude private/** --exclude _check/** --fast-list --retries 10 --low-level-retries 30 --stats 60s --stats-one-line --stats-log-level NOTICE"
           # the live set and the loop's window (Korbi 17 Nov 15:15Z: only these move; the rest stays on Google, read-only):
-          # jobs/, workers/, retired/, cache/, claims/, and results/ of the open jobs and of the loop's batches (lab/zero/loop.json prefix)
+          # jobs/, retired/, cache/, and results/ of the open jobs, of the loop's batches (lab/zero/loop.json prefix) and of the filler's
+          # (lab/filler.json prefix: the loop's games are the filler's batches, zps…, retired ones included). Not claims/ or workers/
+          # (17 Nov 21:25Z): they are leases and beats the workers rewrite every 5 minutes on whichever store they use, and claims
+          # vanish as shards finish, so a copy of them never settles (the first copy-live retried itself to the 6-hour limit on them)
           live() {
-            { printf '%s\n' '- fleet/**' '- private/**' '- _check/**' '+ jobs/**' '+ workers/**' '+ retired/**' '+ cache/**' '+ claims/**' "+ results/$(node -e 'process.stdout.write(require("./lab/zero/loop.json").prefix)')*/**"
+            { printf '%s\n' '- fleet/**' '- private/**' '- _check/**' '- claims/**' '- workers/**' '+ jobs/**' '+ retired/**' '+ cache/**' "+ results/$(node -e 'process.stdout.write(require("./lab/zero/loop.json").prefix)')*/**" "+ results/$(node -e 'process.stdout.write(require("./lab/filler.json").prefix)')*/**"
               rclone lsf "gcs:$LAB_BUCKET/jobs/" --files-only | sed -n 's/\.json$//p' | sed 's#^#+ results/#; s#$#/**#'; echo '- **'; } > "$RUNNER_TEMP/live.txt"
             echo "live set: $(grep -c '^+' "$RUNNER_TEMP/live.txt") patterns"
           }
           RL="${R//--exclude fleet\/\*\* --exclude private\/\*\* --exclude _check\/\*\* /}"   # the live steps' filter file holds the exclusions
+          RL="${RL//--retries 10/--retries 3}"   # a whole-copy retry relists everything: 3 at most for the live steps
           case "${{ inputs.step }}" in
             copy-live)    live; rclone copy "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" --filter-from "$RUNNER_TEMP/live.txt" $RL --transfers 192 --checkers 256 --size-only ;;
             catchup-live) live; rclone copy "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" --filter-from "$RUNNER_TEMP/live.txt" $RL --transfers 192 --checkers 256 --update --use-server-modtime ;;

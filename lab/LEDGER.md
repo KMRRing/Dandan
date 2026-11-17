@@ -1264,3 +1264,8 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   counted from zps007: generation 15 read 0 games for 2.5 hours. lab/worker.mjs now counts retired batches too; the loop counts
   zps006's parts from 18:10Z on (genSince) for this generation, and reads a retired batch's games a shard from its retired spec.
 - 19:43Z ops regrowth: step 3 in (80 machines, 481/512 busy at 19:28Z). Lifted again after restoring, back to 1 and parked (thin markets): 34896194 ch.large-iad ($0.005), VM 335fb7c2 gp.large-iad (0.005), c3bd10fc gp.2xlarge-iad (0.015), VM c82eac0a gp.large-lon (0.002), VM 09546bc6 gp.large-syd (0.006). ch.vs1.medium-hkg reached our bid ($0.010) → 601cbd03 to 1. Step 4 on bigger machines only (fewer bucket calls per core; Google request cost $0.21/h): 8c 4f6bb2f2, c9645623, 9a0649fb, 3c385656 → 6; 16c e7f00bce, c8e65e7b, 8da1f90b, 45ec415c, VM a2b0e1bf → 6. 2c/4c held. zps007: 1,006 waiting.
+- 21:25Z store-move copy-live (run 44112774982) reached its 6-hour limit: it had copied the live set (1.49 GiB) by about 19:30Z,
+  but claims of finishing shards vanished during the copy (404s), and rclone retried the whole copy 10 times, relisting
+  everything each time. The live set now leaves out claims/ and workers/ (leases and beats the workers rewrite every 5 minutes
+  on whichever store they use) and includes the filler's batches (results/zps*: the loop's games, the retired zps006 too),
+  with at most 3 whole-copy retries. Copy-live rerun; the switch still waits for it and verify-live.
