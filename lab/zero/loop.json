@@ -12,13 +12,15 @@
   "trainArgs": "keep=0.25 vkeep=0.15 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--decay_0.9_--soft_0.02",
   "genFrom": 6,
   "windowFrom": 6,
-  "nextFrom": 6,
-  "phase": "play",
+  "nextFrom": 9,
+  "phase": "train",
   "log": [
     "2026-11-17T15:10:53.743Z generation 13: gm1 (warm from g12r-C) plays from the filler's next batch",
     "2026-11-17T16:10:40Z generation 14: gm2 (gm1 grown to view 2, 2602 inputs, with the general dealer sg1: Korbi 17:27, full general) to be crowned by the next step; the belief from here on is scryg",
     "2026-11-17T16:25:51.074Z generation 14: gm2 (warm from gm1) plays from the filler's next batch",
-    "2026-11-17T19:20:00Z generation 15: counted from zps006 too, its parts written from 18:10Z on (surely gm2's): zps006 was retired at gm2's crowning, but the refill made a batch of the same name again (it listed jobs/ only), and the fleet played gm2 there, uncounted; lab/worker.mjs now counts retired batches when it names the next one"
+    "2026-11-17T19:20:00Z generation 15: counted from zps006 too, its parts written from 18:10Z on (surely gm2's): zps006 was retired at gm2's crowning, but the refill made a batch of the same name again (it listed jobs/ only), and the fleet played gm2 there, uncounted; lab/worker.mjs now counts retired batches when it names the next one",
+    "2026-11-17T22:43:34.336Z generation 15: gm2 against gm1: 49.7% over 368 games",
+    "2026-11-17T22:43:34.336Z generation 15: training zl15 warm from gm2 on zps006,zps007,zps008"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -30,15 +32,11 @@
   "scry": "g12h2",
   "trained": {
     "from": [
-      "az-g11-c",
-      "az-g11-c2",
-      "az-g11-c3",
-      "az-g12-c",
-      "az-g12-c2",
-      "zps003",
-      "zps004"
+      "zps006",
+      "zps007",
+      "zps008"
     ],
-    "at": "2026-11-17T16:10:40Z"
+    "at": "2026-11-17T22:43:34.336Z"
   },
   "history": [
     {
@@ -85,15 +83,11 @@
   ],
   "progress": {
     "gen": 15,
-    "games": 2386,
+    "games": 4142,
     "of": 2400,
-    "at": "2026-11-17T22:14:13.801Z",
+    "at": "2026-11-17T22:43:34.336Z",
     "nets": "gm2",
     "pace": [
-      [
-        "2026-11-17T18:36:10.411Z",
-        0
-      ],
       [
         "2026-11-17T18:43:38.311Z",
         0
@@ -185,10 +179,21 @@
       [
         "2026-11-17T22:14:13.801Z",
         2386
+      ],
+      [
+        "2026-11-17T22:43:34.336Z",
+        4142
       ]
     ]
   },
   "belief": "scryg",
   "beliefArgs": "args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
-  "genSince": "2026-11-17T18:10:00Z"
+  "genSince": "2026-11-17T18:10:00Z",
+  "reading": {
+    "nets": "gm2",
+    "against": "gm1",
+    "n": 368,
+    "score": 0.49728260869565216
+  },
+  "challenger": "zl15"
 }
