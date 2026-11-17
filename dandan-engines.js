@@ -102,7 +102,7 @@ export const ENGINES = [
     expect: "Against the live Hard (Medium in the look-aheads), Quick, 2,000 pairs: 49.1% (99%: 47.3 to 51.0), its side thinking 1.08 times as long: the swap bar (49% and at most 1.2 times) is met. Alone against Medium, no search: 49.2% over 20,000 pairs.",
   },
   {
-    id: "zero-g12r", name: "Monte Scry Zero: live", short: "Zero", kind: "zero", tag: "What the live game plays since 17 November 2026: Monte Scry Zero with generation 12's nets (g12r-C), warm-trained from the from-scratch line; the latest nets play, no gate (Korbi). Monte's test suite: 4 of 5 (g9x-C 0 of 5).", nets: "g12r-C", deeper: 0.03, available: true,
+    id: "zero-g12r", name: "Monte Scry Zero: live", short: "Zero", kind: "zero", tag: "What the live game plays since 17 November 2026: Monte Scry Zero with generation 12's nets (g12r-C), trained from scratch on that generation's games; the latest nets play, no gate (Korbi). Monte's test suite: 4 of 5 (g9x-C 0 of 5).", nets: "g12r-C", deeper: 0.03, available: true,
     description: "The from-scratch line (lab, 14–15 November 2026): nothing of Medium inside. Its options are every legal move and passing; its look-aheads are played by its own policy net (g12r-C, 654 inputs: the position as its seat sees it and Scry's estimate of the other hand) and its questions by its own question head; the hidden cards are dealt by Scry, a net that follows the other player's play and gives each unseen card in their hand its own chance of every name; positions are judged by its own value net (both hands face up). Close calls (the best two within 3 points) are weighed again three turns ahead instead of two (Korbi's variable look-ahead). Its nets (about 2 MB) ship with the app and are kept offline.",
     expect: "Monte's test suite (lab/suite.json, the no-Island Dandân positions from Korbi's games) at 256 deals: 4 of 5 passed, against 0 of 5 for g9x-C. Each warm generation has measured 2 to 3 points ahead of the one before at Quick.",
   },  {
@@ -179,6 +179,12 @@ export const keepNet = (load = fetchJson) => (keepNetP ||= load(new URL("./judge
 const zeroP = new Map();
 async function zeroOf(engine, load = fetchJson) {
   if (!zeroP.has(engine.id)) zeroP.set(engine.id, (async () => {
+    // the general Monte (engine.general, 17 Nov 2026: stage 3 step 3): its nets judges/general-<nets>-gpolicy, -gvalue, -scry12
+    if (engine.general) {
+      const [{ makeGeneral }, [policy, value, scry12]] = await Promise.all([import("./lab/zero/general.mjs"),
+        Promise.all(["gpolicy", "gvalue", "scry12"].map(k => load(new URL(`./judges/general-${engine.nets}-${k}.json`, import.meta.url).href)))]);
+      return { brain: makeGeneral({ policy, value, scry12 }), game: null, G: null, at: 0 };
+    }
     const [{ makeZero }, nets] = await Promise.all([import("./dandan-zero.js"),
       Promise.all(["policy", "qpolicy", "scry", "value"].map(k => load(new URL(`./judges/zero-${engine.nets}-${k}.json`, import.meta.url).href)))]);
     const [policy, qpolicy, scry, value] = nets;

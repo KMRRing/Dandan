@@ -7,7 +7,7 @@ import { think } from "../../dandan-think.js";
 import { zeroOptions, PASS } from "../../dandan-zero.js";
 import { generalView, valueView, generalMarks, onPool, viewSize, POOL } from "../../dandan-general.js";
 import { Scry12 } from "./scry12.mjs";
-import { NN } from "./zero-view.mjs";
+import { NN } from "../../dandan-zeroview.js";   // the app's own: the page loads this file (no node modules)
 
 /** The one policy as the look-aheads' player and the tree's focus, for priority and for questions alike. */
 export function generalPlayer(policy, ctx) {
@@ -40,7 +40,7 @@ export function generalPlayer(policy, ctx) {
 export function generalJudge(value) {
   if (!value) return null;
   const net = value.layers.map(L => {
-    const [nIn, nOut] = L.n, raw = Buffer.from(L.q, "base64"), W = new Float32Array(nIn * nOut), b = new Float32Array(nOut);
+    const [nIn, nOut] = L.n, raw = Uint8Array.from(atob(L.q), c => c.charCodeAt(0)), W = new Float32Array(nIn * nOut), b = new Float32Array(nOut);
     for (let i = 0; i < raw.length; i++) { let v = raw[i]; if (v > 127) v -= 256; W[i] = v * L.s[i % nOut]; }
     if (L.b.length) b.set(L.b);
     return { nIn, nOut, W, b, y: new Float32Array(nOut) };

@@ -1115,3 +1115,9 @@ replay-pack2 ENC=general packs it (16-bit floats, KEEP/VKEEP shares; pack-merge,
 lab/zero/general.mjs plays it (makeGeneral: the one policy for moves and answers, Scry 1.2 dealing, the value net over
 valueView); suite.mjs reads "gen:<name>". Checked end to end on the fixture with throw-away nets. general-train.yml trains the
 first general nets fresh on the stored games (Fable). The live game and Zero 2's path are unchanged (Zero 2's pack byte-identical).
+- 12:20Z Step 3, rest: the policy's form head2 (Fable: a hidden layer on the move scorer; policy_np.py --form head2 and
+  freeScorer, JavaScript and NumPy agree on its scores); gm1 retrained with it (run 44078371393: --form head2, h3 64; the first run,
+  head form, cancelled while packing). The game can play the general Monte: an engine with `general` loads judges/general-<nets>-
+  gpolicy, -gvalue, -scry12 and lab/zero/general.mjs (now browser-safe: no node modules). The 36 names stay in the old encoding
+  (dandan-netpolicy.js 28, dandan-think.js 4, dandan-zero.js 2, zero2.mjs 2) until the general Monte replaces the live one: then
+  they leave Monte's path, and dandan-zero.js's bend list and the coach's Dandân count take the card files' words.

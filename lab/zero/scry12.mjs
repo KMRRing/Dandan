@@ -18,7 +18,7 @@
 // of at least one of each name for the policy's input (each card's odds with nothing dealt before it), deal() whole hands.
 import { DECK, NAMES } from "../../dandan-cards.js";
 import { isLandId } from "../../dandan-core.js";
-import { EXT_N, NN, ext, seenBy, unknownSlots } from "./zero-view.mjs";
+import { EXT_N, NN, ext, seenBy, unknownSlots } from "../../dandan-zeroview.js";   // the app's own (the page can load this file)
 import { observe } from "../../dandan-view.js";
 
 const other = x => 1 - x, NAME_AT = new Map(NAMES.map((n, k) => [n, k]));
