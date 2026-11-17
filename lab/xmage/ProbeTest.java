@@ -13,7 +13,7 @@ import org.mage.test.serverside.base.CardTestPlayerBaseWithMonteCarloAIHelps;
  */
 public class ProbeTest extends CardTestPlayerBaseWithMonteCarloAIHelps {
 
-    private void deck(mage.players.Player p, String... cards) {
+    private void deck(org.mage.test.player.TestPlayer p, String... cards) {
         for (String c : cards) addCard(Zone.LIBRARY, p, c, 4);
     }
 
