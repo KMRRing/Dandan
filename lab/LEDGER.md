@@ -1082,3 +1082,10 @@ three generations behind. Zero's loop runs the suite on every new generation and
   LIVE_ENGINE zero-g12r; g9x-C kept as an engine for the lab. One local game pair (g12r-C against g9x-C at Quick) played: won both.
   Filler on g12r-C from its next batch, explore 1 in 100 (Fable's condition); zps005 (g11w-C) closed by the rule. Loop champion
   g12r-C, generation 13 from zps006; the loop turns on after the store check.
+- 11:10Z Korbi: **no null-move rule**: "use this as a metric for model performance. do not use human knowledge." lab/null-move.mjs
+  (a move that, with both players passing until the stack is empty, leaves the position as it was but for the card and the
+  mana), lab/null-count.mjs (its rate in self-play), and the suite now reports each pick's margin (best other minus the bad
+  move, at the first look's depth) and whether it is a null move. Zero's loop reads the null rate of every generation's games.
+  Self-play zps003-004 (doomed-count, by land type): 3,200 games, a Dandân cast with no Island of its own 400 of 38,253 casts
+  (1.0%), 348 of them with an Island in hand and the land drop unused; a turn ends with a land held 21.1% (an Island 17.6%).
+  Suite, g12r-C: 4 of 5 at 256 deals (1 null pick), 5 of 5 at 2,048 (Monte's Deepest), mean margin 4.4 points.

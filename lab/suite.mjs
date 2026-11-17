@@ -9,6 +9,8 @@ import { shownRules } from "../dandan-rules.js";
 import { newRecord, applyMove } from "../seats.js";
 import { DECK } from "../dandan-core.js";
 import { zeroBrain } from "./zero/zero-lib.mjs";
+import { isNull } from "./null-move.mjs";
+import { seeded } from "../seats.js";
 
 const args = process.argv.slice(2).filter(a => !a.startsWith("--")), asJson = process.argv.includes("--json");
 const [nets = "g9x-C", deals = "256", flags = "deeper=0.03"] = args;
@@ -28,10 +30,16 @@ for (const p of suite.positions) {
   for (let i = 0; i < p.move; i++) { const st = G.state, [who, m] = moves[i]; const r = applyMove(shownRules, G, who, m, g.started); if (r.error) throw new Error(`${p.id}: move ${i}: ${r.error}`); brain.seen(st, who, m, r.G.state); G = r.G; }
   const s = shownRules.restore(JSON.parse(JSON.stringify(G.state))), who = moves[p.move][0];
   const r = brain.think(s, who, Number(deals), extraOf(flags)), pick = r.best;
-  const bad = pick.t === p.bad.t && DECK[pick.card] === p.bad.name;
-  out.push({ id: p.id, pass: !bad, pick: name(pick), top: r.list.slice(0, 4).map(o => [name(o.move), Math.round(1000 * o.mean) / 10]) });
-  console.log(`${bad ? "FAIL" : "pass"}  ${p.id}: picks ${name(pick)}; ${r.list.slice(0, 4).map(o => `${name(o.move)} ${(100 * o.mean).toFixed(1)}`).join(", ")}`);
+  const isBad = m => m.t === p.bad.t && DECK[m.card] === p.bad.name, bad = isBad(pick);
+  // the margin (Fable 10:50Z): the best other option less the bad move, in points, all at the first look's depth (the deeper
+  // look reweighs only the best two, so final means mix depths); a pass by a hair says little
+  const v = o => o.first ?? o.mean, badO = r.list.find(o => isBad(o.move)), other = r.list.filter(o => !isBad(o.move)).sort((a, b) => v(b) - v(a))[0];
+  const margin = badO && other ? Math.round(1000 * (v(other) - v(badO))) / 10 : null;
+  // and whether the pick is a null move (lab/null-move.mjs: the measure Korbi asked for, never a rule)
+  const nul = isNull(s, who, pick, seeded(7));
+  out.push({ id: p.id, pass: !bad, margin, null: nul, pick: name(pick), top: r.list.slice(0, 4).map(o => [name(o.move), Math.round(1000 * o.mean) / 10]) });
+  console.log(`${bad ? "FAIL" : "pass"}  ${p.id}: picks ${name(pick)}${nul ? " (a null move)" : ""}, margin ${margin ?? "-"} points; ${r.list.slice(0, 4).map(o => `${name(o.move)} ${(100 * o.mean).toFixed(1)}`).join(", ")}`);
 }
-const passed = out.filter(x => x.pass).length;
-console.log(`suite: ${passed} of ${out.length} passed (nets ${nets}, ${deals} deals, ${flags || "no flags"})`);
+const passed = out.filter(x => x.pass).length, margins = out.map(x => x.margin).filter(x => x != null);
+console.log(`suite: ${passed} of ${out.length} passed, mean margin ${(margins.reduce((a, b) => a + b, 0) / Math.max(1, margins.length)).toFixed(1)} points, ${out.filter(x => x.null).length} null picks (nets ${nets}, ${deals} deals, ${flags || "no flags"})`);
 if (asJson) console.log(JSON.stringify({ nets, deals: Number(deals), flags, passed, of: out.length, positions: out }));

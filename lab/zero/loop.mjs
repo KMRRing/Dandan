@@ -73,6 +73,8 @@ if (L.phase === "play") {
     if (ids.length) say(`RETIRE ${ids.join(" ")}`);
     log(`generation ${L.gen}: ${L.champion} (warm from ${prev}) plays from the filler's next batch`);
     if (L.yardEvery && L.gen % L.yardEvery === 0) queueYard(`zy-${L.champion}`);
+    // the null-move rate of the generation just played (lab/null-count.mjs; Korbi: a measure, never a rule), read on GitHub
+    say(`DISPATCH lab-read.yml script=null-count.mjs args=0_1_-_${L.trained.from.join(",")}`);
     // Monte's test suite on the new nets (lab/suite.json: the positions Korbi flagged), kept with the generation
     let suite = null;
     try { const t = execSync(`node ${here}../suite.mjs ${L.champion} 256 ${L.flags} --json`, { encoding: "utf8", timeout: 20 * 60e3 }); suite = JSON.parse(t.trim().split("\n").pop()); say(`suite: ${suite.passed} of ${suite.of} passed`); }
