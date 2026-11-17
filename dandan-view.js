@@ -28,7 +28,7 @@ export function observe(s, me) {
   const o = { ...s, hand, lib, observer: me, theirLib, kn: s.kn.filter(seen), kh: (s.kh || []).filter(seen) };
   // sorted, so where each hidden card is (hand or library) doesn't show; made only when asked for
   let sorted = null;
-  Object.defineProperty(o, "unseenIds", { get: () => (sorted ||= unseen.sort((a, b) => a - b)), enumerable: false });
+  Object.defineProperty(o, "unseenIds", { get: () => (sorted ||= Array.from(Int32Array.from(unseen).sort())), enumerable: false });
   if (s.pending && s.pending.seat !== me) o.pending = { t: s.pending.t, seat: s.pending.seat };
   delete o.tells; delete o.reading; delete o.adv;
   o.log = [];   // its lines are written for people, some for one seat only; no view reads them

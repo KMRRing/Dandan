@@ -2,7 +2,7 @@
 // belief dealing the hidden cards, the value net face up) with every input and mark from dandan-general.js, so nothing in it
 // names a card. Nets: <name>-gpolicy.json (lab/policy_np.py --form head on a pack made with ENC=general), <name>-gvalue.json
 // (lab/zero/value_np.py on the same pack's value rows), the Scry 1.2 file it was packed with.
-import { freeScorer } from "../../dandan-netpolicy.js";
+import { freeScorer, firstLayer } from "../../dandan-netpolicy.js";
 import { think } from "../../dandan-think.js";
 import { zeroOptions, PASS } from "../../dandan-zero.js";
 import { generalView, valueView, generalMarks, onPool, viewSize, VIEW_VERSIONS, POOL } from "../../dandan-general.js";
@@ -11,12 +11,16 @@ import { ScryG } from "./scryg.mjs";
 import { determinize } from "../../dandan-think.js";
 import { Wall } from "./wall.mjs";
 import { DECK } from "../../dandan-cards.js";
-import { NN } from "../../dandan-zeroview.js";   // the app's own: the page loads this file (no node modules)
+import { NN } from "../../dandan-zeroview.js";
+import { kernel } from "../../dandan-kernel.js";   // the app's own: the page loads this file (no node modules)
+
+// the compiled kernel (dandan-kernel.js, lab/kernel/kernel.c) unless NO_KERNEL is set (the lab's A/B) or it can't load here
+const useKernel = () => (typeof process !== "undefined" && process.env?.NO_KERNEL ? null : kernel());
 
 /** The one policy as the look-aheads' player and the tree's focus, for priority and for questions alike. */
 export function generalPlayer(policy, ctx) {
   // the view as long as the net reads (version 1 or 2: dandan-general.js)
-  const score = policy ? freeScorer(policy) : null, none = new Float32Array(POOL.V), XB = new Float32Array(policy ? policy.net.XN : viewSize());
+  const K = useKernel(), score = policy ? (K && K.head2(policy)) || freeScorer(policy, { carry: true }) : null, none = new Float32Array(POOL.V), XB = new Float32Array(policy ? policy.net.XN : viewSize());
   if (policy && !VIEW_VERSIONS(POOL).includes(policy.net.XN)) throw new Error(`the general policy reads ${policy.net.XN} inputs, not a view's (${VIEW_VERSIONS(POOL)})`);
   const view = (s, seat) => generalView(s, seat, ctx.counts[seat] ?? none, ctx.any[seat] ?? null, POOL, XB);
   const scores = (s, seat, ms) => score(view(s, seat), ms.map(m => generalMarks(s, seat, m)));
@@ -57,11 +61,19 @@ export function generalJudge(value) {
   });
   const N = net[0].nIn;
   if (!VIEW_VERSIONS(POOL).includes(N)) throw new Error(`the general value net reads ${N} inputs, not a view's (${VIEW_VERSIONS(POOL)})`);
-  const g = x => {
+  // the compiled kernel when it loads (one net for each side's view, each carrying its own first layer), else the JavaScript with
+  // the first layer carried between calls (dandan-netpolicy.js firstLayer)
+  const K = useKernel(), compiled = K ? [K.mlp(net), K.mlp(net)] : null;
+  const L0 = net[0], first = [firstLayer(L0.nIn, L0.nOut, L0.W, L0.b), firstLayer(L0.nIn, L0.nOut, L0.W, L0.b)];
+  const g = (x, side) => {
+    if (compiled) return compiled[side](x);
     let a = x;
     net.forEach((L, li) => {
-      L.y.set(L.b);
-      for (let i = 0; i < L.nIn; i++) { const v = a[i]; if (!v) continue; const r = i * L.nOut; for (let o = 0; o < L.nOut; o++) L.y[o] += v * L.W[r + o]; }
+      if (li === 0) first[side](x, L.y);
+      else {
+        L.y.set(L.b);
+        for (let i = 0; i < L.nIn; i++) { const v = a[i]; if (!v) continue; const r = i * L.nOut; for (let o = 0; o < L.nOut; o++) L.y[o] += v * L.W[r + o]; }
+      }
       if (li < net.length - 1) for (let o = 0; o < L.nOut; o++) if (L.y[o] < 0) L.y[o] = 0;
       a = L.y;
     });
@@ -70,7 +82,7 @@ export function generalJudge(value) {
   const xs = [new Float32Array(N), new Float32Array(N)];
   return (s, me) => {
     if (s.over) return s.winner < 0 ? 0.5 : s.winner === me ? 1 : 0;
-    const a = g(valueView(s, me, POOL, xs[0])), b = g(valueView(s, 1 - me, POOL, xs[1]));
+    const a = g(valueView(s, me, POOL, xs[0]), 0), b = g(valueView(s, 1 - me, POOL, xs[1]), 1);
     return 1 / (1 + Math.exp(b - a));
   };
 }

@@ -67,6 +67,51 @@ export function poolOf(names = NAMES) {
   return { vocab, V, at, factsOf, facts, F, fat, keys, MARK_N: keys.length, mark: new Map(keys.map((k, i) => [k, i])) };
 }
 export const POOL = poolOf();
+/** A name's slot and its facts' slots, compiled once per pool (the view's and the marks' hot path: no string keys per call). */
+function compiled(P) {
+  if (P._names) return P._names;
+  const names = new Map();
+  const slots = fs => Int32Array.from(fs.map(f => P.fat.get(f)).filter(j => j != null));
+  // fj: the printed facts' slots; pj: a permanent's printed part (the land types left out: on the table they are read as they are now)
+  for (const n of P.vocab) names.set(n, { i: P.at.get(n), fj: slots(P.factsOf.get(n) || []), pj: slots((P.factsOf.get(n) || []).filter(f => !f.startsWith("sub:"))) });
+  Object.defineProperty(P, "_byId", { value: [], enumerable: false });
+  const marks = new Map();
+  Object.defineProperty(P, "_names", { value: names, enumerable: false });
+  Object.defineProperty(P, "_marks", { value: marks, enumerable: false });
+  return names;
+}
+/** A card id's entry (compiled), by id: null for a card not in the pool. */
+function idEntry(P, id) {
+  const B = P._byId;
+  let e = B[id];
+  if (e === undefined) B[id] = e = compiled(P).get(cardNameOf(id)) || null;
+  return e;
+}
+/** A permanent's facts beyond its printed ones (permFacts less the printed part). */
+function liveFacts(p, turn, out) {
+  const n = cardNameOf(p.id);
+  if (CARDS[n]?.type === "land") for (const t of typesOf(p)) out.push(`now-sub:${t}`);
+  for (const [a, b] of p.tc || []) out.push(`changed-from:${a}`, `changed-to:${b}`);
+  if (p.dmg) out.push("damaged");
+  if (p.pump) out.push("pumped");
+  if (p.walk) out.push("walks");
+  if (p.ent === turn) out.push("arrived");
+  return out;
+}
+/** The marks of a card by name under a prefix pair (card/fact, tcard/tfact), compiled once per pool. */
+function nameMarks(P, pre, fpre, name) {
+  compiled(P);
+  let byPre = P._marks.get(pre);
+  if (!byPre) P._marks.set(pre, (byPre = new Map()));
+  let m = byPre.get(name);
+  if (!m) {
+    const out = [], add = k => { const i = P.mark.get(k); if (i != null) out.push(i); };
+    add(`${pre}:${name}`);
+    for (const f of P.factsOf.get(name) || []) add(`${fpre}:${f}`);
+    byPre.set(name, (m = Int32Array.from(out)));
+  }
+  return m;
+}
 // a card id's name; a token's from the card files (the one token kind this pool makes)
 const TOKEN_NAME = Object.keys(CARDS).find(n => CARDS[n].type === "token");
 const cardNameOf = id => (id >= TOKEN_AT ? TOKEN_NAME : DECK[id]);
@@ -107,33 +152,46 @@ function permFacts(P, p, turn) {
 export function generalView(s, seat, theirHand, theirAny = null, P = POOL, out = new Float32Array(viewSize(P))) {
   const o = observe(s, seat), opp = other(seat), Z = P.V + P.F;
   out.fill(0);
+  const C = compiled(P);
   const card = (z, name, w = 1) => {
-    const base = z * Z, i = P.at.get(name);
-    if (i == null) return;
-    out[base + i] += w / 4;
-    for (const f of P.factsOf.get(name) || []) { const j = P.fat.get(f); if (j != null) out[base + P.V + j] += w / 4; }
+    const e = C.get(name);
+    if (!e) return;
+    const base = z * Z, q = w / 4, fb = base + P.V, fj = e.fj;
+    out[base + e.i] += q;
+    for (let t = 0; t < fj.length; t++) out[fb + fj[t]] += q;
   };
+  const byId = (z, id, w = 1) => {
+    if (id == null || id === HIDDEN) return;
+    const e = idEntry(P, id);
+    if (!e) return;
+    const base = z * Z, q = w / 4, fb = base + P.V, fj = e.fj;
+    out[base + e.i] += q;
+    for (let t = 0; t < fj.length; t++) out[fb + fj[t]] += q;
+  };
+  const live = [];
   const perm = (z, p) => {
-    const base = z * Z, name = cardNameOf(p.id), i = P.at.get(name);
-    if (i != null) out[base + i] += 0.25;
-    for (const f of permFacts(P, p, o.turn)) { const j = P.fat.get(f); if (j != null) out[base + P.V + j] += 0.25; }
+    const base = z * Z, e = idEntry(P, p.id), fb = base + P.V;
+    if (e) { out[base + e.i] += 0.25; for (let t = 0; t < e.pj.length; t++) out[fb + e.pj[t]] += 0.25; }
+    else for (const f of (P.factsOf.get(cardNameOf(p.id)) || []).filter(f => !f.startsWith("sub:"))) { const j = P.fat.get(f); if (j != null) out[fb + j] += 0.25; }
+    live.length = 0;
+    for (const f of liveFacts(p, o.turn, live)) { const j = P.fat.get(f); if (j != null) out[fb + j] += 0.25; }
   };
-  for (const id of o.hand[seat]) card(0, nameOf(id));
+  for (const id of o.hand[seat]) byId(0, id);
   P.vocab.forEach((n, i) => { if (theirHand[i]) card(1, n, theirHand[i]); });
   for (const p of o.bf) perm((p.ctl === seat ? 2 : 4) + (p.tapped ? 1 : 0), p);
-  for (const id of o.yard) card(6, nameOf(id));
-  for (const id of o.exile) card(7, nameOf(id));
-  for (let i = 0; i < 5; i++) { const id = o.lib[i]; if (id != null && id !== HIDDEN) card(8, nameOf(id), 1 - i / 5); }
+  for (const id of o.yard) byId(6, id);
+  for (const id of o.exile) byId(7, id);
+  for (let i = 0; i < 5; i++) { const id = o.lib[i]; if (id != null && id !== HIDDEN) byId(8, id, 1 - i / 5); }
   // the unseen pool: every card of the pool less those this seat has seen (the hidden ones, by name: public)
-  for (const id of o.unseenIds) card(9, nameOf(id));
+  for (const id of o.unseenIds) byId(9, id);
   let k = ZONES.length * Z;
   for (let i = 0; i < P.V; i++) out[k + i] = theirAny ? theirAny[i] : theirHand[i] > 0.5 ? 1 : 0;
   k += P.V;
   for (let j = 0; j < STACK; j++, k += Z + 6) {
     const it = o.stack[o.stack.length - 1 - j];
     if (!it) continue;
-    const name = it.card != null ? nameOf(it.card) : null, i = name != null ? P.at.get(name) : null;
-    if (i != null) { out[k + i] = 1; for (const f of P.factsOf.get(name) || []) { const q = P.fat.get(f); if (q != null) out[k + P.V + q] = 1; } }
+    const e = it.card != null ? C.get(nameOf(it.card)) : null;
+    if (e) { out[k + e.i] = 1; for (let t = 0; t < e.fj.length; t++) out[k + P.V + e.fj[t]] = 1; }
     out[k + Z] = it.ctl === seat ? 1 : 0;
     out[k + Z + 1] = it.kind === "spell" ? 0 : 1;
     const t = it.targets?.[0];
@@ -170,11 +228,13 @@ export function generalView(s, seat, theirHand, theirAny = null, P = POOL, out =
 /** Version 2's part (see viewSize): from the observation, at offset k. */
 function view2(o, seat, P, out, k) {
   const opp = other(seat), Z = P.V + P.F, theirs = new Set(o.theirLib || []);
+  const C = compiled(P);
   const cardAt = (base, name, w = 1) => {
-    const i = P.at.get(name);
-    if (i == null) return;
-    out[base + i] += w / 4;
-    for (const f of P.factsOf.get(name) || []) { const j = P.fat.get(f); if (j != null) out[base + P.V + j] += w / 4; }
+    const e = C.get(name);
+    if (!e) return;
+    const q = w / 4, fb = base + P.V, fj = e.fj;
+    out[base + e.i] += q;
+    for (let t = 0; t < fj.length; t++) out[fb + fj[t]] += q;
   };
   // the libraries: the engine's per-seat ones (o.libs), else the one shared library as the seat's
   const libs = o.libs ? [o.libs[seat], o.libs[opp]] : [o.lib, null];
@@ -226,7 +286,11 @@ export function onPool(counts, P = POOL, names = NAMES) {
 /** A move's or an answer's marks: indices into the pool's mark space (POOL.keys). */
 export function generalMarks(s, seat, m, P = POOL) {
   const out = new Set(), add = k => { const i = P.mark.get(k); if (i != null) out.add(i); };
-  const cardMarks = (name, pre = "card", fpre = "fact") => { if (name == null) return; add(`${pre}:${name}`); for (const f of P.factsOf.get(name) || []) add(`${fpre}:${f}`); };
+  const cardMarks = (name, pre = "card", fpre = "fact") => {
+    if (name == null) return;
+    if (!P.at.has(name)) { add(`${pre}:${name}`); for (const f of P.factsOf.get(name) || []) add(`${fpre}:${f}`); return; }
+    for (const i of nameMarks(P, pre, fpre, name)) out.add(i);
+  };
   const permMarks = (p, pre, fpre) => { const n = cardNameOf(p.id); add(`${pre}:${n}`); for (const f of permFacts(P, p, s.turn)) add(`${fpre}:${f}`); };
   add(`kind:${KINDS.includes(m.t) ? m.t : "other"}`);
   switch (m.t) {

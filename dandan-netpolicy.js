@@ -152,17 +152,62 @@ export function mediumView(s, seat, rng = Math.random) {
  * once (XN → H1 → H2, ReLU both); a move scores trunk · (the sum of its marks' vectors E) + the sum of its marks' biases eb, so
  * its cost hardly grows with the moves.
  */
-export function freeScorer(model) {
+/**
+ * The first layer, x·W + c (XN inputs, H out), kept between calls (17 Nov 2026, Korbi: "do all 3"; the chess engines' NNUE
+ * accumulator): the search asks the net of positions that differ from one of the last few asked in a few inputs only, so
+ * the sums are carried and only the inputs that changed are added in, (new − old)·W's row. Each slot keeps one recent input
+ * and its sums, in doubles, rebuilt from scratch every REFRESH updates or when more inputs changed than are non-zero (where
+ * from scratch is cheaper). The same numbers as from scratch to float rounding (tests/first-layer.mjs).
+ */
+const SLOTS = 2, REFRESH = 512;
+export function firstLayer(XN, H, W, c) {
+  const S = Array.from({ length: SLOTS }, () => ({ x: new Float32Array(XN), a: new Float64Array(H), n: -1, used: 0 }));
+  const diffs = new Int32Array(SLOTS);
+  let clock = 0;
+  const f = (x, out) => {
+    let nz = 0;
+    diffs.fill(0);
+    for (let i = 0; i < XN; i++) {
+      const v = x[i];
+      if (v !== 0) nz++;
+      for (let k = 0; k < SLOTS; k++) if (S[k].x[i] !== v) diffs[k]++;
+    }
+    let b = 0;
+    for (let k = 1; k < SLOTS; k++) if (diffs[k] < diffs[b]) b = k;
+    let sl = S[b];
+    if (sl.n < 0 || sl.n >= REFRESH || diffs[b] >= nz) {
+      // from scratch, into the slot used longest ago
+      if (sl.n < 0 || diffs[b] >= nz) { let lru = 0; for (let k = 1; k < SLOTS; k++) if (S[k].used < S[lru].used) lru = k; sl = S[lru]; }
+      const a = sl.a;
+      for (let o = 0; o < H; o++) a[o] = c[o];
+      for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H; for (let o = 0; o < H; o++) a[o] += v * W[r + o]; }
+      sl.x.set(x); sl.n = 0; f.fresh++;
+    } else {
+      const a = sl.a, xs = sl.x;
+      for (let i = 0; i < XN; i++) { const d = x[i] - xs[i]; if (d === 0) continue; const r = i * H; for (let o = 0; o < H; o++) a[o] += d * W[r + o]; xs[i] = x[i]; }
+      sl.n++; f.carried++;
+    }
+    sl.used = ++clock;
+    for (let o = 0; o < H; o++) out[o] = sl.a[o];
+    return out;
+  };
+  f.fresh = 0; f.carried = 0;
+  return f;
+}
+
+// carry: the first layer carried between calls (firstLayer); the lab's searches ask for it (lab/zero/general.mjs), the game's
+// Monte keeps the sums from scratch as it was
+export function freeScorer(model, { carry = false } = {}) {
   const n = model.net, H1 = n.H1, H2 = n.H2, XN = n.XN;
+  const layer1 = (W, c) => { if (carry) return firstLayer(XN, H1, W, c); return (x, out) => { out.set(c); for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H1; for (let o = 0; o < H1; o++) out[o] += v * W[r + o]; } return out; }; };
   // form "head2" (17 Nov 2026, Fable: a hidden layer on the move scorer): the trunk as "head"; then trunk · W3 + c3 once (H3), each
   // move's marks' rows of E3 added, ReLU, w4, plus the marks' biases eb (lab/policy_np.py --form head2)
   if (model.form === "head2") {
     const H3 = n.H3, W1 = Float32Array.from(n.W1), c1 = Float32Array.from(n.c1), W2 = Float32Array.from(n.W2), c2 = Float32Array.from(n.c2);
     const W3 = Float32Array.from(n.W3), c3 = Float32Array.from(n.c3), E3 = Float32Array.from(n.E3), w4 = Float32Array.from(n.w4), eb = Float32Array.from(n.eb);
-    const a1 = new Float32Array(H1), z = new Float32Array(H2), A3 = new Float32Array(H3), h = new Float32Array(H3);
+    const L1 = layer1(W1, c1), a1 = new Float32Array(H1), z = new Float32Array(H2), A3 = new Float32Array(H3), h = new Float32Array(H3);
     return (x, marks) => {
-      a1.set(c1);
-      for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H1; for (let o = 0; o < H1; o++) a1[o] += v * W1[r + o]; }
+      L1(x, a1);
       z.set(c2);
       for (let o = 0; o < H1; o++) { const v = a1[o]; if (v <= 0) continue; const r = o * H2; for (let o2 = 0; o2 < H2; o2++) z[o2] += v * W2[r + o2]; }
       A3.set(c3);
@@ -179,10 +224,9 @@ export function freeScorer(model) {
   }
   if (model.form === "head") {
     const W1 = Float32Array.from(n.W1), c1 = Float32Array.from(n.c1), W2 = Float32Array.from(n.W2), c2 = Float32Array.from(n.c2);
-    const E = Float32Array.from(n.E), eb = Float32Array.from(n.eb), a1 = new Float32Array(H1), z = new Float32Array(H2);
+    const E = Float32Array.from(n.E), eb = Float32Array.from(n.eb), L1 = layer1(W1, c1), a1 = new Float32Array(H1), z = new Float32Array(H2);
     return (x, marks) => {
-      a1.set(c1);
-      for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H1; for (let o = 0; o < H1; o++) a1[o] += v * W1[r + o]; }
+      L1(x, a1);
       z.set(c2);
       for (let o = 0; o < H1; o++) { const h = a1[o]; if (h <= 0) continue; const r = o * H2; for (let o2 = 0; o2 < H2; o2++) z[o2] += h * W2[r + o2]; }
       for (let o2 = 0; o2 < H2; o2++) if (z[o2] < 0) z[o2] = 0;
@@ -191,10 +235,9 @@ export function freeScorer(model) {
   }
   const wx = Float32Array.from(n.wx), wm = Float32Array.from(n.wm), b1 = Float32Array.from(n.b1);
   const w2 = Float32Array.from(n.w2), b2 = Float32Array.from(n.b2), w3 = Float32Array.from(n.w3);
-  const base = new Float32Array(H1), h1 = new Float32Array(H1);
+  const L1 = layer1(wx, b1), base = new Float32Array(H1), h1 = new Float32Array(H1);
   return (x, marks) => {
-    base.set(b1);
-    for (let i = 0; i < XN; i++) { const v = x[i]; if (v === 0) continue; const r = i * H1; for (let o = 0; o < H1; o++) base[o] += v * wx[r + o]; }
+    L1(x, base);
     return marks.map(ms => {
       h1.set(base);
       for (const i of ms) { const r = i * H1; for (let o = 0; o < H1; o++) h1[o] += wm[r + o]; }
