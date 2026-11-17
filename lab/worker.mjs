@@ -34,6 +34,7 @@ import path from "node:path";
 import { spawn, execFileSync } from "node:child_process";
 import { openStore, dataStoreOf, REQ, STORE_CONFIG } from "./store.mjs";
 import { readOpen, editOpen, OPEN_STALE_MS } from "./open-list.mjs";
+import { chosenScheduler } from "./scheduler.mjs";
 
 const env = process.env;
 const SLOTS = Number(env.LAB_SLOTS) || os.cpus().length, WORK = env.LAB_WORK || "/tmp/lab-work";
@@ -370,8 +371,33 @@ const beatWorker = () => {
   // the bucket requests since the last report, over `ms` (13 Nov, the fleet director); this report's own write counts in the next
   const now = Date.now(), req = { ...REQ, ms: now - lastBeat };
   for (const k in REQ) { REQ_ALL[k] += REQ[k]; REQ[k] = 0; } lastBeat = now;
-  return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, pool: POOL, fin: FIN, slots: loops.length, hw: hw(), busy: [...BUSY.values()], req, started: T0, t: now })).catch(() => {});
+  return store.put(`workers/${NAME}.json`, JSON.stringify({ by: NAME, cloud: CLOUD, pool: POOL, fin: FIN, slots: loops.length, hw: hw(), busy: [...BUSY.values()], req, started: T0, boot: BOOT, ...(GH ? { sched: 1 } : {}), t: now })).catch(() => {});
 };
+// ---------- the scheduler (17 Nov 2026, Korbi 18:35: "nominate one of the more powerful VMs ... that has been around for
+// longer, and github as last case backup") ----------
+// GitHub's own schedule starts runs late or not at all, so one worker starts the loop's step (zero-loop.yml) every 10 minutes
+// and keeps the Fleet page's snapshot run (fleet.yml) going. Which one: of the fresh workers that hold the GitHub token (sched),
+// the one with the most cores, then the machine up longest, then by name; every worker works it out from the same beats, so
+// they agree without talking, and when the chosen one goes the next takes over within a beat. The token (LAB_GH_TOKEN, a
+// fine-grained token for this repo that can only start workflows) is never logged. GitHub's schedules stay, as the backup.
+const GH = env.LAB_GH_TOKEN || null, GH_REPO = env.LAB_GH_REPO || "KMRRing/Dandan", BOOT = Date.now() - Math.round(os.uptime() * 1000);
+const gh = async (method, p, body) => {
+  const r = await fetch(`https://api.github.com/repos/${GH_REPO}/${p}`, { method, headers: { authorization: `Bearer ${GH}`, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28", ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) throw new Error(`GitHub ${method} ${p.split("?")[0]}: ${r.status}`);
+  return r.status === 204 ? null : r.json();
+};
+async function schedule() {
+  try {
+    const names = (await store.list("workers/")).map(o => o.name).filter(n => n.endsWith(".json"));
+    const beats = (await Promise.all(names.map(n => store.get(n).then(t => { try { return JSON.parse(t); } catch { return null; } }).catch(() => null)))).filter(Boolean);
+    if (chosenScheduler(beats) !== NAME) return;
+    // a run already waiting or running is enough (each workflow keeps one at a time)
+    const busy = async wf => ((await gh("GET", `actions/workflows/${wf}/runs?per_page=5`)).workflow_runs || []).some(r => r.status !== "completed");
+    if (!(await busy("zero-loop.yml"))) { await gh("POST", "actions/workflows/zero-loop.yml/dispatches", { ref: "main" }); log("scheduler: the loop's step started"); }
+    if (!(await busy("fleet.yml"))) { await gh("POST", "actions/workflows/fleet.yml/dispatches", { ref: "main" }); log("scheduler: the fleet snapshot run started"); }
+  } catch (e) { log(`scheduler: ${e.message}`); }
+}
+if (GH) setInterval(schedule, 10 * 60000).unref();
 const workerBeat = setInterval(beatWorker, BEAT_MS);
 beatWorker();
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { store.del(`workers/${NAME}.json`).catch(() => {}); });

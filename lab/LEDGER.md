@@ -1227,3 +1227,9 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   compiled: 2.2x. Where the time goes now: the view and the rules (JavaScript) and garbage collection; the nets are ~10%.
   search-shape.yml (run 44125648892): the loop's search against cut=0/2/4/8 (the play-out stopped k moves past the tree, the
   value net there), mass=0.8, most=3, deals=64/128, nodeeper, on gm2, and when the answer settles by deals.
+- 16:40Z Korbi 18:35 (the scheduler on the fleet, no extra machine: "nominate one of the more powerful VMs ... that has been
+  around for longer, and github as last case backup"): lab/worker.mjs schedule. Every 10 minutes the worker chosen from the
+  beats (holds the GitHub token; the most cores, then the machine up longest, then by name: lab/scheduler.mjs) starts
+  zero-loop.yml unless one is waiting or running, and fleet.yml likewise. The token is a fine-grained one that can only start
+  workflows on this repo (GitHub secret LAB_GH_TOKEN, put in the clusters by k8s-apply.yml as a Kubernetes secret); no store or
+  queue key moves. GitHub's own schedules stay as the backup. Waiting on the token.
