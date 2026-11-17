@@ -77,3 +77,10 @@ export function decisionLine(s, seat, g, i, res, pick, deals, hold, x3) {
     med: 0, pick, every: 1, ...(q ? { qd: 1 } : {}), ...(hold ? { hold: 1 } : {}), ...(x3 != null ? { x3 } : {}),
   };
 }
+
+/** The general Monte (stage 3 step 3, lab/zero/general.mjs) by its nets' name: lab/zero/nets/<name>-gpolicy, -gvalue and
+ *  -scry12 (the belief it was packed with). */
+export async function generalBrain(name) {
+  const { makeGeneral } = await import("./general.mjs");
+  return makeGeneral({ policy: netOf(`${name}-gpolicy`), value: netOf(`${name}-gvalue`), scry12: netOf(`${name}-scry12`) });
+}

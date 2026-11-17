@@ -9,6 +9,7 @@ import { ext, seenBy } from "../dandan-zeroview.js";
 import { viewInto, VIEW_N } from "../dandan-netpolicy.js";
 import { knOf, knownIn } from "../dandan-core.js";
 import { Scry12 } from "../lab/zero/scry12.mjs";
+import { generalView, POOL } from "../dandan-general.js";
 
 let fails = 0;
 const check = (ok, what) => { console.log(`${ok ? "ok  " : "FAIL"} ${what}`); if (!ok) fails++; };
@@ -36,14 +37,15 @@ for (let i = 0; i < line.moves.length; i++) {
     n++;
     if (obsKey(observe(s, me)) === obsKey(observe(t, me))) sameObs++;
     const a = seenBy(s, me), b = seenBy(t, me);
-    if (key(ext(s, me, z)) === key(ext(t, me, z)) && key(viewInto(s, me, new Float64Array(VIEW_N))) === key(viewInto(t, me, new Float64Array(VIEW_N))) && key(a.unseen) === key(b.unseen) && a.unknown === b.unknown) sameViews++;
+    const gz = new Float32Array(POOL.V);
+    if (key(generalView(s, me, gz)) === key(generalView(t, me, gz)) && key(ext(s, me, z)) === key(ext(t, me, z)) && key(viewInto(s, me, new Float64Array(VIEW_N))) === key(viewInto(t, me, new Float64Array(VIEW_N))) && key(a.unseen) === key(b.unseen) && a.unknown === b.unknown) sameViews++;
   }
   const [who, m] = line.moves[i];
   Math.random = seeded(mix(line.seed, i + 1));
   G = applyMove(rules, G, who, m, 0).G;
 }
 check(n > 200 && sameObs === n, `the observation doesn't change when the hidden cards are dealt again (${sameObs} of ${n} positions and seats)`);
-check(sameViews === n, `nor do ext, viewInto and seenBy built on it (${sameViews} of ${n})`);
+check(sameViews === n, `nor do the general view, ext, viewInto and seenBy built on it (${sameViews} of ${n})`);
 // 3. Scry 1.2's belief on the honest net, followed through the game: the same counts with the hidden cards dealt again
 {
   const net = JSON.parse(fs.readFileSync(new URL("../lab/zero/nets/g12h2-scry12.json", import.meta.url), "utf8").split("\n")[0]);

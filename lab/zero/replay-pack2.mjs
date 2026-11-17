@@ -6,6 +6,8 @@
 //   <dir>/v  value rows face up over the extended view alone (EXT_N a seat, lab/zero/value_np.py): won.f32 the game's result
 //            blended with the search's value at that position (VBLEND, default 0.5, where the position was searched), aux.f32
 //            whether that seat lost by drawing from an empty library (value_np.py --aux)
+// ENC (env, 17 Nov 2026, stage 3 step 3): "general" packs dandan-general.js's view, value view and marks (every input from the card
+// files, nothing named by hand) in place of Zero 2's; the same games, the same picks and values.
 // HANDS (env): the belief's dealt hands a decision (1,024 as in play; the training workflow packs at 256, Fable 20:45Z)
 // usage: node lab/zero/replay-pack2.mjs <dir> <zero-play job ids, comma-separated | file:<local output>> <Scry 1.2 file> [shard shards]
 import fs from "node:fs";
@@ -16,6 +18,24 @@ import { zeroOptions, qMarksOf } from "../../dandan-zero.js";
 import { ext, handCounts, EXT_N } from "./zero-view.mjs";
 import { Scry12 } from "./scry12.mjs";
 import { input2, marks2, X2, MARK_N } from "./zero2.mjs";
+import { generalView, valueView, generalMarks, onPool, viewSize, POOL } from "../../dandan-general.js";
+
+const GEN = process.env.ENC === "general";
+// the general view is ~1,260 numbers: stored as 16-bit floats (half the room; the trainers read them in place, a memory map)
+// and, with KEEP / VKEEP (env), a share of the decisions and of the value rows kept, chosen by the game's seed (17 Nov 2026)
+const KEEP = Number(process.env.KEEP || 1), VKEEP = Number(process.env.VKEEP || 1);
+const F32 = new Float32Array(1), U32 = new Uint32Array(F32.buffer);
+function half(v) {   // a float32 as IEEE 754 binary16, rounded to nearest
+  F32[0] = v; const x = U32[0], sign = (x >>> 16) & 0x8000, e = ((x >>> 23) & 0xff) - 127 + 15, m = x & 0x7fffff;
+  if (e <= 0) { if (e < -10) return sign; const mm = (m | 0x800000) >> (1 - e); return sign | ((mm + 0x1000) >> 13); }
+  if (e >= 31) return sign | 0x7c00;
+  return sign | (e << 10) | ((m + 0x1000) >> 13);
+}
+const halves = a => { const o = new Uint16Array(a.length); for (let i = 0; i < a.length; i++) o[i] = a[i] ? half(a[i]) : 0; return o; };
+const XN = GEN ? viewSize() : X2, MN = GEN ? POOL.MARK_N : MARK_N, VN = GEN ? viewSize() : EXT_N;
+const inputOf = GEN ? (s, who, counts, any) => generalView(s, who, onPool(counts), onPool(any)) : input2;
+const marksAt = GEN ? generalMarks : marks2;
+const valueOf = GEN ? (s, me) => valueView(s, me) : (s, me) => ext(s, me, handCounts(s, 1 - me));
 
 const [dir, ids, sfile] = process.argv.slice(2), SH = Number(process.argv[5] || 0), SHS = Number(process.argv[6] || 1);
 const VBLEND = Number(process.env.VBLEND ?? 0.5), HANDS = Number(process.env.HANDS || 1024), net = JSON.parse(fs.readFileSync(sfile, "utf8").split("\n")[0]);
@@ -25,8 +45,8 @@ function sink(sub, names) {
   const fd = Object.fromEntries(names.map(n => [n, fs.openSync(`${dir}/${sub}/${n}`, "w")]));
   return { put: (n, a) => fs.writeSync(fd[n], Buffer.from(a.buffer, a.byteOffset, a.byteLength)), close: () => Object.values(fd).forEach(f => fs.closeSync(f)) };
 }
-const A = sink("a", ["x.f32", "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8"]), PC = { D: 0, C: 0, K: 0, Q: 0 };
-const V = sink("v", ["mine.f32", "theirs.f32", "won.f32", "aux.f32", "hold.u8"]);
+const XF = GEN ? "x.f16" : "x.f32", A = sink("a", [XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8"]), PC = { D: 0, C: 0, K: 0, Q: 0 };
+const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "hold.u8"]);
 let nv = 0, games = 0, broken = 0, unmatched = 0, skipped = 0, old = 0, pickOff = 0, moved = 0, twins = 0;
 
 // a decision line's options are its moves (Fable's review, item 8: zero-play stores each, mv), checked against zeroOptions.
@@ -61,11 +81,11 @@ function pickOf(d, ms, played, explored) {
 }
 function putDecision(s, d, o, x, p) {
   const ms = o.ms, hard = !!o.groups;
-  A.put("x.f32", x); A.put("cand.i32", Int32Array.of(PC.C)); A.put("pick.i16", Int16Array.of(p)); A.put("med.i16", Int16Array.of(0));
+  A.put(XF, GEN ? halves(x) : x); A.put("cand.i32", Int32Array.of(PC.C)); A.put("pick.i16", Int16Array.of(p)); A.put("med.i16", Int16Array.of(0));
   A.put("flags.u8", Uint8Array.of((d.hold ? 1 : 0) | (d.deep ? 2 : 0) | 4 | (hard ? 16 : 0)));
   // twins get their group's mean: on a new line, the options the net reads alike (the same marks2), as it can't tell them apart;
   // on an old line, the options alike in the old marks, as the line can't tell which q was whose
-  const mk = ms.map(m => marks2(s, d.seat, m)), grp = new Map();
+  const mk = ms.map(m => marksAt(s, d.seat, m)), grp = new Map();
   if (hard) o.groups.forEach((js, k) => grp.set(k, js));
   else mk.forEach((k, j) => { const g = key(k); if (!grp.has(g)) grp.set(g, []); grp.get(g).push(j); });
   const q = new Float32Array(ms.length), mark = new Int32Array(ms.length), marks = [];
@@ -92,13 +112,13 @@ function replay(game, decisions) {
     // random move only; the search's value where this position was searched
     const turnStart = s.turn !== lastTurn && !s.pending;
     if (turnStart) lastTurn = s.turn;
-    if (!s.pending && (turnStart || seeded(mix(seed, 4242 + i))() < 1 / 3)) {
+    if (!s.pending && (turnStart || seeded(mix(seed, 4242 + i))() < 1 / 3) && (VKEEP >= 1 || seeded(mix(seed, 5151 + i))() < VKEEP)) {
       if (x3 != null && i <= x3) skipped += 2;
       else {
         // the value target: the picked option's final mean (item 9; an old line: the played move's q, its group's on a twin),
         // not the best of the first look's
         const d = ds.find(x => x.c?.length), vs = !d ? null : d.v != null ? d.v : valueOld(s, d, m, x3 === i);
-        for (const me of [0, 1]) vrows.push({ me, f: ext(s, me, handCounts(s, other(me))), g: ext(s, other(me), handCounts(s, me)), v: vs == null ? null : me === d.seat ? vs : 1 - vs });
+        for (const me of [0, 1]) vrows.push({ me, f: valueOf(s, me), g: valueOf(s, other(me)), v: vs == null ? null : me === d.seat ? vs : 1 - vs });
       }
     }
     for (const d of ds) {
@@ -106,8 +126,9 @@ function replay(game, decisions) {
       const o = options(s, d, m, x3 === i);
       if (!o) { unmatched++; continue; }
       if (o.groups) old++;
+      if (KEEP < 1 && seeded(mix(seed, 6161 + i))() >= KEEP) continue;   // not kept (KEEP): matched and counted, not packed
       const b = F[who].belief(s);
-      putDecision(s, d, o, input2(s, who, b.counts, b.any), pickOf(d, o.ms, m, x3 === i));
+      putDecision(s, d, o, inputOf(s, who, b.counts, b.any), pickOf(d, o.ms, m, x3 === i));
     }
     Math.random = seeded(mix(seed, i + 1));
     const r = applyMove(rules, G, who, m, 0);
@@ -119,7 +140,7 @@ function replay(game, decisions) {
   const end = G.state, won = x => (end.winner === x ? 1 : end.winner == null || end.winner < 0 ? 0.5 : 0);
   for (const r of vrows) {
     const y = r.v == null ? won(r.me) : (1 - VBLEND) * won(r.me) + VBLEND * r.v;
-    V.put("mine.f32", Float32Array.from(r.f)); V.put("theirs.f32", Float32Array.from(r.g)); V.put("won.f32", Float32Array.of(y));
+    V.put(MF, GEN ? halves(r.f) : Float32Array.from(r.f)); V.put(TF, GEN ? halves(r.g) : Float32Array.from(r.g)); V.put("won.f32", Float32Array.of(y));
     V.put("aux.f32", Float32Array.of(end.lost?.[r.me] ? 1 : 0)); V.put("hold.u8", Uint8Array.of(hold ? 1 : 0)); nv++;
   }
   games++;
@@ -139,6 +160,6 @@ for (const name of parts) {
   }
 }
 A.put("cand.i32", Int32Array.of(PC.C)); A.put("mark.i32", Int32Array.of(PC.K)); A.close(); V.close();
-fs.writeFileSync(`${dir}/a/meta.json`, JSON.stringify({ XN: X2, decisions: PC.D, candidates: PC.C, marks: PC.K, markN: MARK_N, questions: PC.Q, exports: ids, every: true }));
-fs.writeFileSync(`${dir}/v/meta.json`, JSON.stringify({ N: EXT_N, rows: nv, skipped, ids, aux: true }));
+fs.writeFileSync(`${dir}/a/meta.json`, JSON.stringify({ XN, decisions: PC.D, candidates: PC.C, marks: PC.K, markN: MN, ...(GEN ? { enc: "general" } : {}), questions: PC.Q, exports: ids, every: true }));
+fs.writeFileSync(`${dir}/v/meta.json`, JSON.stringify({ N: VN, rows: nv, ...(GEN ? { enc: "general" } : {}), skipped, ids, aux: true }));
 console.log(`replay-pack2: ${games} games (${broken} not the same); decisions ${PC.D} (questions ${PC.Q}, ${unmatched} unmatched, ${old} from before moves were stored (learnt as hard picks), ${pickOff} picks not among the options, ${moved} where the move played was not the line's pick, ${twins} options in twin groups); value rows ${nv} (${skipped} before a random move skipped)`);

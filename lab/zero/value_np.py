@@ -19,7 +19,13 @@ A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 meta = json.load(open(os.path.join(A.dir, "meta.json"))); N, R = meta["N"], meta["rows"]
 rd = lambda n, t: np.fromfile(os.path.join(A.dir, n), dtype=t)
-M, T, Y, H = rd("mine.f32", np.float32).reshape(R, N), rd("theirs.f32", np.float32).reshape(R, N), rd("won.f32", np.float32), rd("hold.u8", np.uint8) > 0
+# the general encoding (17 Nov 2026): 16-bit floats, read in place (a memory map) and widened a batch at a time
+if os.path.exists(os.path.join(A.dir, "mine.f16")):
+    mm = lambda n: np.memmap(os.path.join(A.dir, n), dtype=np.float16, mode="r", shape=(R, N))
+    M, T = mm("mine.f16"), mm("theirs.f16")
+else:
+    M, T = rd("mine.f32", np.float32).reshape(R, N), rd("theirs.f32", np.float32).reshape(R, N)
+Y, H = rd("won.f32", np.float32), rd("hold.u8", np.uint8) > 0
 tr, he = np.flatnonzero(~H), np.flatnonzero(H)
 AUX = rd("aux.f32", np.float32) if A.aux and os.path.exists(os.path.join(A.dir, "aux.f32")) else None
 OUT = 2 if AUX is not None else 1   # with --aux the last layer has a second output, the deck-out logit
@@ -46,7 +52,7 @@ def loss_of(idx):
     out = 0.0
     for s in range(0, len(idx), 65536):
         j = idx[s:s + 65536]
-        d = g(M[j])[-1][:, 0] - g(T[j])[-1][:, 0]
+        d = g(np.asarray(M[j], dtype=np.float32))[-1][:, 0] - g(np.asarray(T[j], dtype=np.float32))[-1][:, 0]
         p = 1 / (1 + np.exp(-np.clip(d, -30, 30)))
         out += -(Y[j] * np.log(p + 1e-9) + (1 - Y[j]) * np.log(1 - p + 1e-9)).sum()
     return out / max(1, len(idx))
@@ -64,7 +70,7 @@ for e in range(1, A.epochs + 1):
     order = rng.permutation(tr)
     for s in range(0, len(order), A.batch):
         j = order[s:s + A.batch]; t += 1
-        hm, ht = g(M[j]), g(T[j])
+        hm, ht = g(np.asarray(M[j], dtype=np.float32)), g(np.asarray(T[j], dtype=np.float32))
         d = hm[-1][:, 0] - ht[-1][:, 0]
         p = 1 / (1 + np.exp(-np.clip(d, -30, 30)))
         gd = ((p - Y[j]) / len(j))[:, None]

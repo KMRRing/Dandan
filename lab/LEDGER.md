@@ -1102,3 +1102,16 @@ Gates: tests/observe.mjs (a position and the same one with every hidden card dea
 views and the same Scry 1.2 belief: 228 of 228, 38 of 38); scry-honest and scry-redeal pass; the fixture's training pack is
 byte-identical to before (x, cand, marks, q, value rows); the suite unchanged (g12r-C 4 of 5 at 256); 5 us an observe. One local
 self-play game. Scry 1 (the live, leaky belief's Tracker) is not routed through it: it goes when the general dealer replaces it.
+
+## 17 Nov 12:10Z — stage 3 step 3, first part: the general encoding (Phase A)
+dandan-general.js: every net input and move mark generated from the card files and the rules, no card named (census 0 for it,
+dandan-view.js and lab/zero/general.mjs). A card is known by its pool slot (learned identity) and its printed facts read off the
+card files (type, mana value, generic and coloured pips, land types and the mana they make, power/toughness, enters tapped,
+cycling, typecycling, flashback, aftermath, modes, fetch); on the table also its current land types (Mind Bend), text changes,
+damage, a pump, arrival this turn. 26 names, 56 facts; the view 1,259 numbers (ten zones by name and facts, the stack's top four,
+the rules' facts), 239 marks (kind, card and facts, cast from, mode, targets with their card and facts, a question's cards,
+counts, choices). Built from observe() (tests/observe.mjs covers it), 29 us a view. tests/general.mjs.
+replay-pack2 ENC=general packs it (16-bit floats, KEEP/VKEEP shares; pack-merge, policy_np and value_np read them memory-mapped);
+lab/zero/general.mjs plays it (makeGeneral: the one policy for moves and answers, Scry 1.2 dealing, the value net over
+valueView); suite.mjs reads "gen:<name>". Checked end to end on the fixture with throw-away nets. general-train.yml trains the
+first general nets fresh on the stored games (Fable). The live game and Zero 2's path are unchanged (Zero 2's pack byte-identical).

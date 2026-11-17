@@ -46,7 +46,9 @@ meta = json.load(open(os.path.join(A.dir, "meta.json")))
 XN, D = meta["XN"], meta["decisions"]
 MOVE_N = meta.get("markN", MOVE_N)
 rd = lambda n, t: np.fromfile(os.path.join(A.dir, n), dtype=t)
-X = rd("x.f32", np.float32).reshape(D, XN)
+# the general encoding (17 Nov 2026) stores x as 16-bit floats, read in place (a memory map) and widened a batch at a time
+X16 = os.path.exists(os.path.join(A.dir, "x.f16"))
+X = np.memmap(os.path.join(A.dir, "x.f16"), dtype=np.float16, mode="r", shape=(D, XN)) if X16 else rd("x.f32", np.float32).reshape(D, XN)
 cand = rd("cand.i32", np.int32).astype(np.int64)
 pick, med, flags = rd("pick.i16", np.int16).astype(np.int64), rd("med.i16", np.int16).astype(np.int64), rd("flags.u8", np.uint8)
 Q, mark, MARKS = rd("q.f32", np.float32), rd("mark.i32", np.int32).astype(np.int64), rd("marks.u8", np.uint8).astype(np.int64)
@@ -92,7 +94,7 @@ V = {k: np.zeros_like(v) for k, v in P.items()}
 
 
 def forward(g):
-    x = X[g["idx"]]
+    x = np.asarray(X[g["idx"]], dtype=np.float32)
     if A.form == "mlp":
         base = x @ P["wx"] + P["b1"]
         pre1 = base[g["dec"]] + np.add.reduceat(P["wm"][g["rows"]], g["mstart"], axis=0)

@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 import { shownRules } from "../dandan-rules.js";
 import { newRecord, applyMove } from "../seats.js";
 import { DECK } from "../dandan-core.js";
-import { zeroBrain } from "./zero/zero-lib.mjs";
+import { zeroBrain, generalBrain } from "./zero/zero-lib.mjs";
 import { isNull } from "./null-move.mjs";
 import { seeded } from "../seats.js";
 
@@ -26,7 +26,8 @@ const out = [];
 for (const p of suite.positions) {
   const rec = JSON.parse(execSync(`git show FETCH_HEAD:games/${p.game}.json`, { encoding: "utf8", maxBuffer: 1 << 28 })), g = rec.game, moves = JSON.parse(g.moves);
   let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
-  const brain = zeroBrain(`${nets}-policy`, `${nets}-value`);
+  // "gen:<name>": the general Monte (lab/zero/general.mjs), its nets <name>-gpolicy, -gvalue, -scry12
+  const brain = nets.startsWith("gen:") ? await generalBrain(nets.slice(4)) : zeroBrain(`${nets}-policy`, `${nets}-value`);
   for (let i = 0; i < p.move; i++) { const st = G.state, [who, m] = moves[i]; const r = applyMove(shownRules, G, who, m, g.started); if (r.error) throw new Error(`${p.id}: move ${i}: ${r.error}`); brain.seen(st, who, m, r.G.state); G = r.G; }
   const s = shownRules.restore(JSON.parse(JSON.stringify(G.state))), who = moves[p.move][0];
   const r = brain.think(s, who, Number(deals), extraOf(flags)), pick = r.best;

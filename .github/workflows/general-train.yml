@@ -1,0 +1,75 @@
+# The general Monte's nets (17 Nov 2026, stage 3 step 3 of the plan to a general engine): Zero's stored games replayed with
+# Scry 1.2 and packed in the general encoding (lab/zero/replay-pack2.mjs ENC=general: every input and mark from the card files,
+# dandan-general.js), 16-bit floats, a share of the decisions (keep) and of the value rows (vkeep) kept; the policy for moves and
+# answers (policy_np.py --form head) and the value net face up with its deck-out output (value_np.py --aux). Committed as
+# lab/zero/nets/<name>-gpolicy.json, -gvalue.json, with the Scry as <name>-scry12.json. Fresh nets (Fable: no honest carry-over),
+# trained first on the stored games.
+name: General Monte (train)
+on:
+  workflow_dispatch:
+    inputs:
+      games: { description: "Zero game jobs to learn from, comma-separated", required: true }
+      name: { description: "Name of the nets", required: true }
+      scry: { description: "Scry 1.2 to pack with (lab/zero/nets/<scry>-scry12.json)", required: true }
+      value: { description: "Value net shape", required: true, default: "128x64" }
+      keep: { description: "Share of the decisions packed", required: false, default: "0.35" }
+      vkeep: { description: "Share of the value rows packed", required: false, default: "0.25" }
+      value_args: { description: "More value_np.py arguments", required: false, default: "--lr 3e-4 --wd 0.1 --aux 0.1 --epochs 8" }
+      policy_args: { description: "More policy_np.py arguments", required: false, default: "--h1 128 --h2 64 --epochs 8 --decay 0.9 --soft 0.02" }
+      vblend: { description: "Share of the search's value in the value targets", required: false, default: "0.5" }
+      hands: { description: "Scry 1.2's dealt hands a decision in the pack (1,024 in play; 256 packs four times as fast)", required: false, default: "256" }
+permissions:
+  contents: write
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy: { matrix: { part: [0, 1, 2, 3] } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Pack
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          S="lab/zero/nets/${{ inputs.scry }}-scry12.json"; D="$RUNNER_TEMP/r"; P=${{ matrix.part }}
+          for k in 0 1 2 3; do ENC=general KEEP="${{ inputs.keep }}" VKEEP="${{ inputs.vkeep }}" VBLEND="${{ inputs.vblend }}" HANDS="${{ inputs.hands }}" LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D/$k" "${{ inputs.games }}" "$S" $((P * 4 + k)) 16 > "$RUNNER_TEMP/t$k.txt" & done; wait
+          rm -f "$RUNNER_TEMP/key.json"
+          tail -n 1 "$RUNNER_TEMP"/t?.txt | tee -a "$GITHUB_STEP_SUMMARY"
+          cp "$RUNNER_TEMP"/t?.txt "$D/"
+      - uses: actions/upload-artifact@v4
+        with: { name: "pack-${{ matrix.part }}", path: "${{ runner.temp }}/r", retention-days: 2, compression-level: 1 }
+  train:
+    needs: pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/download-artifact@v4
+        with: { path: "${{ runner.temp }}/in" }
+      - name: Train
+        run: |
+          pip install -q numpy
+          N="${{ inputs.name }}"; S="lab/zero/nets/${{ inputs.scry }}-scry12.json"; D="$RUNNER_TEMP/r"; I="$RUNNER_TEMP/in"
+          # (Fable 20:45Z) no training on a pack that guessed: every decision matched, every pick among the options, every game the same
+          bad=$(cat "$I"/pack-*/t?.txt | grep -oE '\(([0-9]+) not the same|([0-9]+) unmatched|([0-9]+) picks not among' | grep -oE '[0-9]+' | paste -sd+ | bc)
+          if [ "${bad:-1}" != 0 ]; then echo "::error::the pack has $bad games not the same, unmatched decisions or picks not among the options: not trained"; exit 1; fi
+          python3 lab/zero/pack-merge.py "$D" $(ls -d "$I"/pack-*/[0-9] | sort) | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -rf "$I"
+          python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$N-gvalue.json" --shape "${{ inputs.value }}" ${{ inputs.value_args }} | tee -a "$RUNNER_TEMP/log.txt"
+          python3 lab/policy_np.py "$D/a" "lab/zero/nets/$N-gpolicy.json" --form head ${{ inputs.policy_args }} | tee -a "$RUNNER_TEMP/log.txt"
+          [ "$S" = "lab/zero/nets/$N-scry12.json" ] || cp "$S" "lab/zero/nets/$N-scry12.json"
+          { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the nets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lab/zero/nets/
+          git commit -q -m "General Monte nets trained on GitHub: ${{ inputs.name }}" || exit 0
+          for i in 1 2 3 4 5 6 7 8; do if git pull -q --rebase origin main && git push -q origin HEAD:main; then exit 0; fi; git rebase --abort 2>/dev/null || true; sleep $((5 + RANDOM % 20)); done
+          echo "::error::the nets could not be pushed"; exit 1
