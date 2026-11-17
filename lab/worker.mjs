@@ -113,11 +113,14 @@ async function fillerSpec() {
 async function refill() {
   const F = await fillerSpec(), batch = n => `${F.prefix}${String(n).padStart(3, "0")}`, re = new RegExp(`^${F.prefix}\\d+$`);
   const ids = (await store.list("jobs/")).map(o => path.basename(o.name, ".json"));
-  const last = Math.max(0, ...ids.filter(i => re.test(i)).map(i => Number(i.slice(F.prefix.length))));
+  // retired batches count too (17 Nov 2026, 19:10Z): with only jobs/ listed, retiring the newest batch made the next refill
+  // make a batch of the same name again (zps005 and zps006 came back after each retirement, on the same seeds)
+  const gone = (await store.list("retired/")).map(o => path.basename(o.name, ".json"));
+  const last = Math.max(0, ...[...ids, ...gone].filter(i => re.test(i)).map(i => Number(i.slice(F.prefix.length))));
   // the last batch's own size, not the spec's now (16:40Z, the fleet director: after shards went 24 → 240, 24-shard batches
   // never looked fully taken, so the chain stalled)
   const lastShards = last ? (await specOf({ name: `jobs/${batch(last)}.json`, generation: "open" }).catch(() => null))?.shards || F.shards : F.shards;
-  if (last && (await doneCount(batch(last))) < lastShards && (await store.list(`claims/${batch(last)}/`)).length < lastShards) {
+  if (last && ids.includes(batch(last)) && (await doneCount(batch(last))) < lastShards && (await store.list(`claims/${batch(last)}/`)).length < lastShards) {
     // the last batch still has free shards, yet the open list (which sent us here) didn't name it: an update was lost
     await editOpen(store, jobs => (jobs[batch(last)] ? false : ((jobs[batch(last)] = 1), true)), { by: NAME }).catch(e => log("open list:", e.message));
     return false;

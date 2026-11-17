@@ -31,15 +31,19 @@ if (!L.on) { say("the loop is off (lab/zero/loop.json: on false)"); process.exit
 const store = await labStore(), F = JSON.parse(fs.readFileSync(FILLER, "utf8"));
 const batch = n => `${F.prefix}${String(n).padStart(3, "0")}`, perShard = F.games / F.shards;
 /** Games finished in the filler's batches from number `from` on, by batch (a batch with no part yet ends the list). */
-async function games(from) {
+// since (17 Nov 2026, 19:10Z): only parts written after that time, for a batch that held games of older nets too (zps006: its name
+// was made again after it was retired, so its results hold gm1's parts and gm2's)
+async function games(from, since = 0) {
   const out = [];
   for (let n = from; ; n++) {
-    const parts = (await store.list(`results/${batch(n)}/`)).filter(x => /\/part-\d+\.jsonl$/.test(x)).length;
-    if (!parts) break;
+    const all = (await store.listAll(`results/${batch(n)}/`)).filter(x => /\/part-\d+\.jsonl$/.test(x.name));
+    if (!all.length) break;
+    const parts = all.filter(x => !since || x.t >= since).length;
+    if (!parts) continue;
     // games a shard from the batch's own spec (17 Nov: 2 a shard from 2,400-game batches on, 4 before), else the filler's now
     let per = perShard;
-    try { const spec = JSON.parse((await store.get(`jobs/${batch(n)}.json`)) || "null"); const g = Number(spec?.args?.split(" ")[4]); if (spec?.shards && g) per = g / spec.shards; } catch {}
-    out.push({ id: batch(n), n, games: parts * per });
+    try { const spec = JSON.parse((await store.get(`jobs/${batch(n)}.json`)) || (await store.get(`retired/${batch(n)}.json`)) || "null"); const g = Number(spec?.args?.split(" ")[4]); if (spec?.shards && g) per = g / spec.shards; } catch {}
+    out.push({ id: batch(n), n, games: parts * per, since });
   }
   return out;
 }
@@ -47,7 +51,8 @@ async function games(from) {
  *  of this generation's batches whose line says vs. Every one of them trains as any other. */
 async function vsScore(from) {
   let n = 0, won = 0;
-  for (const b of await games(from)) for (const name of (await store.list(`results/${b.id}/`)).filter(x => /\/part-\d+\.jsonl$/.test(x))) {
+  const since = L.genSince ? Date.parse(L.genSince) : 0;
+  for (const b of await games(from, since)) for (const name of (await store.listAll(`results/${b.id}/`)).filter(x => /\/part-\d+\.jsonl$/.test(x.name) && (!since || x.t >= since)).map(x => x.name)) {
     const t = (await store.get(name)) || "";
     for (const l of t.split("\n")) {
       if (!l.includes('"vs":')) continue;
@@ -72,7 +77,7 @@ function queueYard(id) {
 }
 
 if (L.phase === "play") {
-  const got = await games(L.genFrom), total = got.reduce((a, b) => a + b.games, 0);
+  const got = await games(L.genFrom, L.genSince ? Date.parse(L.genSince) : 0), total = got.reduce((a, b) => a + b.games, 0);
   say(`generation ${L.gen}: ${total} of ${L.games} games in (${got.map(b => `${b.id} ${b.games}`).join(", ") || "none yet"})`);
   // the Fleet page's Loop view reads this: games in now, and the pace (the last 24 readings, one a step)
   const pace = (L.progress?.gen === L.gen ? L.progress.pace || [] : []).concat([[now, total]]).slice(-24);
@@ -122,7 +127,7 @@ if (L.phase === "play") {
     L.history = [...(L.history || []), { gen: L.gen, nets: L.champion, from: prev, window: L.trained.from, at: now, ...(L.reading ? { reading: L.reading } : {}), ...(suite ? { suite: `${suite.passed}/${suite.of}`, failed: suite.positions.filter(x => !x.pass).map(x => x.id) } : {}) }];
     L.windowFrom = L.genFrom;   // the window: the generation just played and the next
     L.genFrom = open.length ? open[open.length - 1].n + 1 : L.nextFrom;
-    L.gen++; L.phase = "play"; delete L.challenger;
+    L.gen++; L.phase = "play"; delete L.challenger; delete L.genSince;
   } else if (Date.now() - Date.parse(L.trained.at) > 12 * 3600e3) log(`generation ${L.gen}: no nets for ${L.challenger} 12 hours after training began: look at zero-train-ext.yml's runs`);
   else say(`generation ${L.gen}: ${L.challenger} still training (since ${L.trained.at})`);
 }
