@@ -1216,3 +1216,14 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   reads and lists old batches (az-g11-c, zps003: 1,200 parts each on Google, all 3,600 objects already on B2 from the first
   copy) the same: PASSED. The fallback merged to main (a46fb575; inert until private/store.json exists). The switch goes with
   gm2's crowning (the next generation boundary): config, catchup-live, verify-live.
+- 16:26Z gm2 crowned (generation 14; Korbi 17:27, full general): gm1's policy and value grown to view 2 (2,602 inputs, zero
+  weights on the new ones) with the general dealer sg1 (Scry G, 1.01M positions, held-out 2.584 nats a card chained, 2.620 each,
+  epoch 3; calibrated to 0.025 at the bottom, a little over-sure above 0.4). The loop's belief is scryg from here: each
+  generation trains its dealer too. The filler plays gen:gm2, 1 game in 10 against gen:gm1. Suite 3/5. belief-eval run
+  44125644415 scores sg1 beside Scry 1.2 (g12h2) on the hidden hand's cards of az-g12-c and c2's held-out games.
+- 16:30Z Korbi 17:52 ("do all 3": the speed list). On one core, 300,000 policy calls of a gm1 game: 47.6 s before; 31.5 s with
+  the first layer carried between calls (the inputs that changed added in, as chess engines' NNUE does: 99.8% of calls carried);
+  21.4 s with the nets compiled to WebAssembly with SIMD (lab/kernel/kernel.c, dandan-kernel.js) and the view's name lookups
+  compiled: 2.2x. Where the time goes now: the view and the rules (JavaScript) and garbage collection; the nets are ~10%.
+  search-shape.yml (run 44125648892): the loop's search against cut=0/2/4/8 (the play-out stopped k moves past the tree, the
+  value net there), mass=0.8, most=3, deals=64/128, nodeeper, on gm2, and when the answer settles by deals.

@@ -102,7 +102,7 @@ if (L.phase === "play") {
     // 1 game in vsEvery against the nets just replaced (Korbi 17 Nov): the next generation's reading, its games training as any
     if (L.vsEvery) F.args = `${F.args.replace(/ vs=\S+/, "")} vs=${L.prevLine === "old" ? prev : ref(prev)}:${L.vsEvery}`;
     L.previous = prev; delete L.prevLine;
-    F.purpose = `Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets ${L.champion} against themselves; games for the next generation. ${F.purpose.replace(/^Filler[^.]*\.\s*/, "")}`.slice(0, 1500);
+    F.purpose = `Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets ${L.champion} against themselves; games for the next generation. ${F.purpose.replace(/^Filler:.*?games for the next generation\.\s*/, "").replace(/^mjs\) plays .*?games for the next generation\.\s*/, "").replace(/^\d*\), 1 decision in/, "1 decision in")}`.slice(0, 1500);
     if (!dry) fs.writeFileSync(FILLER, JSON.stringify(F, null, 2) + "\n");
     // the rule (Fable, 16 Nov): when anything goes live, close the open filler batch: it was made with the old nets
     const open = await games(L.nextFrom), ids = open.map(b => b.id);
