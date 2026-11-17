@@ -1,6 +1,6 @@
 {
   "on": false,
-  "note": "Zero's loop (lab/zero/loop.mjs). Off until the store check passes and the fleet takes jobs again. Lab only: the game's Monte changes on Korbi's word.",
+  "note": "Zero's loop (lab/zero/loop.mjs): no gates (Korbi 17 Nov), the latest nets always play; a yardstick against g9x-C every 4th generation. Off until the store check passes. Lab only: the game's Monte changes on Korbi's word.",
   "gen": 13,
   "prefix": "zl",
   "champion": "g11w-C",
@@ -10,10 +10,13 @@
   "maxWindow": 30000,
   "value": "64x32",
   "trainArgs": "",
-  "gateSeed": 3000000,
   "genFrom": 3,
   "windowFrom": 3,
   "nextFrom": 3,
   "phase": "play",
-  "log": []
+  "log": [],
+  "yard": "g9x-C",
+  "yardEvery": 4,
+  "yardPairs": 300,
+  "yardSeed": 3100000
 }

@@ -1054,3 +1054,12 @@ picks a list, then a hand from it. The deck layer above Scry comes after the car
   (now shared with gate-sum.mjs) → CROWN: filler.json plays the new nets, the open batch retired; DROP: the window widens;
   EXTEND: pairs 600-1,199. Champion g11w-C, generation 13 from zps003. Tested end to end on a folder store. Off until the store
   check passes. Lab only: the game's Monte changes on Korbi's word.
+- 09:50Z Korbi 11:46 local: **no gates** in Zero's loop: the latest nets always play, training carries on from them. loop.mjs:
+  train → the new nets go straight to the filler (open batch retired), a yardstick (300 pairs against the fixed g9x-C, the same
+  deals) every 4th generation decides nothing. Korbi: **az-sw12 runs now, on Google** (Fable's call 2): queued.
+- Fable 09:40Z on the question fix: ownQs answered every question past the frontier with the first option listed (3,091 of
+  3,091 on the fixture) and missed Korbi's line. Dropped; az-qf1 never queued. Built instead, behind flags: qtree, qall, exact
+  twins (dandan-think.js). az-qf2 written, held until Korbi's position passes in lab/position-check.mjs (both hand orders).
+- XMage probe 44056696169 (mid-game Modern, 220 cards, 13 permanents, one thread): a game copy 0.52 ms; a random play-out to
+  the end of the turn after next 540 ms (~324 actions, XMage's SimulatedPlayerMCTS, opponent's hand dealt again). Several
+  hundred to a thousand times too slow to carry Monte's search as it is.
