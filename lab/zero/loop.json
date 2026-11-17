@@ -95,5 +95,6 @@
       ]
     ]
   },
-  "belief": "scryg"
+  "belief": "scryg",
+  "beliefArgs": "args=--epochs_2_--d_32_--a_32_--h_128_--bs_128"
 }

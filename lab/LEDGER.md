@@ -1243,3 +1243,7 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   0.52x; nodeeper 82% 0.22 0.61x. Clear calls (>10 pts): deals=64 loses 0.03 pts. The play-outs carry real value (cut=0 is the
   worst); breadth costs little time. Second run (seed=1/2: the reference against itself, the noise floor; early=<at>:<gap>
   stops) dispatched.
+- 17:40Z Korbi 19:32 (speed up every part): general-train.yml packs on 12 runners × 4 (was 4; the pack took 27 min) and trains
+  the value net and the policy side by side (one after the other took 40 min). The dealer warm-starts each generation with 2
+  epochs, not 4 (sg1's 4th epoch was already past its best on held-out: 2.5871 vs 2.5838 chained). Training stays on GitHub:
+  free, 20 runners in parallel; the next step for training, if it ever limits a generation, is a GPU, not more CPU.

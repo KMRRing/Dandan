@@ -27,7 +27,8 @@ jobs:
   pack:
     runs-on: ubuntu-latest
     timeout-minutes: 360
-    strategy: { matrix: { part: [0, 1, 2, 3] } }
+    # 12 runners × 4 processes (17 Nov 2026, Korbi 19:32: speed every part up): the pack took 27 minutes on 4 runners
+    strategy: { matrix: { part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,16 +40,18 @@ jobs:
         run: |
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
           S="lab/zero/nets/${{ inputs.scry }}-${{ inputs.belief }}.json"; D="$RUNNER_TEMP/r"; P=${{ matrix.part }}
-          for k in 0 1 2 3; do ENC=general KEEP="${{ inputs.keep }}" VKEEP="${{ inputs.vkeep }}" VBLEND="${{ inputs.vblend }}" HANDS="${{ inputs.hands }}" LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D/$k" "${{ inputs.games }}" "$S" $((P * 4 + k)) 16 > "$RUNNER_TEMP/t$k.txt" & done; wait
+          for k in 0 1 2 3; do ENC=general KEEP="${{ inputs.keep }}" VKEEP="${{ inputs.vkeep }}" VBLEND="${{ inputs.vblend }}" HANDS="${{ inputs.hands }}" LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D/$k" "${{ inputs.games }}" "$S" $((P * 4 + k)) 48 > "$RUNNER_TEMP/t$k.txt" & done; wait
           rm -f "$RUNNER_TEMP/key.json"
           tail -n 1 "$RUNNER_TEMP"/t?.txt | tee -a "$GITHUB_STEP_SUMMARY"
           cp "$RUNNER_TEMP"/t?.txt "$D/"
       - uses: actions/upload-artifact@v4
         with: { name: "pack-${{ matrix.part }}", path: "${{ runner.temp }}/r", retention-days: 2, compression-level: 1 }
+  # the value net and the policy trained side by side (17 Nov 2026, Korbi 19:32): one after the other took 40 minutes on one runner
   train:
     needs: pack
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    strategy: { matrix: { net: [gvalue, gpolicy] } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -58,20 +61,35 @@ jobs:
       - name: Train
         run: |
           pip install -q numpy
-          N="${{ inputs.name }}"; B="${{ inputs.belief }}"; S="lab/zero/nets/${{ inputs.scry }}-$B.json"; D="$RUNNER_TEMP/r"; I="$RUNNER_TEMP/in"
+          N="${{ inputs.name }}"; D="$RUNNER_TEMP/r"; I="$RUNNER_TEMP/in"; mkdir -p out
           # (Fable 20:45Z) no training on a pack that guessed: every decision matched, every pick among the options, every game the same
           bad=$(cat "$I"/pack-*/t?.txt | grep -oE '\(([0-9]+) not the same|([0-9]+) unmatched|([0-9]+) picks not among' | grep -oE '[0-9]+' | paste -sd+ | bc)
           if [ "${bad:-1}" != 0 ]; then echo "::error::the pack has $bad games not the same, unmatched decisions or picks not among the options: not trained"; exit 1; fi
           python3 lab/zero/pack-merge.py "$D" $(ls -d "$I"/pack-*/[0-9] | sort) | tee -a "$GITHUB_STEP_SUMMARY"
           rm -rf "$I"
           W="${{ inputs.init }}"; ini() { [ -z "$W" ] || echo "--init lab/zero/nets/$W-$1.json"; }
-          python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$N-gvalue.json" --shape "${{ inputs.value }}" $(ini gvalue) ${{ inputs.value_args }} | tee -a "$RUNNER_TEMP/log.txt"
-          python3 lab/policy_np.py "$D/a" "lab/zero/nets/$N-gpolicy.json" --form head $(ini gpolicy) ${{ inputs.policy_args }} | tee -a "$RUNNER_TEMP/log.txt"
-          # Scry 1.2 goes with the nets; the general dealer (scryg) is trained by scryg-train.yml beside this run (Zero's loop waits for both)
-          [ "$B" = scryg ] || [ "$S" = "lab/zero/nets/$N-$B.json" ] || cp "$S" "lab/zero/nets/$N-$B.json"
+          if [ "${{ matrix.net }}" = gvalue ]; then
+            python3 lab/zero/value_np.py "$D/v" "out/$N-gvalue.json" --shape "${{ inputs.value }}" $(ini gvalue) ${{ inputs.value_args }} | tee "$RUNNER_TEMP/log.txt"
+          else
+            python3 lab/policy_np.py "$D/a" "out/$N-gpolicy.json" --form head $(ini gpolicy) ${{ inputs.policy_args }} | tee "$RUNNER_TEMP/log.txt"
+          fi
+          cp out/* "$RUNNER_TEMP/" 2>/dev/null || true
           { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with: { name: "net-${{ matrix.net }}", path: out/, retention-days: 2 }
+  keep:
+    needs: train
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: nets-in, pattern: "net-*", merge-multiple: true }
       - name: Keep the nets
         run: |
+          N="${{ inputs.name }}"; B="${{ inputs.belief }}"; S="lab/zero/nets/${{ inputs.scry }}-$B.json"
+          cp nets-in/*.json lab/zero/nets/
+          # Scry 1.2 goes with the nets; the general dealer (scryg) is trained by scryg-train.yml beside this run (Zero's loop waits for both)
+          [ "$B" = scryg ] || [ "$S" = "lab/zero/nets/$N-$B.json" ] || cp "$S" "lab/zero/nets/$N-$B.json"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add lab/zero/nets/
