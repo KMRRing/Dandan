@@ -8,7 +8,8 @@
 //   deals=<n>  n deals at most (the loop's 256)
 //   nodeeper   no second look on close calls
 //   seed=<n>   the reference itself on other deals (its salt): how often two runs of the same search agree, the noise floor
-//   early=<at>:<gap>  stop at `at` deals when the leader is `gap` (win chance) ahead of the next move
+//   early=<at>:<gap>[:<most>]  stop at `at` deals when the leader is `gap` (win chance) ahead of the next move (with fewer
+//              than `most` options only, when given)
 // Variants combine with "+": cut=4+deals=128. For each decision: the reference's pick and its means for every move, each variant's
 // pick and time, and the reference's trace (the move leading at every power of two of deals: when the answer settles).
 // usage: node lab/zero/search-shape.mjs <jobs, comma-separated | file:<zero-play output>> <shard> <shards> <nets> <every> <variant>... > part.jsonl
@@ -86,7 +87,7 @@ const parse = (spec, base = LOOP) => {
     else if (k === "loop") {}
     else if (k === "nodeeper") o.deeper = null;
     else if (k === "seed") o.extra.salt = Number(v);   // the reference again on other deals: the noise floor
-    else if (k === "early") { const [at, gap] = v.split(":").map(Number); o.extra.early = { at, gap }; }
+    else if (k === "early") { const [at, gap, most] = v.split(":").map(Number); o.extra.early = { at, gap, ...(most ? { most } : {}) }; }
     else throw new Error(`unknown variant part ${part}`);
   }
   return o;

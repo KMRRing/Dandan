@@ -539,8 +539,8 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     // trace (lab): at every power of two, the move leading on its mean over the deals so far and how many are still in the race
     if (trace && (d & (d - 1)) === 0) { let b = alive[0]; for (const i of alive) if (vals[i].reduce((a, x) => a + x, 0) / vals[i].length > vals[b].reduce((a, x) => a + x, 0) / vals[b].length) b = i; trace.push({ d, lead: key(cands[b]), alive: alive.length, ms: Date.now() - t0 }); }
     // early (lab, 17 Nov 2026: the search-shape table): at `at` deals, stop when the leader is `gap` or more ahead of the next move
-    // still in the race on their means (off by default)
-    if (early && d === early.at && alive.length > 1) {
+    // still in the race on their means, only with fewer than `most` options when given (off by default)
+    if (early && d === early.at && alive.length > 1 && (!early.most || n < early.most)) {
       const m = alive.map(i => vals[i].reduce((a, x) => a + x, 0) / vals[i].length).sort((a, b) => b - a);
       if (m[0] - m[1] >= early.gap) break;
     }
