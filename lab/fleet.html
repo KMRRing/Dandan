@@ -170,6 +170,7 @@ details summary{cursor:pointer;font-size:12.5px;color:var(--mute)}
 .ring .tile em{font-style:normal;font-size:12.5px;color:var(--mute)}
 .ring .tile .rows{display:grid;grid-template-columns:auto 1fr;gap:1px 10px;font-size:12.5px;margin-top:2px}.ring .tile .rows dt{color:var(--mute)}.ring .tile .rows dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums}
 .ring .tile .bar{margin-top:4px}
+.ring .tile p.d{margin:6px 0 0;padding-top:6px;border-top:1px solid var(--line);font-size:12.5px;line-height:1.45;color:var(--ink);opacity:.85}
 .ring .arr{display:flex;align-items:center;justify-content:center;color:var(--mute);font:600 16px var(--mono)}
 @media (max-width:760px){.ring{display:flex;flex-direction:column;gap:6px}.ring .arr{display:none}.ring .tile{order:var(--o)}}
 .now{display:grid;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -2594,14 +2595,25 @@ async function renderNow() {
   const T = S?.total || {}, batch = Object.keys(O?.jobs || {}).filter(id => id.startsWith(F?.prefix || "zps")).sort().at(-1);
   const rule = (F?.args || "").match(/\{out\} (\d+) (\d+)/), deals = rule?.[1], deep = (F?.args || "").match(/deepmax=(\d+)/)?.[1];
   const loopRun = latest("Zero loop"), storeRun = latest("Store move (Google to B2)");
-  const tile = (o, cls, label, v, em, extra = "") => `<div class="tile ${cls}" style="--o:${o}"><b>${cls === "live" ? '<span class="dot live"></span>' : ""}${label}</b><span class="v">${v}</span>${em ? `<em>${em}</em>` : ""}${extra}</div>`;
+  // what each step does, in plain words (Korbi 21:19: "add some more description on what each of those actually do")
+  const DO = {
+    1: "Every free core on the fleet plays Dandân against itself with the latest nets. At each decision the search deals the cards it can't see many different ways (the deals), plays every sensible move a few turns forward in each deal, and lets the value net judge where each one ends up; the move with the best average is played. The game, and the search's numbers at every decision, are saved.",
+    2: "Counts this generation's finished games. When it reaches the target, the games are complete and training starts. One game in ten is played against the previous nets instead; those games are the strength reading.",
+    3: "Replays every game move by move and turns it into training rows: at each decision, what that player could see, the options it had, how the search valued each one, and what the dealer believed about the hidden cards then. Runs on 12 GitHub machines in parallel.",
+    4: "Three nets learn from the rows, each starting from the one playing now (a warm start): the policy learns which move the search would choose; the value net learns who wins from a position; the dealer learns which cards the opponent is likely holding, from what they have done so far.",
+    5: "The new nets replace the old ones at once. There is no test match to pass (no gate): the latest nets always play. The batch of games still open is closed, so no more games are played with the old nets.",
+    6: "Checks the line is going up: the test suite (positions with a known right move, 5 so far), and the new nets' score against the previous ones in the 1-in-10 games (50% means no change).",
+    7: "A new batch of games is made for the new nets, and the fleet picks it up shard by shard (a shard is 2 games) as cores free up. When a batch runs out the next is made automatically.",
+    8: "The loop's coordinator. Every 10 minutes the fleet's chosen machine (the one with the most cores, up longest) runs one step: count the games, start training when they're in, crown the new nets when they land. Training also starts a step the moment it finishes. Store: where games and nets are kept.",
+  };
+  const tile = (o, cls, label, v, em, extra = "") => `<div class="tile ${cls}" style="--o:${o}"><b>${cls === "live" ? '<span class="dot live"></span>' : ""}${label}</b><span class="v">${v}</span>${em ? `<em>${em}</em>` : ""}${extra}${DO[o] ? `<p class="d">${DO[o]}</p>` : ""}</div>`;
   const rows = r => `<dl class="rows">${r.filter(x => x[1] != null).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
   const t1 = tile(1, T.busy ? "live" : "", "1 · Self-play", T.slots ? `${(T.busy || 0).toLocaleString()} / ${T.slots.toLocaleString()} cores` : "—", `${T.machines ?? "—"} machines · ${T.fin10 ?? "—"} shards in the last 10 min`,
     rows([["nets", L.champion], ["batch", batch || "—"], ["search", deals ? `up to ${Number(deals).toLocaleString()} deals${deep ? `, close calls ${deep} turns ahead` : ""}` : "—"], ["vs previous", L.vsEvery ? `1 game in ${L.vsEvery}` : null]]));
   const t2 = tile(2, training ? "done" : "live", "2 · Games", `${games.toLocaleString()} / ${(of || 0).toLocaleString()}`, training ? "in: the generation trains" : rate ? `${Math.round(rate).toLocaleString()} an hour · training in ${eta < 1 ? Math.round(eta * 60) + " min" : eta.toFixed(1) + " h"}` : `read ${ago(P.at)}`, bar(pct));
-  const t3 = tile(3, training ? (pk.s === "done" ? "done" : pk.s === "live" ? "live" : "") : "", "3 · Pack", training ? pk.t : "next", "the games replayed into training rows, the beliefs read as the players had them",
+  const t3 = tile(3, training ? (pk.s === "done" ? "done" : pk.s === "live" ? "live" : "") : "", "3 · Pack", training ? pk.t : "next", training ? "replaying the games" : "starts when the games are in",
     training && pk.p != null ? bar(pk.p) : "");
-  const t4 = tile(4, training ? (trainSt.s === "done" ? "done" : trainSt.s === "live" || pk.s === "done" ? "live" : "") : "", "4 · Train", training ? (trainSt.s === "wait" && pk.s !== "done" ? "after the pack" : trainSt.t) : "next", "each net warm from the latest",
+  const t4 = tile(4, training ? (trainSt.s === "done" ? "done" : trainSt.s === "live" || pk.s === "done" ? "live" : "") : "", "4 · Train", training ? (trainSt.s === "wait" && pk.s !== "done" ? "after the pack" : trainSt.t) : "next", training ? "value, policy and dealer side by side" : "after the pack",
     rows([["value", training ? jobState(tv) : "—"], ["policy", training ? jobState(tp) : "—"], ["dealer", training ? jobState(sTrain[0]) : "—"]]));
   const t5 = tile(5, training ? (keep?.conclusion === "success" ? "done" : "") : "done", "5 · Crown", training ? `${esc(L.challenger || "—")} next` : esc(L.champion),
     training ? "goes live the moment its nets land" : `live since ${clock(H.at)} (${ago(H.at)}) · the filler's next batch plays it`);
@@ -2610,9 +2622,9 @@ async function renderNow() {
   const nb = Object.keys(O?.jobs || {}).length;
   const t7 = tile(7, "", "7 · Back to the fleet", training ? "after the crown" : esc(batch || "—"), training ? "the open batch is closed; the filler's next one plays the new nets" : `the filler's batch with ${esc(L.champion)}; a new one is made as each runs out`,
     rows([["open jobs", String(nb)], ["games a batch", F?.games ? F.games.toLocaleString() : null]]));
-  const t8 = tile(8, "", "8 · Steps", loopRun ? ago(loopRun.created_at) : "—", "the loop's step every 10 minutes from the fleet, and at once when training lands",
+  const t8 = tile(8, "", "8 · Steps", loopRun ? ago(loopRun.created_at) : "—", "the last step",
     rows([["last", loopRun ? `${clock(loopRun.created_at)} · ${loopRun.conclusion || loopRun.status}` : null], ["store", storeRun && storeRun.status !== "completed" ? "Google (moving to B2)" : "Google"]]));
-  const hub = `<div class="tile hub" style="--o:0"><b>Generation</b><span class="v">${L.gen} · ${esc(training ? "training" : "playing")}</span><em>${esc(L.champion)} playing${training ? `, ${esc(L.challenger)} training` : ""}</em>${bar(training ? 50 + (pk.s === "done" ? 25 : 0) + (trainSt.s === "done" ? 25 : 0) : pct / 2)}<em>${training ? "games in, training" : `${pct.toFixed(0)}% of the games`} · ${hist.length} generations so far</em></div>`;
+  const hub = `<div class="tile hub" style="--o:0"><b>Generation</b><span class="v">${L.gen} · ${esc(training ? "training" : "playing")}</span><em>${esc(L.champion)} playing${training ? `, ${esc(L.challenger)} training` : ""}</em>${bar(training ? 50 + (pk.s === "done" ? 25 : 0) + (trainSt.s === "done" ? 25 : 0) : pct / 2)}<em>${training ? "games in, training" : `${pct.toFixed(0)}% of the games`} · ${hist.length} generations so far</em><p class="d">One trip round the ring is one generation: the nets play, learn from their own games, and the improved nets play again. Generations are numbered on from the old engine\'s line (12); the general loop began with 13.</p></div>`;
   const A = c => `<div class="arr">${c}</div>`, E = `<div></div>`;
   // the ring's 5×5 cells, row by row: tiles at the even places, arrows between them clockwise, the generation in the middle
   const ring = `<div class="ring">${t1}${A("→")}${t2}${A("→")}${t3}`
