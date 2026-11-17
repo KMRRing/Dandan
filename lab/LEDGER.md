@@ -1248,3 +1248,10 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   epochs, not 4 (sg1's 4th epoch was already past its best on held-out: 2.5871 vs 2.5838 chained). Training stays on GitHub:
   free, 20 runners in parallel; the next step for training, if it ever limits a generation, is a GPU, not more CPU.
 - 17:40Z ops (Korbi 17:36Z: "time to step it up, once they match our bid, take it off again"): step 1 of regrowth, all bids unchanged at the ladder floor. 4c: HK 230a6786, US East 34896194, London 4a0dd4b5 → 4; VMs Sydney 09546bc6 + e086d81d, US East 335fb7c2, London c82eac0a → 3. 2c: 8b47d1d2 ORD, 5660d0e1 DFW, 1bcf9431 USE, 5e41d538 LON, 601cbd03 HK, 7e7b615a USE gp, 1bd3b76c DFW gp, f4060db0 HK gp → 3. 8c: 4f6bb2f2 USE, c9645623 DFW, 9a0649fb HK, 3c385656 ORD → 2. 16c: e7f00bce + c3bd10fc USE, c8e65e7b LON, 8da1f90b + 45ec415c HK, VM a2b0e1bf USE → 2. mh mediums left at 1. Rule: a class whose market rises above its pre-step price after a step is stepped back (at our bid we'd lose the machines anyway); next step only where prices held.
+- 17:50Z search-shape 44133607759 (the noise floor): the loop's search against itself on other deals agrees 82% (73% at 6+
+  options), 0.25 pts; early=64:0.05 saves 10% for 0.06 pts. 44134347939 (hard decisions, referee 1,024 deals + deeper to 4
+  turns): the loop 0.32 pts a decision; deeper to 4 turns 0.24 (1.4x); 512 deals 0.21 (2x); both 0.13 (2.8x); 1,024 deals 0.17.
+- 18:05Z Korbi 19:51 ("make the search rule more ambitious", "2400 games"): the filler plays up to 1,024 deals, the close-call
+  look up to 4 turns, stopping at 256 deals when the leader is 3 pts ahead with fewer than 6 options and at 512 when 2 pts
+  ahead (zero-play deepmax=, early=, first=16, steady=2); about 3x a decision (one local game: 16 turns in 4 min). 2,400
+  games a generation, 2 a shard (1,200 shards); the loop counts each batch's games from its own spec.

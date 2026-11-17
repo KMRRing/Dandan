@@ -36,7 +36,10 @@ async function games(from) {
   for (let n = from; ; n++) {
     const parts = (await store.list(`results/${batch(n)}/`)).filter(x => /\/part-\d+\.jsonl$/.test(x)).length;
     if (!parts) break;
-    out.push({ id: batch(n), n, games: parts * perShard });
+    // games a shard from the batch's own spec (17 Nov: 2 a shard from 2,400-game batches on, 4 before), else the filler's now
+    let per = perShard;
+    try { const spec = JSON.parse((await store.get(`jobs/${batch(n)}.json`)) || "null"); const g = Number(spec?.args?.split(" ")[4]); if (spec?.shards && g) per = g / spec.shards; } catch {}
+    out.push({ id: batch(n), n, games: parts * per });
   }
   return out;
 }

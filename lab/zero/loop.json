@@ -6,7 +6,7 @@
   "champion": "gm2",
   "flags": "deeper=0.03",
   "deals": 64,
-  "games": 4800,
+  "games": 2400,
   "maxWindow": 30000,
   "value": "128x64",
   "trainArgs": "keep=0.25 vkeep=0.15 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--decay_0.9_--soft_0.02",

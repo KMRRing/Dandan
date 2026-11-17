@@ -29,7 +29,15 @@ const brainBy = (policy, value) => (policy.startsWith("gen:") ? generalBrain(pol
 const brain = await brainBy(process.argv[8], process.argv[9]), X3 = Number(process.argv[10] || 400);
 // "deeper=<gap>" (15 Nov 2026, Korbi): three turns ahead on close calls, the search's values for those moves the deeper look's
 const FLAGS = process.argv.slice(11), flag = k => FLAGS.find(f => f.startsWith(`${k}=`))?.slice(k.length + 1);
-const DEEPER = flag("deeper") ? { deeper: { gap: Number(flag("deeper")) } } : {};
+// deepmax=<turns> (17 Nov 2026, Korbi 19:51: the search rule, "more ambitious"): the close-call look may go on, a turn at a
+// time while still close, up to that many turns ahead; early=<at>:<gap>[:<most>],… the search stops at `at` deals when the
+// leader is `gap` ahead (with fewer than `most` options); first=, steady= as think's
+const DEEPER = {
+  ...(flag("deeper") ? { deeper: { gap: Number(flag("deeper")), ...(flag("deepmax") ? { max: Number(flag("deepmax")) } : {}) } } : {}),
+  ...(flag("early") ? { early: flag("early").split(",").map(e => { const [at, gap, most] = e.split(":").map(Number); return { at, gap, ...(most ? { most } : {}) }; }) } : {}),
+  ...(flag("first") ? { first: Number(flag("first")) } : {}),
+  ...(flag("steady") ? { steady: Number(flag("steady")) } : {}),
+};
 const VS = flag("vs") || "", cut = VS.lastIndexOf(":"), VS_NETS = cut > 0 ? VS.slice(0, cut) : "", every = cut > 0 ? Number(VS.slice(cut + 1)) || 0 : 0;
 const rival = VS_NETS && every ? await brainBy(VS_NETS.startsWith("gen:") ? VS_NETS : `${VS_NETS}-policy`, `${VS_NETS}-value`) : null;
 const random = !brain.judge;   // generation 0: no value net, no search

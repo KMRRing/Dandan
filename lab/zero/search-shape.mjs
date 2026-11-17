@@ -87,7 +87,9 @@ const parse = (spec, base = LOOP) => {
     else if (k === "loop") {}
     else if (k === "nodeeper") o.deeper = null;
     else if (k === "seed") o.extra.salt = Number(v);   // the reference again on other deals: the noise floor
-    else if (k === "early") { const [at, gap, most] = v.split(":").map(Number); o.extra.early = { at, gap, ...(most ? { most } : {}) }; }
+    else if (k === "early") o.extra.early = v.split(",").map(e => { const [at, gap, most] = e.split(":").map(Number); return { at, gap, ...(most ? { most } : {}) }; });
+    else if (k === "first") o.extra.first = Number(v);
+    else if (k === "steady") o.extra.steady = Number(v);
     else throw new Error(`unknown variant part ${part}`);
   }
   return o;
