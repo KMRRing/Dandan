@@ -1,8 +1,10 @@
 // The particle wall (17 Nov 2026, Korbi 14:31-15:57): "start with the current game state, identify the cards that you don't yet
 // know, and think what could they be", the dealer proposing, the policy judging, the unlikely replaced.
 //
-// A world is a guess at the cards the other player holds that the seat can't see (their names; the library is the rest of the
-// unseen cards, in an order nobody knows, shuffled afresh at every deal). Before every search (ensure):
+// A world is a guess at the cards the other player knows and the seat doesn't: their hidden hand, and the library places only they
+// know (cards they put back on top or on the bottom, or looked at: observe's theirLib), which come from what they held or saw,
+// not from the unseen pool at random (Korbi 16:14). The rest of the library is the rest of the unseen cards, in an order nobody
+// knows, shuffled afresh at every deal. Before every search (ensure):
 //   - the worlds follow what happened since the last search: a card that came out of the hidden hand where the seat can see it
 //     (cast, played, discarded face up) leaves each world's hand (a world without it is impossible and goes); cards drawn unseen
 //     join each world's hand as random cards of the unseen pool (a draw is random); cards that left unseen (put back) leave at
@@ -68,6 +70,8 @@ export class Wall {
   unseen(v) { const vis = this.visible(v), out = []; for (const id of this.all) if (!vis.has(id)) out.push(id); return out; }
   /** How many of the other hand's cards the seat can't see. */
   hiddenCount(v) { return v.hand[other(this.me)].filter(id => id < 0).length; }
+  /** How many cards a world names: the hidden hand and the library places only the other player knows. */
+  heldCount(v) { return this.hiddenCount(v) + (v.theirLib?.length || 0); }
 
   /** After every real move (true states in; only what the seat sees of them is kept). */
   seen(s, who, m, after) {
@@ -96,7 +100,7 @@ export class Wall {
     const opp = other(this.me), u = this.hiddenCount(d.view), pool = [...hand], held = [];
     for (const n of d.shown) { const j = pool.indexOf(n); if (j >= 0) pool.splice(j, 1); held.push(n); }
     while (held.length < u && pool.length) held.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
-    const s = this.fill(d.view, held, rng);
+    const s = this.fill(d.view, held, rng, pool);
     if (!s) return this.beta * Math.log(this.eps);
     let ms;
     try { ms = this.E.options(s, opp); } catch { return 0; }
@@ -109,7 +113,7 @@ export class Wall {
   }
   /** A position the seat saw (v) made whole: the other hand's hidden cards given the names `held` (copies among the unseen), the
    *  rest of the unseen in random order in the hand's other hidden places and the library's. Null if a name has no copy left. */
-  fill(v, held, rng) {
+  fill(v, held, rng, theirs = []) {
     const opp = other(this.me), byName = new Map();
     for (const id of this.unseen(v)) { const n = this.E.nameOf(id); if (!byName.has(n)) byName.set(n, []); byName.get(n).push(id); }
     const s = J(v);
@@ -118,6 +122,13 @@ export class Wall {
       const a = byName.get(held[k++]);
       if (!a?.length) return null;
       s.hand[opp][i] = a.splice(Math.floor(rng() * a.length), 1)[0];
+    }
+    // the library places only they know: the world's other cards there, in random order (which went where, nobody but they know)
+    const mine = [...theirs];
+    for (let i = mine.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [mine[i], mine[j]] = [mine[j], mine[i]]; }
+    for (const i of v.theirLib || []) {
+      const a = mine.length ? byName.get(mine.pop()) : null;
+      if (a?.length) s.lib[i] = a.splice(Math.floor(rng() * a.length), 1)[0];
     }
     const rest = [...byName.values()].flat();
     for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [rest[i], rest[j]] = [rest[j], rest[i]]; }
@@ -130,7 +141,7 @@ export class Wall {
   // ---------- the worlds ----------
   /** A new world's hand: the dealer's for the hidden cards now (random unseen names without a dealer). */
   deal1() {
-    const k = this.hiddenCount(this.view);
+    const k = this.heldCount(this.view);
     if (this.dealer) return this.dealer.sample(k, this.rng).names;
     const names = this.unseen(this.view).map(id => this.E.nameOf(id)), out = [];
     for (let j = 0; j < k && names.length; j++) out.push(names.splice(Math.floor(this.rng() * names.length), 1)[0]);
@@ -139,7 +150,7 @@ export class Wall {
   /** A world's hand brought up to the current view: the cards shown out of the hidden hand since leave it (a world without one is
    *  impossible), cards drawn unseen join it at random from the unseen pool, cards gone unseen leave it at random. */
   follow(w, from) {
-    const k = this.hiddenCount(this.view);
+    const k = this.heldCount(this.view);
     for (let i = from; i < this.decisions.length; i++) for (const n of this.decisions[i].shown) {
       const j = w.names.indexOf(n);
       if (j < 0) return false;
@@ -198,18 +209,37 @@ export class Wall {
     return ws[k].w;
   }
   /** A whole position from a world drawn by weight (the other player's belief is read in it), or null. */
-  sample(rng) { const w = this.draw(rng); return w ? this.fill(this.view, w.names, rng) : null; }
+  sample(rng) {
+    const w = this.draw(rng);
+    if (!w) return null;
+    const { hand, lib } = this.split(w.names, rng);
+    return this.fill(this.view, hand, rng, lib);
+  }
+  /** A world's names split: as many as the hand hides for the hand, the rest for the library places only they know (at random:
+   *  which went back, nobody but they know). */
+  split(names, rng) {
+    const a = [...names];
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    const k = this.hiddenCount(this.view);
+    return { hand: a.slice(0, k), lib: a.slice(k) };
+  }
   /** A dealer for determinize (pool, n, rng) → the other hand's hidden cards then the library's: a world drawn by weight, its
    *  names on copies in the pool, the rest of the pool shuffled (the unseen library's order is nobody's). Null: deal as before. */
   deal() {
     if (!this.worlds.length) return null;
+    const v = this.view, hidLib = []; v.lib.forEach((id, i) => { if (id < 0) hidLib.push(i); });
+    const theirs = new Set(v.theirLib || []);
     return (pool, n, rng) => {
       const w = this.draw(rng);
-      if (!w || w.names.length !== n) return null;
-      const left = pool.slice(), hand = [];
-      for (const nm of w.names) { const j = left.findIndex(id => this.E.nameOf(id) === nm); if (j < 0) return null; hand.push(left.splice(j, 1)[0]); }
+      if (!w || w.names.length !== this.heldCount(v) || n !== this.hiddenCount(v)) return null;
+      const { hand: hn, lib: ln } = this.split(w.names, rng), left = pool.slice(), take = nm => { const j = left.findIndex(id => this.E.nameOf(id) === nm); return j < 0 ? null : left.splice(j, 1)[0]; };
+      const hand = hn.map(take), mine = ln.map(take);
+      if (hand.includes(null) || mine.includes(null)) return null;
       for (let i = left.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [left[i], left[j]] = [left[j], left[i]]; }
-      return [...hand, ...left];
+      // the library's unseen places in order (determinize's): theirs from the world, the others from the shuffled rest
+      if (pool.length !== n + hidLib.length) return [...hand, ...mine, ...left];   // a search of the seat's pins some: as before
+      const lib = hidLib.map(i => (theirs.has(i) ? mine.pop() : left.pop()));
+      return [...hand, ...lib];
     };
   }
   /** The weighted chance of each name among the other hand's hidden cards. */

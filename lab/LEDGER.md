@@ -1166,3 +1166,8 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   lab/wall-check.mjs (per-card −log chance of the true hidden cards, lower better), 256 worlds: gm1 game seat 0 2.52 vs Scry
   2.65, seat 1 3.22 vs 3.09, g12r-C game seat 0 2.53 vs 2.58, seat 1 2.69 vs 2.83; 1,024 worlds (gm1 seat 0) 2.49 vs 2.65.
   Cost: 0.5-5.6 s a search at 256 worlds, 2.4 s at 1,024 (the judging of new worlds). Off by default; not in the loop.
+- 15:20Z Korbi 16:14 (cards put on the bottom or back change the deck's distribution): observe() gives `theirLib`, the library
+  places the other player knows and the seat doesn't (public: where, not what), and keeps knowledge entries (kn, kh) only for
+  cards the seat sees (an entry for a hidden card named it). Views unchanged (tests: observe, zero-pack, scry-honest). The wall's
+  worlds name those places too (drawn with the hand, not from the unseen pool). Korbi 16:15: simpler, a belief net trained, no
+  wall: the wall parked (off; lab/zero/wall.mjs kept), the work goes to the general dealer net.

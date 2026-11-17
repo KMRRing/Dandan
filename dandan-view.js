@@ -4,6 +4,9 @@
 //   - the other hand: each card the seat doesn't know is there (dandan-core.js knownIn) becomes HIDDEN, the size kept;
 //   - the library: each card the seat doesn't know (knOf) becomes HIDDEN, the size and the known positions kept;
 //   - another seat's pending question keeps only its kind and whose it is (its options can name hidden cards);
+//   - who knows what (kn, kh): only the entries for cards the seat sees (an entry for a hidden card would say which card it is);
+//     where the other player knows a library card the seat doesn't (one they put back or on the bottom, or looked at) is public:
+//     `theirLib`, those positions (17 Nov 2026, Korbi: "cards that went to the bottom change the distribution in the deck");
 //   - the engine's own reads of hidden play (Medium's tells, reading, the coach's advice) and the log go.
 // What the hidden cards could be is public (every card less those seen): `unseenIds`, the ids in no particular order.
 import { knownIn } from "./dandan-core.js";
@@ -19,7 +22,10 @@ export function observe(s, me) {
   hand[opp] = s.hand[opp].map(id => (kh.has(id) ? id : (unseen.push(id), HIDDEN)));
   const kn = new Map(s.kn);   // knOf, once for the whole library
   const lib = s.lib.map(id => ((kn.get(id) || 0) & bit ? id : (unseen.push(id), HIDDEN)));
-  const o = { ...s, hand, lib, observer: me };
+  const theirLib = [];
+  s.lib.forEach((id, i) => { if (lib[i] === HIDDEN && (kn.get(id) || 0) & (1 << opp)) theirLib.push(i); });
+  const hidden = new Set(unseen), seen = e => !hidden.has(e[0]);
+  const o = { ...s, hand, lib, observer: me, theirLib, kn: s.kn.filter(seen), kh: (s.kh || []).filter(seen) };
   // sorted, so where each hidden card is (hand or library) doesn't show; made only when asked for
   let sorted = null;
   Object.defineProperty(o, "unseenIds", { get: () => (sorted ||= unseen.sort((a, b) => a - b)), enumerable: false });

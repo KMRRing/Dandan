@@ -23,11 +23,11 @@ for (const seed of [11, 12]) {
     G = r.G;
     if (i % 20 === 19) {
       wall.ensure();
-      const v = observe(G.state, 0), k = wall.hiddenCount(v), pool = wall.unseen(v), names = pool.map(id => wall.E.nameOf(id));
+      const v = observe(G.state, 0), k = wall.heldCount(v), h = wall.hiddenCount(v), pool = wall.unseen(v), names = pool.map(id => wall.E.nameOf(id));
       const fits = w => { const left = [...names]; return w.names.length === k && w.names.every(n => { const j = left.indexOf(n); if (j < 0) return false; left.splice(j, 1); return true; }); };
       ok(wall.worlds.length > 0 && wall.worlds.every(fits), `seed ${seed} move ${i}: ${wall.worlds.length} worlds, each ${k} unseen cards`);
       ok(wall.worlds.every(w => Number.isFinite(w.logw)), `seed ${seed} move ${i}: the weights are numbers`);
-      const d = wall.deal(), out = d && d(pool, k, Math.random);
+      const d = wall.deal(), out = d && d(pool, h, Math.random);
       ok(out && [...out].sort((a, b) => a - b).join() === [...pool].sort((a, b) => a - b).join(), `seed ${seed} move ${i}: a deal is the unseen cards`);
       const tot = [...wall.counts().values()].reduce((a, b) => a + b, 0);
       ok(Math.abs(tot - k) < 1e-6, `seed ${seed} move ${i}: the belief adds up to the ${k} hidden cards (${tot.toFixed(3)})`);
