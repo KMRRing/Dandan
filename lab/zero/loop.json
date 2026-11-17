@@ -6,7 +6,7 @@
   "champion": "g11w-C",
   "flags": "deeper=0.03",
   "deals": 64,
-  "games": 14400,
+  "games": 4800,
   "maxWindow": 30000,
   "value": "64x32",
   "trainArgs": "",

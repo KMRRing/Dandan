@@ -1063,3 +1063,18 @@ picks a list, then a hand from it. The deck layer above Scry comes after the car
 - XMage probe 44056696169 (mid-game Modern, 220 cards, 13 permanents, one thread): a game copy 0.52 ms; a random play-out to
   the end of the turn after next 540 ms (~324 actions, XMage's SimulatedPlayerMCTS, opponent's hand dealt again). Several
   hundred to a thousand times too slow to carry Monte's search as it is.
+
+## 17 Nov 10:45Z — Monte's test suite (Korbi 12:17: the no-Island Dandân as its first entry; fixed by search and training, no hand-written rule)
+lab/suite.json (five positions: 1794511767232 moves 31, 64, 97; 1794876432406 moves 324, 339 — Monte casts Dandân with no Island
+of its own, an Island-typed land in hand) and lab/suite.mjs (passes when Zero's pick isn't the cast). 256 deals, deeper 0.03:
+| nets | suite |
+|---|---|
+| g9x-C (the live nets) | 0 of 5 |
+| g10w-C | 1 of 5 |
+| g11w-C | 3 of 5 |
+| g12r-C | 4 of 5 |
+g9x-C with twins+qtree+qall 1 of 5, turns=3 1 of 5, turns=4 0 of 5. Training is curing it, generation by generation; the live game is
+three generations behind. Zero's loop runs the suite on every new generation and keeps the score in its history.
+- Fable 10:20Z repairs: qall walks as the tree does (focus with priority, qfocus for a question, one candidate moves on), every
+  answer of a deal from the same seed, deals without the question go down the tree; twins keys arrival only as "this turn";
+  doomed-count reads Islands by land type. Loop generation 4,800 games (Fable's advice).

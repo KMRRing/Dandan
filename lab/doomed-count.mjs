@@ -5,20 +5,21 @@
 import fs from "node:fs";
 import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../seats.js";
-import { DECK } from "../dandan-core.js";
+import { DECK, islands, typesOf, isLandId } from "../dandan-core.js";
+
+const islandCard = x => typesOf({ id: x }).includes("Island");
 
 const [SH, SHS, OUT, ids] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5]];
 const real = Math.random, T = { games: 0, casts: 0, doomed: 0, doomedWithIslandInHand: 0, doomedLandUnplayed: 0, turns: 0, held: 0, heldIsland: 0 };
-const isIsland = p => (p.tc ? p.tc.some(([, to]) => to === "Island") : DECK[p.id] === "Island");
 function replay(game) {
   let G = newRecord(rules, { seats: 2, seed: game.seed, now: 0 });
   for (let i = 0; i < game.moves.length; i++) {
     const [who, m] = game.moves[i], s = G.state;
     if (m.t === "cast" && DECK[m.card] === "Dandân") {
       T.casts++;
-      if (!s.bf.some(p => p.ctl === who && isIsland(p))) {
+      if (!islands(s, who).length) {   // an Island by its land types (Thundering Falls and Mystic Sanctuary are Islands; Mind Bend's changes read)
         T.doomed++;
-        const islandInHand = s.hand[who].some(x => DECK[x] === "Island");
+        const islandInHand = s.hand[who].some(islandCard);
         if (islandInHand) T.doomedWithIslandInHand++;
         if (islandInHand && !s.played && s.active === who && /^main/.test(s.step)) T.doomedLandUnplayed++;
       }
@@ -29,8 +30,8 @@ function replay(game) {
     if (r.error) return;
     if (r.G.state.turn !== s.turn) {
       T.turns++;
-      const a = s.active, lands = s.hand[a].filter(x => /Island|Sandbar|Isle|Falls|Boilerworks|Depths|Sanctuary|Flood Plain/.test(DECK[x] || ""));
-      if (!s.played && lands.length) { T.held++; if (lands.some(x => DECK[x] === "Island")) T.heldIsland++; }
+      const a = s.active, lands = s.hand[a].filter(isLandId);
+      if (!s.played && lands.length) { T.held++; if (lands.some(islandCard)) T.heldIsland++; }
     }
     G = r.G;
   }

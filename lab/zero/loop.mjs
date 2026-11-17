@@ -14,6 +14,7 @@
 // It prints what it did; lines "DISPATCH <workflow> <key=value>…" are for the workflow to run.
 // usage: node lab/zero/loop.mjs [--dry]    (reads the store as lab/lib.mjs does)
 import fs from "node:fs";
+import { execSync } from "node:child_process";
 import { labStore } from "../lib.mjs";
 
 const here = new URL(".", import.meta.url).pathname, LOOP = `${here}loop.json`, FILLER = `${here}../filler.json`, QUEUE = `${here}../queue/`;
@@ -72,7 +73,11 @@ if (L.phase === "play") {
     if (ids.length) say(`RETIRE ${ids.join(" ")}`);
     log(`generation ${L.gen}: ${L.champion} (warm from ${prev}) plays from the filler's next batch`);
     if (L.yardEvery && L.gen % L.yardEvery === 0) queueYard(`zy-${L.champion}`);
-    L.history = [...(L.history || []), { gen: L.gen, nets: L.champion, from: prev, window: L.trained.from, at: now }];
+    // Monte's test suite on the new nets (lab/suite.json: the positions Korbi flagged), kept with the generation
+    let suite = null;
+    try { const t = execSync(`node ${here}../suite.mjs ${L.champion} 256 ${L.flags} --json`, { encoding: "utf8", timeout: 20 * 60e3 }); suite = JSON.parse(t.trim().split("\n").pop()); say(`suite: ${suite.passed} of ${suite.of} passed`); }
+    catch (e) { say(`suite: did not run (${String(e.message).slice(0, 120)})`); }
+    L.history = [...(L.history || []), { gen: L.gen, nets: L.champion, from: prev, window: L.trained.from, at: now, ...(suite ? { suite: `${suite.passed}/${suite.of}`, failed: suite.positions.filter(x => !x.pass).map(x => x.id) } : {}) }];
     L.windowFrom = L.genFrom;   // the window: the generation just played and the next
     L.genFrom = open.length ? open[open.length - 1].n + 1 : L.nextFrom;
     L.gen++; L.phase = "play"; delete L.challenger;

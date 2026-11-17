@@ -301,7 +301,8 @@ function sigOf(m, c, seat, who) {
  * tree: attackers and blockers by name and state, an ability by its permanent's name and state.
  */
 function twinKey(m, c, seat) {
-  const perm = id => { const p = c.bf.find(x => x.id === id); if (!p) return `?${id}`; const { id: _i, oid: _o, ...rest } = p; return `${DECK[p.id] ?? "Clue"}${JSON.stringify(rest)}`; };
+  // a permanent by its whole state, but its arrival only as the rules read it: this turn or not (canAttack)
+  const perm = id => { const p = c.bf.find(x => x.id === id); if (!p) return `?${id}`; const { id: _i, oid: _o, ent, ...rest } = p; return `${DECK[p.id] ?? "Clue"}${ent === c.turn ? "new" : ""}${JSON.stringify(rest)}`; };
   if (m.t === "attack") return `A${m.ids.map(perm).sort().join(",")}`;
   if (m.t === "block") return `B${m.pairs.map(([b, a]) => `${perm(b)}>${perm(a)}`).sort().join(",")}`;
   // a target by what it is in full (Fable 09:40Z: an Island bent to a Swamp is not a plain Island): a permanent by its whole state
@@ -482,35 +483,35 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
   // qall (17 Nov 2026, Fable 09:40Z, Korbi's game): where the first decision with more than one option after a root move is the
   // searcher's own question, asked with the same answers on every deal, every answer is weighed on every deal (a tree each)
   // and the move takes its best answer's mean: passing is valued with its best discard, not one the search half chose
-  const qa = cands.map(() => (qall ? { keys: null, vals: null, roots: null, off: false } : null));
-  const fixed = seeded(seed ^ 0x9a11);
-  const ownQuestion = c => {
+  const qa = cands.map(() => (qall ? { keys: null, deals: [], roots: null } : null));
+  // the walk to that decision, as the tree walks (Fable 10:20Z): with priority the focus's moves, a question by qfocus; one
+  // candidate moves on; the seat's own question first: every answer (its whole list)
+  const ownQuestion = (c, r) => {
     for (let g = 0; g < 50 && !c.over; g++) {
       const w = toMove(c);
       if (w == null) return null;
-      const ms = options ? options(c, w) : candidates(c, w, { wide: WIDTH, rank });
-      if (ms.length > 1) return w === seat && c.pending ? ms : null;
-      if (!ms.length || typeof act(c, w, ms[0], { rng: fixed, quiet: true }) === "string") return null;
+      if (w === seat && c.pending) { const all = options ? options(c, w) : candidates(c, w, { wide: WIDTH, rank }); return all.length > 1 ? all : null; }
+      const ms = focus && !c.pending ? focus(c, w) : qfocus && c.pending ? qfocus(c, w) : options ? options(c, w) : candidates(c, w, { wide: WIDTH, rank });
+      if (ms.length !== 1 || typeof act(c, w, ms[0], { rng: r, quiet: true }) === "string") return null;
     }
     return null;
   };
-  const playOne = (i, c, r, at) => {
+  const playOne = (i, c, r, at, runSeed) => {
     const Q = qa[i];
-    if (Q && !Q.off) {
-      const ms = ownQuestion(c), ks = ms && ms.map(m => sigOf(m, c, seat, seat)).join("|");
+    if (Q) {
+      const w = fork(c), ms = ownQuestion(w, r), ks = ms && ms.map(m => sigOf(m, w, seat, seat)).join("|");
       if (ms && (Q.keys == null || Q.keys === ks)) {
-        if (Q.keys == null) { Q.keys = ks; Q.vals = ms.map(() => []); Q.roots = ms.map(newNode); }
-        let best = -Infinity, bestMean = -Infinity;
-        ms.forEach((m, j) => {
-          const c2 = fork(c), r2 = seeded(mix(vals[i].length + 1, j + 11));
-          const v = typeof act(c2, seat, m, { rng: r2, quiet: true }) === "string" ? -1 : treePlay(c2, seat, Q.roots[j], to, r2, judge, j ? {} : at, explore, rollout, table, treeRank || rank, focus, options, qfocus);
-          Q.vals[j].push(v);
-          const mean = Q.vals[j].reduce((a, b) => a + b, 0) / Q.vals[j].length;
-          if (mean > bestMean) { bestMean = mean; best = v; }
+        if (Q.keys == null) { Q.keys = ks; Q.roots = ms.map(newNode); }
+        // every answer on this deal, all from the same seed (paired across answers)
+        const vs = ms.map((m, j) => {
+          const c2 = fork(w), r2 = seeded(mix(runSeed, 11));
+          return typeof act(c2, seat, m, { rng: r2, quiet: true }) === "string" ? -1 : treePlay(c2, seat, Q.roots[j], to, r2, judge, j ? {} : at, explore, rollout, table, treeRank || rank, focus, options, qfocus);
         });
-        return best;   // this deal's value of the answer that leads so far (the list's values: the best answer's, at the end)
+        Q.deals.push(vs);
+        const means = vs.map((_, j) => { let t = 0, n = 0; for (const d of Q.deals) if (d) { t += d[j]; n++; } return t / n; });
+        return vs[means.indexOf(Math.max(...means))];   // this deal's value of the answer that leads so far
       }
-      if (Q.keys != null || ms) Q.off = true;   // the answers differ between deals: weighed as any move, from here on
+      Q.deals.push(null);   // a deal where the question doesn't come first (or comes with other answers): down the tree
     }
     return treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank, focus, options, qfocus);
   };
@@ -526,7 +527,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       const res = act(c, seat, cands[i], { rng: r, quiet: true });
       const at = {};
       if (typeof res === "string") vals[i].push(-1);
-      else vals[i].push(playOne(i, c, r, at));
+      else vals[i].push(playOne(i, c, r, at, runSeed));
       seen[i].push(at);
     }
     d++;
@@ -543,11 +544,12 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     }
     if (Date.now() - t0 > ms) break;
   }
-  // qall: a move whose question was weighed on every deal takes its best answer's values (and that answer is noted)
+  // qall: the question's deals take the answer with the best mean over them; the other deals keep their own values
   qa.forEach((Q, i) => {
-    if (!Q || Q.off || !Q.vals || Q.vals[0].length !== vals[i].length) return;
-    const means = Q.vals.map(v => v.reduce((a, b) => a + b, 0) / v.length), j = means.indexOf(Math.max(...means));
-    vals[i] = Q.vals[j];
+    if (!Q || !Q.deals.some(Boolean) || Q.deals.length !== vals[i].length) return;
+    const n = Q.deals[Q.deals.findIndex(Boolean)].length, means = [...Array(n)].map((_, j) => { let t = 0, k = 0; for (const d of Q.deals) if (d) { t += d[j]; k++; } return t / k; });
+    const j = means.indexOf(Math.max(...means));
+    vals[i] = vals[i].map((v, k) => (Q.deals[k] ? Q.deals[k][j] : v));
   });
   // a twin takes its class's values, and is in the race while its class is
   if (twins) { for (let i = 0; i < n; i++) if (repOf[i] !== i) { vals[i] = vals[repOf[i]]; seen[i] = seen[repOf[i]]; } alive = cands.map((_, i) => i).filter(i => alive.includes(repOf[i])); }
