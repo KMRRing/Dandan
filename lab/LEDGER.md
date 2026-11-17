@@ -1091,3 +1091,4 @@ three generations behind. Zero's loop runs the suite on every new generation and
   Suite, g12r-C: 4 of 5 at 256 deals (1 null pick), 5 of 5 at 2,048 (Monte's Deepest), mean margin 4.4 points.
 - 11:15Z Korbi 13:09: "matches are for training not for demonstrating competence": no yardstick (zy-g12r-C never queued; the
   loop's yardEvery 0). Each generation is measured by the suite and the null-move rate, which play no games.
+- 11:20Z az-sw12 retired (Korbi: generalize first). The plan for Fable: https://claude.ai/artifact/3Kfpi91qy9HawZPEFHzprM (phases A generalize, B housekeeping, C train, D belief net, E Modern engine).

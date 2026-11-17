@@ -28,3 +28,4 @@ az-yd11  # 16 Nov 20:15Z (Fable 20:10Z): read at 190 of 200 pairs, 65.0% (99%: 5
 az-dd9  # 16 Nov 20:15Z (Fable 20:10Z): read at 198 of 200, 53.3% (99%: 47.7 to 58.9): Deepest over Deep not shown
 az-yd10-c  # 16 Nov 20:15Z (Fable 20:10Z): read at 199 of 200, 59.0% (99%: 52.6 to 65.5)
 zps005  # 17 Nov 10:30Z: closed when g12r-C went live (Fable 16 Nov: when anything goes live, close the open filler batch)
+az-sw12  # 17 Nov 11:20Z (Korbi 13:16: generalize first, then train; no more feature matches on the old nets)
