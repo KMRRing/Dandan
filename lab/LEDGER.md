@@ -1269,3 +1269,4 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   everything each time. The live set now leaves out claims/ and workers/ (leases and beats the workers rewrite every 5 minutes
   on whichever store they use) and includes the filler's batches (results/zps*: the loop's games, the retired zps006 too),
   with at most 3 whole-copy retries. Copy-live rerun; the switch still waits for it and verify-live.
+- 22:20Z ops: store switch done — window copy finished (44179487381 21:52Z, follow-ups 44184892734, 44188629057 succeeded); private/store.json present on the Google bucket (names only; fleet/ and fleet-status hold no store file). New writes go to B2; the rest stays on Google read-only. One-week reminder set to ask Korbi about deleting the Google remainder (~24 Nov 22:30Z). zps007 done (gen 15 at 2,386/2,400 games at 22:14Z), nothing queued: if idle over 1 h, trim to step-1 counts.
