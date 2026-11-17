@@ -301,10 +301,13 @@ function sigOf(m, c, seat, who) {
  * tree: attackers and blockers by name and state, an ability by its permanent's name and state.
  */
 function twinKey(m, c, seat) {
-  const perm = id => { const p = c.bf.find(x => x.id === id); return p ? `${p.ctl}${DECK[p.id] ?? "Clue"}${p.tapped ? "t" : ""}${p.sick ? "s" : ""}${p.dmg || ""}${p.tc ? JSON.stringify(p.tc) : ""}` : `?${id}`; };
+  const perm = id => { const p = c.bf.find(x => x.id === id); if (!p) return `?${id}`; const { id: _i, oid: _o, ...rest } = p; return `${DECK[p.id] ?? "Clue"}${JSON.stringify(rest)}`; };
   if (m.t === "attack") return `A${m.ids.map(perm).sort().join(",")}`;
   if (m.t === "block") return `B${m.pairs.map(([b, a]) => `${perm(b)}>${perm(a)}`).sort().join(",")}`;
-  if (m.t === "ability") return `a${perm(m.id)}${m.mode ?? ""}${JSON.stringify(m.targets ?? null)}`;
+  // a target by what it is in full (Fable 09:40Z: an Island bent to a Swamp is not a plain Island): a permanent by its whole state
+  const tg = t => (t.k === "c" ? `c${perm(t.id)}` : JSON.stringify(t.k === "s" ? { k: "s", x: c.stack.find(x => x.sid === t.sid)?.name ?? t.sid } : t));
+  if (m.t === "ability") return `a${perm(m.id)}${m.mode ?? ""}${(m.targets || []).map(tg).join("/")}`;
+  if (m.targets?.length) return `${sigOf({ ...m, targets: [] }, c, seat, seat)}>${m.targets.map(tg).join("/")}`;
   return sigOf(m, c, seat, seat);
 }
 const newNode = () => ({ n: 0, kids: new Map() });
@@ -365,36 +368,33 @@ function tableFor(s, seat) {
  * the deals'. seen: where it was left, and the other player's first choice on the way (their answer, for the coach's
  * words).
  */
-export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null, focus = null, options = null, ownQs = false) {
+export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null, focus = null, options = null, qfocus = null) {
   const opp = other(seat), path = [];
-  // ownQs (lab, 17 Nov 2026, Fable on Korbi's game): the searching seat's own questions (discard, put back, order...) until
-  // the end of its turn are searched in the tree past its frontier too, not answered by the play-out's quick pick: with them
-  // quick, a pass was valued with the wrong cleanup discard (Monte cast Dandân with no Island). Its turn: this one if it is
-  // active, else its next
-  const qsTo = c.active === seat ? c.turn : c.turn + 1;
   let node = root, growing = true;
   for (let i = 0; i < 4000 && !c.over; i++) {
     if (c.turn >= to && !c.stack.length) break;
     const who = toMove(c);
     if (who == null) break;
     let m = null;
-    const ask = !growing && ownQs && c.pending && who === seat && c.turn <= qsTo && node;
-    if ((growing || ask) && c.turn < to) {
+    if (growing && c.turn < to) {
       // focus (lab, 14 Nov 2026, Fable No. 17): with priority, the options are the picker's fewest top moves holding 90% of its
-      // probability (1 to 6), all open from the first visit; the questions as before
-      const ms = focus && !c.pending ? focus(c, who) : options ? options(c, who) : candidates(c, who, { wide: WIDTH, rank });
+      // probability (1 to 6), all open from the first visit; the questions as before. qfocus (17 Nov, Fable 09:40Z): a question
+      // the same way, its answers by the question head, the fewest top answers holding 90%, open from the first visit, for
+      // both seats (in list order, a question's first visit took the first answer listed: the first card in hand)
+      const open = (focus && !c.pending) || (qfocus && c.pending);
+      const ms = focus && !c.pending ? focus(c, who) : qfocus && c.pending ? qfocus(c, who) : options ? options(c, who) : candidates(c, who, { wide: WIDTH, rank });
       if (ms.length > 1) {
         // merged: the node is the position's, wherever it was reached from; one not met before ends the tree for this deal
         let fresh = false;
         if (table) { const k = posKey(c, seat, table.reads); node = table.get(k); if (!node) { node = newNode(); table.set(k, node); fresh = true; } }
         // a decision's children are keyed by who decides and where, as well as by the move: in other deals the same
         // line can reach another seat's decision first (a hand with nothing to do there is passed over)
-        const pick = choose(node, ms, c, seat, who, `${who}${c.step}${c.stack.length}${c.pending?.t ?? ""}:`, explore, focus && !c.pending);
+        const pick = choose(node, ms, c, seat, who, `${who}${c.step}${c.stack.length}${c.pending?.t ?? ""}:`, explore, !!open);
         m = pick.m;
         path.push([pick.k, who]);
         if (table) { if (fresh) growing = false; }
         else if (pick.k.node) node = pick.k.node;
-        else { pick.k.node = newNode(); growing = false; if (ownQs) node = pick.k.node; }   // ownQs: its questions go on from here
+        else { pick.k.node = newNode(); growing = false; }
       } else m = ms[0];
     } else m = rollout ? rollout(c, who, rng) : policyMove(c, who, { rng });
     // their answer, for the coach: what they do first in their own main phase (their turn's plan), else first at all
@@ -466,7 +466,7 @@ export function think(s, seat, opts = {}) {
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && isDeep(c)).sort((a, b) => b.mean - a.mean), ...list.filter(c => !isDeep(c))], deeper: looks };
 }
-function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, ownQs = false, twins = false } = {}) {
+function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false } = {}) {
   const t0 = Date.now();
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
   // read Medium's scores); weigh false: hidden cards dealt without dandan-reads.js's tells (which read Medium's play)
@@ -479,6 +479,41 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
   if (n === 1 || repOf.every(r => r === 0)) return { best: cands[0], list: cands.map(m => ({ move: m, mean: NaN, se: 0, n: 0, cls: cls[0] })), deals: 0, only: true };
   const to = s.turn + Math.max(turns, endOfLibrary(s)), seed = salt ? mix(seedOf(s, seat), salt) : seedOf(s, seat);   // salt: the lab's play-outs, the same position searched afresh
   const vals = cands.map(() => []), seen = cands.map(() => []), roots = cands.map(newNode);
+  // qall (17 Nov 2026, Fable 09:40Z, Korbi's game): where the first decision with more than one option after a root move is the
+  // searcher's own question, asked with the same answers on every deal, every answer is weighed on every deal (a tree each)
+  // and the move takes its best answer's mean: passing is valued with its best discard, not one the search half chose
+  const qa = cands.map(() => (qall ? { keys: null, vals: null, roots: null, off: false } : null));
+  const fixed = seeded(seed ^ 0x9a11);
+  const ownQuestion = c => {
+    for (let g = 0; g < 50 && !c.over; g++) {
+      const w = toMove(c);
+      if (w == null) return null;
+      const ms = options ? options(c, w) : candidates(c, w, { wide: WIDTH, rank });
+      if (ms.length > 1) return w === seat && c.pending ? ms : null;
+      if (!ms.length || typeof act(c, w, ms[0], { rng: fixed, quiet: true }) === "string") return null;
+    }
+    return null;
+  };
+  const playOne = (i, c, r, at) => {
+    const Q = qa[i];
+    if (Q && !Q.off) {
+      const ms = ownQuestion(c), ks = ms && ms.map(m => sigOf(m, c, seat, seat)).join("|");
+      if (ms && (Q.keys == null || Q.keys === ks)) {
+        if (Q.keys == null) { Q.keys = ks; Q.vals = ms.map(() => []); Q.roots = ms.map(newNode); }
+        let best = -Infinity, bestMean = -Infinity;
+        ms.forEach((m, j) => {
+          const c2 = fork(c), r2 = seeded(mix(vals[i].length + 1, j + 11));
+          const v = typeof act(c2, seat, m, { rng: r2, quiet: true }) === "string" ? -1 : treePlay(c2, seat, Q.roots[j], to, r2, judge, j ? {} : at, explore, rollout, table, treeRank || rank, focus, options, qfocus);
+          Q.vals[j].push(v);
+          const mean = Q.vals[j].reduce((a, b) => a + b, 0) / Q.vals[j].length;
+          if (mean > bestMean) { bestMean = mean; best = v; }
+        });
+        return best;   // this deal's value of the answer that leads so far (the list's values: the best answer's, at the end)
+      }
+      if (Q.keys != null || ms) Q.off = true;   // the answers differ between deals: weighed as any move, from here on
+    }
+    return treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank, focus, options, qfocus);
+  };
   const table = reuse ? tableFor(s, seat) : merge ? new Map() : null;
   if (table) table.reads = merge === "reads";
   let lead = -1, steadyLooks = 0;
@@ -491,7 +526,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       const res = act(c, seat, cands[i], { rng: r, quiet: true });
       const at = {};
       if (typeof res === "string") vals[i].push(-1);
-      else vals[i].push(treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank, focus, options, ownQs));
+      else vals[i].push(playOne(i, c, r, at));
       seen[i].push(at);
     }
     d++;
@@ -508,6 +543,12 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     }
     if (Date.now() - t0 > ms) break;
   }
+  // qall: a move whose question was weighed on every deal takes its best answer's values (and that answer is noted)
+  qa.forEach((Q, i) => {
+    if (!Q || Q.off || !Q.vals || Q.vals[0].length !== vals[i].length) return;
+    const means = Q.vals.map(v => v.reduce((a, b) => a + b, 0) / v.length), j = means.indexOf(Math.max(...means));
+    vals[i] = Q.vals[j];
+  });
   // a twin takes its class's values, and is in the race while its class is
   if (twins) { for (let i = 0; i < n; i++) if (repOf[i] !== i) { vals[i] = vals[repOf[i]]; seen[i] = seen[repOf[i]]; } alive = cands.map((_, i) => i).filter(i => alive.includes(repOf[i])); }
   const list = cands.map((move, i) => {

@@ -60,9 +60,10 @@ async function side(spec) {
     // "deals=<n>": this side's own deals a decision (Deep against Deepest, 15 Nov 2026); "v1+v2" as the value: their mean
     const dealsFlag = flags.find(x => x.startsWith("deals=")), ownDeals = dealsFlag ? Number(dealsFlag.slice(6)) : 0;
     const brain = Z.zeroBrain(pol, v, scryFlag ? scryFlag.slice(5) : null), extra = { open, ...(turnsFlag ? { turns: Number(turnsFlag.slice(6)) } : {}), ...(deeperFlag ? { deeper: deeperOf(deeperFlag.slice(7)) } : {}), ...(flags.includes("keepfirst") ? { keepFirst: true } : {}),
-      // "twins": options the seat can't tell apart weighed once, the deeper look on the best two classes (review item 3); "ownq": its
-      // own questions to the end of its turn searched in the tree, not answered by the quick pick (17 Nov 2026, Korbi's game)
-      ...(flags.includes("twins") ? { twins: true } : {}), ...(flags.includes("ownq") ? { ownQs: true } : {}) };
+      // "twins": options the seat can't tell apart weighed once, the deeper look on the best two classes (review item 3); "qtree":
+      // questions in the tree by the question head's top answers, open from the first visit; "qall": the searcher's own question
+      // right after a root move weighed answer by answer on every deal, the move taking its best answer (17 Nov, Fable 09:40Z)
+      ...(flags.includes("twins") ? { twins: true } : {}), ...(flags.includes("qtree") ? { qtree: true } : {}), ...(flags.includes("qall") ? { qall: true } : {}) };
     const f = (s, seat) => {
       const ms = Z.zeroOptions(s, seat);
       if (ms.length <= 1) return { move: ms[0] ?? Z.PASS, off: false };

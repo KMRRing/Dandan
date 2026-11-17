@@ -135,7 +135,16 @@ export function zeroPlayer(policy, qpolicy = null, ctx = null) {
     for (let r = 0; r < order.length && out.length < most; r++) { out.push(ms[order[r]]); cum += e[r] / z; if (cum >= mass) break; }
     return out;
   } : null;
-  return { rollout, focus, wide };
+  // the same for a question (17 Nov 2026, Fable 09:40Z): its head's fewest top answers holding 90%, for the tree (qtree)
+  const qfocus = qscore ? (s, seat, mass = 0.9, most = 6) => {
+    const ms = zeroOptions(s, seat), sc = qscore(view(s, seat), ms.map(m => qMarksOf(s, seat, m)));
+    const order = sc.map((v, k) => k).sort((a, b) => sc[b] - sc[a] || a - b), top = sc[order[0]];
+    const e = order.map(k => Math.exp(sc[k] - top)), z = e.reduce((a, b) => a + b, 0), out = [];
+    let cum = 0;
+    for (let r = 0; r < order.length && out.length < most; r++) { out.push(ms[order[r]]); cum += e[r] / z; if (cum >= mass) break; }
+    return out;
+  } : null;
+  return { rollout, focus, qfocus, wide };
 }
 
 /** Zero whole, from its nets (14 Nov 2026, Korbi 10:04): the player, the value net (either view), and Scry kept up to date after
@@ -164,7 +173,9 @@ export function makeZero({ policy = null, qpolicy = null, scry: bnet = null, val
       return bnet ? { deal: dealBy(b[seat].slots) } : {};
     },
     think(s, seat, deals, extra = {}) {
-      return think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge, ...(player.focus ? { focus: player.focus } : {}), ...this.root(s, seat), ...extra });
+      // qtree (lab): questions in the tree by the question head's top answers (player.qfocus), not in list order
+      const { qtree, ...rest } = extra;
+      return think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge, ...(player.focus ? { focus: player.focus } : {}), ...(qtree && player.qfocus ? { qfocus: player.qfocus } : {}), ...this.root(s, seat), ...rest });
     },
   };
 }
