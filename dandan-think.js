@@ -472,7 +472,7 @@ export function think(s, seat, opts = {}) {
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && isDeep(c)).sort((a, b) => b.mean - a.mean), ...list.filter(c => !isDeep(c))], deeper: looks };
 }
-function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null } = {}) {
+function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null } = {}) {
   const t0 = Date.now();
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
   // read Medium's scores); weigh false: hidden cards dealt without dandan-reads.js's tells (which read Medium's play)
@@ -538,6 +538,12 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     d++;
     // trace (lab): at every power of two, the move leading on its mean over the deals so far and how many are still in the race
     if (trace && (d & (d - 1)) === 0) { let b = alive[0]; for (const i of alive) if (vals[i].reduce((a, x) => a + x, 0) / vals[i].length > vals[b].reduce((a, x) => a + x, 0) / vals[b].length) b = i; trace.push({ d, lead: key(cands[b]), alive: alive.length, ms: Date.now() - t0 }); }
+    // early (lab, 17 Nov 2026: the search-shape table): at `at` deals, stop when the leader is `gap` or more ahead of the next move
+    // still in the race on their means (off by default)
+    if (early && d === early.at && alive.length > 1) {
+      const m = alive.map(i => vals[i].reduce((a, x) => a + x, 0) / vals[i].length).sort((a, b) => b - a);
+      if (m[0] - m[1] >= early.gap) break;
+    }
     if (d >= first && (d & (d - 1)) === 0) {
       alive = prune(alive, vals, cands, must, hold, z);   // a look at 128, 256, 512...
       // steady (lab): stop once the same move has led clearly at `steady` looks in a row, not at the first one that

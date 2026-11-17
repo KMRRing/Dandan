@@ -1233,3 +1233,13 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   zero-loop.yml unless one is waiting or running, and fleet.yml likewise. The token is a fine-grained one that can only start
   workflows on this repo (GitHub secret LAB_GH_TOKEN, written by scheduler-token.yml to private/scheduler.json on Google, where the workers look for it); no store or
   queue key moves. GitHub's own schedules stay as the backup. Waiting on the token.
+- 17:00Z belief-eval 44125644415 (az-g12-c, c2: 663,844 held-out hand cards, 1,917 games; nats a card, lower better): pool 2.776
+  each / 2.767 whole hand; Scry 1.2 g12h2 2.611 / 2.575; Scry G sg1 2.643 / 2.611. sg1 keeps 80% of Scry 1.2's edge over the
+  pool on the hand (0.156 of 0.192 whole hand); it also guesses the library places, which Scry 1.2 doesn't. It trains each
+  generation from here.
+- 17:00Z search-shape 44125648892 (gm2, 2,560 decisions, 174 games of az-g12-c2; the reference 256 deals, deeper=0.03, 1.98 s):
+  agreement / loss in points a decision (the reference's own means, so an upper bound) / time: cut=0 69% 0.79 0.38x; cut=4 75%
+  0.52 0.59x; cut=8 80% 0.35 0.74x; mass=0.8 80% 0.33 0.92x; most=3 84% 0.18 0.94x; deals=64 79% 0.30 0.29x; deals=128 85% 0.16
+  0.52x; nodeeper 82% 0.22 0.61x. Clear calls (>10 pts): deals=64 loses 0.03 pts. The play-outs carry real value (cut=0 is the
+  worst); breadth costs little time. Second run (seed=1/2: the reference against itself, the noise floor; early=<at>:<gap>
+  stops) dispatched.
