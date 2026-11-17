@@ -25,6 +25,9 @@ import java.util.UUID;
 public class ProbeTest extends CardTestPlayerBase {
 
     static boolean done = false;
+    /** Its own file: the test run's stdout doesn't reach the log (the workflow prints this file) */
+    static java.io.PrintStream out;
+    static { try { out = new java.io.PrintStream(new java.io.FileOutputStream("/tmp/probe.txt", true), true); } catch (Exception e) { out = System.out; } }
 
     /** A test player that runs the probe at its first priority on turn 3, first main phase. */
     class ProbePlayer extends TestPlayer {
@@ -46,14 +49,14 @@ public class ProbeTest extends CardTestPlayerBase {
     }
 
     static void probe(Game game, UUID me) {
-        System.out.println("PROBE position: turn " + game.getTurnNum() + ", cards in game " + game.getCards().size()
+        out.println("PROBE position: turn " + game.getTurnNum() + ", cards in game " + game.getCards().size()
                 + ", permanents " + game.getBattlefield().getAllPermanents().size());
         for (int round = 0; round < 3; round++) {   // the first round warms the JIT up
             int n = 2000;
             long t = System.nanoTime();
             for (int i = 0; i < n; i++) game.createSimulationForAI();
             double us = (System.nanoTime() - t) / 1000.0 / n;
-            System.out.println("PROBE copy, round " + round + ": " + String.format("%.1f", us) + " us a copy, " + String.format("%.0f", 1e6 / us) + " a second (one thread)");
+            out.println("PROBE copy, round " + round + ": " + String.format("%.1f", us) + " us a copy, " + String.format("%.0f", 1e6 / us) + " a second (one thread)");
         }
         for (int round = 0; round < 2; round++) {
             int n = round == 0 ? 50 : 300, ok = 0, failed = 0;
@@ -89,11 +92,11 @@ public class ProbeTest extends CardTestPlayerBase {
                     ok++;
                 } catch (Throwable e) {
                     failed++;
-                    if (failed <= 2) { System.out.println("PROBE play-out failed: " + e); e.printStackTrace(System.out); }
+                    if (failed <= 2) { out.println("PROBE play-out failed: " + e); e.printStackTrace(out); }
                 }
             }
             double ms = (System.nanoTime() - t) / 1e6 / n;
-            System.out.println("PROBE play-out to turn " + (game.getTurnNum() + 2) + ", round " + round + ": " + String.format("%.2f", ms) + " ms each, "
+            out.println("PROBE play-out to turn " + (game.getTurnNum() + 2) + ", round " + round + ": " + String.format("%.2f", ms) + " ms each, "
                     + String.format("%.0f", 1000 / ms) + " a second (one thread), " + (ok > 0 ? actions / ok : 0) + " actions each, " + failed + " failed of " + n);
         }
     }
@@ -128,6 +131,6 @@ public class ProbeTest extends CardTestPlayerBase {
         setStopAt(3, PhaseStep.END_TURN);
         setStrictChooseMode(false);
         execute();
-        System.out.println("PROBE ran: " + done);
+        out.println("PROBE ran: " + done);
     }
 }

@@ -24,4 +24,4 @@ jobs:
         run: |
           mkdir -p Mage.Tests/src/test/java/org/mage/test/probe
           cp ../lab/xmage/ProbeTest.java Mage.Tests/src/test/java/org/mage/test/probe/
-          s=0; MAVEN_OPTS="-Xmx6g" mvn -B -pl Mage.Tests test -Dtest=ProbeTest -Dsurefire.failIfNoSpecifiedTests=false > probe.log 2>&1 || s=$?; cat probe.log Mage.Tests/target/surefire-reports/*-output.txt 2>/dev/null | grep -E "PROBE|Tests run" | head -80; [ $s = 0 ] || grep -B2 -A12 -E "ERROR|Exception" probe.log | head -120; exit $s
+          s=0; MAVEN_OPTS="-Xmx6g" mvn -B -pl Mage.Tests test -Dtest=ProbeTest -Dsurefire.failIfNoSpecifiedTests=false > probe.log 2>&1 || s=$?; cat /tmp/probe.txt 2>/dev/null | head -80; grep "Tests run" probe.log | tail -1; [ $s = 0 ] || grep -B2 -A12 -E "ERROR|Exception" probe.log | head -120; exit $s
