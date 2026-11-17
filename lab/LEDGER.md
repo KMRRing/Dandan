@@ -1126,3 +1126,10 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   train as any. Filler from its next batch: vs=g11w-C:10. Zero's loop reads the latest nets' score against the previous off
   each generation's vs games (vsScore), logs it and keeps it in the history, and moves vs to the nets just replaced at every new
   generation. Tested end to end on a folder store. Fable's human-record starts dropped.
+- 12:25Z Korbi 14:14 ("loop on general line … asap"): the loop on the general line. zero-play.mjs: policy `gen:<name>` plays the
+  general Monte, `vs=gen:<name>:<every>` or `vs=<old nets>:<every>` the rival (records unchanged: the general packer replays
+  them; checked: 2 local games gen vs g12r-C, repacked 0 not the same). general-train.yml: `init` (warm start, --init for
+  -gvalue and -gpolicy; checked locally). loop.mjs: loop.json `line: general` dispatches general-train.yml (scry, keep,
+  policy_args head2 128·64·64), the filler plays `gen:<nets> -`, the suite runs gen:<nets>. loop.json set to crown gm1 at its
+  first step (phase train, challenger gm1): then the filler plays gen:gm1, 1 game in 10 against g12r-C. The loop stays off
+  until the store verify passes. Smoke nets deleted.

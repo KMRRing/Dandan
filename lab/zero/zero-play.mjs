@@ -10,20 +10,25 @@
 // "vs=<nets>:<every>" (17 Nov 2026, Korbi: how the general Monte is known to be ready, with every game still training): every
 // <every>th game one seat (taking turns) plays the nets <nets> (lab/zero/nets/<nets>-policy, -value), the previous generation's;
 // the game line says so ({ vs: { nets, seat } }), and Zero's loop reads the new nets' score against them off those games.
-// usage: node lab/zero/zero-play.mjs <shard> <shards> <out> <deals> <games> <first seed> <policy net|-> <value net|-> [x3 400] [deeper=<gap>] [vs=<nets>:<every>]
+// The general line (17 Nov 2026, Korbi: "loop on general line … asap"): a policy argument gen:<name> plays the general Monte
+// (lab/zero/general.mjs; nets lab/zero/nets/<name>-gpolicy, -gvalue, -scry12; the value argument is then ignored), and
+// vs=gen:<name>:<every> plays it as the rival. The records are the same (moves and the search's weights): the general packer
+// replays them.
+// usage: node lab/zero/zero-play.mjs <shard> <shards> <out> <deals> <games> <first seed> <policy net|gen:<name>|-> <value net|-> [x3 400] [deeper=<gap>] [vs=<nets>:<every>]
 import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
-import { zeroOptions, zeroBrain, valueRow, decisionLine, PASS } from "./zero-lib.mjs";
+import { zeroOptions, zeroBrain, generalBrain, valueRow, decisionLine, PASS } from "./zero-lib.mjs";
 
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5]), Number(process.argv[6]), Number(process.argv[7])];
 // the nets by name; from generation 6 (Korbi 10:04) a policy on the extended view with its Scry, and a value net face up
-const brain = zeroBrain(process.argv[8], process.argv[9], null), X3 = Number(process.argv[10] || 400);
+const brainBy = (policy, value) => (policy.startsWith("gen:") ? generalBrain(policy.slice(4)) : zeroBrain(policy, value, null));
+const brain = await brainBy(process.argv[8], process.argv[9]), X3 = Number(process.argv[10] || 400);
 // "deeper=<gap>" (15 Nov 2026, Korbi): three turns ahead on close calls, the search's values for those moves the deeper look's
 const FLAGS = process.argv.slice(11), flag = k => FLAGS.find(f => f.startsWith(`${k}=`))?.slice(k.length + 1);
 const DEEPER = flag("deeper") ? { deeper: { gap: Number(flag("deeper")) } } : {};
-const [VS_NETS, VS_EVERY] = (flag("vs") || "").split(":"), every = Number(VS_EVERY) || 0;
-const rival = VS_NETS && every ? zeroBrain(`${VS_NETS}-policy`, `${VS_NETS}-value`, null) : null;
+const VS = flag("vs") || "", cut = VS.lastIndexOf(":"), VS_NETS = cut > 0 ? VS.slice(0, cut) : "", every = cut > 0 ? Number(VS.slice(cut + 1)) || 0 : 0;
+const rival = VS_NETS && every ? await brainBy(VS_NETS.startsWith("gen:") ? VS_NETS : `${VS_NETS}-policy`, `${VS_NETS}-value`) : null;
 const random = !brain.judge;   // generation 0: no value net, no search
 const J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
 const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);

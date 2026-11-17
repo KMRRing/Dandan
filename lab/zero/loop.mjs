@@ -10,6 +10,10 @@
 //          (Korbi, 17 Nov 13:09: "matches are for training not for demonstrating competence"; yardEvery 0): each
 //          generation is measured for free by Monte's test suite and the null-move rate of its games
 //
+// The general line (17 Nov 2026, Korbi: "loop on general line … asap"; loop.json line "general"): the filler plays the general
+// Monte (zero-play.mjs gen:<nets>), general-train.yml trains warm from it (init) with the Scry 1.2 in loop.json scry, the suite
+// runs gen:<nets>. The first general generation may read against the old line's nets (vs=<old>:10): the rival's kind is its own.
+//
 // Lab only: a crowned net is the lab's champion, never the game's; the game's Monte changes only on Korbi's word.
 // It prints what it did; lines "DISPATCH <workflow> <key=value>…" are for the workflow to run.
 // usage: node lab/zero/loop.mjs [--dry]    (reads the store as lab/lib.mjs does)
@@ -51,7 +55,8 @@ async function vsScore(from) {
   }
   return { n, score: n ? won / n : null };
 }
-const nets = name => fs.existsSync(`${here}nets/${name}-policy.json`) && fs.existsSync(`${here}nets/${name}-value.json`);
+const GEN = L.line === "general", ref = name => (GEN ? `gen:${name}` : name);
+const nets = name => (GEN ? ["gpolicy", "gvalue", "scry12"] : ["policy", "value"]).every(k => fs.existsSync(`${here}nets/${name}-${k}.json`));
 const side = name => `zero~${name}-value~${name}-policy~${L.flags}`;
 function queueYard(id) {
   const spec = { id, script: "hard-match.mjs", args: `{shard} {shards} {out} ${side(L.champion)} ${side(L.yard)} ${L.deals} ${L.yardPairs} ${L.yardSeed} 0`, shards: L.yardPairs / 5, timeoutMin: 200,
@@ -74,17 +79,19 @@ if (L.phase === "play") {
     L.trained = { from: window, at: now };
     L.phase = "train";
     log(`generation ${L.gen}: training ${L.challenger} warm from ${L.champion} on ${window.join(",")}`);
-    say(`DISPATCH zero-train-ext.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
+    if (GEN) say(`DISPATCH general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.scry} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
+    else say(`DISPATCH zero-train-ext.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
     L.nextFrom = got.length ? got[got.length - 1].n + 1 : L.genFrom;   // the next generation's first batch
   }
 } else if (L.phase === "train") {
   if (nets(L.challenger)) {
     const prev = L.champion;
     L.champion = L.challenger;
-    F.args = F.args.replace(/\S+-policy \S+-value/, `${L.champion}-policy ${L.champion}-value`);
+    // the nets the filler plays: "<name>-policy <name>-value" on the old line, "gen:<name> -" on the general
+    F.args = F.args.replace(/(\{seed\} )\S+ \S+/, GEN ? `$1gen:${L.champion} -` : `$1${L.champion}-policy ${L.champion}-value`);
     // 1 game in vsEvery against the nets just replaced (Korbi 17 Nov): the next generation's reading, its games training as any
-    if (L.vsEvery) F.args = `${F.args.replace(/ vs=\S+/, "")} vs=${prev}:${L.vsEvery}`;
-    L.previous = prev;
+    if (L.vsEvery) F.args = `${F.args.replace(/ vs=\S+/, "")} vs=${L.prevLine === "old" ? prev : ref(prev)}:${L.vsEvery}`;
+    L.previous = prev; delete L.prevLine;
     F.purpose = `Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets ${L.champion} against themselves; games for the next generation. ${F.purpose.replace(/^Filler[^.]*\.\s*/, "")}`.slice(0, 1500);
     if (!dry) fs.writeFileSync(FILLER, JSON.stringify(F, null, 2) + "\n");
     // the rule (Fable, 16 Nov): when anything goes live, close the open filler batch: it was made with the old nets
@@ -97,7 +104,7 @@ if (L.phase === "play") {
     say(`DISPATCH lab-read.yml script=null-count.mjs args=0_1_-_${L.trained.from.join(",")}`);
     // Monte's test suite on the new nets (lab/suite.json: the positions Korbi flagged), kept with the generation
     let suite = null;
-    try { const t = execSync(`node ${here}../suite.mjs ${L.champion} 256 ${L.flags} --json`, { encoding: "utf8", timeout: 20 * 60e3 }); suite = JSON.parse(t.trim().split("\n").pop()); say(`suite: ${suite.passed} of ${suite.of} passed`); }
+    try { const t = execSync(`node ${here}../suite.mjs ${ref(L.champion)} 256 ${L.flags} --json`, { encoding: "utf8", timeout: 20 * 60e3 }); suite = JSON.parse(t.trim().split("\n").pop()); say(`suite: ${suite.passed} of ${suite.of} passed`); }
     catch (e) { say(`suite: did not run (${String(e.message).slice(0, 120)})`); }
     L.history = [...(L.history || []), { gen: L.gen, nets: L.champion, from: prev, window: L.trained.from, at: now, ...(L.reading ? { reading: L.reading } : {}), ...(suite ? { suite: `${suite.passed}/${suite.of}`, failed: suite.positions.filter(x => !x.pass).map(x => x.id) } : {}) }];
     L.windowFrom = L.genFrom;   // the window: the generation just played and the next

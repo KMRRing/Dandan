@@ -1,6 +1,6 @@
 {
   "on": false,
-  "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. Off until the store check passes.",
+  "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. Off until the store check passes. From gm1 (17 Nov, Korbi: the loop on the general line): line general, the first step crowns gm1 (trained fresh on the stored games, general-train run 44078371393), the filler then plays gen:gm1 with 1 game in 10 against g12r-C.",
   "gen": 13,
   "prefix": "zl",
   "champion": "g12r-C",
@@ -8,17 +8,33 @@
   "deals": 64,
   "games": 4800,
   "maxWindow": 30000,
-  "value": "64x32",
-  "trainArgs": "",
+  "value": "128x64",
+  "trainArgs": "keep=0.25 vkeep=0.15 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--decay_0.9_--soft_0.02",
   "genFrom": 6,
   "windowFrom": 3,
   "nextFrom": 6,
-  "phase": "play",
+  "phase": "train",
   "log": [],
   "yard": "g9x-C",
   "yardEvery": 0,
   "yardPairs": 300,
   "yardSeed": 3100000,
   "vsEvery": 10,
-  "previous": "g11w-C"
+  "previous": "g11w-C",
+  "line": "general",
+  "scry": "g12h2",
+  "challenger": "gm1",
+  "prevLine": "old",
+  "trained": {
+    "from": [
+      "az-g11-c",
+      "az-g11-c2",
+      "az-g11-c3",
+      "az-g12-c",
+      "az-g12-c2",
+      "zps003",
+      "zps004"
+    ],
+    "at": "2026-11-17T11:55:30Z"
+  }
 }
