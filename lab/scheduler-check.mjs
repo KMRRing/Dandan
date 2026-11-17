@@ -4,7 +4,7 @@
 import { labStore } from "./lib.mjs";
 import { chosenScheduler } from "./scheduler.mjs";
 const store = await labStore(), now = Date.now();
-const names = (await store.list("workers/")).map(o => o.name).filter(n => n.endsWith(".json"));
+const names = (await store.list("workers/")).map(o => (typeof o === "string" ? o : o.name)).filter(n => n.endsWith(".json"));
 const beats = (await Promise.all(names.map(n => store.get(n).then(t => { try { return JSON.parse(t); } catch { return null; } })))).filter(Boolean);
 const fresh = beats.filter(b => now - b.t < 11 * 60000), sched = fresh.filter(b => b.sched);
 console.log(`${beats.length} beats, ${fresh.length} fresh, ${sched.length} hold the token`);

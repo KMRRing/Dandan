@@ -38,6 +38,7 @@ jobs:
           LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
           LAB_BUCKET: dandan-lab-807207481983
         run: |
+          set -o pipefail
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
           LAB_KEY="$RUNNER_TEMP/key.json" node lab/scheduler-check.mjs --dispatch | tee -a "$GITHUB_STEP_SUMMARY"
           rm -f "$RUNNER_TEMP/key.json"
