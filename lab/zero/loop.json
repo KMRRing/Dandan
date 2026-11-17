@@ -1,6 +1,6 @@
 {
   "on": false,
-  "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured for free on each generation: Monte's test suite and the null-move rate. Off until the store check passes.",
+  "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. Off until the store check passes.",
   "gen": 13,
   "prefix": "zl",
   "champion": "g12r-C",
@@ -18,5 +18,7 @@
   "yard": "g9x-C",
   "yardEvery": 0,
   "yardPairs": 300,
-  "yardSeed": 3100000
+  "yardSeed": 3100000,
+  "vsEvery": 10,
+  "previous": "g11w-C"
 }

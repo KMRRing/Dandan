@@ -7,7 +7,10 @@
 // Out, one JSON line each: a searched decision with priority (lab/export.mjs's format, so fetch-ex.mjs / policy_np.py read it),
 // then the game's value rows { v: 1, g, seat, turn, f: [mine, theirs], won, x3 } at every turn's start for both seats, then
 // { game, seed, winner, turns, moves, explore3 }.
-// usage: node lab/zero/zero-play.mjs <shard> <shards> <out> <deals> <games> <first seed> <policy net|-> <value net|-> [x3 400] [deeper=<gap>]
+// "vs=<nets>:<every>" (17 Nov 2026, Korbi: how the general Monte is known to be ready, with every game still training): every
+// <every>th game one seat (taking turns) plays the nets <nets> (lab/zero/nets/<nets>-policy, -value), the previous generation's;
+// the game line says so ({ vs: { nets, seat } }), and Zero's loop reads the new nets' score against them off those games.
+// usage: node lab/zero/zero-play.mjs <shard> <shards> <out> <deals> <games> <first seed> <policy net|-> <value net|-> [x3 400] [deeper=<gap>] [vs=<nets>:<every>]
 import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
@@ -17,7 +20,10 @@ const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Numb
 // the nets by name; from generation 6 (Korbi 10:04) a policy on the extended view with its Scry, and a value net face up
 const brain = zeroBrain(process.argv[8], process.argv[9], null), X3 = Number(process.argv[10] || 400);
 // "deeper=<gap>" (15 Nov 2026, Korbi): three turns ahead on close calls, the search's values for those moves the deeper look's
-const DEEPER = (process.argv[11] || "").startsWith("deeper=") ? { deeper: { gap: Number(process.argv[11].slice(7)) } } : {};
+const FLAGS = process.argv.slice(11), flag = k => FLAGS.find(f => f.startsWith(`${k}=`))?.slice(k.length + 1);
+const DEEPER = flag("deeper") ? { deeper: { gap: Number(flag("deeper")) } } : {};
+const [VS_NETS, VS_EVERY] = (flag("vs") || "").split(":"), every = Number(VS_EVERY) || 0;
+const rival = VS_NETS && every ? zeroBrain(`${VS_NETS}-policy`, `${VS_NETS}-value`, null) : null;
 const random = !brain.judge;   // generation 0: no value net, no search
 const J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
 const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);
@@ -26,7 +32,9 @@ fs.writeFileSync(out, "");
 for (let g = first; g < first + n; g++) {
   const seed = seed0 + g, lines = [], rows = [];
   let G = newRecord(rules, { seats: 2, seed, now: 0 }), explored3 = null, lastTurn = -1;
-  brain.reset();
+  // a game against the previous nets: the seat they play, taking turns game by game
+  const vsSeat = rival && g % every === 0 ? Math.floor(g / every) % 2 : -1, brainOf = seat => (seat === vsSeat ? rival : brain);
+  brain.reset(); if (rival) rival.reset();
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state));
     const rng = seeded(mix(seed, i + 1));
@@ -37,7 +45,7 @@ for (let g = first; g < first + n; g++) {
     if (ms.length <= 1) move = ms[0] ?? PASS;
     else if (random) move = ms[Math.floor(rng() * ms.length)];
     else {
-      const res = brain.think(s, who, deals, DEEPER);
+      const res = brainOf(who).think(s, who, deals, DEEPER);
       move = res.best;
       if (X3 && !explored3 && res.list.length >= 2 && seeded(mix(seed, 9700003 + i))() < 1 / X3) {
         const others = res.list.filter(c => key(c.move) !== key(res.best));
@@ -49,6 +57,7 @@ for (let g = first; g < first + n; g++) {
     const r = applyMove(rules, G, who, move, 0);
     if (r.error) throw new Error(`zero game ${seed} move ${i}: ${r.error}`);
     brain.seen(s, who, move, r.G.state);
+    if (vsSeat >= 0) rival.seen(s, who, move, r.G.state);
     G = r.G;
   }
   Math.random = realRandom;
@@ -57,6 +66,6 @@ for (let g = first; g < first + n; g++) {
   if (explored3) for (const d of lines) d.x3 = Math.sign(d.i - explored3.i);
   const text = [...lines.map(d => JSON.stringify(d)),
     ...rows.map(r => JSON.stringify({ v: 1, g: seed, seat: r.seat, turn: r.turn, f: r.f, won: won(r.seat), ...(seed % 5 === 0 ? { hold: 1 } : {}), ...(explored3 ? { x3: Math.sign(r.i - explored3.i) } : {}) })),
-    JSON.stringify({ game: g, seed, winner: st.winner, why: st.why, turns: st.turn, moves: G.moves ?? [], ...(explored3 ? { explore3: explored3 } : {}) })];
+    JSON.stringify({ game: g, seed, winner: st.winner, why: st.why, turns: st.turn, moves: G.moves ?? [], ...(explored3 ? { explore3: explored3 } : {}), ...(vsSeat >= 0 ? { vs: { nets: VS_NETS, seat: vsSeat } } : {}) })];
   fs.appendFileSync(out, text.join("\n") + "\n");
 }

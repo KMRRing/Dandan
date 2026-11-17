@@ -1121,3 +1121,8 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   gpolicy, -gvalue, -scry12 and lab/zero/general.mjs (now browser-safe: no node modules). The 36 names stay in the old encoding
   (dandan-netpolicy.js 28, dandan-think.js 4, dandan-zero.js 2, zero2.mjs 2) until the general Monte replaces the live one: then
   they leave Monte's path, and dandan-zero.js's bend list and the coach's Dandân count take the card files' words.
+- 12:35Z Korbi 14:02: strength by mixed self-play, **yes**; starts from human games, **no** ("don't bother"). zero-play.mjs
+  vs=<nets>:<every>: every 10th game one seat (taking turns) plays the previous nets; the game line carries { vs }; those games
+  train as any. Filler from its next batch: vs=g11w-C:10. Zero's loop reads the latest nets' score against the previous off
+  each generation's vs games (vsScore), logs it and keeps it in the history, and moves vs to the nets just replaced at every new
+  generation. Tested end to end on a folder store. Fable's human-record starts dropped.
