@@ -13,6 +13,7 @@ on:
       init: { description: "Warm start: an earlier Scry G (lab/zero/nets/<init>-scryg.json); empty fresh", required: false, default: "" }
 permissions:
   contents: write
+  actions: write
 jobs:
   pack:
     runs-on: ubuntu-latest
@@ -58,3 +59,8 @@ jobs:
           git commit -q -m "Scry G trained on GitHub: ${{ inputs.name }}" || exit 0
           for i in 1 2 3 4 5 6 7 8; do if git pull -q --rebase origin main && git push -q origin HEAD:main; then exit 0; fi; git rebase --abort 2>/dev/null || true; sleep $((5 + RANDOM % 20)); done
           echo "::error::the net could not be pushed"; exit 1
+      # the loop's next step at once (17 Nov 2026, Korbi 20:11): it crowns the nets when everything is in, instead of at its next
+      # 10-minute tick
+      - name: The loop's next step
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: gh workflow run zero-loop.yml --repo "${{ github.repository }}" --ref main || echo "::warning::the loop's step was not started"
