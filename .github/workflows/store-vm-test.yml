@@ -1,0 +1,38 @@
+# The B2 store tried from a lab machine before the switch (17 Nov 2026, Korbi 17:33). Logs in to a lab machine over SSH (the
+# LAB_SSH_KEY secret, as vm-check.yml) and runs lab/store-vm-test.mjs from `ref` there, with the B2 key sent over the SSH
+# connection's input (never in a command line, a file or the log) and the machine's own bucket key. Only the test's own lines
+# are kept, every key-like token blanked.
+name: Store test from a lab machine
+on:
+  workflow_dispatch:
+    inputs:
+      host: { description: "A lab machine's address", required: true }
+      ref: { description: "Branch with the store code to try", required: true, default: "store-fallback" }
+permissions: { contents: read }
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Run the test on the machine
+        env:
+          LAB_SSH_KEY: "${{ secrets.LAB_SSH_KEY }}"
+          LAB_B2_KEY_ID: "${{ secrets.LAB_B2_KEY_ID }}"
+          LAB_B2_KEY: "${{ secrets.LAB_B2_KEY }}"
+          LAB_B2_ENDPOINT: "${{ secrets.LAB_B2_ENDPOINT }}"
+          HOST: "${{ inputs.host }}"
+          REF: "${{ inputs.ref }}"
+        run: |
+          key="$RUNNER_TEMP/k"; printf '%s\n' "$LAB_SSH_KEY" > "$key"; chmod 600 "$key"
+          q() { printf "%q" "$1"; }
+          script="export LAB_B2_KEY_ID=$(q "$LAB_B2_KEY_ID") LAB_B2_KEY=$(q "$LAB_B2_KEY") LAB_B2_ENDPOINT=$(q "$LAB_B2_ENDPOINT") LAB_B2_BUCKET=ML-queue LAB_BUCKET=dandan-lab-807207481983 LAB_KEY=/opt/lab-key.json
+          d=\$(mktemp -d); git clone -q --depth 1 -b $(q "$REF") https://github.com/KMRRing/Dandan.git \"\$d/t\" && cd \"\$d/t\" && node lab/store-vm-test.mjs; s=\$?; rm -rf \"\$d\"; exit \$s"
+          s=0
+          for u in root ubuntu; do
+            run="bash -s"; [ "$u" = root ] || run="sudo -n bash -s"   # the machine's bucket key is root's
+            printf '%s\n' "$script" | timeout 600 ssh -i "$key" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=15 -o BatchMode=yes "$u@$HOST" "$run" > out.raw 2>&1 || s=$?
+            grep -q "STORE-VM-TEST" out.raw && break
+          done
+          rm -f "$key"
+          sed -E -e '/[Kk][Ee][Yy]|[Ss][Ee][Cc][Rr][Ee][Tt]|[Tt][Oo][Kk][Ee][Nn]|BEGIN|END /c\[line hidden]' -e 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g' out.raw | tee -a "$GITHUB_STEP_SUMMARY"
+          grep -q "STORE-VM-TEST: passed" out.raw
