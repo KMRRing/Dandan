@@ -3,6 +3,8 @@
 # every target in full) and raw value rows (lab/zero/replay-pack2.mjs, four side by side, merged); the raw value net with its
 # deck-out output (value_np.py --aux) and the one policy with soft targets (policy_np.py). Committed as
 # lab/zero/nets/<name>-value2.json, -policy2.json, with a copy of the Scry as <name>-scry12.json.
+# The pack runs on four runners side by side, four shards each (17 Nov 2026: z2a's one runner was lost after 2.6 hours with
+# its logs, packing ~24,000 games on one machine); the train job merges their packs and trains.
 name: Zero 2 (train)
 on:
   workflow_dispatch:
@@ -18,31 +20,46 @@ on:
 permissions:
   contents: write
 jobs:
-  train:
+  pack:
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    strategy: { matrix: { part: [0, 1, 2, 3] } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - name: Train
+      - name: Pack
         env:
           LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
           LAB_BUCKET: dandan-lab-807207481983
         run: |
-          pip install -q numpy
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
-          N="${{ inputs.name }}"; S="lab/zero/nets/${{ inputs.scry }}-scry12.json"; D="$RUNNER_TEMP/r"
-          for k in 0 1 2 3; do VBLEND="${{ inputs.vblend }}" HANDS="${{ inputs.hands }}" LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D$k" "${{ inputs.games }}" "$S" $k 4 > "$RUNNER_TEMP/t$k.txt" & done; wait
+          S="lab/zero/nets/${{ inputs.scry }}-scry12.json"; D="$RUNNER_TEMP/r"; P=${{ matrix.part }}
+          for k in 0 1 2 3; do VBLEND="${{ inputs.vblend }}" HANDS="${{ inputs.hands }}" LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D/$k" "${{ inputs.games }}" "$S" $((P * 4 + k)) 16 > "$RUNNER_TEMP/t$k.txt" & done; wait
           rm -f "$RUNNER_TEMP/key.json"
           tail -n 1 "$RUNNER_TEMP"/t?.txt | tee -a "$GITHUB_STEP_SUMMARY"
+          cp "$RUNNER_TEMP"/t?.txt "$D/"
+      - uses: actions/upload-artifact@v4
+        with: { name: "pack-${{ matrix.part }}", path: "${{ runner.temp }}/r", retention-days: 2, compression-level: 1 }
+  train:
+    needs: pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/download-artifact@v4
+        with: { path: "${{ runner.temp }}/in" }
+      - name: Train
+        run: |
+          pip install -q numpy
+          N="${{ inputs.name }}"; S="lab/zero/nets/${{ inputs.scry }}-scry12.json"; D="$RUNNER_TEMP/r"; I="$RUNNER_TEMP/in"
           # (Fable 20:45Z) no training on a pack that guessed: every decision matched, every pick among the options, every game the same
-          bad=$(cat "$RUNNER_TEMP"/t?.txt | grep -oE '\(([0-9]+) not the same|([0-9]+) unmatched|([0-9]+) picks not among' | grep -oE '[0-9]+' | paste -sd+ | bc)
+          bad=$(cat "$I"/pack-*/t?.txt | grep -oE '\(([0-9]+) not the same|([0-9]+) unmatched|([0-9]+) picks not among' | grep -oE '[0-9]+' | paste -sd+ | bc)
           if [ "${bad:-1}" != 0 ]; then echo "::error::the pack has $bad games not the same, unmatched decisions or picks not among the options: not trained"; exit 1; fi
-          python3 lab/zero/pack-merge.py "$D" "${D}0" "${D}1" "${D}2" "${D}3" | tee -a "$GITHUB_STEP_SUMMARY"
-          rm -rf "${D}"?/
+          python3 lab/zero/pack-merge.py "$D" $(ls -d "$I"/pack-*/[0-9] | sort) | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -rf "$I"
           python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$N-value2.json" --shape "${{ inputs.value }}" ${{ inputs.value_args }} | tee -a "$RUNNER_TEMP/log.txt"
           python3 lab/policy_np.py "$D/a" "lab/zero/nets/$N-policy2.json" --form head ${{ inputs.policy_args }} | tee -a "$RUNNER_TEMP/log.txt"
           [ "$S" = "lab/zero/nets/$N-scry12.json" ] || cp "$S" "lab/zero/nets/$N-scry12.json"
