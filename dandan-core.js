@@ -15,13 +15,17 @@ export const list = x => (Array.isArray(x) ? x.filter(v => v != null) : x && typ
 
 // ---------- randomness: the move's own stream, set by whoever runs a move ----------
 // quiet: a game the computer plays out in its head keeps no log (a line is a string built for nobody)
-let rng = Math.random, quiet = false;
-export function withRng(r, fn, hush = false) {
-  const old = rng, was = quiet;
+// real (17 Nov 2026, the particle wall): a move played again in a world the computer imagines, as the real game would play it: no
+// log and nothing noted, but the game stops where the real one does (the shortcuts of a game played out in the head left out)
+let rng = Math.random, quiet = false, real = false;
+export function withRng(r, fn, hush = false, asReal = false) {
+  const old = rng, was = quiet, wasReal = real;
   rng = r || Math.random;
-  quiet = hush;
-  try { return fn(); } finally { rng = old; quiet = was; }
+  quiet = hush; real = asReal;
+  try { return fn(); } finally { rng = old; quiet = was; real = wasReal; }
 }
+/** Whether the game may take the shortcuts of one played out in the head (quiet, and not a real game played again). */
+export const inHead = () => quiet && !real;
 export const random = () => rng();
 /** Whether the move being made is one played out in the head (no log, nothing noted for the table). */
 export const hushed = () => quiet;

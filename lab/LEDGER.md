@@ -1133,3 +1133,20 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   policy_args head2 128·64·64), the filler plays `gen:<nets> -`, the suite runs gen:<nets>. loop.json set to crown gm1 at its
   first step (phase train, challenger gm1): then the filler plays gen:gm1, 1 game in 10 against g12r-C. The loop stays off
   until the store verify passes. Smoke nets deleted.
+- 13:40Z gm1 landed (general-train 44078371393): 33.5k games packed, 0 not the same, 0 unmatched, 0 picks off; value held-out
+  0.428 (coin 0.693; z2a 0.424), policy agrees 73.0% (z2a 75.6%). Suite gen:gm1: 4/5 at 256 deals (mean margin 1.3), 3/5 at
+  2,048 (0.9; 2 null picks); g12r-C was 4/5, 5/5. A self-play game at 256 deals: 1.5 s a decision (g12r-C 1.4 s).
+- 13:40Z Korbi 14:31-14:38: the particle wall (lab/zero/wall.mjs; tests/wall.mjs). Worlds are whole hidden games played by the
+  rules from the deal; each real move played in every world (the other player's as the options that look the same, weighed by
+  the policy, softened eps, tempered beta); worlds kept showing exactly what the seat sees (copies renamed; a wrong draw swapped
+  with a card nobody knows); the world's rules stop at every priority and pass on to the real game's stop (engine flag `real`:
+  quiet, real stops; dandan-core.js inHead), so nothing is learnt from where the real game stopped; repairs for cards shown
+  that a world lacks. Before each search: resampled when thin, Metropolis-Hastings moves (whole hand dealt by Scry 1.2 and
+  judged by the likelihood ratio; one-card moves). The search deals from the wall (general.mjs makeGeneral wall:, zero-play
+  wall=<n>); the other player's belief then read in a world, not in the real game. Test: the true deal, played through every
+  move with the true plays, always survives; every world shows what the seat sees; worlds deal the unseen cards.
+  Measured (lab/wall-check.mjs, per-card −log chance of the true hidden cards, lower better): one gm1 game, seat 0: wall 2.55
+  vs Scry 1.2 2.65 (poe, beta 1, 32 worlds, 32 moves); but seat 1 and a g12r-C game: wall 2.68-3.53 vs Scry 2.58-3.09. The
+  likelihood itself points the right way (the true hand's beats the median world's at every check), the wall's search over
+  hands doesn't find it reliably, and worlds still die at rare plays (an empty wall leaves the search to Scry). Off by default;
+  not in the loop.

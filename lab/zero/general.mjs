@@ -7,6 +7,12 @@ import { think } from "../../dandan-think.js";
 import { zeroOptions, PASS } from "../../dandan-zero.js";
 import { generalView, valueView, generalMarks, onPool, viewSize, POOL } from "../../dandan-general.js";
 import { Scry12 } from "./scry12.mjs";
+import { Wall } from "./wall.mjs";
+import { act as engineAct, unplayable, stopEverywhere, toMove as engineToMove } from "../../dandan-engine.js";
+import { rules } from "../../dandan-rules.js";
+import { fork } from "../../dandan-think.js";
+import { DECK } from "../../dandan-cards.js";
+import { HAND } from "../../dandan-core.js";
 import { NN } from "../../dandan-zeroview.js";   // the app's own: the page loads this file (no node modules)
 
 /** The one policy as the look-aheads' player and the tree's focus, for priority and for questions alike. */
@@ -33,7 +39,12 @@ export function generalPlayer(policy, ctx) {
     for (let r = 0; r < order.length && out.length < most; r++) { out.push(ms[order[r]]); cum += e[r] / z; if (cum >= mass) break; }
     return out;
   };
-  return { rollout, focus: score ? top : null, qfocus: score ? top : null };
+  // the policy's chances of the options (softmax of its scores): the particle wall's likelihood of a play
+  const probs = (s, seat, ms) => {
+    const sc = scores(s, seat, ms), m = Math.max(...sc), e = sc.map(v => Math.exp(v - m)), z = e.reduce((a, b) => a + b, 0);
+    return e.map(v => v / z);
+  };
+  return { rollout, focus: score ? top : null, qfocus: score ? top : null, probs: score ? probs : null };
 }
 
 /** The value net (value_np.py's layer format) over valueView, face up: the chance `me` wins, sigmoid(g(mine) − g(theirs)). */
@@ -65,20 +76,57 @@ export function generalJudge(value) {
   };
 }
 
-/** The general Monte whole: { policy, value, scry12 } nets as read from their files; the interface of dandan-zero.js makeZero. */
-export function makeGeneral({ policy = null, value = null, scry12 = null } = {}) {
-  const ctx = { counts: [new Float32Array(POOL.V), new Float32Array(POOL.V)], any: [null, null] }, player = generalPlayer(policy, ctx), judge = generalJudge(value);
-  let filters = scry12 ? [new Scry12(0, scry12), new Scry12(1, scry12)] : null;
+/**
+ * Dandân's rules for the particle wall (lab/zero/wall.mjs): the only part of it that knows the game. show: the page's rules
+ * (the computer's spells shown, dandan-rules.js shownRules), which stop where the plain ones don't.
+ */
+export function dandanEngine({ show = false } = {}) {
   return {
-    player, judge, wide: true, dealing: !!scry12, filters: () => filters, scry: null,
-    reset() { if (scry12) filters = [new Scry12(0, scry12), new Scry12(1, scry12)]; },
+    // a deal as the game's own (rules.deal: a read game, which stops where the engine reads passes; the cover setting read off the
+    // first position seen)
+    deal: (rng, v0) => rules.deal({ rng, options: v0?.cover ? { cover: 1 } : {} }),
+    // a move as the real game makes it, stopping at every priority (the wall passes on to where the real game stood)
+    act: (s, seat, m, rng) => {
+      stopEverywhere(true);
+      try { const r = engineAct(s, seat, m, { rng, quiet: true, real: true, show: show && seat !== 0 }); return typeof r === "string" ? r : r || s; }
+      finally { stopEverywhere(false); }
+    },
+    toMove: engineToMove, PASS,
+    copy: fork, options: zeroOptions, nameOf: id => DECK[id] ?? `token ${id}`,
+    IDKEYS: ["card", "cards", "id", "ids", "src", "att", "blk", "attackers", "blockers", "pairs"],
+    // a hand changed at the deal: the mulligan question asked again of it (whether its mulligan is free)
+    refresh: s => { const p = s.pending; if (p?.t === "mull") p.free = s.hand[p.seat].length === HAND && unplayable(s, p.seat); },
+  };
+}
+
+/** The general Monte whole: { policy, value, scry12 } nets as read from their files; the interface of dandan-zero.js makeZero. */
+// wall (17 Nov 2026, Korbi: the particle wall): the worlds the search deals come from lab/zero/wall.mjs, Scry 1.2 its proposal;
+// { n, eps, beta, … } its settings, true the defaults. The other player's belief (the policy's input when it plays them) is then
+// read in a world drawn from the wall, not in the real game, where it would see their real hand.
+export function makeGeneral({ policy = null, value = null, scry12 = null, wall = null, show = false } = {}) {
+  const ctx = { counts: [new Float32Array(POOL.V), new Float32Array(POOL.V)], any: [null, null] }, player = generalPlayer(policy, ctx), judge = generalJudge(value);
+  const W = wall ? (wall === true ? {} : wall) : null, engine = W ? dandanEngine({ show }) : null;
+  let filters = null, walls = null;
+  const fresh = () => {
+    filters = scry12 ? [new Scry12(0, scry12), new Scry12(1, scry12)] : null;
+    walls = W ? [0, 1].map(x => new Wall(x, engine, { ...W, seed: (W.seed || 1) + x, policy: player.probs, dealer: filters ? filters[x] : null })) : null;
+  };
+  fresh();
+  return {
+    player, judge, wide: true, dealing: !!scry12, filters: () => filters, walls: () => walls, scry: null,
+    reset: fresh,
     tracker: () => null,
-    seen(s, who, m, after) { if (filters) for (const f of filters) f.update(s, who, m, after); },
+    seen(s, who, m, after) { if (filters) for (const f of filters) f.update(s, who, m, after); if (walls) for (const w of walls) w.seen(s, who, m, after); },
     root(s, seat) {
       if (!filters) return {};
-      const b = [filters[0].belief(s), filters[1].belief(s)];
-      for (const x of [0, 1]) { ctx.counts[x] = onPool(b[x].counts); ctx.any[x] = onPool(b[x].any); }
-      return { deal: filters[seat].deal() };
+      const mine = filters[seat].belief(s), o = 1 - seat;
+      let world = null;
+      if (walls) { walls[seat].ensure(); world = walls[seat].draw(Math.random)?.s ?? null; }
+      const theirs = filters[o].belief(world || s);
+      ctx.counts[seat] = onPool(mine.counts); ctx.any[seat] = onPool(mine.any);
+      ctx.counts[o] = onPool(theirs.counts); ctx.any[o] = onPool(theirs.any);
+      const sd = filters[seat].deal(), wd = walls ? walls[seat].deal() : null;
+      return { deal: wd ? (pool, n, rng) => wd(pool, n, rng) || sd(pool, n, rng) : sd };
     },
     think(s, seat, deals, extra = {}) {
       const { qtree, ...rest } = extra;

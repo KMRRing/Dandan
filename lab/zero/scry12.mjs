@@ -198,6 +198,26 @@ export class Scry12 {
     }
     return d;
   }
+  /** The particle wall's proposal (lab/zero/wall.mjs) at the last belief's position: k names dealt card after card, with the
+   *  log chance of that order; and the log chance of a given order. */
+  sample(k, rng) {
+    const d = new Float32Array(NN), names = [];
+    let key = "", logq = 0;
+    for (let j = 0; j < k; j++) {
+      const p = this.next(d, key);
+      let r = rng(), c = 0; while (c < NN - 1 && (r -= p[c]) > 0) c++;
+      logq += Math.log(p[c] || 1e-12); d[c]++; key += c + "."; names.push(NAMES[c]);
+    }
+    return { names, logq };
+  }
+  /** The odds of one hidden card by name with nothing dealt before it, at the last belief's position (a Map, name → chance). */
+  marginal() { const p = this.next(new Float32Array(NN), ""), m = new Map(); NAMES.forEach((n, k) => m.set(n, p[k])); return m; }
+  logProb(names) {
+    const d = new Float32Array(NN);
+    let key = "", lp = 0;
+    for (const n of names) { const c = NAME_AT.get(n), p = this.next(d, key); lp += Math.log((c >= 0 ? p[c] : 0) || 1e-12); d[c]++; key += c + "."; }
+    return lp;
+  }
   /** A dealer for determinize: the other hand's unknown cards one after another, each by its odds given those dealt before it. */
   deal() {
     const L = this.last;

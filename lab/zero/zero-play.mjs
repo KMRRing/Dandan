@@ -22,7 +22,10 @@ import { zeroOptions, zeroBrain, generalBrain, valueRow, decisionLine, PASS } fr
 
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5]), Number(process.argv[6]), Number(process.argv[7])];
 // the nets by name; from generation 6 (Korbi 10:04) a policy on the extended view with its Scry, and a value net face up
-const brainBy = (policy, value) => (policy.startsWith("gen:") ? generalBrain(policy.slice(4)) : zeroBrain(policy, value, null));
+// "wall=<worlds>" (17 Nov 2026, Korbi: the particle wall, lab/zero/wall.mjs): the general Monte deals its worlds from a wall of
+// that many
+const WALL = Number((process.argv.slice(11).find(f => f.startsWith("wall=")) || "").slice(5)) || 0;
+const brainBy = (policy, value) => (policy.startsWith("gen:") ? generalBrain(policy.slice(4), WALL ? { wall: { n: WALL } } : {}) : zeroBrain(policy, value, null));
 const brain = await brainBy(process.argv[8], process.argv[9]), X3 = Number(process.argv[10] || 400);
 // "deeper=<gap>" (15 Nov 2026, Korbi): three turns ahead on close calls, the search's values for those moves the deeper look's
 const FLAGS = process.argv.slice(11), flag = k => FLAGS.find(f => f.startsWith(`${k}=`))?.slice(k.length + 1);
@@ -73,4 +76,5 @@ for (let g = first; g < first + n; g++) {
     ...rows.map(r => JSON.stringify({ v: 1, g: seed, seat: r.seat, turn: r.turn, f: r.f, won: won(r.seat), ...(seed % 5 === 0 ? { hold: 1 } : {}), ...(explored3 ? { x3: Math.sign(r.i - explored3.i) } : {}) })),
     JSON.stringify({ game: g, seed, winner: st.winner, why: st.why, turns: st.turn, moves: G.moves ?? [], ...(explored3 ? { explore3: explored3 } : {}), ...(vsSeat >= 0 ? { vs: { nets: VS_NETS, seat: vsSeat } } : {}) })];
   fs.appendFileSync(out, text.join("\n") + "\n");
+  if (WALL && brain.walls?.()) for (const w of brain.walls()) console.error(`wall ${w.me} game ${g}: ${JSON.stringify(w.stats)} worlds ${w.parts.filter(p => p.alive).length} ess ${w.ess().toFixed(1)}`);
 }
