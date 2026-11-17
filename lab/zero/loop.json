@@ -1,9 +1,9 @@
 {
   "on": true,
   "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. On since 17 Nov 15:15Z on Google (Korbi 17:12, Fable 15:10Z: the store moves to B2 between generations). From gm1 (17 Nov, Korbi: the loop on the general line): line general, the first step crowns gm1 (trained fresh on the stored games, general-train run 44078371393), the filler then plays gen:gm1 with 1 game in 10 against g12r-C.",
-  "gen": 13,
+  "gen": 14,
   "prefix": "zl",
-  "champion": "g12r-C",
+  "champion": "gm1",
   "flags": "deeper=0.03",
   "deals": 64,
   "games": 4800,
@@ -11,20 +11,20 @@
   "value": "128x64",
   "trainArgs": "keep=0.25 vkeep=0.15 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--decay_0.9_--soft_0.02",
   "genFrom": 6,
-  "windowFrom": 3,
+  "windowFrom": 6,
   "nextFrom": 6,
-  "phase": "train",
-  "log": [],
+  "phase": "play",
+  "log": [
+    "2026-11-17T15:10:53.743Z generation 13: gm1 (warm from g12r-C) plays from the filler's next batch"
+  ],
   "yard": "g9x-C",
   "yardEvery": 0,
   "yardPairs": 300,
   "yardSeed": 3100000,
   "vsEvery": 10,
-  "previous": "g11w-C",
+  "previous": "g12r-C",
   "line": "general",
   "scry": "g12h2",
-  "challenger": "gm1",
-  "prevLine": "old",
   "trained": {
     "from": [
       "az-g11-c",
@@ -36,5 +36,28 @@
       "zps004"
     ],
     "at": "2026-11-17T11:55:30Z"
-  }
+  },
+  "history": [
+    {
+      "gen": 13,
+      "nets": "gm1",
+      "from": "g12r-C",
+      "window": [
+        "az-g11-c",
+        "az-g11-c2",
+        "az-g11-c3",
+        "az-g12-c",
+        "az-g12-c2",
+        "zps003",
+        "zps004"
+      ],
+      "at": "2026-11-17T15:10:53.743Z",
+      "suite": "2/5",
+      "failed": [
+        "no-island-dandan-2",
+        "no-island-dandan-4",
+        "no-island-dandan-5"
+      ]
+    }
+  ]
 }
