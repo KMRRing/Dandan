@@ -1,29 +1,30 @@
 {
   "on": true,
   "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. On since 17 Nov 15:15Z on Google (Korbi 17:12, Fable 15:10Z: the store moves to B2 between generations). From gm1 (17 Nov, Korbi: the loop on the general line): line general, the first step crowns gm1 (trained fresh on the stored games, general-train run 44078371393), the filler then plays gen:gm1 with 1 game in 10 against g12r-C.",
-  "gen": 14,
+  "gen": 15,
   "prefix": "zl",
-  "champion": "gm1",
+  "champion": "gm2",
   "flags": "deeper=0.03",
   "deals": 64,
   "games": 4800,
   "maxWindow": 30000,
   "value": "128x64",
   "trainArgs": "keep=0.25 vkeep=0.15 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--decay_0.9_--soft_0.02",
-  "genFrom": 6,
+  "genFrom": 7,
   "windowFrom": 6,
   "nextFrom": 6,
-  "phase": "train",
+  "phase": "play",
   "log": [
     "2026-11-17T15:10:53.743Z generation 13: gm1 (warm from g12r-C) plays from the filler's next batch",
-    "2026-11-17T16:10:40Z generation 14: gm2 (gm1 grown to view 2, 2602 inputs, with the general dealer sg1: Korbi 17:27, full general) to be crowned by the next step; the belief from here on is scryg"
+    "2026-11-17T16:10:40Z generation 14: gm2 (gm1 grown to view 2, 2602 inputs, with the general dealer sg1: Korbi 17:27, full general) to be crowned by the next step; the belief from here on is scryg",
+    "2026-11-17T16:25:51.074Z generation 14: gm2 (warm from gm1) plays from the filler's next batch"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
   "yardPairs": 300,
   "yardSeed": 3100000,
   "vsEvery": 10,
-  "previous": "g12r-C",
+  "previous": "gm1",
   "line": "general",
   "scry": "g12h2",
   "trained": {
@@ -59,6 +60,26 @@
         "no-island-dandan-4",
         "no-island-dandan-5"
       ]
+    },
+    {
+      "gen": 14,
+      "nets": "gm2",
+      "from": "gm1",
+      "window": [
+        "az-g11-c",
+        "az-g11-c2",
+        "az-g11-c3",
+        "az-g12-c",
+        "az-g12-c2",
+        "zps003",
+        "zps004"
+      ],
+      "at": "2026-11-17T16:25:51.074Z",
+      "suite": "3/5",
+      "failed": [
+        "no-island-dandan-4",
+        "no-island-dandan-5"
+      ]
     }
   ],
   "progress": {
@@ -74,6 +95,5 @@
       ]
     ]
   },
-  "belief": "scryg",
-  "challenger": "gm2"
+  "belief": "scryg"
 }
