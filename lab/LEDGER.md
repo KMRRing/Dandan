@@ -1092,3 +1092,13 @@ three generations behind. Zero's loop runs the suite on every new generation and
 - 11:15Z Korbi 13:09: "matches are for training not for demonstrating competence": no yardstick (zy-g12r-C never queued; the
   loop's yardEvery 0). Each generation is measured by the suite and the null-move rate, which play no games.
 - 11:20Z az-sw12 retired (Korbi: generalize first). The plan for Fable: https://claude.ai/artifact/3Kfpi91qy9HawZPEFHzprM (phases A generalize, B housekeeping, C train, D belief net, E Modern engine).
+
+## 17 Nov 11:50Z — stage 3 step 2: observe(state, seat) (Phase A of the plan)
+dandan-view.js observe(): the state as one seat sees it, same shape: the other hand's unknown cards and the library's unknown
+cards HIDDEN (sizes and known positions kept), another seat's pending question reduced to its kind, Medium's tells/reading/the
+coach's advice and the log dropped; `unseenIds` (sorted, made on demand) is what the hidden cards could be. ext, viewInto, seenBy,
+Scry 1.2's eventOf and belief now build from it, so no net input can read a hidden card (dandan-eval.js skips HIDDEN ids).
+Gates: tests/observe.mjs (a position and the same one with every hidden card dealt again give the same observation, the same
+views and the same Scry 1.2 belief: 228 of 228, 38 of 38); scry-honest and scry-redeal pass; the fixture's training pack is
+byte-identical to before (x, cand, marks, q, value rows); the suite unchanged (g12r-C 4 of 5 at 256); 5 us an observe. One local
+self-play game. Scry 1 (the live, leaky belief's Tracker) is not routed through it: it goes when the general dealer replaces it.
