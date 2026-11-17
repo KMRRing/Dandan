@@ -16,30 +16,41 @@ const check = (ok, what) => { console.log(`${ok ? "ok  " : "FAIL"} ${what}`); if
 const J = x => JSON.parse(JSON.stringify(x)), key = a => Array.from(a).join(",");
 /** The same position with the cards `me` can't see dealt again among the places it can't see (the other hand, the library). */
 function redeal(s, me, rng) {
-  const c = J(s), opp = 1 - me, bit = 1 << me, kh = new Set(knownIn(c, opp, me));
-  const at = [];
-  c.hand[opp].forEach((id, i) => { if (!kh.has(id)) at.push(["h", i]); });
-  // a library place the other player knows stays as it is (that they know it is public: observe's theirLib)
-  c.lib.forEach((id, i) => { if (!(knOf(c, id) & bit) && !(knOf(c, id) & (1 << opp))) at.push(["l", i]); });
-  const ids = at.map(([z, i]) => (z === "h" ? c.hand[opp][i] : c.lib[i]));
-  for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-  at.forEach(([z, i], k) => { if (z === "h") c.hand[opp][i] = ids[k]; else c.lib[i] = ids[k]; });
+  // two classes, each dealt again among its own places (the places stay, the contents move; Fable 15:10Z): the cards the other
+  // player knows and the seat doesn't (their hidden hand, the library places only they know), and the library places neither knows
+  const c = J(s), opp = 1 - me, bit = 1 << me, kh = new Set(knownIn(c, opp, me)), theirs = [], none = [];
+  c.hand[opp].forEach((id, i) => { if (!kh.has(id)) theirs.push(["h", i]); });
+  c.lib.forEach((id, i) => { const k = knOf(c, id); if (!(k & bit)) (k & (1 << opp) ? theirs : none).push(["l", i]); });
+  for (const at of [theirs, none]) {
+    const ids = at.map(([z, i]) => (z === "h" ? c.hand[opp][i] : c.lib[i])), bits = ids.map(id => knOf(c, id));
+    for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+    at.forEach(([z, i], k) => { if (z === "h") c.hand[opp][i] = ids[k]; else c.lib[i] = ids[k]; });
+    // what the other player knows stays with the place: each id takes the knowledge of the place it now sits in
+    const was = new Map(at.map(([z, i], k) => [ids[k], bits[k]]));
+    c.kn = c.kn.filter(e => !was.has(e[0]));
+    at.forEach(([z, i], k) => { if (z === "l" && bits[k]) c.kn.push([ids[k], bits[k]]); });
+  }
   return c;
 }
 const line = fs.readFileSync(new URL("./fixtures/zero-game-4245.jsonl", import.meta.url), "utf8").split("\n").filter(Boolean).map(JSON.parse).find(o => o.game != null);
-let G = newRecord(rules, { seats: 2, seed: line.seed, now: 0 }), n = 0, sameObs = 0, sameViews = 0;
+let G = newRecord(rules, { seats: 2, seed: line.seed, now: 0 }), n = 0, sameObs = 0, sameViews = 0, withTheirs = 0;
 const rng = seeded(17), z = new Float32Array(25);
 const obsKey = o => JSON.stringify({ ...o, log: undefined }) + key(o.unseenIds);
 for (let i = 0; i < line.moves.length; i++) {
   const s = G.state;
   for (const me of [0, 1]) {
     if (s.pending) continue;   // a question's options may name hidden cards in the state (the observation drops them)
-    const t = redeal(s, me, rng);
-    n++;
-    if (obsKey(observe(s, me)) === obsKey(observe(t, me))) sameObs++;
-    const a = seenBy(s, me), b = seenBy(t, me);
-    const gz = new Float32Array(POOL.V);
-    if (key(generalView(s, me, gz)) === key(generalView(t, me, gz)) && key(ext(s, me, z)) === key(ext(t, me, z)) && key(viewInto(s, me, new Float64Array(VIEW_N))) === key(viewInto(t, me, new Float64Array(VIEW_N))) && key(a.unseen) === key(b.unseen) && a.unknown === b.unknown) sameViews++;
+    // a position with library places only the other player knows (what view 2 reads) is dealt again eight times
+    const theirs = observe(s, me).theirLib.length;
+    if (theirs) withTheirs++;
+    for (let r = 0; r < (theirs ? 8 : 1); r++) {
+      const t = redeal(s, me, rng);
+      n++;
+      if (obsKey(observe(s, me)) === obsKey(observe(t, me))) sameObs++;
+      const a = seenBy(s, me), b = seenBy(t, me);
+      const gz = new Float32Array(POOL.V);
+      if (key(generalView(s, me, gz)) === key(generalView(t, me, gz)) && key(ext(s, me, z)) === key(ext(t, me, z)) && key(viewInto(s, me, new Float64Array(VIEW_N))) === key(viewInto(t, me, new Float64Array(VIEW_N))) && key(a.unseen) === key(b.unseen) && a.unknown === b.unknown) sameViews++;
+    }
   }
   const [who, m] = line.moves[i];
   Math.random = seeded(mix(line.seed, i + 1));
@@ -47,6 +58,7 @@ for (let i = 0; i < line.moves.length; i++) {
 }
 check(n > 200 && sameObs === n, `the observation doesn't change when the hidden cards are dealt again (${sameObs} of ${n} positions and seats)`);
 check(sameViews === n, `nor do the general view, ext, viewInto and seenBy built on it (${sameViews} of ${n})`);
+check(withTheirs > 0, `the library places only the other player knows dealt again too: ${withTheirs} positions, 8 times each`);
 // 3. Scry 1.2's belief on the honest net, followed through the game: the same counts with the hidden cards dealt again
 {
   const net = JSON.parse(fs.readFileSync(new URL("../lab/zero/nets/g12h2-scry12.json", import.meta.url), "utf8").split("\n")[0]);

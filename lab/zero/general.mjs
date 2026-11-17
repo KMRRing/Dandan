@@ -85,6 +85,7 @@ export const dandanEngine = () => ({ options: zeroOptions, nameOf: id => DECK[id
 // scryg (17 Nov 2026, Korbi 16:29: the general dealer, lab/zero/scryg.mjs): the belief, when given, in place of Scry 1.2; its
 // counts are on the pool already. The other player's belief (the policy's input when it plays them in the search) is read in a
 // world dealt from the seat's own belief, never in the real game (where it would read their real hand).
+const OTHER_WORLDS = 4;
 export function makeGeneral({ policy = null, value = null, scry12 = null, scryg = null, wall = null } = {}) {
   const ctx = { counts: [new Float32Array(POOL.V), new Float32Array(POOL.V)], any: [null, null] }, player = generalPlayer(policy, ctx), judge = generalJudge(value);
   const W = wall ? (wall === true ? {} : wall) : null, engine = W ? dandanEngine() : null;
@@ -103,12 +104,17 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
       if (!filters) return {};
       const mine = filters[seat].belief(s), o = 1 - seat, on = scryg ? x => x : onPool;
       const sd = filters[seat].deal(), wd = walls ? walls[seat].deal() : null;
-      let world = null;
-      if (walls) { walls[seat].ensure(); world = walls[seat].sample(Math.random); }
-      if (!world) world = determinize(s, seat, Math.random, false, false, (pool, n, rng) => sd(pool, n, rng) || pool);
-      const theirs = filters[o].belief(world);
+      // the other player's belief about the seat's hand, averaged over OTHER_WORLDS worlds dealt from the seat's own belief
+      // (Fable 15:10Z: one world a search is a bias; never the real game, where it would read their real hand)
+      if (walls) walls[seat].ensure();
+      const tc = new Float32Array(POOL.V), ta = new Float32Array(POOL.V);
+      for (let w = 0; w < OTHER_WORLDS; w++) {
+        const world = (walls && walls[seat].sample(Math.random)) || determinize(s, seat, Math.random, false, false, (pool, n, rng) => sd(pool, n, rng) || pool);
+        const b = filters[o].belief(world), c = on(b.counts), a = on(b.any);
+        for (let k = 0; k < POOL.V; k++) { tc[k] += c[k] / OTHER_WORLDS; ta[k] += a[k] / OTHER_WORLDS; }
+      }
       ctx.counts[seat] = on(mine.counts); ctx.any[seat] = on(mine.any);
-      ctx.counts[o] = on(theirs.counts); ctx.any[o] = on(theirs.any);
+      ctx.counts[o] = tc; ctx.any[o] = ta;
       return { deal: wd ? (pool, n, rng) => wd(pool, n, rng) || sd(pool, n, rng) : sd };
     },
     think(s, seat, deals, extra = {}) {

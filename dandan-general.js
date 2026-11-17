@@ -186,6 +186,7 @@ function view2(o, seat, P, out, k) {
         if (i < 0 || i >= n || (j >= 3 && i < 3)) return;   // a short library: each place once
         const id = lib[i];
         if (id !== HIDDEN && id != null) cardAt(b, nameOf(id), 4); else out[b + Z] = 1;
+        // (with two libraries, o.libs, observe has no theirLib for them yet: these marks stay off until step 4 gives one per library)
         if (!o.libs && theirs.has(i)) out[b + Z + 1] = 1;
       });
       const mid = k + SLOTS * (Z + 2);

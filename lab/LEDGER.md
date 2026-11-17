@@ -1189,3 +1189,11 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   by the net); policy_np.py and value_np.py warm-start a grown view with zero weights on the new inputs (checked from gm1; a
   padded v2 policy played gm1 locally). New packs are version 2. tests/observe.mjs's redeal keeps the places the other player
   knows (that they know them is public); it failed since a2c510a5 (theirLib), Test and publish with it: fixed.
+- 16:20Z Fable 15:10Z (via Korbi 17:05): (1) tests/observe.mjs and tests/scryg.mjs re-deal by knowledge class again: the cards
+  the other player knows and the seat doesn't (their hidden hand, the library places only they know) among themselves, the places
+  neither knows among themselves; places stay, contents move, the knowledge stays with the place. A position with such places is
+  dealt again 8 times (3 positions in the fixture). Checked by mutation: observe() made to show those places fails the test.
+  (2) view 2's "the other knows this place" marks are off with two libraries (o.libs) until step 4 gives theirLib per library:
+  noted in dandan-general.js. (4) The other player's belief in the search averaged over 4 worlds dealt from the seat's belief
+  (was one world a search). (3, for the sampled moves) the policy's targets are the search's values per option: sample only
+  among options within the search's noise, keep every value row.

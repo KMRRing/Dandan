@@ -13,12 +13,20 @@ let fails = 0;
 const check = (ok, what) => { console.log(`${ok ? "ok  " : "FAIL"} ${what}`); if (!ok) fails++; };
 const J = x => JSON.parse(JSON.stringify(x));
 function redeal(s, me, rng) {
-  const c = J(s), opp = 1 - me, bit = 1 << me, kh = new Set(knownIn(c, opp, me)), at = [];
-  c.hand[opp].forEach((id, i) => { if (!kh.has(id)) at.push(["h", i]); });
-  c.lib.forEach((id, i) => { if (!(knOf(c, id) & bit) && !(knOf(c, id) & (1 << opp))) at.push(["l", i]); });   // their known places stay
-  const ids = at.map(([z, i]) => (z === "h" ? c.hand[opp][i] : c.lib[i]));
-  for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-  at.forEach(([z, i], k) => { if (z === "h") c.hand[opp][i] = ids[k]; else c.lib[i] = ids[k]; });
+  // two classes, each dealt again among its own places (the places stay, the contents move; Fable 15:10Z): the cards the other
+  // player knows and the seat doesn't (their hidden hand, the library places only they know), and the library places neither knows
+  const c = J(s), opp = 1 - me, bit = 1 << me, kh = new Set(knownIn(c, opp, me)), theirs = [], none = [];
+  c.hand[opp].forEach((id, i) => { if (!kh.has(id)) theirs.push(["h", i]); });
+  c.lib.forEach((id, i) => { const k = knOf(c, id); if (!(k & bit)) (k & (1 << opp) ? theirs : none).push(["l", i]); });
+  for (const at of [theirs, none]) {
+    const ids = at.map(([z, i]) => (z === "h" ? c.hand[opp][i] : c.lib[i])), bits = ids.map(id => knOf(c, id));
+    for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
+    at.forEach(([z, i], k) => { if (z === "h") c.hand[opp][i] = ids[k]; else c.lib[i] = ids[k]; });
+    // what the other player knows stays with the place: each id takes the knowledge of the place it now sits in
+    const was = new Map(at.map(([z, i], k) => [ids[k], bits[k]]));
+    c.kn = c.kn.filter(e => !was.has(e[0]));
+    at.forEach(([z, i], k) => { if (z === "l" && bits[k]) c.kn.push([ids[k], bits[k]]); });
+  }
   return c;
 }
 const P = POOL, D = 4, A = 4, H = 8, r0 = seeded(5), w = n => Array.from({ length: n }, () => (r0() - 0.5) * 0.2);
