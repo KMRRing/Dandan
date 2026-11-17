@@ -160,6 +160,18 @@ details summary{cursor:pointer;font-size:12.5px;color:var(--mute)}
 .node .vs{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:12.5px;margin:0}
 .node .vs dt{font:600 11.5px var(--mono);color:var(--t)} .node .vs dd{margin:0}
 .t-medium{--t:#23a26d} .t-check{--t:#8a8fa3} .t-set{--t:#7a5af5} .t-judge{--t:#c0399b} .t-engine{--t:var(--accent)} .t-match{--t:#d9822b} .t-out{--t:var(--good)} .t-policy{--t:#1f8fb3} .t-belief{--t:#b8860b}
+.ring{display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr;grid-template-rows:auto 24px auto 24px auto;align-items:stretch}
+.ring .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:3px;align-content:start;min-width:0}
+.ring .tile.live{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.ring .tile.done{border-color:var(--good)}
+.ring .tile.hub{background:var(--band);border-style:dashed}
+.ring .tile b{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);display:flex;gap:6px;align-items:center}
+.ring .tile span.v{font:600 19px var(--mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ring .tile em{font-style:normal;font-size:12.5px;color:var(--mute)}
+.ring .tile .rows{display:grid;grid-template-columns:auto 1fr;gap:1px 10px;font-size:12.5px;margin-top:2px}.ring .tile .rows dt{color:var(--mute)}.ring .tile .rows dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.ring .tile .bar{margin-top:4px}
+.ring .arr{display:flex;align-items:center;justify-content:center;color:var(--mute);font:600 16px var(--mono)}
+@media (max-width:760px){.ring{display:flex;flex-direction:column;gap:6px}.ring .arr{display:none}.ring .tile{order:var(--o)}}
 .now{display:grid;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
 .now .item{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;padding:11px 14px;border-top:1px solid var(--line)}
 .now .item:first-child{border-top:0}
@@ -648,11 +660,12 @@ async function loadFable() {
 }
 // ---------- the plan, in order (Korbi 16 Nov 18:06: "super clear what is happening, in which order, and why") ----------
 // Kept by hand with every change of plan; shown at the top of "Now" and as a tracker card. s: done, running, next, later, decide
-const PLAN = { at: "17 Nov 2026, 17:30 (Kyiv)", steps: [
-  { s: "running", t: "Zero's loop, general line: gm1 playing", why: "Generation 14: the first general nets (gm1) play themselves, 1 game in 10 against the leaky old engine (g12r-C). Live state and measures on the Loop tab." },
-  { s: "running", t: "The general dealer sg1 training; then gm2, fully general", why: "When sg1 lands: gm2 = gm1 grown onto view 2 with sg1 as its belief, live in the loop at once; from then every generation trains policy, value and dealer together." },
-  { s: "decide", t: "Store to Backblaze, scheduler machine", why: "The live set is copying; the switch at the next generation boundary needs your OK on the store fallback (old results read from Google). The scheduler VM, about $14 a month: your OK." },
-  { s: "next", t: "Sampled moves, the opponent-known library places", why: "Some self-play moves sampled within the search's noise (the belief learns which plays tell little); the dealer fills the library places only the opponent knows." },
+const PLAN = { at: "17 Nov 2026, 21:10 (Kyiv)", steps: [
+  { s: "running", t: "Zero's loop, fully general: gm2 playing with the ambitious search", why: "Generation 15: gm2 (view 2, the general dealer sg1) plays zps007: up to 1,024 deals, close calls 4 turns ahead, 2,400 games a generation; the training runs start the loop's next step when they land. The ring above shows each step." },
+  { s: "running", t: "Store to Backblaze at the next generation boundary", why: "The live set is still copying; then the switch (config, catch-up, verify). The fleet's own scheduler (the biggest, longest-up machine) replaced the paid scheduler machine." },
+  { s: "decide", t: "Kubernetes logins expired", why: "The clusters' kubeconfig secrets have all expired: the Fleet page's Kubernetes rows and pod restarts are blind. Paste fresh ones once; then logins that never expire are made and kept." },
+  { s: "next", t: "Full search on some moves only (KataGo's way), the opponent-known library places", why: "Full search on a share of moves as the training targets, fast play on the rest: more games without weaker targets. The dealer fills the library places only the opponent knows." },
+  { s: "later", t: "Modern: the first pool (parked)", why: "Eldrazi Ramp, Affinity, Amulet Titan, Boros Energy, Rakdos Midrange, plus Korbi's Grixis build with Stubborn Denial (lab/MODERN.md)." },
 ], filler: "Idle cores play the latest general nets against themselves (Zero's loop); the games train the next generation." };
 const PLAN_DOT = { done: "var(--good)", running: "var(--accent)", next: "var(--wait)", later: "var(--mute)", decide: "var(--bad)" };
 const PLAN_WORD = { done: "Done", running: "Running", next: "Next", later: "Then", decide: "Your call" };
@@ -778,7 +791,7 @@ function paint(v) {
 }
 function paint0(v) {
   if (v === "pipeline" || v === "fable") { setMap(v); renderCanvas(last); }
-  else if (v === "now") renderNow(last);
+  else if (v === "now") renderNow();
   else if (v === "matches") { GRAPH = buildGraph(last); renderMatches(); }
   else render(last);
 }
@@ -1041,7 +1054,7 @@ async function refresh() {
     last.rows = { ...prevRows, ...last.rows };
     store("fleet:last:" + pfx, last);
     if (v === "pipeline" || v === "fable") { paint(v); await loadSpecs(last); paint(v); }
-    else if (v === "now") { try { await loadNow(); } catch (e) { nowList = []; } paint(v); }
+    else if (v === "now") paint(v);
     else if (v === "matches") { paint(v); await loadSpecs(last); await loadShow(); paint(v); }
     else paint(v);
     showFresh(last.at, true);
@@ -1325,7 +1338,7 @@ const GWHAT = {
 };
 let SPECS = {};
 try { SPECS = JSON.parse(localStorage.getItem("fleet:specs") || "{}"); } catch {}
-let nowList = [], showRows = {};
+let showRows = {};
 try { showRows = JSON.parse(localStorage.getItem("fleet:showRows") || "{}"); } catch {}
 
 function familyOf(id) {
@@ -2546,10 +2559,69 @@ async function renderLoop() {
     + `<section><h2>Strength over generations</h2><p>Read the trend, not one generation: about ${Math.round(L.games / L.vsEvery)} games each.</p>${chart}</section>`
     + `<section><h2>Generations<span class="count">${hist.length}</span></h2>${table}</section>`;
 }
-function renderNow(d) {
-  $("nowView").innerHTML = `<section><h2>The plan, in order</h2><p>What happens next and why (as of ${esc(PLAN.at)}). The full map is under Pipeline.</p>${planHtml(true)}</section>` + `<section><h2>Working on now<span class="count">${nowList.length}</span></h2><p>Everything the workers are running this minute.</p>${
-    nowList.length ? `<div class="now">${nowList.map(x => `<div class="item"><span class="dot live"></span><h4>${esc(x.title)}</h4><span class="count">${x.running} of ${x.shards} live</span><p>${esc(x.id)}${x.filler ? " · filler: runs whenever the queue is empty" : ""}</p></div>`).join("")}</div>`
-    : `<div class="now"><div class="item"><span class="dot" style="background:var(--mute)"></span><h4>Nothing running</h4></div></div>`}</section>`;
+// ---------- Now (17 Nov 2026, Korbi 21:03: "really show the different operations and metrics. it should now be a kind of loop,
+// the same type of tiles, and show the progress"): Zero's loop as a ring of its operations, clockwise from self-play, each tile
+// live (accent), done (green) or waiting; read from loop.json on main, the fleet snapshot (fleet-status branch) and GitHub's
+// public list of this repo's runs. Refreshed every 5 minutes while open.
+const GH_API = "https://api.github.com/repos/KMRRing/Dandan/actions";
+let nowTimer = null;
+const getJ = u => fetch(u, { cache: "no-store" }).then(r => (r.ok ? r.json() : null), () => null);
+const ago = t => { if (!t) return "—"; const m = Math.round((Date.now() - (typeof t === "number" ? t : Date.parse(t))) / 60000); return m < 1 ? "just now" : m < 90 ? m + " min ago" : (m / 60).toFixed(1) + " h ago"; };
+const clock = t => (t ? new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—");
+async function renderNow() {
+  clearTimeout(nowTimer); nowTimer = setTimeout(() => { if (view() === "now") renderNow(); }, 5 * 60e3);
+  const [L, S, F, O, runs] = await Promise.all([getJ(LOOP_URL + "?v=" + Date.now()), getJ(SNAP_BASE + "o/fleet/summary.json?v=" + Date.now()),
+    getJ(SNAP_BASE + "o/fleet/filler.json?v=" + Date.now()), getJ(SNAP_BASE + "o/fleet/open.json?v=" + Date.now()), getJ(GH_API + "/runs?per_page=40")]);
+  if (!L) { $("nowView").innerHTML = `<section><h2>Zero's loop</h2><p class="err">Couldn't read the loop's state.</p></section>`; return; }
+  const R = runs?.workflow_runs || [], latest = name => R.find(r => r.name === name) || null;
+  const jobsOf = async r => (r ? (await getJ(`${GH_API}/runs/${r.id}/jobs?per_page=50`))?.jobs || [] : []);
+  // the generation's training runs: the latest of each started since the generation's training began
+  const since = Date.parse(L.trained?.at || 0) - 60e3, fresh = r => r && Date.parse(r.created_at) >= since ? r : null;
+  const gt = fresh(latest("General Monte (train)")), sg = fresh(latest("Scry G (train)"));
+  const [gj, sj] = await Promise.all([jobsOf(gt), jobsOf(sg)]);
+  const P = L.progress || {}, of = P.of || L.games, games = P.games || 0, pct = Math.min(100, (100 * games) / (of || 1));
+  const pace = P.pace || [], hrs = pace.length > 1 ? (Date.parse(pace.at(-1)[0]) - Date.parse(pace[0][0])) / 3600e3 : 0, rate = hrs > 0 ? (pace.at(-1)[1] - pace[0][1]) / hrs : 0;
+  const eta = rate > 0 ? Math.max(0, of - games) / rate : null, hist = L.history || [], H = hist.at(-1) || {};
+  const training = L.phase === "train", bar = p => `<div class="bar"><i style="width:${Math.max(0, Math.min(100, p)).toFixed(1)}%"></i></div>`;
+  const st = js => { if (!js.length) return { s: "wait", t: "waiting" }; const done = js.filter(j => j.status === "completed"), bad = done.filter(j => j.conclusion !== "success" && j.conclusion !== "skipped");
+    if (bad.length) return { s: "bad", t: `${bad.length} failed` }; if (done.length === js.length) return { s: "done", t: "done" };
+    return { s: "live", t: `${done.length} of ${js.length}`, p: (100 * done.length) / js.length }; };
+  const dur = j => (j?.started_at ? Math.round(((j.completed_at ? Date.parse(j.completed_at) : Date.now()) - Date.parse(j.started_at)) / 60000) + " min" : "—");
+  const packs = gj.filter(j => /^pack/.test(j.name)), trains = gj.filter(j => /^train/.test(j.name)), keep = gj.find(j => j.name === "keep");
+  const tv = trains.find(j => /gvalue/.test(j.name)), tp = trains.find(j => /gpolicy/.test(j.name)), sPack = sj.filter(j => /^pack/.test(j.name)), sTrain = sj.filter(j => !/^pack/.test(j.name));
+  const pk = st([...packs, ...sPack]), jobState = j => (!j ? "waiting" : j.status !== "completed" ? (j.status === "in_progress" ? "training · " + dur(j) : j.status) : j.conclusion === "success" ? "done · " + dur(j) : j.conclusion);
+  const trainSt = st([...trains, ...sTrain]);
+  const T = S?.total || {}, batch = Object.keys(O?.jobs || {}).filter(id => id.startsWith(F?.prefix || "zps")).sort().at(-1);
+  const rule = (F?.args || "").match(/\{out\} (\d+) (\d+)/), deals = rule?.[1], deep = (F?.args || "").match(/deepmax=(\d+)/)?.[1];
+  const loopRun = latest("Zero loop"), storeRun = latest("Store move (Google to B2)");
+  const tile = (o, cls, label, v, em, extra = "") => `<div class="tile ${cls}" style="--o:${o}"><b>${cls === "live" ? '<span class="dot live"></span>' : ""}${label}</b><span class="v">${v}</span>${em ? `<em>${em}</em>` : ""}${extra}</div>`;
+  const rows = r => `<dl class="rows">${r.filter(x => x[1] != null).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
+  const t1 = tile(1, T.busy ? "live" : "", "1 · Self-play", T.slots ? `${(T.busy || 0).toLocaleString()} / ${T.slots.toLocaleString()} cores` : "—", `${T.machines ?? "—"} machines · ${T.fin10 ?? "—"} shards in the last 10 min`,
+    rows([["nets", L.champion], ["batch", batch || "—"], ["search", deals ? `up to ${Number(deals).toLocaleString()} deals${deep ? `, close calls ${deep} turns ahead` : ""}` : "—"], ["vs previous", L.vsEvery ? `1 game in ${L.vsEvery}` : null]]));
+  const t2 = tile(2, training ? "done" : "live", "2 · Games", `${games.toLocaleString()} / ${(of || 0).toLocaleString()}`, training ? "in: the generation trains" : rate ? `${Math.round(rate).toLocaleString()} an hour · training in ${eta < 1 ? Math.round(eta * 60) + " min" : eta.toFixed(1) + " h"}` : `read ${ago(P.at)}`, bar(pct));
+  const t3 = tile(3, training ? (pk.s === "done" ? "done" : pk.s === "live" ? "live" : "") : "", "3 · Pack", training ? pk.t : "next", "the games replayed into training rows, the beliefs read as the players had them",
+    training && pk.p != null ? bar(pk.p) : "");
+  const t4 = tile(4, training ? (trainSt.s === "done" ? "done" : trainSt.s === "live" || pk.s === "done" ? "live" : "") : "", "4 · Train", training ? (trainSt.s === "wait" && pk.s !== "done" ? "after the pack" : trainSt.t) : "next", "each net warm from the latest",
+    rows([["value", training ? jobState(tv) : "—"], ["policy", training ? jobState(tp) : "—"], ["dealer", training ? jobState(sTrain[0]) : "—"]]));
+  const t5 = tile(5, training ? (keep?.conclusion === "success" ? "done" : "") : "done", "5 · Crown", training ? `${esc(L.challenger || "—")} next` : esc(L.champion),
+    training ? "goes live the moment its nets land" : `live since ${clock(H.at)} (${ago(H.at)}) · the filler's next batch plays it`);
+  const t6 = tile(6, "", "6 · Measure", H.suite ? `suite ${esc(H.suite)}` : "—", H.reading ? `${(100 * H.reading.score).toFixed(1)}% against ${esc(H.reading.against)} (${H.reading.n} games)` : "strength vs the previous nets: read when this generation ends",
+    rows([["failed", (H.failed || []).length ? H.failed.join(", ") : null], ["null moves", H.nulls != null ? String(H.nulls) : null]]));
+  const nb = Object.keys(O?.jobs || {}).length;
+  const t7 = tile(7, "", "7 · Back to the fleet", training ? "after the crown" : esc(batch || "—"), training ? "the open batch is closed; the filler's next one plays the new nets" : `the filler's batch with ${esc(L.champion)}; a new one is made as each runs out`,
+    rows([["open jobs", String(nb)], ["games a batch", F?.games ? F.games.toLocaleString() : null]]));
+  const t8 = tile(8, "", "8 · Steps", loopRun ? ago(loopRun.created_at) : "—", "the loop's step every 10 minutes from the fleet, and at once when training lands",
+    rows([["last", loopRun ? `${clock(loopRun.created_at)} · ${loopRun.conclusion || loopRun.status}` : null], ["store", storeRun && storeRun.status !== "completed" ? "Google (moving to B2)" : "Google"]]));
+  const hub = `<div class="tile hub" style="--o:0"><b>Generation</b><span class="v">${L.gen} · ${esc(training ? "training" : "playing")}</span><em>${esc(L.champion)} playing${training ? `, ${esc(L.challenger)} training` : ""}</em>${bar(training ? 50 + (pk.s === "done" ? 25 : 0) + (trainSt.s === "done" ? 25 : 0) : pct / 2)}<em>${training ? "games in, training" : `${pct.toFixed(0)}% of the games`} · ${hist.length} generations so far</em></div>`;
+  const A = c => `<div class="arr">${c}</div>`, E = `<div></div>`;
+  // the ring's 5×5 cells, row by row: tiles at the even places, arrows between them clockwise, the generation in the middle
+  const ring = `<div class="ring">${t1}${A("→")}${t2}${A("→")}${t3}`
+    + `${A("↑")}${E}${E}${E}${A("↓")}`
+    + `${t8}${E}${hub}${E}${t4}`
+    + `${A("↑")}${E}${E}${E}${A("↓")}`
+    + `${t7}${A("←")}${t6}${A("←")}${t5}</div>`;
+  $("nowView").innerHTML = `<section><h2>Zero's loop, now<span class="count">${L.on ? "on" : "off"}</span></h2><p>Each generation goes round once: the fleet plays the latest nets, the games train the next ones, they go live and are measured, and the fleet plays them. Live steps in blue, done in green.</p>${ring}</section>`
+    + `<section><h2>The plan, in order</h2><p>What happens next and why (as of ${esc(PLAN.at)}). The full map is under Pipeline.</p>${planHtml(true)}</section>`;
 }
 function renderMatches() {
   const byId = { ...SPECS };
@@ -2563,27 +2635,6 @@ function renderMatches() {
       <div class="chart">${chartSvg(pts, x.planned, v)}</div><p class="note">${esc(x.note)}</p></div>`;
   }).join("")}</div></section>
   <p class="note">Deal pair: one random deal played twice with seats swapped, so neither side keeps the luckier hand. Quick, Long, Deep, Deepest: Hard considers 64, 256, 1,024 or 2,048 possible hidden-card deals per move; the live game plays Deepest.</p>`;
-}
-// what's running this minute: claims re-stamped in the last 5 minutes (workers re-stamp every 2)
-async function loadNow() {
-  const since = new Date(Date.now() - 5 * 60000).toISOString().slice(0, 19);
-  const dirs = (await gcloud(`gcloud storage ls "${B}/claims/"`)).out;
-  const latest = p => { const ns = [...dirs.matchAll(new RegExp(`/claims/${p}(\\d+)/`, "g"))].map(m => Number(m[1])); return ns.length ? Math.max(...ns) : null; };
-  const spb = latest("spb"), jt = latest("jt");
-  const urls = [`"${B}/claims/a**"`];
-  if (spb != null) urls.push(`"${B}/claims/spb${spb}/*"`, `"${B}/claims/spb${spb - 1}/*"`);
-  if (jt != null) urls.push(`"${B}/claims/jt${jt}/*"`);
-  let names = "";
-  try { names = (await gcloud(`gcloud storage objects list ${urls.join(" ")} --filter="update_time>=${since}" --format="value(name)"`)).out; } catch (e) { if (!noMatch(e)) throw e; }
-  const count = {}, seen = new Set();
-  for (const m of names.matchAll(/claims\/([^/\s\\"]+)\/(\d+)/g)) { const k = m[1] + "/" + m[2]; if (!seen.has(k)) { seen.add(k); count[m[1]] = (count[m[1]] || 0) + 1; } }
-  const ids = Object.keys(count);
-  let specs = [];
-  if (ids.length) specs = parsed((await gcloud("gcloud storage cat " + ids.map(id => `"${B}/jobs/${id}.json"`).join(" "))).out).filter(j => j.id && j.script);
-  nowList = ids.map(id => {
-    const j = specs.find(x => x.id === id) || { id, script: "?", args: "", shards: "?" };
-    return { id, title: NAMES[groupOf(id)] || describe(j), running: count[id], shards: j.shards, filler: /^(spb|jt)\d+$/.test(id) };
-  }).sort((a, b) => b.running - a.running);
 }
 let FETCHING = false;
 async function loadRows(ids) {
