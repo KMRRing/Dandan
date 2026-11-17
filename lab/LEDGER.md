@@ -1169,5 +1169,5 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
 - 15:20Z Korbi 16:14 (cards put on the bottom or back change the deck's distribution): observe() gives `theirLib`, the library
   places the other player knows and the seat doesn't (public: where, not what), and keeps knowledge entries (kn, kh) only for
   cards the seat sees (an entry for a hidden card named it). Views unchanged (tests: observe, zero-pack, scry-honest). The wall's
-  worlds name those places too (drawn with the hand, not from the unseen pool). Korbi 16:15: simpler, a belief net trained, no
-  wall: the wall parked (off; lab/zero/wall.mjs kept), the work goes to the general dealer net.
+  worlds name those places too (drawn with the hand, not from the unseen pool). Korbi 16:15 asked whether to drop the wall for a
+  trained belief net alone; exec recommends yes: the wall parked (off; lab/zero/wall.mjs kept), the work to the general dealer.
