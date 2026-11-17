@@ -19,6 +19,7 @@
 import { DECK, NAMES } from "../../dandan-cards.js";
 import { isLandId } from "../../dandan-core.js";
 import { EXT_N, NN, ext, seenBy, unknownSlots } from "./zero-view.mjs";
+import { observe } from "../../dandan-view.js";
 
 const other = x => 1 - x, NAME_AT = new Map(NAMES.map((n, k) => [n, k]));
 const STEPS = ["mull", "upkeep", "draw", "main1", "attackers", "blockers", "damage", "main2", "end", "over"];
@@ -36,6 +37,7 @@ const played = m => m.t === "land" || (m.t === "cast" && m.from === "hand") || m
 /** One event as seen by `me`: `s` the position it happened in, `who` whose it was, `m` the move (or { t: "pass" } at a priority
  *  point, { t: "draw", n } for cards drawn). Every number is the position's or the event's own. */
 export function eventOf(s, who, m, me, out = new Float32Array(EV_N)) {
+  s = observe(s, me);   // only what `me` sees (dandan-view.js); the move's own fields read are public (its kind, a card it shows)
   out.fill(0);
   out[0] = who === other(me) ? 1 : 0;
   out[T0 + (TYPE_AT[m.t] ?? 10)] = 1;
@@ -162,6 +164,7 @@ export class Scry12 {
    * The deals use a stream fixed by the record's length, so a position gives the same belief however often it is asked.
    */
   belief(s) {
+    s = observe(s, this.me);   // only what this seat sees (dandan-view.js)
     const seen = seenBy(s, this.me), ids = unknownSlots(s, this.me), g = this.base(s, seen);
     const p0 = this.card(g, null, seen.unseen), slots = ids.map(() => p0);
     this.last = { s, seen, ids, g, memo: new Map() };

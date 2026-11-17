@@ -8,6 +8,7 @@
 // its size stays), the step, and how much is on the stack. A move is a handful of yes/no marks: its kind, its card, where
 // it's cast from, what it targets (whose, a Dandân, a land, the spell on the stack or the card in the graveyard by name),
 // its mode. Questions the engine asks (attack, block, order, a mulligan…) stay with Medium.
+import { observe } from "./dandan-view.js";
 import { DECK, TOKEN_AT } from "./dandan-cards.js";
 import { perm } from "./dandan-core.js";
 import { moves, halfOf, STEPS } from "./dandan-engine.js";
@@ -117,6 +118,7 @@ const VIEW_BUF = new Float64Array(VIEW_N);
  * stateOf's own features() call is not repeated). The array is overwritten by the next call: read it before then.
  */
 export function viewInto(s, seat, out = VIEW_BUF) {
+  s = observe(s, seat);   // only what `seat` sees (dandan-view.js)
   featuresPlus(s, seat, PLUS_BUF);
   for (let i = 0; i < BASE; i++) out[i] = r3(PLUS_BUF[i]);
   for (let i = THEIR_NAMES; i < THEIR_NAMES + SPELLS.length + 7; i++) out[i] = 0;

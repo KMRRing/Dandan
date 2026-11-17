@@ -18,6 +18,7 @@
 import { DECK, NAMES, TOKEN_AT } from "./dandan-cards.js";
 import { isLandId, knOf, knownIn } from "./dandan-core.js";
 import { score } from "./dandan-eval.js";
+import { observe } from "./dandan-view.js";
 
 export const NN = NAMES.length;                                  // 25 names
 const AT = new Map(NAMES.map((n, i) => [n, i]));
@@ -33,6 +34,7 @@ const other = x => 1 - x;
 /** A copied spell on the stack (Narset's Reversal's) is not a card, so it isn't counted off the unseen pool (16 Nov 2026, Fable's
  *  review, item 2: else the pool can show no copy left while the other hand holds one; live with the dealer below, az-df1). */
 export function seenBy(s, me) {
+  s = observe(s, me);   // only what `me` sees (dandan-view.js): honest by construction
   const unseen = Float32Array.from(DECK_COUNT), known = new Float32Array(NN), bit = 1 << me, opp = other(me);
   const take = id => { const k = nameAt(id); if (k >= 0) unseen[k]--; };
   for (const id of s.hand[me]) take(id);
@@ -51,6 +53,7 @@ export function handCounts(s, seat) { const h = new Float32Array(NN); for (const
 
 const r3 = v => Math.round(v * 1000) / 1000;
 export function ext(s, me, theirHand, out = new Float32Array(EXT_N), unseen = null, theirAny = null) {
+  s = observe(s, me);   // only what `me` sees; the other hand comes in as `theirHand` (the Scry's counts, or a dealt world face up)
   out.fill(0);
   let k = 0;
   for (const x of [me, other(me)]) {

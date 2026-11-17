@@ -64,7 +64,7 @@ function seatFeatures(s, x, out, k) {
   const at = k;
   for (let i = 0; i < SPELLS.length + 7; i++) out[k++] = 0;
   for (const id of hand) {
-    if (id >= TOKEN_AT) continue;
+    if (id < 0 || id >= TOKEN_AT) continue;   // a hidden card (dandan-view.js observe) or a token
     const i = isLandId(id) ? SPELLS.length + LAND_AT.get(DECK[id]) : SPELL_AT.get(DECK[id]);
     if (i != null && out[at + i] < 3) out[at + i]++;
   }
