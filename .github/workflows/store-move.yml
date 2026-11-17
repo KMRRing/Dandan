@@ -15,7 +15,7 @@ name: Store move (Google to B2)
 on:
   workflow_dispatch:
     inputs:
-      step: { description: "check, copy, config, catchup-dry, catchup or verify", required: true, default: "check" }
+      step: { description: "check, copy, config, catchup-dry, catchup or verify; copy-live, catchup-live, verify-live (the live set and the loop's window only: Korbi 17 Nov 15:15Z)", required: true, default: "check" }
 permissions:
   contents: read
 jobs:
@@ -49,7 +49,24 @@ jobs:
           export RCLONE_CONFIG_B2_REGION="$(printf '%s' "$LAB_B2_ENDPOINT" | sed -E 's#^(https?://)?s3\.([^.]+)\..*#\2#')"
           # progress every minute in the live log (ops 19:50Z); many small objects, so wide parallelism: per-object latency is the limit
           R="--exclude fleet/** --exclude private/** --exclude _check/** --fast-list --retries 10 --low-level-retries 30 --stats 60s --stats-one-line --stats-log-level NOTICE"
+          # the live set and the loop's window (Korbi 17 Nov 15:15Z: only these move; the rest stays on Google, read-only):
+          # jobs/, workers/, retired/, cache/, claims/, and results/ of the open jobs and of the loop's batches (lab/zero/loop.json prefix)
+          live() {
+            { printf '%s\n' '- fleet/**' '- private/**' '- _check/**' '+ jobs/**' '+ workers/**' '+ retired/**' '+ cache/**' '+ claims/**' "+ results/$(node -e 'process.stdout.write(require("./lab/zero/loop.json").prefix)')*/**"
+              rclone lsf "gcs:$LAB_BUCKET/jobs/" --files-only | sed -n 's/\.json$//p' | sed 's#^#+ results/#; s#$#/**#'; echo '- **'; } > "$RUNNER_TEMP/live.txt"
+            echo "live set: $(grep -c '^+' "$RUNNER_TEMP/live.txt") patterns"
+          }
+          RL="${R//--exclude fleet\/\*\* --exclude private\/\*\* --exclude _check\/\*\* /}"   # the live steps' filter file holds the exclusions
           case "${{ inputs.step }}" in
+            copy-live)    live; rclone copy "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" --filter-from "$RUNNER_TEMP/live.txt" $RL --transfers 192 --checkers 256 --size-only ;;
+            catchup-live) live; rclone copy "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" --filter-from "$RUNNER_TEMP/live.txt" $RL --transfers 192 --checkers 256 --update --use-server-modtime ;;
+            verify-live)
+              live; : > "$RUNNER_TEMP/miss.txt"
+              rclone check "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" --filter-from "$RUNNER_TEMP/live.txt" $RL --one-way --size-only --missing-on-dst "$RUNNER_TEMP/miss.txt" > "$RUNNER_TEMP/check.txt" 2>&1 || true
+              tail -3 "$RUNNER_TEMP/check.txt"
+              missing=$({ grep -v -E '^(claims|workers)/' "$RUNNER_TEMP/miss.txt" || true; } | wc -l)
+              echo "## live set missing on B2 outside claims/ and workers/: $missing"; cut -d/ -f1-2 "$RUNNER_TEMP/miss.txt" | sort | uniq -c | sort -rn | head
+              if [ "$missing" = 0 ]; then echo "VERIFY-LIVE: passed"; else echo "VERIFY-LIVE: not yet"; fi ;;
             check)  node lab/store-check.mjs ;;
             copy)   [ -z "$(LAB_KEY="$RUNNER_TEMP/rkey.json" node -e 'import("./lab/store.mjs").then(async m => { const { googleToken } = await import("./lab/lib.mjs"); const g = m.googleStore(process.env.LAB_BUCKET, googleToken); process.stdout.write((await g.get(m.STORE_CONFIG)) ? "set" : ""); })')" ] || { echo "the store has switched: use catchup, not copy"; exit 1; }
                     rclone copy "gcs:$LAB_BUCKET" "b2:$LAB_B2_BUCKET" $R --transfers 192 --checkers 256 --size-only ;;
