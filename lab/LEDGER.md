@@ -1231,5 +1231,5 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   around for longer, and github as last case backup"): lab/worker.mjs schedule. Every 10 minutes the worker chosen from the
   beats (holds the GitHub token; the most cores, then the machine up longest, then by name: lab/scheduler.mjs) starts
   zero-loop.yml unless one is waiting or running, and fleet.yml likewise. The token is a fine-grained one that can only start
-  workflows on this repo (GitHub secret LAB_GH_TOKEN, put in the clusters by k8s-apply.yml as a Kubernetes secret); no store or
+  workflows on this repo (GitHub secret LAB_GH_TOKEN, written by scheduler-token.yml to private/scheduler.json on Google, where the workers look for it); no store or
   queue key moves. GitHub's own schedules stay as the backup. Waiting on the token.

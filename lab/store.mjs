@@ -201,6 +201,8 @@ export function s3Store({ endpoint, bucket, keyId, key, region }) {
 
 // ---------- the lab's routing ----------
 export const STORE_CONFIG = "private/store.json";
+// the scheduler's GitHub token (lab/worker.mjs schedule; scheduler-token.yml writes it), on the Google side like STORE_CONFIG
+export const SCHED_CONFIG = "private/scheduler.json";
 /** fleet/ on `control` (Google), the rest on `data`; `data` may be swapped later (set). `control` is the Google side itself. */
 // Once the data store is B2, results/ and cache/ written before the move stay on Google, read-only (Korbi 17 Nov 15:15Z: only the
 // live set and the loop's window are copied): a read there that B2 doesn't have is answered from Google, and a listing is both

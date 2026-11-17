@@ -38,7 +38,6 @@ jobs:
           RS_KUBECONFIG_8: "${{ secrets.RS_KUBECONFIG_8 }}"
           RS_KUBECONFIG_9: "${{ secrets.RS_KUBECONFIG_9 }}"
           LAB_K8S_MANIFEST: "${{ secrets.LAB_K8S_MANIFEST }}"
-          LAB_GH_TOKEN: "${{ secrets.LAB_GH_TOKEN }}"
           LOGS: "${{ inputs.logs }}"
         run: |
           if [ -z "$LAB_K8S_MANIFEST" ]; then echo "::error::Add the LAB_K8S_MANIFEST secret first"; exit 1; fi
@@ -56,12 +55,6 @@ jobs:
             # each worker is told which cluster it runs in (LAB_POOL), for the Fleet page's cost tiles (13 Nov)
             sed "s#^\( *\)image: \(.*node:22-bookworm\)#\1image: \2\n\1env: [{ name: LAB_POOL, value: \"$cluster\" }]#" "$RUNNER_TEMP/m.yaml" > "$RUNNER_TEMP/m1.yaml"
             kubectl apply -f "$RUNNER_TEMP/m1.yaml" 2>&1 | sed -E 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g'
-            # the scheduler's GitHub token (17 Nov, Korbi 18:35; lab/worker.mjs schedule): a Kubernetes secret the workers read as
-            # LAB_GH_TOKEN; set once, unchanged on later runs (no restart then). Never printed.
-            if [ -n "$LAB_GH_TOKEN" ]; then
-              kubectl create secret generic dandan-lab-gh --from-literal=LAB_GH_TOKEN="$LAB_GH_TOKEN" --dry-run=client -o yaml | kubectl apply -f - 2>&1 | sed -E 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g'
-              kubectl set env daemonset/dandan-lab --from=secret/dandan-lab-gh 2>&1 | sed -E 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g'
-            fi
             # 13 Nov: workers started before the drain-on-new-version change never restart by themselves
             if [ "${{ inputs.restart }}" = "true" ]; then kubectl rollout restart daemonset/dandan-lab 2>&1; fi
             rm -f "$RUNNER_TEMP/m1.yaml"

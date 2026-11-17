@@ -32,7 +32,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawn, execFileSync } from "node:child_process";
-import { openStore, dataStoreOf, REQ, STORE_CONFIG } from "./store.mjs";
+import { openStore, dataStoreOf, REQ, STORE_CONFIG, SCHED_CONFIG } from "./store.mjs";
 import { readOpen, editOpen, OPEN_STALE_MS } from "./open-list.mjs";
 import { chosenScheduler } from "./scheduler.mjs";
 
@@ -378,15 +378,19 @@ const beatWorker = () => {
 // GitHub's own schedule starts runs late or not at all, so one worker starts the loop's step (zero-loop.yml) every 10 minutes
 // and keeps the Fleet page's snapshot run (fleet.yml) going. Which one: of the fresh workers that hold the GitHub token (sched),
 // the one with the most cores, then the machine up longest, then by name; every worker works it out from the same beats, so
-// they agree without talking, and when the chosen one goes the next takes over within a beat. The token (LAB_GH_TOKEN, a
-// fine-grained token for this repo that can only start workflows) is never logged. GitHub's schedules stay, as the backup.
-const GH = env.LAB_GH_TOKEN || null, GH_REPO = env.LAB_GH_REPO || "KMRRing/Dandan", BOOT = Date.now() - Math.round(os.uptime() * 1000);
+// they agree without talking, and when the chosen one goes the next takes over within a beat. The token (a fine-grained token
+// for this repo that can only start workflows) is LAB_GH_TOKEN or private/scheduler.json on the Google side (scheduler-token.yml),
+// looked at every 10 minutes; never logged. GitHub's schedules stay, as the backup.
+let GH = env.LAB_GH_TOKEN || null;
+const GH_REPO = env.LAB_GH_REPO || "KMRRing/Dandan", BOOT = Date.now() - Math.round(os.uptime() * 1000);
 const gh = async (method, p, body) => {
   const r = await fetch(`https://api.github.com/repos/${GH_REPO}/${p}`, { method, headers: { authorization: `Bearer ${GH}`, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28", ...(body ? { "content-type": "application/json" } : {}) }, body: body ? JSON.stringify(body) : undefined });
   if (!r.ok) throw new Error(`GitHub ${method} ${p.split("?")[0]}: ${r.status}`);
   return r.status === 204 ? null : r.json();
 };
 async function schedule() {
+  if (!env.LAB_GH_TOKEN && !env.LAB_DIR) { try { GH = JSON.parse((await store.control.get(SCHED_CONFIG)) || "{}").token || null; } catch { GH = null; } }
+  if (!GH) return;
   try {
     const names = (await store.list("workers/")).map(o => o.name).filter(n => n.endsWith(".json"));
     const beats = (await Promise.all(names.map(n => store.get(n).then(t => { try { return JSON.parse(t); } catch { return null; } }).catch(() => null)))).filter(Boolean);
@@ -397,7 +401,8 @@ async function schedule() {
     if (!(await busy("fleet.yml"))) { await gh("POST", "actions/workflows/fleet.yml/dispatches", { ref: "main" }); log("scheduler: the fleet snapshot run started"); }
   } catch (e) { log(`scheduler: ${e.message}`); }
 }
-if (GH) setInterval(schedule, 10 * 60000).unref();
+setInterval(schedule, 10 * 60000).unref();
+schedule();
 const workerBeat = setInterval(beatWorker, BEAT_MS);
 beatWorker();
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => { store.del(`workers/${NAME}.json`).catch(() => {}); });

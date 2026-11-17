@@ -1,0 +1,39 @@
+# The scheduler's GitHub token to the fleet (17 Nov 2026, Korbi 18:35; lab/worker.mjs schedule): the LAB_GH_TOKEN secret (a
+# fine-grained token that can only start this repo's workflows) written to private/scheduler.json on the Google bucket, a path
+# nothing lists or copies out, where every worker looks for it every 10 minutes (as for private/store.json). The Kubernetes
+# route was given up: the clusters' kubeconfig secrets had all expired. Nothing is printed but whether it was written.
+name: Scheduler token to the fleet
+on:
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  put:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Write it
+        env:
+          LAB_QUEUE_KEY: "${{ secrets.LAB_QUEUE_KEY }}"
+          LAB_GH_TOKEN: "${{ secrets.LAB_GH_TOKEN }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          set -euo pipefail
+          if [ -z "$LAB_GH_TOKEN" ]; then echo "::error::Add the LAB_GH_TOKEN secret first"; exit 1; fi
+          printf '%s' "$LAB_QUEUE_KEY" > "$RUNNER_TEMP/wkey.json"; chmod 600 "$RUNNER_TEMP/wkey.json"
+          LAB_KEY="$RUNNER_TEMP/wkey.json" node -e '
+            import("./lab/store.mjs").then(async m => {
+              const { googleToken } = await import("./lab/lib.mjs"), g = m.googleStore(process.env.LAB_BUCKET, googleToken);
+              await g.put(m.SCHED_CONFIG, JSON.stringify({ token: process.env.LAB_GH_TOKEN }));
+              const back = JSON.parse((await g.get(m.SCHED_CONFIG)) || "{}");
+              console.log(back.token === process.env.LAB_GH_TOKEN ? `${m.SCHED_CONFIG} written` : "not written");
+              process.exit(back.token === process.env.LAB_GH_TOKEN ? 0 : 1);
+            })'
+          rm -f "$RUNNER_TEMP/wkey.json"
+      - name: Can it start a workflow? (a read of this repo's workflow list with it)
+        env: { LAB_GH_TOKEN: "${{ secrets.LAB_GH_TOKEN }}" }
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $LAB_GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/actions/workflows/zero-loop.yml/runs?per_page=1")
+          echo "GitHub answered $code"; [ "$code" = 200 ]
