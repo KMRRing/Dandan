@@ -1,0 +1,19 @@
+{
+  "on": false,
+  "note": "Zero's loop (lab/zero/loop.mjs). Off until the store check passes and the fleet takes jobs again. Lab only: the game's Monte changes on Korbi's word.",
+  "gen": 13,
+  "prefix": "zl",
+  "champion": "g11w-C",
+  "flags": "deeper=0.03",
+  "deals": 64,
+  "games": 14400,
+  "maxWindow": 30000,
+  "value": "64x32",
+  "trainArgs": "",
+  "gateSeed": 3000000,
+  "genFrom": 3,
+  "windowFrom": 3,
+  "nextFrom": 3,
+  "phase": "play",
+  "log": []
+}

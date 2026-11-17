@@ -1040,3 +1040,17 @@ picks a list, then a hand from it. The deck layer above Scry comes after the car
    This is exactly the defect we just measured in our own engine (questions answered by a quick head, not searched).
 3. Speed: a copy deep-copies the whole game state and every card object in the game (gameCards, LKI maps, effects, triggers):
    for 120 cards with abilities, likely milliseconds, against microseconds in our engine. To be timed before any decision on it.
+
+## 17 Nov 09:15Z — resumed after the night; Zero's loop built (off)
+- store-move copy 43947204023 was cut by GitHub's 6-hour limit at 02:11Z at 97% (37.0 of 38.3 GiB, 487,903 of 498,298 files);
+  config never ran. Copy resumed as 44052438569 (skips what landed). The 404s on claims/ are claims deleted mid-copy.
+- z2a (43951959630): its one runner was lost after 2.6 h with its logs. zero2-train now packs on four runners side by side
+  (16 shards), uploads the packs, and a train job merges and trains. Rerun as 44052756254, same inputs.
+- XMage probe 43966863849: the build passed, the probe didn't compile (TestPlayer type) and its grep hid the failure. Fixed;
+  rerun 44052614513.
+- **Zero's loop** (Korbi: AlphaZero's incremental upgrades, on their own): lab/zero/loop.mjs, an hourly workflow
+  (zero-loop.yml), state in lab/zero/loop.json. play (the filler plays the champion) → after 14,400 new games, zero-train-ext
+  warm from the champion on this generation and the one before (≤30,000 games) → gate 600 pairs Quick, lab/gate.mjs's rule
+  (now shared with gate-sum.mjs) → CROWN: filler.json plays the new nets, the open batch retired; DROP: the window widens;
+  EXTEND: pairs 600-1,199. Champion g11w-C, generation 13 from zps003. Tested end to end on a folder store. Off until the store
+  check passes. Lab only: the game's Monte changes on Korbi's word.

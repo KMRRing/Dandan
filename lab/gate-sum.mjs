@@ -17,7 +17,8 @@
 //   not at whatever has come in; a set missing any of those pairs says how many it lacks
 import { readParts } from "./lib.mjs";
 
-const Z99 = 2.576, pc = x => (100 * x).toFixed(1);
+import { gate, stats, pc } from "./gate.mjs";
+
 /** A set's rows by pair (a pair played twice counts once), from one job or several joined by "+". */
 async function rowsOf(arg) {
   const byPair = new Map();
@@ -27,29 +28,6 @@ async function rowsOf(arg) {
   }
   return [...byPair.values()];
 }
-const stats = xs => {
-  const n = xs.length, mean = xs.reduce((a, b) => a + b, 0) / Math.max(1, n);
-  const sd = n > 1 ? Math.sqrt(xs.reduce((a, x) => a + (x - mean) ** 2, 0) / (n - 1)) : 0;
-  return { n, mean, half: Z99 * sd / Math.sqrt(Math.max(1, n)) };
-};
-/**
- * The gate's word at the furthest look whose pairs are all in. A look reads pairs 0 to L-1 and waits for every one of them:
- * the pairs that finish first are the short games, and a look at "the first 300 to finish" would favour whoever wins quickly.
- */
-export function gate(byPair) {
-  let word = "", at = 0;
-  for (const L of [300, 600, 1200]) {
-    const xs = [];
-    for (let p = 0; p < L && byPair.has(p); p++) xs.push(byPair.get(p));
-    if (xs.length < L) break;
-    const { mean, half } = stats(xs);
-    at = L;
-    word = L === 300 ? (mean + half < 0.5 ? "DROP" : "play on") : mean - half > 0.5 ? "CROWN" : L === 1200 || mean < 0.515 ? "DROP" : "EXTEND";
-    if (word === "DROP" || word === "CROWN") break;
-  }
-  return at ? `${word} at the ${at}-pair look` : "running (the first look is at pairs 0 to 299, all in)";
-}
-
 const upto = Number((process.argv.find(a => a.startsWith("--upto=")) || "").slice(7)) || Infinity;
 const screen = process.argv.includes("--screen"), args = process.argv.slice(2).filter(a => /^[a-z@]/i.test(a) && !a.includes("/"));
 const sets = [];

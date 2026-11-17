@@ -1,0 +1,40 @@
+# Zero's training loop (17 Nov 2026, Korbi: AlphaZero's incremental upgrades, on their own): lab/zero/loop.mjs takes one step
+# an hour (play → train → gate → crown or drop → play), from lab/zero/loop.json. This job commits what it wrote (the state,
+# a gate's job spec, the filler's nets after a crown, retire.txt) and runs what it asked for: zero-train-ext.yml, and
+# queue.yml (pushes from this job's token start no workflow by themselves). Reads the store with the read-only key.
+name: Zero loop
+on:
+  schedule: [{ cron: "17 * * * *" }]
+  workflow_dispatch:
+permissions: { contents: write, actions: write }
+concurrency: { group: zero-loop, cancel-in-progress: false }
+jobs:
+  step:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: One step
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+          GH_TOKEN: "${{ github.token }}"
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/loop.mjs | tee "$RUNNER_TEMP/out.txt" | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -f "$RUNNER_TEMP/key.json"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lab/zero/loop.json lab/filler.json lab/queue/
+          if ! git diff --cached --quiet; then
+            git commit -q -m "Zero loop: $(grep -v '^DISPATCH\|^QUEUE\|^RETIRE' "$RUNNER_TEMP/out.txt" | tail -n 1 | cut -c1-120)"
+            for i in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q origin HEAD:main && break; sleep $((5 + RANDOM % 20)); done
+          fi
+          # what it asked for
+          grep '^DISPATCH ' "$RUNNER_TEMP/out.txt" | while read -r _ wf rest; do
+            args=(); for kv in $rest; do args+=(-f "$kv"); done
+            gh workflow run "$wf" --ref main "${args[@]}"
+          done
+          if grep -q '^QUEUE \|^RETIRE ' "$RUNNER_TEMP/out.txt" || ! git diff --quiet HEAD~1 -- lab/filler.json 2>/dev/null; then gh workflow run queue.yml --ref main; fi
