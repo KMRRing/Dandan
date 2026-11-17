@@ -1,0 +1,54 @@
+# Where in the search the answers are found (17 Nov 2026, Korbi: depth and breadth from where the valuable answers come): Zero's
+# games replayed, a decision in `every` searched by the loop's reference search and each variant on the same deals
+# (lab/zero/search-shape.mjs). 16 runners × 4 processes; the table in the run's summary.
+name: Search shape
+on:
+  workflow_dispatch:
+    inputs:
+      games: { description: "Zero game jobs", required: true, default: "az-g12-c2" }
+      nets: { description: "The general nets (gen:<name>)", required: true, default: "gm1" }
+      every: { description: "One searched decision in", required: true, default: "15" }
+      most: { description: "Decisions a process", required: true, default: "40" }
+      variants: { description: "Variants, space-separated", required: true, default: "cut=0 cut=2 cut=4 cut=8 mass=0.8 most=3 deals=64 deals=128 nodeeper" }
+permissions:
+  contents: read
+jobs:
+  shape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix: { runner: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Search
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+          SHAPE_MAX: "${{ inputs.most }}"
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          mkdir -p out
+          for k in 0 1 2 3; do sh=$(( ${{ matrix.runner }} * 4 + k )); LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/search-shape.mjs "${{ inputs.games }}" $sh 64 ${{ inputs.nets }} ${{ inputs.every }} ${{ inputs.variants }} > out/s$sh.jsonl & done; wait
+          rm -f "$RUNNER_TEMP/key.json"
+          wc -l out/*.jsonl | tail -1
+      - uses: actions/upload-artifact@v4
+        with: { name: "shape-${{ matrix.runner }}", path: out/ }
+  sum:
+    needs: shape
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/download-artifact@v4
+        with: { path: parts, pattern: "shape-*", merge-multiple: true }
+      - name: Table
+        run: |
+          node lab/zero/search-shape.mjs --sum parts/*.jsonl | tee table.txt
+          { echo '```'; cat table.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with: { name: "shape-all", path: parts/ }

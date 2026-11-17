@@ -369,9 +369,9 @@ function tableFor(s, seat) {
  * the deals'. seen: where it was left, and the other player's first choice on the way (their answer, for the coach's
  * words).
  */
-export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null, focus = null, options = null, qfocus = null) {
+export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null, focus = null, options = null, qfocus = null, cut = Infinity) {
   const opp = other(seat), path = [];
-  let node = root, growing = true;
+  let node = root, growing = true, played = 0;
   for (let i = 0; i < 4000 && !c.over; i++) {
     if (c.turn >= to && !c.stack.length) break;
     const who = toMove(c);
@@ -397,7 +397,12 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
         else if (pick.k.node) node = pick.k.node;
         else { pick.k.node = newNode(); growing = false; }
       } else m = ms[0];
-    } else m = rollout ? rollout(c, who, rng) : policyMove(c, who, { rng });
+    } else {
+      // cut (lab, 17 Nov 2026, Korbi: where in the tree the answers are found): the play-out stops after `cut` moves past the
+      // tree and the judge weighs the position there (the default plays on to the turn `to`, as before)
+      if (played++ >= cut) break;
+      m = rollout ? rollout(c, who, rng) : policyMove(c, who, { rng });
+    }
     // their answer, for the coach: what they do first in their own main phase (their turn's plan), else first at all
     // (a land is no answer)
     if (seen && who === opp && m.t !== "pass" && m.t !== "land" && !seen.main && c.turn < to) {
@@ -467,7 +472,7 @@ export function think(s, seat, opts = {}) {
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && isDeep(c)).sort((a, b) => b.mean - a.mean), ...list.filter(c => !isDeep(c))], deeper: looks };
 }
-function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false } = {}) {
+function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null } = {}) {
   const t0 = Date.now();
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
   // read Medium's scores); weigh false: hidden cards dealt without dandan-reads.js's tells (which read Medium's play)
@@ -505,7 +510,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
         // every answer on this deal, all from the same seed (paired across answers)
         const vs = ms.map((m, j) => {
           const c2 = fork(w), r2 = seeded(mix(runSeed, 11));
-          return typeof act(c2, seat, m, { rng: r2, quiet: true }) === "string" ? -1 : treePlay(c2, seat, Q.roots[j], to, r2, judge, j ? {} : at, explore, rollout, table, treeRank || rank, focus, options, qfocus);
+          return typeof act(c2, seat, m, { rng: r2, quiet: true }) === "string" ? -1 : treePlay(c2, seat, Q.roots[j], to, r2, judge, j ? {} : at, explore, rollout, table, treeRank || rank, focus, options, qfocus, cut);
         });
         Q.deals.push(vs);
         const means = vs.map((_, j) => { let t = 0, n = 0; for (const d of Q.deals) if (d) { t += d[j]; n++; } return t / n; });
@@ -513,7 +518,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       }
       Q.deals.push(null);   // a deal where the question doesn't come first (or comes with other answers): down the tree
     }
-    return treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank, focus, options, qfocus);
+    return treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank, focus, options, qfocus, cut);
   };
   const table = reuse ? tableFor(s, seat) : merge ? new Map() : null;
   if (table) table.reads = merge === "reads";
@@ -531,6 +536,8 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       seen[i].push(at);
     }
     d++;
+    // trace (lab): at every power of two, the move leading on its mean over the deals so far and how many are still in the race
+    if (trace && (d & (d - 1)) === 0) { let b = alive[0]; for (const i of alive) if (vals[i].reduce((a, x) => a + x, 0) / vals[i].length > vals[b].reduce((a, x) => a + x, 0) / vals[b].length) b = i; trace.push({ d, lead: key(cands[b]), alive: alive.length, ms: Date.now() - t0 }); }
     if (d >= first && (d & (d - 1)) === 0) {
       alive = prune(alive, vals, cands, must, hold, z);   // a look at 128, 256, 512...
       // steady (lab): stop once the same move has led clearly at `steady` looks in a row, not at the first one that
