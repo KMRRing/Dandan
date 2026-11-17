@@ -56,7 +56,10 @@ async function vsScore(from) {
   return { n, score: n ? won / n : null };
 }
 const GEN = L.line === "general", ref = name => (GEN ? `gen:${name}` : name);
-const nets = name => (GEN ? ["gpolicy", "gvalue", "scry12"] : ["policy", "value"]).every(k => fs.existsSync(`${here}nets/${name}-${k}.json`));
+// the belief (loop.json belief): "scry12" goes with the nets as packed; "scryg", the general dealer, trains every generation too
+// (scryg-train.yml, warm from the latest: Korbi 17 Nov 17:27, "go full general"), and a generation is ready when all three are in
+const BELIEF = L.belief || "scry12";
+const nets = name => (GEN ? ["gpolicy", "gvalue", BELIEF] : ["policy", "value"]).every(k => fs.existsSync(`${here}nets/${name}-${k}.json`));
 const side = name => `zero~${name}-value~${name}-policy~${L.flags}`;
 function queueYard(id) {
   const spec = { id, script: "hard-match.mjs", args: `{shard} {shards} {out} ${side(L.champion)} ${side(L.yard)} ${L.deals} ${L.yardPairs} ${L.yardSeed} 0`, shards: L.yardPairs / 5, timeoutMin: 200,
@@ -82,7 +85,11 @@ if (L.phase === "play") {
     L.trained = { from: window, at: now };
     L.phase = "train";
     log(`generation ${L.gen}: training ${L.challenger} warm from ${L.champion} on ${window.join(",")}`);
-    if (GEN) say(`DISPATCH general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.scry} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
+    if (GEN && BELIEF === "scryg") {
+      // the policy and value packed with the latest dealer's beliefs; the dealer trained on the same games, warm from the latest
+      say(`DISPATCH general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.champion} belief=scryg value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
+      say(`DISPATCH scryg-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion}${L.beliefArgs ? " " + L.beliefArgs : ""}`);
+    } else if (GEN) say(`DISPATCH general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.scry} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
     else say(`DISPATCH zero-train-ext.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
     L.nextFrom = got.length ? got[got.length - 1].n + 1 : L.genFrom;   // the next generation's first batch
   }

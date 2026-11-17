@@ -67,7 +67,8 @@ jobs:
           W="${{ inputs.init }}"; ini() { [ -z "$W" ] || echo "--init lab/zero/nets/$W-$1.json"; }
           python3 lab/zero/value_np.py "$D/v" "lab/zero/nets/$N-gvalue.json" --shape "${{ inputs.value }}" $(ini gvalue) ${{ inputs.value_args }} | tee -a "$RUNNER_TEMP/log.txt"
           python3 lab/policy_np.py "$D/a" "lab/zero/nets/$N-gpolicy.json" --form head $(ini gpolicy) ${{ inputs.policy_args }} | tee -a "$RUNNER_TEMP/log.txt"
-          [ "$S" = "lab/zero/nets/$N-$B.json" ] || cp "$S" "lab/zero/nets/$N-$B.json"
+          # Scry 1.2 goes with the nets; the general dealer (scryg) is trained by scryg-train.yml beside this run (Zero's loop waits for both)
+          [ "$B" = scryg ] || [ "$S" = "lab/zero/nets/$N-$B.json" ] || cp "$S" "lab/zero/nets/$N-$B.json"
           { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the nets
         run: |

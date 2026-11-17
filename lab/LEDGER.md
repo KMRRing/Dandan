@@ -1205,3 +1205,8 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   of 4,800 with a bar, the pace (games an hour, time to training), the latest strength against the previous nets, a chart of
   strength over generations (50% = no change), and every generation's row (nets, from, strength, suite, window, time). loop.mjs
   now records progress (games in, the last 24 readings) each play step.
+- 15:40Z Korbi 17:27 ("go full general version"): when sg1 lands, gm2 = gm1's policy and value grown onto view 2 (lab/zero/
+  grow-view.py: zero weights on the new inputs, checked: the same value to 1e-6) with sg1 as its belief, crowned at once; from
+  then loop.json belief "scryg": each generation general-train.yml packs with the latest dealer (belief=scryg) and scryg-train.yml
+  trains the dealer warm from the latest on the same games; a generation is ready when its policy, value and dealer are all in.
+  The games gm1 is playing now train the next generation as any (the records are moves).
