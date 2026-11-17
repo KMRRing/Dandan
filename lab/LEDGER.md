@@ -1197,3 +1197,6 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   noted in dandan-general.js. (4) The other player's belief in the search averaged over 4 worlds dealt from the seat's belief
   (was one world a search). (3, for the sampled moves) the policy's targets are the search's values per option: sample only
   among options within the search's noise, keep every value row.
+- 15:15Z Store copy 44052438569 cut by GitHub at 15:06Z (the third cut). Korbi 17:12 (Fable 15:10Z): the loop on now, on Google
+  (loop.json on: true); the store moves to B2 between generations, in ops' tiers (live set first). The loop's first step crowns
+  gm1: the filler plays gen:gm1, 1 game in 10 against g12r-C.
