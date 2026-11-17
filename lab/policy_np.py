@@ -95,8 +95,13 @@ else:
              W3=U((H2, H3), np.sqrt(6 / H2)), c3=np.zeros(H3), E3=U((MOVE_N, H3), 0.1), w4=np.zeros(H3), eb=np.zeros(MOVE_N))
 if A.init:
     net0 = json.load(open(A.init))["net"]
-    if (net0["XN"], net0["H1"], net0["H2"], net0.get("H3", 0)) != (XN, H1, H2, H3 if A.form == "head2" else net0.get("H3", 0)): sys.exit(f"--init {A.init}: sizes {net0['XN']}·{net0['H1']}·{net0['H2']}, not {XN}·{H1}·{H2}")
-    for k in P: P[k] = np.asarray(net0[k], dtype=P[k].dtype).reshape(P[k].shape)
+    # a view grown at its end (17 Nov 2026: dandan-general.js version 2): the new inputs' weights start at zero, the net as it was
+    grow = net0["XN"] < XN
+    if (net0["H1"], net0["H2"], net0.get("H3", 0)) != (H1, H2, H3 if A.form == "head2" else net0.get("H3", 0)) or net0["XN"] > XN: sys.exit(f"--init {A.init}: sizes {net0['XN']}·{net0['H1']}·{net0['H2']}, not {XN}·{H1}·{H2}")
+    for k in P:
+        if k == "W1" and grow: P[k] = np.zeros_like(P[k]); P[k][:net0["XN"]] = np.asarray(net0[k], dtype=P[k].dtype).reshape(net0["XN"], -1); continue
+        P[k] = np.asarray(net0[k], dtype=P[k].dtype).reshape(P[k].shape)
+    if grow: print(f"--init {A.init}: the view grown from {net0['XN']} to {XN} inputs, the new ones' weights zero", flush=True)
 M = {k: np.zeros_like(v) for k, v in P.items()}
 V = {k: np.zeros_like(v) for k, v in P.items()}
 

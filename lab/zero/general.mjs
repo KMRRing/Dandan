@@ -5,7 +5,7 @@
 import { freeScorer } from "../../dandan-netpolicy.js";
 import { think } from "../../dandan-think.js";
 import { zeroOptions, PASS } from "../../dandan-zero.js";
-import { generalView, valueView, generalMarks, onPool, viewSize, POOL } from "../../dandan-general.js";
+import { generalView, valueView, generalMarks, onPool, viewSize, VIEW_VERSIONS, POOL } from "../../dandan-general.js";
 import { Scry12 } from "./scry12.mjs";
 import { ScryG } from "./scryg.mjs";
 import { determinize } from "../../dandan-think.js";
@@ -15,8 +15,9 @@ import { NN } from "../../dandan-zeroview.js";   // the app's own: the page load
 
 /** The one policy as the look-aheads' player and the tree's focus, for priority and for questions alike. */
 export function generalPlayer(policy, ctx) {
-  const score = policy ? freeScorer(policy) : null, none = new Float32Array(POOL.V), XB = new Float32Array(viewSize());
-  if (policy && policy.net.XN !== XB.length) throw new Error(`the general policy reads ${policy.net.XN} inputs, not ${XB.length}`);
+  // the view as long as the net reads (version 1 or 2: dandan-general.js)
+  const score = policy ? freeScorer(policy) : null, none = new Float32Array(POOL.V), XB = new Float32Array(policy ? policy.net.XN : viewSize());
+  if (policy && !VIEW_VERSIONS(POOL).includes(policy.net.XN)) throw new Error(`the general policy reads ${policy.net.XN} inputs, not a view's (${VIEW_VERSIONS(POOL)})`);
   const view = (s, seat) => generalView(s, seat, ctx.counts[seat] ?? none, ctx.any[seat] ?? null, POOL, XB);
   const scores = (s, seat, ms) => score(view(s, seat), ms.map(m => generalMarks(s, seat, m)));
   const rollout = (s, seat, rng) => {
@@ -54,8 +55,8 @@ export function generalJudge(value) {
     if (L.b.length) b.set(L.b);
     return { nIn, nOut, W, b, y: new Float32Array(nOut) };
   });
-  const N = viewSize();
-  if (net[0].nIn !== N) throw new Error(`the general value net reads ${net[0].nIn} inputs, not ${N}`);
+  const N = net[0].nIn;
+  if (!VIEW_VERSIONS(POOL).includes(N)) throw new Error(`the general value net reads ${N} inputs, not a view's (${VIEW_VERSIONS(POOL)})`);
   const g = x => {
     let a = x;
     net.forEach((L, li) => {

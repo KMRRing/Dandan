@@ -19,7 +19,8 @@ function redeal(s, me, rng) {
   const c = J(s), opp = 1 - me, bit = 1 << me, kh = new Set(knownIn(c, opp, me));
   const at = [];
   c.hand[opp].forEach((id, i) => { if (!kh.has(id)) at.push(["h", i]); });
-  c.lib.forEach((id, i) => { if (!(knOf(c, id) & bit)) at.push(["l", i]); });
+  // a library place the other player knows stays as it is (that they know it is public: observe's theirLib)
+  c.lib.forEach((id, i) => { if (!(knOf(c, id) & bit) && !(knOf(c, id) & (1 << opp))) at.push(["l", i]); });
   const ids = at.map(([z, i]) => (z === "h" ? c.hand[opp][i] : c.lib[i]));
   for (let i = ids.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [ids[i], ids[j]] = [ids[j], ids[i]]; }
   at.forEach(([z, i], k) => { if (z === "h") c.hand[opp][i] = ids[k]; else c.lib[i] = ids[k]; });

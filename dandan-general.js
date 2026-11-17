@@ -75,7 +75,18 @@ const nameOf = id => (id == null || id === HIDDEN ? null : cardNameOf(id));
 // ---------- the view ----------
 const ZONES = ["myHand", "theirHand", "myUntapped", "myTapped", "theirUntapped", "theirTapped", "yard", "exile", "known top", "unseen"];
 const STACK = 4, SCALARS = STEPS.length + 4 + 2 + KINDS.length + 1 + 2 * (2 + COLOURS.length) + 6;
-export const viewSize = (P = POOL) => ZONES.length * (P.V + P.F) + P.V + STACK * (P.V + P.F + 6) + SCALARS;
+const viewSize1 = P => ZONES.length * (P.V + P.F) + P.V + STACK * (P.V + P.F + 6) + SCALARS;
+// version 2 (17 Nov 2026, Korbi 16:40): what is known of each library by place, and who knows it, appended after version 1 (a net
+// trained on version 1 reads the first part, as before; a version-2 net warm-started from it has zero weights on the rest):
+//   per library (the seat's and the other's; Dandân's one library is the seat's, with `shared` set): its top three and bottom three
+//   places, each the card if the seat knows it, whether hidden, whether the other player knows it; the cards the seat knows are
+//   in it elsewhere; how many places the other player knows at the top, the bottom and elsewhere;
+//   the seat's hand cards the other player knows; the cards seen earlier in the match (a best of three; Dandân plays single games);
+//   whether the library is shared.
+const SLOTS = 6, LIB2 = P => SLOTS * (P.V + P.F + 2) + (P.V + P.F) + 3;
+const extra2 = P => 2 * LIB2(P) + 2 * (P.V + P.F) + 1;
+export const viewSize = (P = POOL, v = 2) => viewSize1(P) + (v >= 2 ? extra2(P) : 0);
+export const VIEW_VERSIONS = P => [viewSize(P, 1), viewSize(P, 2)];
 
 /** A permanent's facts now: its printed ones (land types as they now are), changes, damage, a pump, arrival this turn. */
 function permFacts(P, p, turn) {
@@ -153,6 +164,48 @@ export function generalView(s, seat, theirHand, theirAny = null, P = POOL, out =
   out[k++] = o.played ? 1 : 0;
   out[k++] = o.attacked ? 1 : 0;
   out[k++] = (o.hand[opp].length - o.hand[seat].length) / 7;
+  if (out.length >= viewSize(P, 2)) view2(o, seat, P, out, k);
+  return out;
+}
+/** Version 2's part (see viewSize): from the observation, at offset k. */
+function view2(o, seat, P, out, k) {
+  const opp = other(seat), Z = P.V + P.F, theirs = new Set(o.theirLib || []);
+  const cardAt = (base, name, w = 1) => {
+    const i = P.at.get(name);
+    if (i == null) return;
+    out[base + i] += w / 4;
+    for (const f of P.factsOf.get(name) || []) { const j = P.fat.get(f); if (j != null) out[base + P.V + j] += w / 4; }
+  };
+  // the libraries: the engine's per-seat ones (o.libs), else the one shared library as the seat's
+  const libs = o.libs ? [o.libs[seat], o.libs[opp]] : [o.lib, null];
+  for (const lib of libs) {
+    if (lib) {
+      const n = lib.length, at = [0, 1, 2, n - 1, n - 2, n - 3];
+      at.forEach((i, j) => {
+        const b = k + j * (Z + 2);
+        if (i < 0 || i >= n || (j >= 3 && i < 3)) return;   // a short library: each place once
+        const id = lib[i];
+        if (id !== HIDDEN && id != null) cardAt(b, nameOf(id), 4); else out[b + Z] = 1;
+        if (!o.libs && theirs.has(i)) out[b + Z + 1] = 1;
+      });
+      const mid = k + SLOTS * (Z + 2);
+      let top = 0, bottom = 0, rest = 0;
+      lib.forEach((id, i) => {
+        const edge = i < 3 || i >= n - 3;
+        if (!edge && id !== HIDDEN && id != null) cardAt(mid, nameOf(id));
+        if (!o.libs && theirs.has(i)) { if (i < 3) top++; else if (i >= n - 3) bottom++; else rest++; }
+      });
+      out[mid + Z] = top / 3; out[mid + Z + 1] = bottom / 3; out[mid + Z + 2] = Math.min(5, rest) / 5;
+    }
+    k += LIB2(P);
+  }
+  // the seat's hand cards the other player knows (their knowledge, kh: the other's bit)
+  const kh = new Map(o.kh || []);
+  for (const id of o.hand[seat]) if ((kh.get(id) || 0) & (1 << opp)) cardAt(k, nameOf(id));
+  k += Z;
+  for (const name of o.match?.seen?.[opp] || []) cardAt(k, name);   // seen earlier in the match: none in Dandân
+  k += Z;
+  out[k++] = o.libs ? 0 : 1;
   return out;
 }
 /** The value net's view: the position face up for `seat` (the other hand as dealt), as generalView reads it. */

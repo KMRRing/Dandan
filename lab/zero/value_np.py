@@ -34,8 +34,11 @@ rng = np.random.default_rng(A.seed)
 W = [rng.normal(0, np.sqrt(2 / a), (a, b)) for a, b in zip(sizes[:-1], sizes[1:])]; B = [np.zeros(b) for b in sizes[1:]]
 if A.init:
     L0 = json.load(open(A.init))["layers"]
-    if [l["n"] for l in L0] != [[a, b] for a, b in zip(sizes[:-1], sizes[1:-1] + [1])]: sys.exit(f"--init {A.init}: layers {[l['n'] for l in L0]}, not the shape {sizes}")
+    # a view grown at its end (dandan-general.js version 2): the first layer's new input rows start at zero
+    want = [[a, b] for a, b in zip(sizes[:-1], sizes[1:-1] + [1])]; got = [l["n"] for l in L0]
+    if got[1:] != want[1:] or got[0][1] != want[0][1] or got[0][0] > want[0][0]: sys.exit(f"--init {A.init}: layers {got}, not the shape {sizes}")
     W = [np.frombuffer(base64.b64decode(l["q"]), np.int8).reshape(l["n"]).astype(np.float64) * np.asarray(l["s"]) for l in L0]
+    if got[0][0] < want[0][0]: W[0] = np.concatenate([W[0], np.zeros((want[0][0] - got[0][0], W[0].shape[1]))], 0); print(f"--init {A.init}: the view grown from {got[0][0]} to {want[0][0]} inputs", flush=True)
     B = [np.asarray(l["b"], np.float64) if l["b"] else np.zeros(l["n"][1]) for l in L0]
     if OUT == 2: W[-1] = np.concatenate([W[-1], np.zeros((W[-1].shape[0], 1))], 1); B[-1] = np.zeros(2)
 mW = [np.zeros_like(w) for w in W]; vW = [np.zeros_like(w) for w in W]; mB = [np.zeros_like(b) for b in B]; vB = [np.zeros_like(b) for b in B]

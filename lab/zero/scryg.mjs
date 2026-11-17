@@ -24,7 +24,7 @@ const nameOf = id => (id == null || id < 0 ? null : id >= TOKEN_AT ? TOKEN_NAME 
  *  turn, lives. */
 export const CTX_N = 3 + STEPS.length + 10;
 export const evSize = (P = POOL) => P.MARK_N + CTX_N;
-export const posSize = (P = POOL) => viewSize(P) + P.V + 2;
+export const posSize = (P = POOL, v = 2) => viewSize(P, v) + P.V + 2;
 const IDK = new Set(["card", "cards", "id", "ids", "src", "att", "blk", "attackers", "blockers", "pairs"]);
 
 const visibleIds = v => {
@@ -84,8 +84,8 @@ export function targetsOf(s, me, P = POOL, truth = true) {
 /** The position's input (posSize): generalView with no belief, the unseen copies (÷4), the cards to guess in the hand and in the
  *  library (÷7). */
 export function posInput(s, me, t, P = POOL, out = new Float32Array(posSize(P))) {
-  generalView(s, me, new Float32Array(P.V), null, P, out.subarray(0, viewSize(P)));
-  const b = viewSize(P);
+  const b = out.length - P.V - 2;   // the view as long as the net reads (version 1 or 2)
+  generalView(s, me, new Float32Array(P.V), null, P, out.subarray(0, b));
   for (let i = 0; i < P.V; i++) out[b + i] = t.u[i] / 4;
   out[b + P.V] = t.handN / 7; out[b + P.V + 1] = t.libN / 7;
   return out;
@@ -106,7 +106,8 @@ export class ScryG {
   constructor(me, net, P = POOL) {
     this.me = me; this.P = P; this.rec = new RecordG(me, P); this.embs = [];
     const n = net;
-    if (n.V !== P.V || n.EV !== evSize(P) || n.X !== posSize(P)) throw new Error("Scry G: the net's sizes differ from the code's");
+    if (n.V !== P.V || n.EV !== evSize(P) || ![posSize(P, 1), posSize(P, 2)].includes(n.X)) throw new Error("Scry G: the net's sizes differ from the code's");
+    this.X = n.X;
     Object.assign(this, { D: n.D, A: n.A, H: n.H });
     for (const k of ["Wx", "bx", "We", "be", "Wq", "Wk", "wa", "Wv", "W1", "b1", "Wc", "W2", "b2"]) this[k] = F(n[k]);
   }
@@ -125,7 +126,7 @@ export class ScryG {
   }
   /** The position's share of the hidden layer: g (H), from the position and the record read by attention. */
   base(s) {
-    const t = targetsOf(s, this.me, this.P, false), x = posInput(s, this.me, t, this.P), X = x.length, { D, A, H } = this;
+    const t = targetsOf(s, this.me, this.P, false), x = posInput(s, this.me, t, this.P, new Float32Array(this.X)), X = x.length, { D, A, H } = this;
     const h0 = relu(affine(this.Wx, this.bx, x, X, H)), q = affine(this.Wq, new Float32Array(A), h0, H, A), now = s.turn || 0;
     const T = this.embs.length, sc = new Float32Array(T), c = new Float32Array(D), mean = new Float32Array(D);
     let top = -Infinity;

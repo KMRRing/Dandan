@@ -1181,3 +1181,11 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   left, a guess's chance the product of its cards', untrained = the unseen odds. The general Monte takes it (makeGeneral scryg:,
   generalBrain loads <name>-scryg when there is one), and reads the other player's belief in a world dealt from the seat's own
   (it was read in the real game: their real hand in its input). replay-pack2 packs with it; general-train.yml `belief` input.
+- 16:00Z Korbi 16:40-16:42: the general view's version 2 (dandan-general.js; viewSize 1,259 → 2,602): per library (the seat's,
+  the other's; Dandân's one shared library as the seat's with `shared` set) the top three and bottom three places (the card if
+  known, hidden, known to the other player), cards known elsewhere in it, the other player's known places (top, bottom,
+  elsewhere); the seat's hand cards the other player knows; cards seen earlier in the match (empty in Dandân). Appended after
+  version 1: a version-1 net reads the first part (gm1, sg1 keep working: generalPlayer, generalJudge and Scry G size their view
+  by the net); policy_np.py and value_np.py warm-start a grown view with zero weights on the new inputs (checked from gm1; a
+  padded v2 policy played gm1 locally). New packs are version 2. tests/observe.mjs's redeal keeps the places the other player
+  knows (that they know them is public); it failed since a2c510a5 (theirLib), Test and publish with it: fixed.
