@@ -22,6 +22,12 @@ s.set(b2);
 await s.put("claims/j/1", "b"); await s.put("fleet/filler.json", "{}");
 check(fs.existsSync(path.join(tmp, "b2/claims/j/1")) && fs.existsSync(path.join(tmp, "google/fleet/filler.json")) && !fs.existsSync(path.join(tmp, "b2/fleet")), "with a data store: fleet/ stays on the control store, the rest goes to the data store");
 check((await s.list("claims/")).map(o => o.name).join() === "claims/j/1" && (await s.get("fleet/open.json")) === "{}", "reads follow the same routing (no fallback to the old store)");
+// results/ and cache/ from before the move stay on Google, read-only: read and listed from there when B2 doesn't have them
+await ctl.put("results/old/part-0.jsonl", "g0"); await ctl.put("results/live/part-0.jsonl", "stale"); await s.put("results/live/part-0.jsonl", "fresh"); await s.put("results/live/part-1.jsonl", "b1");
+check((await s.get("results/old/part-0.jsonl")) === "g0" && (await s.get("results/live/part-0.jsonl")) === "fresh", "an old result is read from Google, a copied one from B2");
+check((await s.list("results/")).map(o => o.name).sort().join() === "results/live/part-0.jsonl,results/live/part-1.jsonl,results/old/part-0.jsonl", "results/ lists both stores, B2's copy once");
+await ctl.put("jobs/gone.json", "{}");
+check((await s.get("jobs/gone.json")) === null && !(await s.list("jobs/")).length, "jobs/ (and claims/, workers/, retired/) are B2's alone: nothing removed there comes back");
 check(await s.create("claims/j/1", "c") === false && (await s.get("claims/j/1")) === "b", "create is only if absent");
 const none = await dataStoreOf({ get: async () => null }, {}), cfg = await dataStoreOf({ get: async () => JSON.stringify({ kind: "s3", endpoint: "https://s3.us-east-005.backblazeb2.com", bucket: "ML-queue", keyId: "k", key: "s" }) }, {});
 check(none === null && cfg?.kind === "s3", "private/store.json names the data store (none without it)");

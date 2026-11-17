@@ -202,16 +202,27 @@ export function s3Store({ endpoint, bucket, keyId, key, region }) {
 // ---------- the lab's routing ----------
 export const STORE_CONFIG = "private/store.json";
 /** fleet/ on `control` (Google), the rest on `data`; `data` may be swapped later (set). `control` is the Google side itself. */
+// Once the data store is B2, results/ and cache/ written before the move stay on Google, read-only (Korbi 17 Nov 15:15Z: only the
+// live set and the loop's window are copied): a read there that B2 doesn't have is answered from Google, and a listing is both
+// stores' (B2's copy wins). Everything else (jobs/, claims/, workers/, retired/) is B2's alone, so nothing removed there comes back.
+const KEPT_ON_GOOGLE = /^(results|cache)\//;
+const nameOf = o => (typeof o === "string" ? o : o.name);
 export function routedStore(control, data) {
   let main = data || control;
   const on = name => (name.startsWith("fleet/") ? control : main);
+  const old = name => main !== control && KEPT_ON_GOOGLE.test(name);
   return {
     control,
     get kind() { return main === control ? control.kind : `${control.kind}+${main.kind}`; },
     set(d) { main = d || control; },
-    list: prefix => on(prefix).list(prefix),
-    get: name => on(name).get(name),
-    getG: name => on(name).getG(name),
+    async list(prefix) {
+      const a = await on(prefix).list(prefix);
+      if (!old(prefix)) return a;
+      const seen = new Set(a.map(nameOf));
+      return [...a, ...(await control.list(prefix)).filter(o => !seen.has(nameOf(o)))];
+    },
+    async get(name) { const v = await on(name).get(name); return v == null && old(name) ? control.get(name) : v; },
+    async getG(name) { const v = await on(name).getG(name); return v == null && old(name) ? control.getG(name) : v; },
     put: (name, body, o) => on(name).put(name, body, o),
     create: (name, text) => on(name).create(name, text),
     del: name => on(name).del(name),
