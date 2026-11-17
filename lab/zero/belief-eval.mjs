@@ -8,7 +8,7 @@
 // at least one Dandân and at least one land among the unknown cards, as Brier scores (the mean squared error of the chance; lower
 // is better): the pool's exact (dealing without putting back), Scry 1's card by card, Scry 1.2's from whole hands dealt
 // (belief(), Fable's item 10). The earlier scry12.mjs (old12) has no whole-hand dealer and gives none.
-// Beliefs: "pool"; "s1:<name>" Scry 1 (lab/zero/nets/<name>-scry.json, with the Tracker); "s12:<name>" Scry 1.2 (<name>-scry12.json);
+// Beliefs: "pool"; "s1:<name>" Scry 1 (lab/zero/nets/<name>-scry.json, with the Tracker); "s12:<name>" Scry 1.2 (<name>-scry12.json); "sg:<name>" Scry G (<name>-scryg.json, the hand cards only);
 // "old12:<module>:<name>" a Scry 1.2 net under an earlier scry12.mjs (the leaky g12s: that commit's file, copied in by the workflow).
 // usage: node lab/zero/belief-eval.mjs <jobs, comma-separated | file:<zero-play output>> <shard> <shards> <belief>... > part.json
 //        node lab/zero/belief-eval.mjs --sum part.json...        (the table)
@@ -19,6 +19,7 @@ import { DECK, NAMES } from "../../dandan-cards.js";
 import { isLandId } from "../../dandan-core.js";
 import { Tracker, scryOf, seenBy, unknownSlots } from "./zero-view.mjs";
 import { Scry12 } from "./scry12.mjs";
+import { ScryG } from "./scryg.mjs";
 import { netOf } from "./zero-lib.mjs";
 
 const AT = new Map(NAMES.map((n, k) => [n, k])), EVERY = 6, J = x => JSON.parse(JSON.stringify(x)), real = Math.random;
@@ -66,6 +67,16 @@ function scorer(sp) {
   if (kind === "s1") {
     const f = scryOf(netOf(`${a}-scry`));
     return T => ({ update() {}, score(s, me, ids) { const p = f(s, me, T).slots; let e = 0; ids.forEach((id, j) => { e += nats(p[j][AT.get(DECK[id])]); }); return { each: e, chain: e, calls: byCard(p) }; } });
+  }
+  if (kind === "sg") {
+    // Scry G (lab/zero/scryg.mjs) on the other hand's hidden cards only, its first targets (it also guesses the library's unseen
+    // places; those are not scored here, so the numbers sit beside Scry 1.2's on the same cards)
+    const net = netOf(`${a}-scryg`);
+    return () => { const F = [new ScryG(0, net), new ScryG(1, net)]; return { update(s, who, m, after) { for (const x of F) x.update(s, who, m, after); }, score(s, me, ids) {
+      const r = F[me].score(s, ids.length);
+      if (r.n !== ids.length) throw new Error(`Scry G scored ${r.n} hand cards, the eval ${ids.length}`);
+      return { each: r.each, chain: r.chain };
+    } }; };
   }
   const net = netOf(`${kind === "old12" ? b : a}-scry12`), Cls = kind === "old12" ? old.get(a) : Scry12;
   return () => { const F = [new Cls(0, net), new Cls(1, net)]; return { update(s, who, m, after) { for (const x of F) x.update(s, who, m, after); }, score(s, me, ids) {

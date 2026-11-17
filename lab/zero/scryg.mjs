@@ -199,9 +199,11 @@ export class ScryG {
     };
   }
   /** The scorecard: −log chance of the true cards, as a chain and card by card (each with nothing dealt before it). */
-  score(s) {
+  // only: the first `only` targets (the hidden hand's, which come first): the same cards Scry 1.2 is scored on (belief-eval.mjs)
+  score(s, only = Infinity) {
     const t = targetsOf(s, this.me, this.P, true), { g } = this.base(s), V = this.P.V, dealt = new Float32Array(V), none = new Float32Array(V);
     let chain = 0, each = 0;
+    if (only < t.names.length) t.names = t.names.slice(0, only);
     for (const y of t.names) { const p1 = this.card(g, none, t.u), pc = this.card(g, dealt, t.u); each -= Math.log((p1[y] || 0) + 1e-9); chain -= Math.log((pc[y] || 0) + 1e-9); dealt[y]++; }
     return { chain, each, n: t.names.length, p1: this.card(g, none, t.u), names: t.names };
   }
