@@ -83,7 +83,12 @@ jobs:
             # what the workers wrote to B2 while it was the store, copied to Google (the writer key); objects older than 3 hours on B2
             # came from Google in the first place
             copy-back) export RCLONE_CONFIG_GCSW_TYPE="google cloud storage" RCLONE_CONFIG_GCSW_SERVICE_ACCOUNT_FILE="$RUNNER_TEMP/wkey.json" RCLONE_CONFIG_GCSW_BUCKET_POLICY_ONLY=true
-                       rclone copy "b2:$LAB_B2_BUCKET" "gcsw:$LAB_BUCKET" --max-age 3h --include "results/**" --include "jobs/**" --include "retired/**" --include "cache/**" --fast-list --retries 3 --low-level-retries 30 --stats 60s --stats-one-line --stats-log-level NOTICE --transfers 64 --checkers 64 --size-only ;;
+                       C="--max-age 3h --retries 3 --low-level-retries 30 --stats 60s --stats-one-line --stats-log-level NOTICE --transfers 64 --checkers 64 --size-only"
+                       # only where the workers write: jobs/, retired/, and the results of the filler's batches (a whole-bucket listing of B2
+                       # ran for an hour and was stopped)
+                       for d in jobs retired; do rclone copy "b2:$LAB_B2_BUCKET/$d" "gcsw:$LAB_BUCKET/$d" $C; done
+                       P=$(node -e 'process.stdout.write(require("./lab/filler.json").prefix)')
+                       for d in $(rclone lsf "b2:$LAB_B2_BUCKET/results/" --dirs-only | grep "^$P"); do echo "results/$d"; rclone copy "b2:$LAB_B2_BUCKET/results/$d" "gcsw:$LAB_BUCKET/results/$d" $C; done ;;
             verify)
               echo "## Google (fleet/ left out)"; rclone size "gcs:$LAB_BUCKET" $R --json
               echo "## B2"; rclone size "b2:$LAB_B2_BUCKET" $R --json
