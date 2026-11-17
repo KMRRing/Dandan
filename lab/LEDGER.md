@@ -1210,3 +1210,9 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   then loop.json belief "scryg": each generation general-train.yml packs with the latest dealer (belief=scryg) and scryg-train.yml
   trains the dealer warm from the latest on the same games; a generation is ready when its policy, value and dealer are all in.
   The games gm1 is playing now train the next generation as any (the records are moves).
+- 16:00Z Korbi 17:33 ("test the transfer with a vm; with issues on B2 don't switch"): lab/store-vm-test.mjs run from the US-East
+  lab machine (dandan-us) by store-vm-test.yml on the store-fallback branch: 50 writes + 50 reads one at a time 1.3 s; 400
+  writes 64 in flight 14.0 s, all listed; create-if-absent and write-if-unchanged hold; fleet/ stays on Google; the fallback
+  reads and lists old batches (az-g11-c, zps003: 1,200 parts each on Google, all 3,600 objects already on B2 from the first
+  copy) the same: PASSED. The fallback merged to main (a46fb575; inert until private/store.json exists). The switch goes with
+  gm2's crowning (the next generation boundary): config, catchup-live, verify-live.
