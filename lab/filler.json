@@ -5,6 +5,6 @@
   "games": 4800,
   "seedBase": 200000000,
   "timeoutMin": 300,
-  "args": "{shard} {shards} {out} 256 4800 {seed} g11w-C-policy g11w-C-value 400 deeper=0.03",
-  "purpose": "Filler (Korbi, 16 Nov 14:21: the latest model): Monte Scry Zero with g11w-C's nets (the latest, warm-started line) against itself, 256 deals, close calls searched again three turns ahead (deeper 0.03), 1 decision in 400 explored (explore3); 4 games a shard, 1,200 shards a batch, as generation 12's C sets; seeds from 200,000,000 (every fifth held out, as all Zero games). Hidden hands dealt name first by Scry's odds, stack copies not counted (the dealing fix, live from az-df1 50.5%, 16 Nov) from zps003 on: each batch is pinned to the commit main was at when it was made, so zps001-002 keep the old dealer. Games for the last wave's training."
+  "args": "{shard} {shards} {out} 256 4800 {seed} g12r-C-policy g12r-C-value 100 deeper=0.03",
+  "purpose": "Filler (Korbi 17 Nov 12:25: the new nets live, no gates): Monte Scry Zero with g12r-C's nets, the nets now live in the game, against itself, 256 deals, close calls searched again three turns ahead (deeper 0.03), 1 decision in 100 explored (explore3; Fable: more than 1 in 400); 4 games a shard, 1,200 shards a batch; seeds from 200,000,000 (every fifth held out). From zps006 on; Zero's loop (lab/zero/loop.mjs) trains on these games and moves the filler to each new generation's nets."
 }

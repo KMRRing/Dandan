@@ -31,11 +31,12 @@ export const JUDGES = {
   "avg-jt130-s4d": ["./judges/jt130.json", "./judges/s4d.json"],
 };
 /** The engine Monte plays in the live game (dandan-worker.js, a request with no engine), and the judge of the live game's coach
- *  and its end-of-game review. Monte Scry Zero since 15 November 2026, 16:48Z (Korbi: "replace Monte in the standard app",
+ *  and its end-of-game review. Generation 12's nets (g12r-C) since 17 November 2026, 10:30Z (Korbi: "put the new one live";
+ *  no gates: the latest nets play; Monte's test suite, lab/suite.json, 4 of 5 against g9x-C's 0). Monte Scry Zero since 15 November 2026, 16:48Z (Korbi: "replace Monte in the standard app",
  *  after playing it in the lab; its Deep match against the benchmark 62.2%, 99% range 55.6 to 68.7, over 181 of 200 pairs, no
  *  crown test yet). Before it, Hard with S5 + the keep net from 13 November (its Deep gate against S4 d with Medium's keep,
  *  54.3% ± 2.5 over 1,195 of 1,200 pairs), S4 d from 12 November, v14 before that. The coach and the review stay Hard with S5. */
-export const LIVE_ENGINE = "zero-g9x";
+export const LIVE_ENGINE = "zero-g12r";
 export const LIVE_JUDGE = "s5";
 
 export const ENGINES = [
@@ -101,7 +102,11 @@ export const ENGINES = [
     expect: "Against the live Hard (Medium in the look-aheads), Quick, 2,000 pairs: 49.1% (99%: 47.3 to 51.0), its side thinking 1.08 times as long: the swap bar (49% and at most 1.2 times) is met. Alone against Medium, no search: 49.2% over 20,000 pairs.",
   },
   {
-    id: "zero-g9x", name: "Monte Scry Zero: live", short: "Zero", kind: "zero", tag: "What the live game plays since 15 November 2026: the from-scratch line, its own Scry, policy and value nets, no Medium inside; 62.2% against the benchmark at Deep, not crown-tested.", nets: "g9x-C", deeper: 0.03, available: true,
+    id: "zero-g12r", name: "Monte Scry Zero: live", short: "Zero", kind: "zero", tag: "What the live game plays since 17 November 2026: Monte Scry Zero with generation 12's nets (g12r-C), warm-trained from the from-scratch line; the latest nets play, no gate (Korbi). Monte's test suite: 4 of 5 (g9x-C 0 of 5).", nets: "g12r-C", deeper: 0.03, available: true,
+    description: "The from-scratch line (lab, 14–15 November 2026): nothing of Medium inside. Its options are every legal move and passing; its look-aheads are played by its own policy net (g12r-C, 654 inputs: the position as its seat sees it and Scry's estimate of the other hand) and its questions by its own question head; the hidden cards are dealt by Scry, a net that follows the other player's play and gives each unseen card in their hand its own chance of every name; positions are judged by its own value net (both hands face up). Close calls (the best two within 3 points) are weighed again three turns ahead instead of two (Korbi's variable look-ahead). Its nets (about 2 MB) ship with the app and are kept offline.",
+    expect: "Monte's test suite (lab/suite.json, the no-Island Dandân positions from Korbi's games) at 256 deals: 4 of 5 passed, against 0 of 5 for g9x-C. Each warm generation has measured 2 to 3 points ahead of the one before at Quick.",
+  },  {
+    id: "zero-g9x", name: "Monte Scry Zero (g9x-C)", short: "Zero", kind: "zero", tag: "The live game's Monte from 15 to 17 November 2026: the from-scratch line's generation 9 nets; 62.2% against the benchmark at Deep.", nets: "g9x-C", deeper: 0.03, available: true,
     description: "The from-scratch line (lab, 14–15 November 2026): nothing of Medium inside. Its options are every legal move and passing; its look-aheads are played by its own policy net (g9x-C, 654 inputs: the position as its seat sees it and Scry's estimate of the other hand) and its questions by its own question head; the hidden cards are dealt by Scry, a net that follows the other player's play and gives each unseen card in their hand its own chance of every name; positions are judged by its own value net (both hands face up). Close calls (the best two within 3 points) are weighed again three turns ahead instead of two (Korbi's variable look-ahead). Its nets (about 2 MB) ship with the app and are kept offline.",
     expect: "Against the lab's benchmark (the live Hard with a Medium-free look-ahead, within a point of the live Hard), both at Deep: 61.7% (99%: 55.0 to 68.5) over 175 of 200 pairs (lab job az-yd9-c); at Quick 59.0% over 200. Not crown-tested yet (1,200 pairs at Deep) and never at Deepest. It thinks about 1.5 to 2 times as long as Hard a deal: its nets are larger than Hard's.",
   },

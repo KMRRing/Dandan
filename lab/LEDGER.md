@@ -1078,3 +1078,7 @@ three generations behind. Zero's loop runs the suite on every new generation and
 - Fable 10:20Z repairs: qall walks as the tree does (focus with priority, qfocus for a question, one candidate moves on), every
   answer of a deal from the same seed, deals without the question go down the tree; twins keys arrival only as "this turn";
   doomed-count reads Islands by land type. Loop generation 4,800 games (Fable's advice).
+- 10:30Z **g12r-C live in the game** (Korbi 12:25: "put the new one live - we don't do gates any more"): judges/zero-g12r-C-*,
+  LIVE_ENGINE zero-g12r; g9x-C kept as an engine for the lab. One local game pair (g12r-C against g9x-C at Quick) played: won both.
+  Filler on g12r-C from its next batch, explore 1 in 100 (Fable's condition); zps005 (g11w-C) closed by the rule. Loop champion
+  g12r-C, generation 13 from zps006; the loop turns on after the store check.

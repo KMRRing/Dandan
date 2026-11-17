@@ -40,7 +40,7 @@ function render() {
   ${parts()}
   <h2>One game, step by step: ${esc(n[1])} floods</h2>
   <p>${esc(G.summary)}</p>
-  <p class="hw-note">A real game, seed ${G.seed}, ${G.steps.length} decisions. Both seats play the live nets (g9x-C) at Quick, ${G.deals} dealt worlds a decision; the app plays at Deepest, 2,048. Every number below is what the engine computed at that moment. "The truth" is shown for you; the engine never sees it.</p>
+  <p class="hw-note">A real game, seed ${G.seed}, ${G.steps.length} decisions. Both seats play the nets of the time (g9x-C) at Quick, ${G.deals} dealt worlds a decision; the app plays at Deepest, 2,048. Every number below is what the engine computed at that moment. "The truth" is shown for you; the engine never sees it.</p>
   <div id="hwCharts"></div>
   <div class="hw-game"><div class="hw-step" id="hwStep"></div>
   <div class="hw-panel" id="hwPanel"></div></div>
