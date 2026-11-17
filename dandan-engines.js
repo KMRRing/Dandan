@@ -179,9 +179,12 @@ export const keepNet = (load = fetchJson) => (keepNetP ||= load(new URL("./judge
 const zeroP = new Map();
 async function zeroOf(engine, load = fetchJson) {
   if (!zeroP.has(engine.id)) zeroP.set(engine.id, (async () => {
-    // the general Monte (engine.general, 17 Nov 2026: stage 3 step 3): its nets judges/general-<nets>-gpolicy, -gvalue, -scry12
+    // the general Monte (engine.general, 17 Nov 2026: stage 3 step 3): its nets judges/general-<nets>-gpolicy, -gvalue, -scry12.
+    // Its code is still the lab's (lab/zero/general.mjs, not kept offline): no engine in the list is general yet; at the live swap
+    // its files move beside this one and are kept (the path is built here so the offline list doesn't ask for them before then)
     if (engine.general) {
-      const [{ makeGeneral }, [policy, value, scry12]] = await Promise.all([import("./lab/zero/general.mjs"),
+      const lab = ["lab", "zero", "general.mjs"].join("/");
+      const [{ makeGeneral }, [policy, value, scry12]] = await Promise.all([import(`./${lab}`),
         Promise.all(["gpolicy", "gvalue", "scry12"].map(k => load(new URL(`./judges/general-${engine.nets}-${k}.json`, import.meta.url).href)))]);
       return { brain: makeGeneral({ policy, value, scry12 }), game: null, G: null, at: 0 };
     }
