@@ -11,8 +11,9 @@
 //     one" chances) and, with the other hand dealt face up, for the value net (valueView)
 //   generalMarks(s, seat, move) — a move's or an answer's marks: its kind, the card and its facts, where it is cast from, its
 //     mode, each target (kind, whose, its card and facts), a question's chosen cards, counts and choices
-import { CARDS, DECK, NAMES, HALVES, TOKEN_AT, BASICS, BASIC_MANA, parseCost } from "./dandan-cards.js";
-import { typesOf, lands, creatures, pt, needType, manaAlts, payPlan, canAttack } from "./dandan-core.js";
+import { CARDS, DECK, NAMES, HALVES, TOKEN_AT, BASICS, BASIC_MANA, LIBRARY, parseCost } from "./dandan-cards.js";
+import { typesOf, lands, creatures, pt, needType, manaAlts, canAttack, fetchTypes, poolOf as manaPool } from "./dandan-core.js";
+import { hasType } from "./dandan-spells.js";
 import { targetLists } from "./dandan-spells.js";
 import { observe, HIDDEN } from "./dandan-view.js";
 
@@ -143,7 +144,7 @@ const extra2 = P => 2 * LIB2(P) + 2 * (P.V + P.F) + 1;
 //     hand and those castable now, whether the top of the stack is my spell;
 //   the library short (≤ 1, ≤ 3, ≤ 6); cards drawn this turn, each seat;
 //   the stack's top four items' targets: the target's card and facts, and whose
-const SEAT3 = 6 + 1 + 2 + BASICS.length + 5, WIN3 = 6, extra3 = P => 2 * SEAT3 + WIN3 + 3 + 2 + STACK * (P.V + P.F + 2);
+const SEAT3 = 6 + 1 + 2 + BASICS.length + 5 + 10, WIN3 = 6, extra3 = P => 2 * SEAT3 + WIN3 + 3 + 2 + 2 + STACK * (P.V + P.F + 2);
 export const viewSize = (P = POOL, v = 3) => viewSize1(P) + (v >= 2 ? extra2(P) : 0) + (v >= 3 ? extra3(P) : 0);
 export const VIEW_VERSIONS = P => [viewSize(P, 1), viewSize(P, 2), viewSize(P, 3)];
 /** Which of the pool's names can answer a spell (target one on the stack), probed from the rules' targets once per pool. */
@@ -159,32 +160,80 @@ export function answers(P = POOL) {
 }
 const COLOR_OF = { W: 0, U: 1, B: 2, R: 3, G: 4, C: 5 };
 /** Version 3's part: from the observation, at offset k; `ans`: the chance the other hand holds an answer (null: from theirAny). */
+/**
+ * The mana a seat can make at instant speed: one entry a source, its alternatives (each a list of colour letters): untapped lands
+ * (Izzet Boilerworks: blue and red together), untapped fetch lands whose kind may still be in the library as the observer sees it
+ * (a known library place, or a card it hasn't seen: cracked, the land comes in untapped), and the floating pool.
+ */
+const mayFetch = (o, types) => o.lib.some(id => id !== HIDDEN && id != null && hasType(id, types)) || o.unseenIds.some(id => hasType(id, types));
+function sourcesOf(o, x) {
+  const out = [], may = types => mayFetch(o, types);
+  for (const l of lands(o, x)) {
+    if (l.tapped) continue;
+    const ft = fetchTypes(l);
+    if (ft.length) { if (may(ft)) out.push(ft.map(t => [BASIC_MANA[t]]).filter(a => a[0])); continue; }
+    const alts = manaAlts(l);
+    if (alts.length) out.push(alts);
+  }
+  for (const c of manaPool(o, x)) out.push([[c]]);
+  return out;
+}
+/** Whether sources (sourcesOf) pay a cost ({ g, U, R, … }): every way of picking one alternative a source, tried (a handful of sources). */
+function payable(cost, src) {
+  const need = Object.entries(cost).filter(([c, n]) => c !== "g" && n), total = Object.values(cost).reduce((a, b) => a + b, 0);
+  if (!total) return true;
+  const have = {};
+  const go = i => {
+    if (i === src.length) { let t = 0; for (const c in have) t += have[c]; return t >= total && need.every(([c, n]) => (have[c] || 0) >= n); }
+    for (const alt of src[i]) { for (const c of alt) have[c] = (have[c] || 0) + 1; const ok = go(i + 1); for (const c of alt) have[c]--; if (ok) return true; }
+    return go(i + 1);   // the source left unused
+  };
+  return src.length <= 12 ? go(0) : true;
+}
+const libOf = name => (HALVES[name] || [name]).reduce((a, h) => { const l = LIBRARY[h] || {}; return { take: Math.max(a.take, l.take || 0, l.cycle || 0), add: Math.max(a.add, l.add || 0) }; }, { take: 0, add: 0 });
 function view3(o, seat, P, out, k, theirHand, theirAny, ans) {
-  const opp = other(seat), Z = P.V + P.F, A = answers(P), C = compiled(P);
+  const opp = other(seat), Z = P.V + P.F, A = answers(P), C = compiled(P), SRC = [sourcesOf(o, seat), sourcesOf(o, opp)];
+  // the shared library's race: whose draw comes next, and who would draw from the empty library first if nobody draws extra
+  const L = o.lib.length, nextDraw = (o.step === "upkeep" || o.step === "draw") && !(o.drawn?.[o.active]) ? o.active : other(o.active);
+  const fatal = L % 2 === 0 ? nextDraw : other(nextDraw);
   for (const x of [seat, opp]) {
-    const ls = lands(o, x), b = k;
+    const ls = lands(o, x), b = k, src = SRC[x === seat ? 0 : 1];
     let untapped = 0, all = 0, allU = 0;
     for (const l of ls) {
       const alts = manaAlts(l), most = alts.reduce((a, m) => Math.max(a, m.length), 0), cs = new Set(alts.flat());
       all += most; if (cs.has("U")) allU += 1;
       if (!l.tapped) { untapped += most; for (const c of cs) out[b + COLOR_OF[c]] += 1 / 4; }
     }
-    // scales in quarters and eighths (dyadic: the kernel's carried sums and the JavaScript's agree bit for bit)
+    // scales in quarters and eighths (exact in a float: no rounding of their own)
     out[b + 6] = Math.min(8, untapped) / 4; out[b + 7] = Math.min(16, all) / 8; out[b + 8] = Math.min(16, allU) / 8;
     BASICS.forEach((t, i) => { out[b + 9 + i] = Math.min(8, ls.filter(l => typesOf(l).includes(t)).length) / 4; });
     const theirLands = lands(o, other(x)), mine = creatures(o, x);
     const power = mine.filter(c => theirLands.some(l => typesOf(l).includes(needType(c)))).reduce((a, c) => a + Math.max(0, pt(c)[0]), 0);
     const now = mine.filter(c => canAttack(o, c)).reduce((a, c) => a + Math.max(0, pt(c)[0]), 0);
-    const j = b + 9 + BASICS.length;
+    let j = b + 9 + BASICS.length;
     out[j] = Math.min(16, power) / 8;
     out[j + 1] = Math.min(16, now) / 8;
     out[j + 2] = power > 0 ? Math.min(16, Math.ceil(Math.max(1, o.life[other(x)]) / power)) / 16 : 1;
     out[j + 3] = mine.length ? Math.min(4, Math.min(...mine.map(c => ls.filter(l => typesOf(l).includes(needType(c))).length))) / 4 : 1;
     out[j + 4] = Math.min(8, mine.length) / 4;
+    j += 5;
+    // mana at instant speed with the fetch lands cracked: sources, and those that can make blue
+    out[j] = Math.min(8, src.length) / 4; out[j + 1] = Math.min(8, src.filter(a => a.some(m => m.includes("U"))).length) / 4;
+    out[j + 2] = Math.min(4, ls.filter(l => !l.tapped && fetchTypes(l).length).length) / 4;
+    // the race: faces the empty library first, its own draws until then (its failing one counted)
+    out[j + 3] = fatal === x ? 1 : 0;
+    out[j + 4] = Math.min(16, x === nextDraw ? Math.floor(L / 2) + 1 : Math.floor((L + 1) / 2) + 1) / 16;
+    // cards that take from or add to the library: held (mine as they are, theirs as the belief), and on its battlefield
+    let tk = 0, tkN = 0, ad = 0;
+    if (x === seat) for (const id of o.hand[seat]) { const l = libOf(cardNameOf(id)); if (l.take) { tk++; tkN += l.take; } if (l.add) ad++; }
+    else P.vocab.forEach((n, i) => { const c = theirHand[i]; if (!c) return; const l = libOf(n); if (l.take) { tk += c; tkN += c * l.take; } if (l.add) ad += c; });
+    const inPlay = o.bf.filter(p => p.ctl === x && libOf(cardNameOf(p.id)).take && (!fetchTypes(p).length || (!p.tapped && mayFetch(o, fetchTypes(p))))).length;
+    out[j + 5] = Math.min(4, tk) / 4; out[j + 6] = Math.min(16, tkN) / 8; out[j + 7] = Math.min(4, inPlay) / 4; out[j + 8] = Math.min(4, ad) / 4;
+    out[j + 9] = Math.min(8, o.hand[x].length) / 4;
     k += SEAT3;
   }
-  // the counter window
-  const castable = (x, name) => (HALVES[name] || [name]).some(h => A[P.at.get(name)] && CARDS[h]?.cost != null && payPlan(o, x, parseCost(CARDS[h].cost)) != null);
+  // the counter window: castable with the mana each seat can make at instant speed (fetch lands, two-mana lands, the pool)
+  const castable = (x, name) => (HALVES[name] || [name]).some(h => A[P.at.get(name)] && CARDS[h]?.cost != null && payable(parseCost(CARDS[h].cost), SRC[x === seat ? 0 : 1]));
   let none = 1, noneNow = 1;
   P.vocab.forEach((n, i) => {
     if (!A[i]) return;
@@ -194,16 +243,18 @@ function view3(o, seat, P, out, k, theirHand, theirAny, ans) {
   });
   const anyAns = ans != null ? ans : 1 - none, nowAns = Math.min(anyAns, 1 - noneNow);
   out[k] = anyAns; out[k + 1] = nowAns;
-  out[k + 2] = lands(o, opp).filter(l => !l.tapped).length >= 2 ? 1 : 0;
+  out[k + 2] = payable({ g: 2 }, SRC[1]) ? 1 : 0;   // they can make two mana now
   let held = 0, heldNow = 0;
   for (const id of o.hand[seat]) { const n = cardNameOf(id), i = P.at.get(n); if (i != null && A[i]) { held++; if (castable(seat, n)) heldNow++; } }
   out[k + 3] = Math.min(4, held) / 4; out[k + 4] = Math.min(4, heldNow) / 4;
   const top = o.stack[o.stack.length - 1];
   out[k + 5] = top && top.kind === "spell" && top.ctl === seat ? 1 : 0;
   k += WIN3;
-  const n = o.lib.length;
-  out[k] = n <= 1 ? 1 : 0; out[k + 1] = n <= 3 ? 1 : 0; out[k + 2] = n <= 6 ? 1 : 0; k += 3;
+  out[k] = L <= 1 ? 1 : 0; out[k + 1] = L <= 3 ? 1 : 0; out[k + 2] = L <= 6 ? 1 : 0; k += 3;
   out[k] = Math.min(8, o.drawn?.[seat] || 0) / 4; out[k + 1] = Math.min(8, o.drawn?.[opp] || 0) / 4; k += 2;
+  // the graveyard: cards castable from it (aftermath, flashback), and the library's adders among them
+  const yc = o.yard.map(id => nameOf(id)).filter(Boolean).flatMap(n => HALVES[n] || [n]).filter(h => CARDS[h]?.aftermath || CARDS[h]?.flashback);
+  out[k] = Math.min(4, yc.length) / 4; out[k + 1] = Math.min(4, o.yard.length) / 32; k += 2;
   // the stack's targets
   for (let j = 0; j < STACK; j++, k += Z + 2) {
     const it = o.stack[o.stack.length - 1 - j], t = it?.targets?.[0];

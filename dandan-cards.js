@@ -64,6 +64,20 @@ export const NAMES = LIST.map(([n]) => n);
 
 /** The split card's halves. */
 export const HALVES = { "Commit // Memory": ["Commit", "Memory"] };
+/**
+ * What each card does to the shared library, read off its text (18 Nov 2026, Korbi: the race inputs, dandan-general.js view
+ * version 3, "can't miss a Clue"): take = the fewest cards it removes when cast or used (a draw, a mill, a search; Brainstorm draws
+ * three and puts two back: one; Take Inventory and Predict at their least), cycle = the same when cycled from the hand (cycling,
+ * islandcycling), add = the cards it puts in (a countered spell, a permanent sent to the top, Mystic Sanctuary's return when it
+ * enters untapped). Memory, which shuffles hands and graveyard in and draws fourteen, is its own input (in the graveyard, castable).
+ */
+export const LIBRARY = {
+  "Brainstorm": { take: 1 }, "Predict": { take: 2 }, "Quicken": { take: 1 }, "Repulse": { take: 1 }, "Chart a Course": { take: 2 },
+  "Lórien Revealed": { take: 3, cycle: 1 }, "Take Inventory": { take: 1 }, "Lonely Sandbar": { cycle: 1 }, "Remote Isle": { cycle: 1 },
+  "Flood Plain": { take: 1 }, "Clue": { take: 1 },
+  "Memory Lapse": { add: 1 }, "Metamorphose": { add: 1 }, "Deem Inferior": { add: 1 }, "Gone Missing": { add: 1 }, "Commit": { add: 1 },
+  "Mystic Sanctuary": { add: 1 },
+};
 
 /** A card id's name (the card, "Commit // Memory" for the split card; tokens by id). */
 export const cardName = id => (id >= TOKEN_AT ? "Clue" : DECK[id]);
