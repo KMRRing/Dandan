@@ -40,6 +40,8 @@ const DEEPER = {
   // decided=<at>:<hi>:<lo> (18 Nov 2026, Korbi 03:56): the search stops at `at` deals when the best move's mean is hi+ or lo-
   ...(flag("decided") ? { decided: (([at, hi, lo]) => ({ at, hi, lo }))(flag("decided").split(":").map(Number)) } : {}),
 };
+// the old engine's search as the yardstick plays it: the close-call look only
+const FULL = DEEPER.deeper ? { deeper: DEEPER.deeper } : {};
 // resign=<threshold>:<run>:<keep> (18 Nov 2026, Korbi 03:56; AlphaZero's resignation): a seat whose searched best move is worth
 // less than `threshold` at `run` of its own decisions in a row resigns, and the game is the other seat's. A share `keep` of games
 // never resigns, so the false resignations can be counted (their game line notes where a resignation would have come: would).
@@ -80,9 +82,13 @@ for (let g = first; g < first + n; g++) {
     if (ms.length <= 1) move = ms[0] ?? PASS;
     else if (random) move = ms[Math.floor(rng() * ms.length)];
     else {
-      let res = brainOf(who).think(s, who, deals, DEEPER);
+      // the yardstick rival (an old-line engine, not gen:) plays straight up (Korbi 18 Nov 05:37: "the clean engine with resign and
+      // lazy searching on winning or losing positions to beat the leaky hard-working old engine straight up"): the same deals and
+      // close-call look, none of the shortcuts (early, decided stops) and it never resigns
+      const yard = who === vsSeat && R && !R.nets.startsWith("gen:");
+      let res = brainOf(who).think(s, who, deals, yard ? FULL : DEEPER);
       move = res.best;
-      if (RESIGN && !res.only) {
+      if (RESIGN && !res.only && !yard) {
         const v = res.list.find(c => key(c.move) === key(res.best))?.mean;
         streak[who] = v != null && v < RESIGN.t ? streak[who] + 1 : 0;
         if (streak[who] >= RESIGN.run) {

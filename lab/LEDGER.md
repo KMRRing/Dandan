@@ -1308,3 +1308,8 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   quarter of the deals (at least 256, the second look kept). One local game with the live engine at 256 deals: 43 moves, 26 s.
 
 - 2026-11-18 02:27Z ops: Chicago 8c 3c385656 5→4 (4 workers on 5 nodes for 2 checks). VM a2b0e1bf at 6, all 6 reporting. ch.vs1.medium-ord back at $0.001 (1 of 2). All our classes at floor. Queue refilled: zps011 1,103 waiting. Fleet 02:16Z: 84 machines, 633/642 busy, reqCostH $0.22. Google: no compute, fleet/ 7 files, private/ scheduler.json only.
+- 03:45Z Korbi 05:37, the goal: the clean engine, resigning and searching lightly in decided positions, beats the leaky
+  hard-working old engine straight up. The yardstick games now play g12r-C at the same deals with its close-call look and none
+  of the shortcuts (no early or decided stops), and it never resigns; the clean side keeps its rules. zps011 so far: decided
+  positions 1.5% of the search's deals (22% before), 110 searched decisions a game (187), 100 of 128 games resigned, 0 of 12
+  would-be resignations wrong. One local run with the yardstick rival: 4 games, the g12r-C one played to the library's end.
