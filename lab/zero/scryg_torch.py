@@ -102,7 +102,17 @@ if A.init:
     with torch.no_grad():
         We = T_("We", (A.d, EVN)); net.bag.weight.copy_(We[:, :MARK_N].T); net.ctx.weight.copy_(We[:, MARK_N:]); net.ctx.bias.copy_(T_("be", (A.d,)))
         for nm_, mod in (("Wk", net.Wk), ("Wv", net.Wv), ("Wq", net.Wq), ("Wc", net.Wc)): mod.weight.copy_(T_(nm_, mod.weight.shape))
-        for nm_, mod in (("Wx", net.Wx), ("W1", net.W1), ("W2", net.W2)): mod.weight.copy_(T_(nm_, mod.weight.shape)); mod.bias.copy_(T_({"Wx": "bx", "W1": "b1", "W2": "b2"}[nm_], mod.bias.shape))
+        # the position's input grown (17 Nov 2026: sg1 read view 1, 1,259 + V + 2 inputs; view 2 reads 2,602 + V + 2): the view's
+        # columns kept where they were, the last V + 2 (the unseen copies, the hand and library counts) moved to the end, the new
+        # view-2 columns zero, so the grown net starts out computing what the old one did
+        wx = torch.tensor(j["Wx"], dtype=torch.float32); H_, X_ = net.Wx.weight.shape
+        if wx.numel() != H_ * X_:
+            X0 = wx.numel() // H_; old = wx.reshape(H_, X0); E = V + 2; grown = torch.zeros(H_, X_)
+            grown[:, :X0 - E] = old[:, :X0 - E]; grown[:, X_ - E:] = old[:, X0 - E:]
+            say(f"input grown from {X0} to {X_}"); net.Wx.weight.copy_(grown)
+        else: net.Wx.weight.copy_(wx.reshape(H_, X_))
+        net.Wx.bias.copy_(T_("bx", net.Wx.bias.shape))
+        for nm_, mod in (("W1", net.W1), ("W2", net.W2)): mod.weight.copy_(T_(nm_, mod.weight.shape)); mod.bias.copy_(T_({"W1": "b1", "W2": "b2"}[nm_], mod.bias.shape))
         net.wa.copy_(T_("wa", (A.a,)))
 opt = torch.optim.AdamW(net.parameters(), lr=A.lr, weight_decay=A.wd)
 

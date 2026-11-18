@@ -49,6 +49,7 @@ jobs:
         run: |
           pip install -q numpy torch --index-url https://download.pytorch.org/whl/cpu
           N="${{ inputs.name }}"; I="${{ inputs.init }}"
+          set -o pipefail   # a failed training fails the run (17 Nov: the warm start's error was hidden by tee)
           python3 lab/zero/scryg_torch.py "lab/zero/nets/$N-scryg.json" $(ls -d "${{ runner.temp }}"/in/pack-*/[0-9] | sort) ${{ inputs.args }} ${I:+--init lab/zero/nets/$I-scryg.json} | tee "$RUNNER_TEMP/log.txt"
           { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the net

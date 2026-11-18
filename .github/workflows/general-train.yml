@@ -69,6 +69,7 @@ jobs:
           python3 lab/zero/pack-merge.py "$D" $(ls -d "$I"/pack-*/[0-9] | sort) | tee -a "$GITHUB_STEP_SUMMARY"
           rm -rf "$I"
           W="${{ inputs.init }}"; ini() { [ -z "$W" ] || echo "--init lab/zero/nets/$W-$1.json"; }
+          set -o pipefail
           if [ "${{ matrix.net }}" = gvalue ]; then
             python3 lab/zero/value_np.py "$D/v" "out/$N-gvalue.json" --shape "${{ inputs.value }}" $(ini gvalue) ${{ inputs.value_args }} | tee "$RUNNER_TEMP/log.txt"
           else
