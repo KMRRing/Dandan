@@ -32,3 +32,4 @@ az-sw12  # 17 Nov 11:20Z (Korbi 13:16: generalize first, then train; no more fea
 zps006  # 2026-11-17T16:25:51.074Z Zero's loop: made with the nets before gm2
 zps008  # 2026-11-18T01:28:05Z by hand: open when zl15 went live (the loop closed only batches from nextFrom); made with gm2
 zps009  # 2026-11-18T01:54:13Z by hand: closed minutes in so generation 16 has the g12r-C yardstick games (zps010 on)
+zps010  # 2026-11-18T02:02:40Z by hand: closed early so the rest of generation 16 (zps011 on) resigns and skips decided searches (Korbi 03:56); its shards in hand finish and count
