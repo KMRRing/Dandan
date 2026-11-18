@@ -1284,3 +1284,9 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
 - 00:50Z ops: nodes without workers for 3 checks trimmed: US East 2c had 13 nodes, 10 workers → 7e7b615a 6→3; Chicago 8c 6 nodes, 5 workers → 3c385656 6→5. ch.vs1.2xlarge-iad back at $0.010 (1 of 2). Fleet 00:36Z: 87 machines, 617/626 busy, 743 waiting, reqCostH $0.20.
 
 - 2026-11-18 01:40Z ops: ch.vs1.2xlarge-iad at $0.010 for 2nd check → US East 16c VM a2b0e1bf 4→6 (VMs start workers themselves). e7f00bce held at 4: new k8s nodes don't get worker pods and the queue (505) empties ~03:00Z. ch.vs1.medium-ord at $0.002 (above floor) → Chicago 2c 8b47d1d2 6→4. Fleet 01:26Z: 84 machines, 605/614 busy, reqCostH $0.21. Google: no compute, Batch all finished, fleet/ 7 files, private/ scheduler.json only.
+- 01:30-02:00Z zl15 crowned 01:03Z (generation 16), but the crown closed only batches from nextFrom, so zps008 (gm2) stayed open
+  and the fleet played it; closed by hand 01:31Z, and the crown now closes every batch of the finished generation (the retired
+  zps005/zps006 no longer come back: the refill fix works). Korbi 03:52 ("since we stopped the leaking, 0 progress?"; "I trust
+  you fix the loop and update whatever code you need"): the yardstick: zero-play takes several rivals (vs=a:10,b:20, at
+  different games), the loop reads each (yardReading: the latest nets against the leaky g12r-C, 1 game in 20), and reads each
+  part once (vsParts). zps009 closed so generation 16 (zps010) carries the yardstick games.

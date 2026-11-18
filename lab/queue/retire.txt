@@ -31,3 +31,4 @@ zps005  # 17 Nov 10:30Z: closed when g12r-C went live (Fable 16 Nov: when anythi
 az-sw12  # 17 Nov 11:20Z (Korbi 13:16: generalize first, then train; no more feature matches on the old nets)
 zps006  # 2026-11-17T16:25:51.074Z Zero's loop: made with the nets before gm2
 zps008  # 2026-11-18T01:28:05Z by hand: open when zl15 went live (the loop closed only batches from nextFrom); made with gm2
+zps009  # 2026-11-18T01:54:13Z by hand: closed minutes in so generation 16 has the g12r-C yardstick games (zps010 on)

@@ -38,8 +38,14 @@ const DEEPER = {
   ...(flag("first") ? { first: Number(flag("first")) } : {}),
   ...(flag("steady") ? { steady: Number(flag("steady")) } : {}),
 };
-const VS = flag("vs") || "", cut = VS.lastIndexOf(":"), VS_NETS = cut > 0 ? VS.slice(0, cut) : "", every = cut > 0 ? Number(VS.slice(cut + 1)) || 0 : 0;
-const rival = VS_NETS && every ? await brainBy(VS_NETS.startsWith("gen:") ? VS_NETS : `${VS_NETS}-policy`, `${VS_NETS}-value`) : null;
+// vs=<nets>:<every>[,<nets>:<every>…] (18 Nov 2026, Korbi 03:52: is the honest line gaining? the previous nets every generation,
+// and the leaky old engine g12r-C as a fixed yardstick): the first rival plays games g % every = 0, each later one games
+// g % every = every / 2 + its place (1, 2…), off the first rival's multiples (with 10 and 20: games 0, 10, 20… and 11, 31…)
+const RIVALS = await Promise.all((flag("vs") || "").split(",").filter(Boolean).map(async (spec, k) => {
+  const cut = spec.lastIndexOf(":"), nets = spec.slice(0, cut), every = Number(spec.slice(cut + 1)) || 0;
+  return { nets, every, at: k ? Math.floor(every / 2) + k : 0, brain: await brainBy(nets.startsWith("gen:") ? nets : `${nets}-policy`, `${nets}-value`) };
+}));
+const rivalOf = g => RIVALS.find(r => r.every && g % r.every === r.at) || null;
 const random = !brain.judge;   // generation 0: no value net, no search
 const J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
 const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);
@@ -49,7 +55,8 @@ for (let g = first; g < first + n; g++) {
   const seed = seed0 + g, lines = [], rows = [];
   let G = newRecord(rules, { seats: 2, seed, now: 0 }), explored3 = null, lastTurn = -1;
   // a game against the previous nets: the seat they play, taking turns game by game
-  const vsSeat = rival && g % every === 0 ? Math.floor(g / every) % 2 : -1, brainOf = seat => (seat === vsSeat ? rival : brain);
+  const R = rivalOf(g), rival = R?.brain || null, VS_NETS = R?.nets || "";
+  const vsSeat = R ? Math.floor(g / R.every) % 2 : -1, brainOf = seat => (seat === vsSeat ? rival : brain);
   brain.reset(); if (rival) rival.reset();
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state));

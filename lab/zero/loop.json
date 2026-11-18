@@ -21,7 +21,8 @@
     "2026-11-17T19:20:00Z generation 15: counted from zps006 too, its parts written from 18:10Z on (surely gm2's): zps006 was retired at gm2's crowning, but the refill made a batch of the same name again (it listed jobs/ only), and the fleet played gm2 there, uncounted; lab/worker.mjs now counts retired batches when it names the next one",
     "2026-11-17T22:43:34.336Z generation 15: gm2 against gm1: 49.7% over 368 games",
     "2026-11-17T22:43:34.336Z generation 15: training zl15 warm from gm2 on zps006,zps007,zps008",
-    "2026-11-18T01:03:05.620Z generation 15: zl15 (warm from gm2) plays from the filler's next batch"
+    "2026-11-18T01:03:05.620Z generation 15: zl15 (warm from gm2) plays from the filler's next batch",
+    "2026-11-18T01:58:00Z the yardstick (Korbi 03:52: since the leak was closed, is the honest line gaining?): 1 game in 20 against the leaky old engine g12r-C, every generation, read as yardReading; zps009 closed so generation 16 has them"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -144,5 +145,6 @@
     "against": "gm1",
     "n": 368,
     "score": 0.49728260869565216
-  }
+  },
+  "yardVs": "g12r-C:20"
 }

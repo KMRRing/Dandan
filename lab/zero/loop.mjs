@@ -47,21 +47,29 @@ async function games(from, since = 0) {
   }
   return out;
 }
-/** The latest nets' score against the previous ones (Korbi 17 Nov: 1 game in 10 of self-play, zero-play.mjs vs=): the games
- *  of this generation's batches whose line says vs. Every one of them trains as any other. */
-async function vsScore(from) {
-  let n = 0, won = 0;
-  const since = L.genSince ? Date.parse(L.genSince) : 0;
+/** The latest nets' scores against each rival (Korbi 17 Nov: 1 game in 10 against the previous nets; 18 Nov: 1 in 20 against the
+ *  leaky old engine g12r-C, the yardstick the honest line has to beat): { <rival nets>: { n, score } } from this generation's
+ *  batches' vs lines. A part is read once: its counts are kept in loop.json (vsParts), so a step reads only new parts (18 Nov:
+ *  reading every part each step took 50 minutes and drew B2's SlowDown). */
+async function vsScores(from) {
+  const since = L.genSince ? Date.parse(L.genSince) : 0, cache = (L.vsParts ||= {}), out = {};
+  const keep = new Set();
   for (const b of await games(from, since)) for (const name of (await store.listAll(`results/${b.id}/`)).filter(x => /\/part-\d+\.jsonl$/.test(x.name) && (!since || x.t >= since)).map(x => x.name)) {
-    const t = (await store.get(name)) || "";
-    for (const l of t.split("\n")) {
-      if (!l.includes('"vs":')) continue;
-      const o = JSON.parse(l);
-      if (o.game == null || !o.vs) continue;
-      n++; won += o.winner === 1 - o.vs.seat ? 1 : o.winner === o.vs.seat ? 0 : 0.5;
+    keep.add(name);
+    if (!cache[name]) {
+      const c = {};
+      for (const l of ((await store.get(name)) || "").split("\n")) {
+        if (!l.includes('"vs":')) continue;
+        const o = JSON.parse(l);
+        if (o.game == null || !o.vs) continue;
+        const r = (c[o.vs.nets] ||= [0, 0]); r[0]++; r[1] += o.winner === 1 - o.vs.seat ? 1 : o.winner === o.vs.seat ? 0 : 0.5;
+      }
+      cache[name] = c;
     }
+    for (const [nets, [n, w]] of Object.entries(cache[name])) { const r = (out[nets] ||= { n: 0, won: 0 }); r.n += n; r.won += w; }
   }
-  return { n, score: n ? won / n : null };
+  for (const k of Object.keys(cache)) if (!keep.has(k)) delete cache[k];
+  return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, { n: v.n, score: v.n ? v.won / v.n : null }]));
 }
 const GEN = L.line === "general", ref = name => (GEN ? `gen:${name}` : name);
 // the belief (loop.json belief): "scry12" goes with the nets as packed; "scryg", the general dealer, trains every generation too
@@ -84,7 +92,12 @@ if (L.phase === "play") {
   L.progress = { gen: L.gen, games: total, of: L.games, at: now, nets: L.champion, pace };
   if (total >= L.games) {
     // the reading: the nets that played this generation against the ones before them
-    if (L.vsEvery) { const v = await vsScore(L.genFrom); if (v.n) { log(`generation ${L.gen}: ${L.champion} against ${L.previous || "?"}: ${(100 * v.score).toFixed(1)}% over ${v.n} games`); L.reading = { nets: L.champion, against: L.previous, ...v }; } }
+    if (L.vsEvery || L.yardVs) {
+      const all = await vsScores(L.genFrom), prevKey = ref(L.previous || ""), v = all[prevKey] || all[L.previous] || null;
+      if (v?.n) { log(`generation ${L.gen}: ${L.champion} against ${L.previous || "?"}: ${(100 * v.score).toFixed(1)}% over ${v.n} games`); L.reading = { nets: L.champion, against: L.previous, ...v }; }
+      const y = L.yardVs ? all[L.yardVs.split(":")[0]] : null;
+      if (y?.n) { log(`generation ${L.gen}: ${L.champion} against the leaky ${L.yardVs.split(":")[0]}: ${(100 * y.score).toFixed(1)}% over ${y.n} games`); L.yardReading = { nets: L.champion, against: L.yardVs.split(":")[0], ...y }; }
+    }
     L.challenger = `${L.prefix}${L.gen}`;
     // the window: this generation's games and the one before's, at most maxWindow games (the oldest batches go first)
     const all = await games(L.windowFrom);
@@ -108,7 +121,7 @@ if (L.phase === "play") {
     // the nets the filler plays: "<name>-policy <name>-value" on the old line, "gen:<name> -" on the general
     F.args = F.args.replace(/(\{seed\} )\S+ \S+/, GEN ? `$1gen:${L.champion} -` : `$1${L.champion}-policy ${L.champion}-value`);
     // 1 game in vsEvery against the nets just replaced (Korbi 17 Nov): the next generation's reading, its games training as any
-    if (L.vsEvery) F.args = `${F.args.replace(/ vs=\S+/, "")} vs=${L.prevLine === "old" ? prev : ref(prev)}:${L.vsEvery}`;
+    if (L.vsEvery) F.args = `${F.args.replace(/ vs=\S+/, "")} vs=${L.prevLine === "old" ? prev : ref(prev)}:${L.vsEvery}${L.yardVs ? "," + L.yardVs : ""}`;
     L.previous = prev; delete L.prevLine;
     F.purpose = `Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets ${L.champion} against themselves; games for the next generation. ${F.purpose.replace(/^Filler:.*?games for the next generation\.\s*/, "").replace(/^mjs\) plays .*?games for the next generation\.\s*/, "").replace(/^\d*\), 1 decision in/, "1 decision in")}`.slice(0, 1500);
     if (!dry) fs.writeFileSync(FILLER, JSON.stringify(F, null, 2) + "\n");
@@ -127,10 +140,10 @@ if (L.phase === "play") {
     let suite = null;
     try { const t = execSync(`node ${here}../suite.mjs ${ref(L.champion)} 256 ${L.flags} --json`, { encoding: "utf8", timeout: 20 * 60e3 }); suite = JSON.parse(t.trim().split("\n").pop()); say(`suite: ${suite.passed} of ${suite.of} passed`); }
     catch (e) { say(`suite: did not run (${String(e.message).slice(0, 120)})`); }
-    L.history = [...(L.history || []), { gen: L.gen, nets: L.champion, from: prev, window: L.trained.from, at: now, ...(L.reading ? { reading: L.reading } : {}), ...(suite ? { suite: `${suite.passed}/${suite.of}`, failed: suite.positions.filter(x => !x.pass).map(x => x.id) } : {}) }];
+    L.history = [...(L.history || []), { gen: L.gen, nets: L.champion, from: prev, window: L.trained.from, at: now, ...(L.reading ? { reading: L.reading } : {}), ...(L.yardReading ? { yard: L.yardReading } : {}), ...(suite ? { suite: `${suite.passed}/${suite.of}`, failed: suite.positions.filter(x => !x.pass).map(x => x.id) } : {}) }];
     L.windowFrom = L.genFrom;   // the window: the generation just played and the next
     L.genFrom = open.length ? open[open.length - 1].n + 1 : L.nextFrom;
-    L.gen++; L.phase = "play"; delete L.challenger; delete L.genSince;
+    L.gen++; L.phase = "play"; delete L.challenger; delete L.genSince; delete L.reading; delete L.yardReading;
   } else if (Date.now() - Date.parse(L.trained.at) > 12 * 3600e3) log(`generation ${L.gen}: no nets for ${L.challenger} 12 hours after training began: look at zero-train-ext.yml's runs`);
   else say(`generation ${L.gen}: ${L.challenger} still training (since ${L.trained.at})`);
 }
