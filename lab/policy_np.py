@@ -45,6 +45,8 @@ ap.add_argument("--init", default="")
 # at it / another play) from the played move's own hidden layer; their weights in the loss
 ap.add_argument("--aux_res", type=float, default=0.0)
 ap.add_argument("--aux_resp", type=float, default=0.0)
+# the removal test (18 Nov 2026): inputs from this column on read as zero in training, so their weights stay at zero in the file
+ap.add_argument("--zero_from", type=int, default=0)
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 MOVE_N = 80   # a move's marks; a pack can say otherwise (markN: Zero 2's moves and answers in one encoding, 256)
@@ -126,6 +128,7 @@ def resp_rows(g):
 
 def forward(g):
     x = np.asarray(X[g["idx"]], dtype=np.float32)
+    if A.zero_from: x[:, A.zero_from:] = 0
     if A.form == "mlp":
         base = x @ P["wx"] + P["b1"]
         pre1 = base[g["dec"]] + np.add.reduceat(P["wm"][g["rows"]], g["mstart"], axis=0)

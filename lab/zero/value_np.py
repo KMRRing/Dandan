@@ -15,6 +15,8 @@ ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--seed", typ
 ap.add_argument("--init", default="")  # warm start from a value net of the same shape (15 Nov 2026), its int8 weights read back
 ap.add_argument("--aux", type=float, default=0.0)  # weight of the second output (16 Nov 2026, Zero 2): whether this seat decks out (aux.f32); dropped from the file written
 ap.add_argument("--wd", type=float, default=0.0)  # decoupled weight decay a step (14 Nov: the face-up net overfits from epoch 2)
+# the removal test (18 Nov 2026): inputs from this column on read as zero, so their first-layer weights stay at zero in the file
+ap.add_argument("--zero_from", type=int, default=0)
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 meta = json.load(open(os.path.join(A.dir, "meta.json"))); N, R = meta["N"], meta["rows"]
@@ -27,6 +29,10 @@ else:
     M, T = rd("mine.f32", np.float32).reshape(R, N), rd("theirs.f32", np.float32).reshape(R, N)
 Y, H = rd("won.f32", np.float32), rd("hold.u8", np.uint8) > 0
 tr, he = np.flatnonzero(~H), np.flatnonzero(H)
+def xin(a):
+    z = np.asarray(a, dtype=np.float32)
+    if A.zero_from: z[:, A.zero_from:] = 0
+    return z
 AUX = rd("aux.f32", np.float32) if A.aux and os.path.exists(os.path.join(A.dir, "aux.f32")) else None
 OUT = 2 if AUX is not None else 1   # with --aux the last layer has a second output, the deck-out logit
 sizes = [N] + [int(x) for x in A.shape.split("x")] + [OUT]
@@ -55,7 +61,7 @@ def loss_of(idx):
     out = 0.0
     for s in range(0, len(idx), 65536):
         j = idx[s:s + 65536]
-        d = g(np.asarray(M[j], dtype=np.float32))[-1][:, 0] - g(np.asarray(T[j], dtype=np.float32))[-1][:, 0]
+        d = g(xin(M[j]))[-1][:, 0] - g(xin(T[j]))[-1][:, 0]
         p = 1 / (1 + np.exp(-np.clip(d, -30, 30)))
         out += -(Y[j] * np.log(p + 1e-9) + (1 - Y[j]) * np.log(1 - p + 1e-9)).sum()
     return out / max(1, len(idx))
@@ -74,7 +80,7 @@ for e in range(1, A.epochs + 1):
     order = rng.permutation(tr)
     for s in range(0, len(order), A.batch):
         j = order[s:s + A.batch]; t += 1
-        hm, ht = g(np.asarray(M[j], dtype=np.float32)), g(np.asarray(T[j], dtype=np.float32))
+        hm, ht = g(xin(M[j])), g(xin(T[j]))
         d = hm[-1][:, 0] - ht[-1][:, 0]
         p = 1 / (1 + np.exp(-np.clip(d, -30, 30)))
         gd = ((p - Y[j]) / len(j))[:, None]
@@ -109,7 +115,7 @@ if len(he):
     ps = []
     for s0 in range(0, len(he), 65536):
         j = he[s0:s0 + 65536]
-        d = g(np.asarray(M[j], dtype=np.float32))[-1][:, 0] - g(np.asarray(T[j], dtype=np.float32))[-1][:, 0]
+        d = g(xin(M[j]))[-1][:, 0] - g(xin(T[j]))[-1][:, 0]
         ps.append(1 / (1 + np.exp(-np.clip(d, -30, 30))))
     p_ = np.concatenate(ps); y_ = Y[he]
     say(f"scorecard: rows {len(he)}, log loss {best:.4f}, Brier {float(((p_ - y_) ** 2).mean()):.4f}, favourite right {float(((p_ > 0.5) == (y_ > 0.5)).mean()):.4f}")
