@@ -113,7 +113,10 @@ if (L.phase === "play") {
     F.purpose = `Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets ${L.champion} against themselves; games for the next generation. ${F.purpose.replace(/^Filler:.*?games for the next generation\.\s*/, "").replace(/^mjs\) plays .*?games for the next generation\.\s*/, "").replace(/^\d*\), 1 decision in/, "1 decision in")}`.slice(0, 1500);
     if (!dry) fs.writeFileSync(FILLER, JSON.stringify(F, null, 2) + "\n");
     // the rule (Fable, 16 Nov): when anything goes live, close the open filler batch: it was made with the old nets
-    const open = await games(L.nextFrom), ids = open.map(b => b.id);
+    // every batch of the finished generation still being played is closed (18 Nov 2026, 01:30Z: from nextFrom only, the batch the
+    // fleet was on when training began, zps008, stayed open, and the fleet played the old nets for hours after the crown); a
+    // finished one moves to retired/ too, harmlessly
+    const open = await games(L.genFrom), ids = open.map(b => b.id);
     if (ids.length && !dry) fs.appendFileSync(`${QUEUE}retire.txt`, ids.map(id => `${id}  # ${now} Zero's loop: made with the nets before ${L.champion}\n`).join(""));
     if (ids.length) say(`RETIRE ${ids.join(" ")}`);
     log(`generation ${L.gen}: ${L.champion} (warm from ${prev}) plays from the filler's next batch`);
