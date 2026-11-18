@@ -38,7 +38,9 @@ const halves = a => { const o = new Uint16Array(a.length); for (let i = 0; i < a
 const XN = GEN ? viewSize() : X2, MN = GEN ? POOL.MARK_N : MARK_N, VN = GEN ? viewSize() : EXT_N;
 // the belief file: Scry 1.2's, or the general dealer's (17 Nov 2026: { scryg: 1 }, its counts on the pool already)
 const inputOf = GEN ? (s, who, counts, any, ans) => (net.scryg ? generalView(s, who, counts, any, POOL, undefined, ans ?? null) : generalView(s, who, onPool(counts), onPool(any))) : input2;
-const marksAt = GEN ? generalMarks : marks2;
+// LEGACY=1 (18 Nov 2026, the scorecard of a net from before view version 3): its block marks and belief as it was trained
+const LEGACY = process.env.LEGACY === "1";
+const marksAt = GEN ? (s, seat, m) => generalMarks(s, seat, m, POOL, LEGACY) : marks2;
 const valueOf = GEN ? (s, me) => valueView(s, me) : (s, me) => ext(s, me, handCounts(s, 1 - me));
 
 const [dir, ids, sfile] = process.argv.slice(2), SH = Number(process.argv[5] || 0), SHS = Number(process.argv[6] || 1);
@@ -115,6 +117,7 @@ function replay(game, decisions) {
   let G = newRecord(rules, { seats: 2, seed, now: 0 }), lastTurn = -1, watch = null;
   const gameDec = [];   // this game's decisions in order: { who, resp }, written once the game's result is known
   const F = net.scryg ? [new ScryG(0, net), new ScryG(1, net)] : [new Scry12(0, net, { hands: HANDS }), new Scry12(1, net, { hands: HANDS })], vrows = [];
+  if (LEGACY) for (const f of F) f.legacy = true;
   for (let i = 0; i < game.moves.length; i++) {
     const [who, m] = game.moves[i], s = rules.restore(J(G.state)), ds = decisions.get(i) || [];
     // the value rows: every turn's start and one position with priority in three besides (as replay-pack.mjs), after any

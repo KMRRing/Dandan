@@ -22,15 +22,15 @@ const theirHand = new Float32Array(P.V), theirAny = new Float32Array(P.V);
 theirHand[P.at.get("Memory Lapse")] = 0.8; theirAny[P.at.get("Memory Lapse")] = 0.6;
 const x = generalView(s, 0, theirHand, theirAny), U = 1, ISL = 9 + 1;
 check(x.length === viewSize(P, 3), `the view is version 3's size (${x.length})`);
-check(near(x[B + U], 2 / 3), "seat 0: two untapped blue sources");
-check(near(x[B + 6], 2 / 4) && near(x[B + 7], 3 / 6), "seat 0: 2 mana untapped, 3 in all");
+check(near(x[B + U], 2 / 4), "seat 0: two untapped blue sources");
+check(near(x[B + 6], 2 / 4) && near(x[B + 7], 3 / 8), "seat 0: 2 mana untapped, 3 in all");
 check(near(x[B + ISL], 3 / 4), "seat 0: three Islands");
-check(near(x[B + 14], 4 / 8) && near(x[B + 15], 2 / 10), "seat 0: 4 power that can attack, 2 turns to lethal at 8 life");
-check(near(x[B + 16], 0), "seat 0: no creature to sacrifice");
-check(near(x[B + 18 + U], 2 / 3) && near(x[B + 18 + 14], 0), "seat 1: two blue sources, no power");
-const W = B + 36;
+check(near(x[B + 14], 4 / 8) && near(x[B + 15], 4 / 8) && near(x[B + 16], 2 / 16), "seat 0: 4 power that could and can attack now, 2 turns to lethal at 8 life");
+check(near(x[B + 17], 3 / 4), "seat 0: its Dandân three Islands from being sacrificed");
+check(near(x[B + 19 + U], 2 / 4) && near(x[B + 19 + 14], 0) && x[B + 19 + 17] === 1, "seat 1: two blue sources, no power, no creature at risk");
+const W = B + 38;
 check(near(x[W], 0.6) && near(x[W + 1], 0.6) && x[W + 2] === 1, "the window: 60% they hold an answer, castable, two lands open");
-check(near(x[W + 3], 1 / 3) && near(x[W + 4], 1 / 3), "my answer in hand, castable");
+check(near(x[W + 3], 1 / 4) && near(x[W + 4], 1 / 4), "my answer in hand, castable");
 const y = generalView(s, 0, theirHand, theirAny, P, undefined, 0.9);
 check(near(y[W], 0.9) && near(y[W + 1], 0.6), "the dealer's whole-hand chance replaces the card-by-card one; castable stays ≤ it");
 // tap their lands: the answer is held but can't be cast
@@ -40,6 +40,10 @@ check(near(z[W], 0.6) && near(z[W + 1], 0) && z[W + 2] === 0, "their lands tappe
 // no Island for seat 0: the Dandân must go
 s.bf = s.bf.filter(p => !(p.ctl === 0 && isl.includes(p.id)));
 const w = generalView(s, 0, theirHand, theirAny);
-check(near(w[B + 16], 1 / 2), "seat 0 without an Island: its Dandân must be sacrificed");
+check(near(w[B + 17], 0) && near(w[B + 14], 4 / 8), "seat 0 without an Island: its Dandân at zero (to be sacrificed), still able to attack them");
+// a Dandân that came in this turn: it could attack later, not now
+s.bf.push({ id: dd[1], ctl: 0, tapped: false, ent: 5, oid: 999 }); s.bf.push({ id: isl[0], ctl: 0, tapped: false, ent: 1, oid: 998 });
+const v = generalView(s, 0, theirHand, theirAny);
+check(near(v[B + 14], 8 / 8) && near(v[B + 15], 4 / 8), "a new Dandân: 8 power could attack, 4 can now");
 check([...answers(P)].reduce((a, b) => a + b, 0) === 3, "three answers in the pool: Memory Lapse, Commit // Memory, Narset's Reversal");
 process.exit(bad ? 1 : 0);

@@ -45,7 +45,8 @@ export function eventG(s, who, m, me, seenAfter = null, P = POOL) {
   const o = observe(s, me), vis = visibleIds(o);
   if (seenAfter) for (const id of seenAfter) vis.add(id);
   const pass = m.t === "pass", draw = m.t === "draw";
-  const marks = pass || draw ? [] : generalMarks(o, me, mask(m, vis), P);
+  // legacy marks (a block as its count): the events as every dealer so far was trained on (block pairs: the policy's, 18 Nov)
+  const marks = pass || draw ? [] : generalMarks(o, me, mask(m, vis), P, true);
   const ctx = new Float32Array(CTX_N), st = STEPS.indexOf(o.mull && !(o.mull.done?.[0] && o.mull.done?.[1]) ? "mull" : o.step);
   ctx[0] = who === other(me) ? 1 : 0; ctx[1] = pass ? 1 : 0; ctx[2] = draw ? Math.min(4, m.n) / 4 : 0;
   if (st >= 0) ctx[3 + st] = 1;
@@ -164,7 +165,7 @@ export class ScryG {
     // counted as hand cards before); ans (view version 3's counter window): the share of the hands dealt that hold an answer
     let ans = 0;
     if (this.last.n) for (let h = 0; h < hands; h++) {
-      const d = this.hand(rng, this.last.handN).dealt;
+      const d = this.hand(rng, this.legacy ? this.last.n : this.last.handN).dealt;   // legacy: as the nets before 18 Nov were trained (makeGeneral)
       let held = false;
       for (let k = 0; k < V; k++) if (d[k]) { counts[k] += d[k] / hands; any[k] += 1 / hands; if (A[k]) held = true; }
       if (held) ans += 1 / hands;

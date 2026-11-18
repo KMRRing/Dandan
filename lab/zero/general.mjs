@@ -23,7 +23,8 @@ export function generalPlayer(policy, ctx) {
   const K = useKernel(), score = policy ? (K && K.head2(policy)) || freeScorer(policy, { carry: true }) : null, none = new Float32Array(POOL.V), XB = new Float32Array(policy ? policy.net.XN : viewSize());
   if (policy && !VIEW_VERSIONS(POOL).includes(policy.net.XN)) throw new Error(`the general policy reads ${policy.net.XN} inputs, not a view's (${VIEW_VERSIONS(POOL)})`);
   const view = (s, seat) => generalView(s, seat, ctx.counts[seat] ?? none, ctx.any[seat] ?? null, POOL, XB, ctx.ans?.[seat] ?? null);
-  const scores = (s, seat, ms) => score(view(s, seat), ms.map(m => generalMarks(s, seat, m)));
+  const legacy = !!policy && policy.net.XN < viewSize(POOL, 3);   // a policy from before version 3: its block marks as trained
+  const scores = (s, seat, ms) => score(view(s, seat), ms.map(m => generalMarks(s, seat, m, POOL, legacy)));
   const rollout = (s, seat, rng) => {
     const ms = zeroOptions(s, seat);
     if (ms.length <= 1) return ms[0] ?? PASS;
@@ -104,6 +105,9 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
   let filters = null, walls = null;
   const fresh = () => {
     filters = scryg ? [new ScryG(0, scryg), new ScryG(1, scryg)] : scry12 ? [new Scry12(0, scry12), new Scry12(1, scry12)] : null;
+    // a policy from before view version 3 learned the belief with the library places only they know counted as hand cards
+    // (fixed 18 Nov 2026): it gets the belief it was trained on, so the older nets play as they did in matches against the new
+    if (scryg && policy && policy.net.XN < viewSize(POOL, 3)) for (const f of filters) f.legacy = true;
     walls = W ? [0, 1].map(x => new Wall(x, engine, { ...W, seed: (W.seed || 1) + x, policy: player.probs, dealer: filters ? filters[x] : null })) : null;
   };
   fresh();

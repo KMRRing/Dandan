@@ -61,7 +61,10 @@ jobs:
           N="${{ matrix.net }}"; D="$RUNNER_TEMP/p"; S="lab/zero/nets/$N-scryg.json"
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
           # VBLEND=0: the value rows' target is the game's result alone
-          for k in 0 1 2 3; do HOLD_ONLY=1 ENC=general VBLEND=0 HANDS=256 LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D/$k" "${{ inputs.games }}" "$S" $k 4 > "$RUNNER_TEMP/t$k.txt" & done; wait
+          # a net from before view version 3 (2,602 inputs): its block marks and belief as it was trained
+          V3=$(node -e 'import("./dandan-general.js").then(m => console.log(m.viewSize(m.POOL, 3)))')
+          LEG=$(python3 -c "import json; print(1 if json.load(open('lab/zero/nets/$N-gpolicy.json'))['net']['XN'] < $V3 else 0)")
+          for k in 0 1 2 3; do LEGACY=$LEG HOLD_ONLY=1 ENC=general VBLEND=0 HANDS=256 LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D/$k" "${{ inputs.games }}" "$S" $k 4 > "$RUNNER_TEMP/t$k.txt" & done; wait
           rm -f "$RUNNER_TEMP/key.json"
           tail -n 1 "$RUNNER_TEMP"/t?.txt
           python3 lab/zero/pack-merge.py "$RUNNER_TEMP/m" "$D"/[0-9]

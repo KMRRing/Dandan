@@ -12,7 +12,7 @@
 //   generalMarks(s, seat, move) — a move's or an answer's marks: its kind, the card and its facts, where it is cast from, its
 //     mode, each target (kind, whose, its card and facts), a question's chosen cards, counts and choices
 import { CARDS, DECK, NAMES, HALVES, TOKEN_AT, BASICS, BASIC_MANA, parseCost } from "./dandan-cards.js";
-import { typesOf, lands, creatures, pt, needType, manaAlts, payPlan } from "./dandan-core.js";
+import { typesOf, lands, creatures, pt, needType, manaAlts, payPlan, canAttack } from "./dandan-core.js";
 import { targetLists } from "./dandan-spells.js";
 import { observe, HIDDEN } from "./dandan-view.js";
 
@@ -134,14 +134,16 @@ const extra2 = P => 2 * LIB2(P) + 2 * (P.V + P.F) + 1;
 // version 3 (18 Nov 2026, Korbi 14:51–15:08: "make the policy stronger"; the inputs a small net works out badly, appended after
 // version 2): computed from the rules' own functions and the card files, no card named:
 //   each seat (the seat's, then the other's): untapped mana by colour and in all, all its lands' mana in all and blue, its lands
-//     by their current basic type, the power that could attack it… its creatures' power whose land type the other seat has,
-//     turns to lethal at that power, its creatures that must be sacrificed (no land of the type they need);
+//     by their current basic type; its creatures' power that could attack (the land type each needs on the other side: the
+//     rules' needType, Dandân's own text, so a format with other creatures needs the rules to say it), the power that can
+//     attack now (canAttack: untapped, not new, its turn), turns to lethal at the first, how near its creatures are to being
+//     sacrificed (the fewest of its lands of the type one of them needs: a creature with none is gone already), its creatures;
 //   the counter window: the chance the other hand holds an answer (a card that can target a spell on the stack: probed from
 //     the rules' targets), the chance it holds one it can cast with its untapped mana now, their untapped mana ≥ 2, my answers in
 //     hand and those castable now, whether the top of the stack is my spell;
 //   the library short (≤ 1, ≤ 3, ≤ 6); cards drawn this turn, each seat;
 //   the stack's top four items' targets: the target's card and facts, and whose
-const SEAT3 = 6 + 1 + 2 + BASICS.length + 4, WIN3 = 6, extra3 = P => 2 * SEAT3 + WIN3 + 3 + 2 + STACK * (P.V + P.F + 2);
+const SEAT3 = 6 + 1 + 2 + BASICS.length + 5, WIN3 = 6, extra3 = P => 2 * SEAT3 + WIN3 + 3 + 2 + STACK * (P.V + P.F + 2);
 export const viewSize = (P = POOL, v = 3) => viewSize1(P) + (v >= 2 ? extra2(P) : 0) + (v >= 3 ? extra3(P) : 0);
 export const VIEW_VERSIONS = P => [viewSize(P, 1), viewSize(P, 2), viewSize(P, 3)];
 /** Which of the pool's names can answer a spell (target one on the stack), probed from the rules' targets once per pool. */
@@ -165,17 +167,20 @@ function view3(o, seat, P, out, k, theirHand, theirAny, ans) {
     for (const l of ls) {
       const alts = manaAlts(l), most = alts.reduce((a, m) => Math.max(a, m.length), 0), cs = new Set(alts.flat());
       all += most; if (cs.has("U")) allU += 1;
-      if (!l.tapped) { untapped += most; for (const c of cs) out[b + COLOR_OF[c]] += 1 / 3; }
+      if (!l.tapped) { untapped += most; for (const c of cs) out[b + COLOR_OF[c]] += 1 / 4; }
     }
-    out[b + 6] = Math.min(8, untapped) / 4; out[b + 7] = Math.min(12, all) / 6; out[b + 8] = Math.min(12, allU) / 6;
+    // scales in quarters and eighths (dyadic: the kernel's carried sums and the JavaScript's agree bit for bit)
+    out[b + 6] = Math.min(8, untapped) / 4; out[b + 7] = Math.min(16, all) / 8; out[b + 8] = Math.min(16, allU) / 8;
     BASICS.forEach((t, i) => { out[b + 9 + i] = Math.min(8, ls.filter(l => typesOf(l).includes(t)).length) / 4; });
     const theirLands = lands(o, other(x)), mine = creatures(o, x);
     const power = mine.filter(c => theirLands.some(l => typesOf(l).includes(needType(c)))).reduce((a, c) => a + Math.max(0, pt(c)[0]), 0);
+    const now = mine.filter(c => canAttack(o, c)).reduce((a, c) => a + Math.max(0, pt(c)[0]), 0);
     const j = b + 9 + BASICS.length;
     out[j] = Math.min(16, power) / 8;
-    out[j + 1] = power > 0 ? Math.min(10, Math.ceil(Math.max(1, o.life[other(x)]) / power)) / 10 : 1;
-    out[j + 2] = Math.min(4, mine.filter(c => !ls.some(l => typesOf(l).includes(needType(c)))).length) / 2;
-    out[j + 3] = Math.min(8, mine.length) / 4;
+    out[j + 1] = Math.min(16, now) / 8;
+    out[j + 2] = power > 0 ? Math.min(16, Math.ceil(Math.max(1, o.life[other(x)]) / power)) / 16 : 1;
+    out[j + 3] = mine.length ? Math.min(4, Math.min(...mine.map(c => ls.filter(l => typesOf(l).includes(needType(c))).length))) / 4 : 1;
+    out[j + 4] = Math.min(8, mine.length) / 4;
     k += SEAT3;
   }
   // the counter window
@@ -192,13 +197,13 @@ function view3(o, seat, P, out, k, theirHand, theirAny, ans) {
   out[k + 2] = lands(o, opp).filter(l => !l.tapped).length >= 2 ? 1 : 0;
   let held = 0, heldNow = 0;
   for (const id of o.hand[seat]) { const n = cardNameOf(id), i = P.at.get(n); if (i != null && A[i]) { held++; if (castable(seat, n)) heldNow++; } }
-  out[k + 3] = Math.min(3, held) / 3; out[k + 4] = Math.min(3, heldNow) / 3;
+  out[k + 3] = Math.min(4, held) / 4; out[k + 4] = Math.min(4, heldNow) / 4;
   const top = o.stack[o.stack.length - 1];
   out[k + 5] = top && top.kind === "spell" && top.ctl === seat ? 1 : 0;
   k += WIN3;
   const n = o.lib.length;
   out[k] = n <= 1 ? 1 : 0; out[k + 1] = n <= 3 ? 1 : 0; out[k + 2] = n <= 6 ? 1 : 0; k += 3;
-  out[k] = Math.min(6, o.drawn?.[seat] || 0) / 3; out[k + 1] = Math.min(6, o.drawn?.[opp] || 0) / 3; k += 2;
+  out[k] = Math.min(8, o.drawn?.[seat] || 0) / 4; out[k + 1] = Math.min(8, o.drawn?.[opp] || 0) / 4; k += 2;
   // the stack's targets
   for (let j = 0; j < STACK; j++, k += Z + 2) {
     const it = o.stack[o.stack.length - 1 - j], t = it?.targets?.[0];
@@ -367,7 +372,7 @@ export function onPool(counts, P = POOL, names = NAMES) {
 
 // ---------- the marks ----------
 /** A move's or an answer's marks: indices into the pool's mark space (POOL.keys). */
-export function generalMarks(s, seat, m, P = POOL) {
+export function generalMarks(s, seat, m, P = POOL, legacy = false) {
   const out = new Set(), add = k => { const i = P.mark.get(k); if (i != null) out.add(i); };
   const cardMarks = (name, pre = "card", fpre = "fact") => {
     if (name == null) return;
@@ -393,8 +398,9 @@ export function generalMarks(s, seat, m, P = POOL) {
       break;
     }
     case "attack": add(`count:${Math.min(4, m.ids.length)}`); for (const id of m.ids) { const p = s.bf.find(x => x.id === id); if (p) permMarks(p, "card", "fact"); } break;
-    // each pair (18 Nov 2026: a block's marks were its count alone): the blocker as card/fact, the attacker it blocks as tcard/tfact
-    case "block": add(`count:${Math.min(4, m.pairs.length)}`); for (const [bl, at] of m.pairs) { const p = s.bf.find(x => x.id === bl), q = s.bf.find(x => x.id === at); if (p) permMarks(p, "card", "fact"); if (q) permMarks(q, "tcard", "tfact"); } break;
+    // each pair (18 Nov 2026: a block's marks were its count alone): the blocker as card/fact, the attacker it blocks as tcard/tfact;
+    // legacy: the count alone, for a policy from before view version 3
+    case "block": add(`count:${Math.min(4, m.pairs.length)}`); if (!legacy) for (const [bl, at] of m.pairs) { const p = s.bf.find(x => x.id === bl), q = s.bf.find(x => x.id === at); if (p) permMarks(p, "card", "fact"); if (q) permMarks(q, "tcard", "tfact"); } break;
     case "order": if (m.cards[0] != null) cardMarks(nameOf(m.cards[0])); if (m.cards[1] != null) add(`second:${nameOf(m.cards[1])}`); break;
     case "surveil": if (m.yard) add("yes"); break;
     case "search": case "pick": if (m.card == null) add("none"); else cardMarks(nameOf(m.card)); break;
