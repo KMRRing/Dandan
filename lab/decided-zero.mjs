@@ -20,7 +20,7 @@ for (const id of ids.split(",")) {
       if (!line) continue;
       const o = JSON.parse(line);
       if (o.c && o.g != null && o.i != null) { if (!dec.has(o.g)) dec.set(o.g, []); dec.get(o.g).push({ i: o.i, seat: o.seat, v: o.v, work: o.c.reduce((a, c) => a + (c.n || 0) + (c.dn || 0), 0) }); }
-      else if (o.game != null && o.seed != null) games.push({ winner: o.winner, turns: o.turns, vs: !!o.vs, resign: o.resign, would: o.would, dec: (dec.get(o.seed) || []).sort((a, b) => a.i - b.i) });
+      else if (o.game != null && o.seed != null) games.push({ winner: o.winner, turns: o.turns, vs: !!o.vs, resign: o.resign, would: o.would, rescued: o.rescued, dec: (dec.get(o.seed) || []).sort((a, b) => a.i - b.i) });
     }
   }
 }
@@ -59,3 +59,5 @@ for (const [thr, run] of [[0.02, 2], [0.03, 2], [0.05, 2], [0.05, 3], [0.1, 3]])
 // would have resigned went on to win (the false-resignation rate; AlphaZero kept it under 5%)
 const res = games.filter(g => g.resign), kept = games.filter(g => g.would && g.winner >= 0);
 if (res.length || kept.length) console.log(`resigned: ${res.length} of ${games.length} games; kept from resigning with a would-be resignation: ${kept.length}, of which the would-be resigner won ${kept.filter(g => g.would.seat === g.winner).length} (${kept.length ? (100 * kept.filter(g => g.would.seat === g.winner).length / kept.length).toFixed(1) : 0}%)`);
+const resc = games.filter(g => g.rescued?.length);
+if (resc.length) console.log(`deep confirmation found an out in ${resc.length} games (${resc.reduce((a, g) => a + g.rescued.length, 0)} times); the rescued seat won ${resc.filter(g => g.rescued.some(r => r.seat === g.winner)).length}`);

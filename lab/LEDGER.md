@@ -1297,3 +1297,8 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   game in 10 never resigns and notes where it would have, for the false-resignation rate), decided=64:0.97:0.03 (the search stops
   at 64 deals when the best move is 97%+ or 3%-, and no second look), replay-pack2 takes a resigned game's winner from its line.
   One local run: 4 games, all resigned (turns 16-26), packed with 0 not the same.
+- 02:15Z Korbi 04:08 (training: "do one deep search, if it's obvious still, resign"): a resignation is confirmed first by one
+  search of 2,048 deals with the close-call look to 4 turns; an out found there is played and the streak starts again
+  (rescued, in the game line). One local run: 4 games resigned, one rescue on the way (4.1% at the deep look), packed clean.
+  For play against people (light mode when lost, a full look each turn; a careful medium search when winning, never resign):
+  waits for Korbi's word, as it changes the game.
