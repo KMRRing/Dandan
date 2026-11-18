@@ -22,7 +22,7 @@ export function generalPlayer(policy, ctx) {
   // the view as long as the net reads (version 1 or 2: dandan-general.js)
   const K = useKernel(), score = policy ? (K && K.head2(policy)) || freeScorer(policy, { carry: true }) : null, none = new Float32Array(POOL.V), XB = new Float32Array(policy ? policy.net.XN : viewSize());
   if (policy && !VIEW_VERSIONS(POOL).includes(policy.net.XN)) throw new Error(`the general policy reads ${policy.net.XN} inputs, not a view's (${VIEW_VERSIONS(POOL)})`);
-  const view = (s, seat) => generalView(s, seat, ctx.counts[seat] ?? none, ctx.any[seat] ?? null, POOL, XB);
+  const view = (s, seat) => generalView(s, seat, ctx.counts[seat] ?? none, ctx.any[seat] ?? null, POOL, XB, ctx.ans?.[seat] ?? null);
   const scores = (s, seat, ms) => score(view(s, seat), ms.map(m => generalMarks(s, seat, m)));
   const rollout = (s, seat, rng) => {
     const ms = zeroOptions(s, seat);
@@ -99,7 +99,7 @@ export const dandanEngine = () => ({ options: zeroOptions, nameOf: id => DECK[id
 // world dealt from the seat's own belief, never in the real game (where it would read their real hand).
 const OTHER_WORLDS = 4;
 export function makeGeneral({ policy = null, value = null, scry12 = null, scryg = null, wall = null } = {}) {
-  const ctx = { counts: [new Float32Array(POOL.V), new Float32Array(POOL.V)], any: [null, null] }, player = generalPlayer(policy, ctx), judge = generalJudge(value);
+  const ctx = { counts: [new Float32Array(POOL.V), new Float32Array(POOL.V)], any: [null, null], ans: [null, null] }, player = generalPlayer(policy, ctx), judge = generalJudge(value);
   const W = wall ? (wall === true ? {} : wall) : null, engine = W ? dandanEngine() : null;
   let filters = null, walls = null;
   const fresh = () => {
@@ -120,13 +120,15 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
       // (Fable 15:10Z: one world a search is a bias; never the real game, where it would read their real hand)
       if (walls) walls[seat].ensure();
       const tc = new Float32Array(POOL.V), ta = new Float32Array(POOL.V);
+      let tans = 0;
       for (let w = 0; w < OTHER_WORLDS; w++) {
         const world = (walls && walls[seat].sample(Math.random)) || determinize(s, seat, Math.random, false, false, (pool, n, rng) => sd(pool, n, rng) || pool);
         const b = filters[o].belief(world), c = on(b.counts), a = on(b.any);
         for (let k = 0; k < POOL.V; k++) { tc[k] += c[k] / OTHER_WORLDS; ta[k] += a[k] / OTHER_WORLDS; }
+        tans += (b.ans ?? 0) / OTHER_WORLDS;
       }
-      ctx.counts[seat] = on(mine.counts); ctx.any[seat] = on(mine.any);
-      ctx.counts[o] = tc; ctx.any[o] = ta;
+      ctx.counts[seat] = on(mine.counts); ctx.any[seat] = on(mine.any); ctx.ans[seat] = mine.ans ?? null;
+      ctx.counts[o] = tc; ctx.any[o] = ta; ctx.ans[o] = scryg ? tans : null;
       return { deal: wd ? (pool, n, rng) => wd(pool, n, rng) || sd(pool, n, rng) : sd };
     },
     think(s, seat, deals, extra = {}) {

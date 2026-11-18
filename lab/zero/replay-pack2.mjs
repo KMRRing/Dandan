@@ -37,7 +37,7 @@ function half(v) {   // a float32 as IEEE 754 binary16, rounded to nearest
 const halves = a => { const o = new Uint16Array(a.length); for (let i = 0; i < a.length; i++) o[i] = a[i] ? half(a[i]) : 0; return o; };
 const XN = GEN ? viewSize() : X2, MN = GEN ? POOL.MARK_N : MARK_N, VN = GEN ? viewSize() : EXT_N;
 // the belief file: Scry 1.2's, or the general dealer's (17 Nov 2026: { scryg: 1 }, its counts on the pool already)
-const inputOf = GEN ? (s, who, counts, any) => (net.scryg ? generalView(s, who, counts, any) : generalView(s, who, onPool(counts), onPool(any))) : input2;
+const inputOf = GEN ? (s, who, counts, any, ans) => (net.scryg ? generalView(s, who, counts, any, POOL, undefined, ans ?? null) : generalView(s, who, onPool(counts), onPool(any))) : input2;
 const marksAt = GEN ? generalMarks : marks2;
 const valueOf = GEN ? (s, me) => valueView(s, me) : (s, me) => ext(s, me, handCounts(s, 1 - me));
 
@@ -49,7 +49,10 @@ function sink(sub, names) {
   const fd = Object.fromEntries(names.map(n => [n, fs.openSync(`${dir}/${sub}/${n}`, "w")]));
   return { put: (n, a) => fs.writeSync(fd[n], Buffer.from(a.buffer, a.byteOffset, a.byteLength)), close: () => Object.values(fd).forEach(f => fs.closeSync(f)) };
 }
-const XF = GEN ? "x.f16" : "x.f32", A = sink("a", [XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8"]), PC = { D: 0, C: 0, K: 0, Q: 0 };
+// res.f32 and resp.i8 (18 Nov 2026, the policy's training-only outputs): each decision's game result for its seat, and the other
+// seat's response to the move played while it was on the stack: 0 let it resolve, 1 a spell aimed at it, 2 another play; −1 not a
+// cast, or the seat played again first
+const XF = GEN ? "x.f16" : "x.f32", A = sink("a", [XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8", ...(GEN ? ["res.f32", "resp.i8"] : [])]), PC = { D: 0, C: 0, K: 0, Q: 0 };
 const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "hold.u8"]);
 let nv = 0, games = 0, broken = 0, unmatched = 0, skipped = 0, old = 0, pickOff = 0, moved = 0, twins = 0;
 
@@ -109,7 +112,8 @@ function valueOld(s, d, played, explored) {
 function replay(game, decisions) {
   const seed = game.seed, x3 = game.explore3 ? game.explore3.i : null, hold = seed % 5 === 0;
   if (HOLD_ONLY && !hold) return;
-  let G = newRecord(rules, { seats: 2, seed, now: 0 }), lastTurn = -1;
+  let G = newRecord(rules, { seats: 2, seed, now: 0 }), lastTurn = -1, watch = null;
+  const gameDec = [];   // this game's decisions in order: { who, resp }, written once the game's result is known
   const F = net.scryg ? [new ScryG(0, net), new ScryG(1, net)] : [new Scry12(0, net, { hands: HANDS }), new Scry12(1, net, { hands: HANDS })], vrows = [];
   for (let i = 0; i < game.moves.length; i++) {
     const [who, m] = game.moves[i], s = rules.restore(J(G.state)), ds = decisions.get(i) || [];
@@ -126,6 +130,13 @@ function replay(game, decisions) {
         for (const me of [0, 1]) vrows.push({ me, f: valueOf(s, me), g: valueOf(s, other(me)), v: vs == null ? null : me === d.seat ? vs : 1 - vs });
       }
     }
+    // the response to a cast being watched: the other seat's first play while the spell is still on the stack
+    if (watch && who !== watch.who && s.stack.some(x => x.sid === watch.sid)) {
+      const r = m.t === "pass" ? 0 : m.t === "cast" && (m.targets || []).some(t => t.k === "s" && t.sid === watch.sid) ? 1 : 2;
+      for (const k of watch.ks) gameDec[k].resp = r;
+      watch = null;
+    } else if (watch && who === watch.who && m.t !== "pass") watch = null;   // it played again first: no response to learn
+    const ks = [];
     for (const d of ds) {
       if (d.seat !== who || !(d.qd || d.every)) continue;
       const o = options(s, d, m, x3 === i);
@@ -133,17 +144,21 @@ function replay(game, decisions) {
       if (o.groups) old++;
       if (KEEP < 1 && seeded(mix(seed, 6161 + i))() >= KEEP) continue;   // not kept (KEEP): matched and counted, not packed
       const b = F[who].belief(s);
-      putDecision(s, d, o, inputOf(s, who, b.counts, b.any), pickOf(d, o.ms, m, x3 === i));
+      putDecision(s, d, o, inputOf(s, who, b.counts, b.any, b.ans), pickOf(d, o.ms, m, x3 === i));
+      ks.push(gameDec.length); gameDec.push({ who, resp: -1 });
     }
     Math.random = seeded(mix(seed, i + 1));
     const r = applyMove(rules, G, who, m, 0);
     Math.random = realRandom;
-    if (r.error) { broken++; return; }
+    if (r.error) { broken++; if (GEN) for (const g of gameDec) { A.put("res.f32", Float32Array.of(0.5)); A.put("resp.i8", Int8Array.of(-1)); } return; }   // kept in step with the decisions written
     for (const f of F) f.update(s, who, m, r.G.state);
     G = r.G;
+    if (watch && !G.state.stack.some(x => x.sid === watch.sid)) { for (const k of watch.ks) gameDec[k].resp = 0; watch = null; }
+    if (m.t === "cast" && ks.length) { const top = G.state.stack[G.state.stack.length - 1]; if (top && top.ctl === who) watch = { who, ks, sid: top.sid }; }
   }
   // a resigned game (zero-play.mjs resign=, 18 Nov 2026) ends before the rules end it: its winner is the game line's
   const end = game.resign ? { ...G.state, winner: game.winner } : G.state, won = x => (end.winner === x ? 1 : end.winner == null || end.winner < 0 ? 0.5 : 0);
+  if (GEN) for (const g of gameDec) { A.put("res.f32", Float32Array.of(won(g.who))); A.put("resp.i8", Int8Array.of(g.resp)); }
   for (const r of vrows) {
     const y = r.v == null ? won(r.me) : (1 - VBLEND) * won(r.me) + VBLEND * r.v;
     V.put(MF, GEN ? halves(r.f) : Float32Array.from(r.f)); V.put(TF, GEN ? halves(r.g) : Float32Array.from(r.g)); V.put("won.f32", Float32Array.of(y));

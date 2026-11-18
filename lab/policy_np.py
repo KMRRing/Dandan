@@ -40,6 +40,11 @@ ap.add_argument("--soft", type=float, default=0.0)
 # warm start (15 Nov 2026, Korbi: "very significant"): begin from a trained net of the same form and sizes instead of from random,
 # as AlphaGo Zero and AlphaZero never reset theirs; the held-out loss before training is the bar, so it never comes out worse there
 ap.add_argument("--init", default="")
+# training-only outputs (18 Nov 2026, Korbi 14:57–15:08; head2 only, dropped from the file written): the game's result for the
+# deciding seat from the trunk, and the other seat's response to the move while it is on the stack (let it resolve / aim a spell
+# at it / another play) from the played move's own hidden layer; their weights in the loss
+ap.add_argument("--aux_res", type=float, default=0.0)
+ap.add_argument("--aux_resp", type=float, default=0.0)
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 MOVE_N = 80   # a move's marks; a pack can say otherwise (markN: Zero 2's moves and answers in one encoding, 256)
@@ -57,6 +62,11 @@ cand = rd("cand.i32", np.int32).astype(np.int64)
 pick, med, flags = rd("pick.i16", np.int16).astype(np.int64), rd("med.i16", np.int16).astype(np.int64), rd("flags.u8", np.uint8)
 Q, mark, MARKS = rd("q.f32", np.float32), rd("mark.i32", np.int32).astype(np.int64), rd("marks.u8", np.uint8).astype(np.int64)
 ncand = np.diff(cand)
+has = lambda n: os.path.exists(os.path.join(A.dir, n))
+RES = rd("res.f32", np.float32) if has("res.f32") else None
+RESP = rd("resp.i8", np.int8).astype(np.int64) if has("resp.i8") else None
+AUX_RES = A.aux_res if RES is not None and A.form == "head2" else 0.0
+AUX_RESP = A.aux_resp if RESP is not None and A.form == "head2" else 0.0
 kind = MARKS[mark[:-1]]                                   # a candidate's first mark is its kind
 held_mask = (flags & 1) > 0
 WEIGHT = np.where((flags & 2) > 0, 1.0, A.light)
@@ -104,6 +114,14 @@ if A.init:
     if grow: print(f"--init {A.init}: the view grown from {net0['XN']} to {XN} inputs, the new ones' weights zero", flush=True)
 M = {k: np.zeros_like(v) for k, v in P.items()}
 V = {k: np.zeros_like(v) for k, v in P.items()}
+# the training-only outputs' own weights (never written; a warm start begins them afresh)
+PA = dict(wr=np.zeros(H2), br=np.zeros(1), Wq=U((A.h3, 3), 0.05), bq=np.zeros(3)) if A.form == "head2" else {}
+MA = {k: np.zeros_like(v) for k, v in PA.items()}; VA = {k: np.zeros_like(v) for k, v in PA.items()}
+sig = lambda v: 1 / (1 + np.exp(-np.clip(v, -30, 30)))
+def resp_rows(g):
+    """The decisions of batch g whose response is known: their index in the batch and their played move's candidate row."""
+    r = RESP[g["idx"]]; k = np.flatnonzero(r >= 0)
+    return k, g["target"][k], r[k]
 
 
 def forward(g):
@@ -165,10 +183,25 @@ def step(g, t):
         if A.form == "head2":
             G["w4"] = c["h"].T @ df
             dpre = np.outer(df, P["w4"]) * (c["pre"] > 0)
+            GA = {}
+            if AUX_RESP:
+                k, rows, y = resp_rows(g)
+                if len(k):
+                    lq = c["h"][rows] @ PA["Wq"] + PA["bq"]; lq -= lq.max(1, keepdims=True); pq = np.exp(lq); pq /= pq.sum(1, keepdims=True)
+                    loss += AUX_RESP * -np.log(pq[np.arange(len(k)), y] + 1e-12).sum()
+                    dl = pq.copy(); dl[np.arange(len(k)), y] -= 1; dl *= AUX_RESP / n
+                    GA["Wq"] = c["h"][rows].T @ dl; GA["bq"] = dl.sum(0)
+                    np.add.at(dpre, rows, (dl @ PA["Wq"].T) * (c["pre"][rows] > 0))
             G["E3"] = np.zeros_like(P["E3"]); np.add.at(G["E3"], g["rows"], dpre[g["mcand"]])
             dA = np.add.reduceat(dpre, g["cstart"], axis=0)
             G["W3"] = c["z"].T @ dA; G["c3"] = dA.sum(0)
             dz = (dA @ P["W3"].T) * (c["z"] > 0)
+            if AUX_RES:
+                y = RES[g["idx"]]; pr = sig(c["z"] @ PA["wr"] + PA["br"][0])
+                loss += AUX_RES * -(y * np.log(pr + 1e-9) + (1 - y) * np.log(1 - pr + 1e-9)).sum()
+                dr = (pr - y) * AUX_RES / n
+                GA["wr"] = c["z"].T @ dr; GA["br"] = np.array([dr.sum()])
+                dz += np.outer(dr, PA["wr"]) * (c["z"] > 0)
         else:
             dz = np.add.reduceat(df[:, None] * c["ev"], g["cstart"], axis=0) * (c["z"] > 0)
             dev = df[:, None] * c["z"][g["dec"]]
@@ -181,21 +214,31 @@ def step(g, t):
     for k in P:
         M[k] = b1 * M[k] + (1 - b1) * G[k]; V[k] = b2 * V[k] + (1 - b2) * G[k] ** 2
         P[k] -= LR[0] * (M[k] / (1 - b1 ** t)) / (np.sqrt(V[k] / (1 - b2 ** t)) + 1e-8)
+    for k, gk in (GA.items() if A.form == "head2" else ()):
+        MA[k] = b1 * MA[k] + (1 - b1) * gk; VA[k] = b2 * VA[k] + (1 - b2) * gk ** 2
+        PA[k] -= LR[0] * (MA[k] / (1 - b1 ** t)) / (np.sqrt(VA[k] / (1 - b2 ** t)) + 1e-8)
     return loss
 
 
 def measure(idx):
     """policy-train.mjs's metrics on decisions idx, with agreement by the kind of the search's move and pass/act errors."""
     loss = soft_loss = med_up = mod_up = agree_med = agree_mod = 0.0
+    res_loss = res_right = resp_right = resp_n = resp_base = 0.0
     off_n = off_first = 0
     by = {k: [0, 0, 0] for k in KINDS}       # decisions, Medium agrees, the model agrees
     acted = passed = pass_err = act_err = med_pass_err = med_act_err = 0
     for s in range(0, len(idx), 8192):
         g = gather(idx[s:s + 8192])
-        f, _ = forward(g)
+        f, cm = forward(g)
         p = softmax(f, g)
         loss -= np.log(p[g["target"]] + 1e-12).sum()
         if A.soft > 0: soft_loss -= (softmax(Q[g["cid"]] / A.soft, g) * np.log(p + 1e-12)).sum()
+        if AUX_RES:
+            y = RES[g["idx"]]; pr = sig(cm["z"] @ PA["wr"] + PA["br"][0])
+            res_loss -= (y * np.log(pr + 1e-9) + (1 - y) * np.log(1 - pr + 1e-9)).sum(); res_right += ((pr > 0.5) == (y > 0.5)).sum()
+        if AUX_RESP:
+            k, rows, y = resp_rows(g)
+            if len(k): resp_right += ((cm["h"][rows] @ PA["Wq"] + PA["bq"]).argmax(1) == y).sum(); resp_n += len(k); resp_base += (y == 0).sum()
         best = np.maximum.reduceat(f, g["cstart"])
         # the first candidate with the top score (ties as the engine breaks them: the first listed)
         is_top = f == best[g["dec"]]
@@ -218,7 +261,10 @@ def measure(idx):
         med_pass_err += (a & (k_med == 0)).sum(); med_act_err += (ps & (k_med != 0)).sum()
     n = len(idx)
     r4 = lambda v: round(float(v), 4)
-    return dict(decisions=n, loss=r4(loss / n), **({"softLoss": r4(soft_loss / n)} if A.soft > 0 else {}), mediumGivesUp=round(float(100 * med_up / n), 3), modelGivesUp=round(float(100 * mod_up / n), 3),
+    aux = {}
+    if AUX_RES: aux.update(resultLoss=r4(res_loss / n), resultRight=r4(res_right / n))
+    if AUX_RESP and resp_n: aux.update(responseRight=r4(resp_right / resp_n), responseLetResolve=r4(resp_base / resp_n), responses=int(resp_n))
+    return dict(decisions=n, loss=r4(loss / n), **({"softLoss": r4(soft_loss / n)} if A.soft > 0 else {}), **aux, mediumGivesUp=round(float(100 * med_up / n), 3), modelGivesUp=round(float(100 * mod_up / n), 3),
                 mediumAgrees=r4(agree_med / n), modelAgrees=r4(agree_mod / n), offPicks=int(off_n), offFirst=r4(off_first / max(1, off_n)),
                 byKind={k: dict(decisions=v[0], mediumAgrees=r4(v[1] / max(1, v[0])), modelAgrees=r4(v[2] / max(1, v[0]))) for k, v in by.items()},
                 passWhereActed=dict(model=r4(pass_err / max(1, acted)), medium=r4(med_pass_err / max(1, acted)), of=int(acted)),

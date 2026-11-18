@@ -18,13 +18,15 @@ for sub in [x for x in ("p", "q", "a") if os.path.exists(os.path.join(ins[0], x,
     os.makedirs(os.path.join(out, sub), exist_ok=True)
     XN = next((m["XN"] for m in metas if m["XN"]), 0)
     XF = "x.f16" if os.path.exists(os.path.join(ins[0], sub, "x.f16")) else "x.f32"   # the general encoding stores 16-bit floats
-    for k in (XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8"):
+    # res.f32, resp.i8 (18 Nov 2026): the policy's training-only targets, one a decision, when every pack has them
+    AUXF = tuple(k for k in ("res.f32", "resp.i8") if all(os.path.exists(os.path.join(d, sub, k)) for d in ins))
+    for k in (XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8") + AUXF:
         open(os.path.join(out, sub, k), "wb").close()
     C = K = D = 0
     for d, m in zip(ins, metas):
         if m["decisions"] == 0: continue
         src = lambda n: os.path.join(d, sub, n)
-        for k in (XF, "pick.i16", "med.i16", "flags.u8", "q.f32", "marks.u8"): append(os.path.join(out, sub, k), src(k))
+        for k in (XF, "pick.i16", "med.i16", "flags.u8", "q.f32", "marks.u8") + AUXF: append(os.path.join(out, sub, k), src(k))
         # the offsets, moved on by what came before (small: one int a decision)
         (np.fromfile(src("cand.i32"), np.int32)[:-1] + C).astype(np.int32).tofile(open(os.path.join(out, sub, "cand.i32"), "ab"))
         (np.fromfile(src("mark.i32"), np.int32)[:-1] + K).astype(np.int32).tofile(open(os.path.join(out, sub, "mark.i32"), "ab"))

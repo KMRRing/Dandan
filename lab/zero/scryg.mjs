@@ -13,7 +13,7 @@
 // Trained on Zero's games with the true cards (lab/zero/scryg_torch.py, rows from lab/zero/scryg-pack.mjs). Nothing in it names a
 // card or a rule. Browser-safe (no node modules).
 import { observe, HIDDEN } from "../../dandan-view.js";
-import { generalView, generalMarks, viewSize, POOL } from "../../dandan-general.js";
+import { generalView, generalMarks, viewSize, answers, POOL } from "../../dandan-general.js";
 import { DECK, TOKEN_AT, CARDS } from "../../dandan-cards.js";
 
 const other = x => 1 - x;
@@ -159,9 +159,17 @@ export class ScryG {
   belief(s, hands = 256) {
     const { g, t } = this.base(s), V = this.P.V;
     this.last = { g, u: t.u, n: t.handN + t.libN, handN: t.handN, memo: new Map() };
-    const counts = new Float32Array(V), any = new Float32Array(V), rng = lcg(1 + this.rec.events.length);
-    if (this.last.n) for (let h = 0; h < hands; h++) { const d = this.hand(rng).dealt; for (let k = 0; k < V; k++) if (d[k]) { counts[k] += d[k] / hands; any[k] += 1 / hands; } }
-    return { counts, any };
+    const counts = new Float32Array(V), any = new Float32Array(V), rng = lcg(1 + this.rec.events.length), A = answers(this.P);
+    // the hand's cards alone (18 Nov 2026: the guess deals the hand first, then the library places only they know; those were
+    // counted as hand cards before); ans (view version 3's counter window): the share of the hands dealt that hold an answer
+    let ans = 0;
+    if (this.last.n) for (let h = 0; h < hands; h++) {
+      const d = this.hand(rng, this.last.handN).dealt;
+      let held = false;
+      for (let k = 0; k < V; k++) if (d[k]) { counts[k] += d[k] / hands; any[k] += 1 / hands; if (A[k]) held = true; }
+      if (held) ans += 1 / hands;
+    }
+    return { counts, any, ans };
   }
   next(dealt, key) { const L = this.last; let p = L.memo.get(key); if (!p) { p = this.card(L.g, dealt, L.u); L.memo.set(key, p); } return p; }
   /** One whole guess (all the cards to guess, card after card): slots in order, the counts, the log chance. */
