@@ -139,7 +139,8 @@ function replay(game, decisions) {
     for (const f of F) f.update(s, who, m, r.G.state);
     G = r.G;
   }
-  const end = G.state, won = x => (end.winner === x ? 1 : end.winner == null || end.winner < 0 ? 0.5 : 0);
+  // a resigned game (zero-play.mjs resign=, 18 Nov 2026) ends before the rules end it: its winner is the game line's
+  const end = game.resign ? { ...G.state, winner: game.winner } : G.state, won = x => (end.winner === x ? 1 : end.winner == null || end.winner < 0 ? 0.5 : 0);
   for (const r of vrows) {
     const y = r.v == null ? won(r.me) : (1 - VBLEND) * won(r.me) + VBLEND * r.v;
     V.put(MF, GEN ? halves(r.f) : Float32Array.from(r.f)); V.put(TF, GEN ? halves(r.g) : Float32Array.from(r.g)); V.put("won.f32", Float32Array.of(y));

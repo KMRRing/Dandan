@@ -37,7 +37,15 @@ const DEEPER = {
   ...(flag("early") ? { early: flag("early").split(",").map(e => { const [at, gap, most] = e.split(":").map(Number); return { at, gap, ...(most ? { most } : {}) }; }) } : {}),
   ...(flag("first") ? { first: Number(flag("first")) } : {}),
   ...(flag("steady") ? { steady: Number(flag("steady")) } : {}),
+  // decided=<at>:<hi>:<lo> (18 Nov 2026, Korbi 03:56): the search stops at `at` deals when the best move's mean is hi+ or lo-
+  ...(flag("decided") ? { decided: (([at, hi, lo]) => ({ at, hi, lo }))(flag("decided").split(":").map(Number)) } : {}),
 };
+// resign=<threshold>:<run>:<keep> (18 Nov 2026, Korbi 03:56; AlphaZero's resignation): a seat whose searched best move is worth
+// less than `threshold` at `run` of its own decisions in a row resigns, and the game is the other seat's. A share `keep` of games
+// never resigns, so the false resignations can be counted (their game line notes where a resignation would have come: would).
+// Measured on zps007 (lab/decided-zero.mjs, 1,349 games): below 0.03 for 2 decisions resigns 81% of games, 0.8% of them wrongly,
+// saving 29% of the search's deals.
+const RESIGN = flag("resign") ? (([t, run, keep]) => ({ t, run, keep }))(flag("resign").split(":").map(Number)) : null;
 // vs=<nets>:<every>[,<nets>:<every>…] (18 Nov 2026, Korbi 03:52: is the honest line gaining? the previous nets every generation,
 // and the leaky old engine g12r-C as a fixed yardstick): the first rival plays games g % every = 0, each later one games
 // g % every = every / 2 + its place (1, 2…), off the first rival's multiples (with 10 and 20: games 0, 10, 20… and 11, 31…)
@@ -58,6 +66,8 @@ for (let g = first; g < first + n; g++) {
   const R = rivalOf(g), rival = R?.brain || null, VS_NETS = R?.nets || "";
   const vsSeat = R ? Math.floor(g / R.every) % 2 : -1, brainOf = seat => (seat === vsSeat ? rival : brain);
   brain.reset(); if (rival) rival.reset();
+  const noResign = !RESIGN || seeded(mix(seed, 777001))() < RESIGN.keep, streak = [0, 0];
+  let resigned = null, would = null;
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state));
     const rng = seeded(mix(seed, i + 1));
@@ -70,6 +80,14 @@ for (let g = first; g < first + n; g++) {
     else {
       const res = brainOf(who).think(s, who, deals, DEEPER);
       move = res.best;
+      if (RESIGN && !res.only) {
+        const v = res.list.find(c => key(c.move) === key(res.best))?.mean;
+        streak[who] = v != null && v < RESIGN.t ? streak[who] + 1 : 0;
+        if (streak[who] >= RESIGN.run) {
+          if (!noResign) { resigned = { seat: who, i }; Math.random = realRandom; break; }
+          if (!would) would = { seat: who, i };
+        }
+      }
       if (X3 && !explored3 && res.list.length >= 2 && seeded(mix(seed, 9700003 + i))() < 1 / X3) {
         const others = res.list.filter(c => key(c.move) !== key(res.best));
         if (others.length) { move = others[Math.floor(seeded(mix(seed, 9800003 + i))() * others.length)].move; explored3 = { i, seat: who, move }; }
@@ -84,12 +102,12 @@ for (let g = first; g < first + n; g++) {
     G = r.G;
   }
   Math.random = realRandom;
-  const st = G.state, won = seat => (st.winner === seat ? 1 : st.winner == null || st.winner < 0 ? 0.5 : 0);
+  const st = resigned ? { ...G.state, winner: 1 - resigned.seat, why: "resign" } : G.state, won = seat => (st.winner === seat ? 1 : st.winner == null || st.winner < 0 ? 0.5 : 0);
   // with a random move in the game, every decision and value row says where it stands against it (x3 −1, 0, 1)
   if (explored3) for (const d of lines) d.x3 = Math.sign(d.i - explored3.i);
   const text = [...lines.map(d => JSON.stringify(d)),
     ...rows.map(r => JSON.stringify({ v: 1, g: seed, seat: r.seat, turn: r.turn, f: r.f, won: won(r.seat), ...(seed % 5 === 0 ? { hold: 1 } : {}), ...(explored3 ? { x3: Math.sign(r.i - explored3.i) } : {}) })),
-    JSON.stringify({ game: g, seed, winner: st.winner, why: st.why, turns: st.turn, moves: G.moves ?? [], ...(explored3 ? { explore3: explored3 } : {}), ...(vsSeat >= 0 ? { vs: { nets: VS_NETS, seat: vsSeat } } : {}) })];
+    JSON.stringify({ game: g, seed, winner: st.winner, why: st.why, turns: st.turn, moves: G.moves ?? [], ...(explored3 ? { explore3: explored3 } : {}), ...(vsSeat >= 0 ? { vs: { nets: VS_NETS, seat: vsSeat } } : {}), ...(resigned ? { resign: resigned } : {}), ...(would ? { would } : {}) })];
   fs.appendFileSync(out, text.join("\n") + "\n");
   if (WALL && brain.walls?.()) for (const w of brain.walls()) console.error(`wall ${w.me} game ${g}: ${JSON.stringify(w.stats)} worlds ${w.parts.filter(p => p.alive).length} ess ${w.ess().toFixed(1)}`);
 }

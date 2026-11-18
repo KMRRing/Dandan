@@ -459,6 +459,8 @@ export function think(s, seat, opts = {}) {
   const classes = new Set();
   let top = r.list.filter(c => !c.out && !classes.has(c.cls ?? key(c.move)) && classes.add(c.cls ?? key(c.move))).sort((a, b) => b.mean - a.mean).slice(0, dp.k || 2);
   if (top.length < 2 || top[0].mean - top[1].mean >= dp.gap) return r;
+  const dc = opts.decided;   // a decided position (see thinkOnce's decided) gets no second look
+  if (dc && (top[0].mean >= dc.hi || top[0].mean <= dc.lo)) return r;
   const keys = new Set(top.map(c => key(c.move))), deep = new Set(top.map(c => c.cls ?? key(c.move))), first = dp.turns ?? (opts.turns ?? 2) + 1, max = Math.max(first, dp.max ?? first);
   let r2 = null, looks = 0;
   for (let t = first; t <= max; t++) {
@@ -472,7 +474,7 @@ export function think(s, seat, opts = {}) {
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && isDeep(c)).sort((a, b) => b.mean - a.mean), ...list.filter(c => !isDeep(c))], deeper: looks };
 }
-function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null } = {}) {
+function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null, decided = null } = {}) {
   const t0 = Date.now();
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
   // read Medium's scores); weigh false: hidden cards dealt without dandan-reads.js's tells (which read Medium's play)
@@ -541,6 +543,12 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     // early (lab, 17 Nov 2026: the search-shape table): at `at` deals, stop when the leader is `gap` or more ahead of the next move
     // still in the race on their means, only with fewer than `most` options when given; a list of such stops checks each at its
     // own `at` (off by default)
+    // decided (lab, 18 Nov 2026, Korbi 03:56: a game all but won or lost takes the full search for nothing): at `at` deals, stop
+    // when the best move's mean is `hi` or more, or `lo` or less (off by default)
+    if (decided && d === decided.at && alive.length > 1) {
+      const best = Math.max(...alive.map(i => vals[i].reduce((a, x) => a + x, 0) / vals[i].length));
+      if (best >= decided.hi || best <= decided.lo) break;
+    }
     const stop = early && alive.length > 1 ? [].concat(early).find(e => e.at === d && (!e.most || n < e.most)) : null;
     if (stop) {
       const m = alive.map(i => vals[i].reduce((a, x) => a + x, 0) / vals[i].length).sort((a, b) => b - a);

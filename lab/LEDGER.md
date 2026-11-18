@@ -1290,3 +1290,10 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   you fix the loop and update whatever code you need"): the yardstick: zero-play takes several rivals (vs=a:10,b:20, at
   different games), the loop reads each (yardReading: the latest nets against the leaky g12r-C, 1 game in 20), and reads each
   part once (vsParts). zps009 closed so generation 16 (zps010) carries the yardstick games.
+- 02:20Z Korbi 03:56 (decided games cost a lot of search for nothing). lab/decided-zero.mjs on zps007 (1,349 self-play games
+  at 1,024 deals): after the winner's value passes 97% for good, 10.6% of decisions take 22.1% of the search's deals (a decided
+  position's moves are all close, so the early stops never fire); resigning below 3% for 2 of one's own decisions would end 81%
+  of games early, 0.8% of them wrongly, saving 29% of the deals. Now: zero-play resign=0.03:2:0.1 (AlphaZero's resignation; 1
+  game in 10 never resigns and notes where it would have, for the false-resignation rate), decided=64:0.97:0.03 (the search stops
+  at 64 deals when the best move is 97%+ or 3%-, and no second look), replay-pack2 takes a resigned game's winner from its line.
+  One local run: 4 games, all resigned (turns 16-26), packed with 0 not the same.
