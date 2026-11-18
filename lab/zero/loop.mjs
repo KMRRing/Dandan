@@ -148,8 +148,9 @@ if (L.phase === "play") {
   } else if (Date.now() - Date.parse(L.trained.at) > 12 * 3600e3) log(`generation ${L.gen}: no nets for ${L.challenger} 12 hours after training began: look at zero-train-ext.yml's runs`);
   // the training asked for again when its nets are 100 minutes late (18 Nov: a refused dispatch left generation 16 waiting two
   // hours); twice at most, the nets that are already in are kept (the runs commit only their own files)
-  else if (L.trained.dispatch && Date.now() - Date.parse(L.trained.at) > 100 * 60e3 * ((L.trained.retries || 0) + 1) && (L.trained.retries || 0) < 2) {
-    L.trained.retries = (L.trained.retries || 0) + 1;
+  // the clock runs from the last request (18 Nov: a request by hand at 07:20Z was followed by a needless second one at 07:28Z)
+  else if (L.trained.dispatch && Date.now() - Date.parse(L.trained.asked || L.trained.at) > 100 * 60e3 && (L.trained.retries || 0) < 2) {
+    L.trained.retries = (L.trained.retries || 0) + 1; L.trained.asked = new Date().toISOString();
     log(`generation ${L.gen}: ${L.challenger}'s nets are late: training asked for again (${L.trained.retries})`);
     const have = n => fs.existsSync(new URL(`./nets/${L.challenger}-${n}.json`, import.meta.url));
     for (const d of L.trained.dispatch) if (d.startsWith("general") ? !(have("gpolicy") && have("gvalue")) : !have("scryg")) say(`DISPATCH ${d}`);
