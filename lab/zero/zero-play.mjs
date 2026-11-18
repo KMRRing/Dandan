@@ -40,6 +40,8 @@ const DEEPER = {
   // decided=<at>:<hi>:<lo> (18 Nov 2026, Korbi 03:56): the search stops at `at` deals when the best move's mean is hi+ or lo-
   ...(flag("decided") ? { decided: (([at, hi, lo]) => ({ at, hi, lo }))(flag("decided").split(":").map(Number)) } : {}),
 };
+const CAP = flag("cap") ? (([share, d]) => ({ share, deals: d || 64 }))(flag("cap").split(":").map(Number)) : null;
+const FAST = DEEPER.decided ? { decided: DEEPER.decided } : {};
 // the old engine's search as the yardstick plays it: the close-call look only
 const FULL = DEEPER.deeper ? { deeper: DEEPER.deeper } : {};
 // resign=<threshold>:<run>:<keep> (18 Nov 2026, Korbi 03:56; AlphaZero's resignation): a seat whose searched best move is worth
@@ -86,7 +88,11 @@ for (let g = first; g < first + n; g++) {
       // lazy searching on winning or losing positions to beat the leaky hard-working old engine straight up"): the same deals and
       // close-call look, none of the shortcuts (early, decided stops) and it never resigns
       const yard = who === vsSeat && R && !R.nets.startsWith("gen:");
-      let res = brainOf(who).think(s, who, deals, yard ? FULL : DEEPER);
+      // cap=<share>:<deals> (18 Nov 2026, KataGo's playout cap randomisation; Korbi 04:48 "KataGo in for sure"): a share of
+      // decisions gets the full search and only those become policy targets; the rest play from a fast search (that many deals,
+      // no close-call look) and leave no decision line (their positions still give value rows from the game's result)
+      const full = yard || !CAP || seeded(mix(seed, 3300017 + i))() < CAP.share;
+      let res = brainOf(who).think(s, who, full ? deals : CAP.deals, yard ? FULL : full ? DEEPER : FAST);
       move = res.best;
       if (RESIGN && !res.only && !yard) {
         const v = res.list.find(c => key(c.move) === key(res.best))?.mean;
@@ -105,7 +111,7 @@ for (let g = first; g < first + n; g++) {
         if (others.length) { move = others[Math.floor(seeded(mix(seed, 9800003 + i))() * others.length)].move; explored3 = { i, seat: who, move }; }
       }
       // every searched decision: with priority for the policy head, a question (qd) for the question head
-      if (!res.only && res.list.length >= 2) lines.push(decisionLine(s, who, seed, i, res, res.list.findIndex(c => key(c.move) === key(res.best)), deals, seed % 5 === 0, null));
+      if (full && !res.only && res.list.length >= 2) lines.push(decisionLine(s, who, seed, i, res, res.list.findIndex(c => key(c.move) === key(res.best)), deals, seed % 5 === 0, null));
     }
     const r = applyMove(rules, G, who, move, 0);
     if (r.error) throw new Error(`zero game ${seed} move ${i}: ${r.error}`);

@@ -1315,3 +1315,8 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   would-be resignations wrong. One local run with the yardstick rival: 4 games, the g12r-C one played to the library's end.
 
 - 2026-11-18 04:00Z ops: Chicago 8c 3c385656 4→3 (3 workers on 4 nodes for 2 checks; the 02:27Z trim took a working node). Chicago 2c held at 4 despite $0.001 (new k8s nodes get no pods). All classes at floor. Queue zps011 478 waiting (~04:45Z empty). Fleet 03:46Z: 83 machines, 625/634 busy, reqCostH $0.26. Google: no compute, fleet/ 7 files, private/ scheduler.json only.
+- 04:30Z Korbi 06:18 (too slow). Generation 16 at 04:08Z: 1,126 of 2,400, ~900 games an hour on ~630 cores (zps011's 2-game
+  shards: median 2,747 s); training in about 1.5 h. KataGo's playout cap randomisation in (Korbi 04:48 "in for sure"): zero-play
+  cap=0.25:128 — a quarter of decisions get the full search and become policy targets, the rest play from 128 deals with no
+  close-call look and leave no decision line (value rows from the result). From the filler's next batch (zps012). One local run
+  of 2 games packed clean.
