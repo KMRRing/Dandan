@@ -9,7 +9,7 @@
   "games": 9600,
   "maxWindow": 30000,
   "value": "128x64",
-  "trainArgs": "keep=0.5 vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux_res_0.5_--aux_resp_0.5",
+  "trainArgs": "keep=0.5 vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux_res_0.5_--aux_resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8",
   "genFrom": 20,
   "windowFrom": 15,
   "nextFrom": 20,
