@@ -72,7 +72,7 @@ export function decisionLine(s, seat, g, i, res, pick, deals, hold, x3) {
   const q = !!s.pending, mk = q ? qMarksOf : marksOf, r4 = v => +v.toFixed(4);
   return {
     g, i, seat, deep: deals >= 1024 ? 1 : 0, deals, x: viewOf(s, seat),
-    c: res.list.map(c => ({ m: mk(s, seat, c.move), mv: c.move, s: 0, q: r4(c.first ?? c.mean), se: r4(c.firstSe ?? c.se), n: c.firstN ?? c.n, ...(c.first != null ? { d: r4(c.mean), dse: r4(c.se), dn: c.n } : {}) })),
+    c: res.list.map(c => ({ m: mk(s, seat, c.move), mv: c.move, s: 0, q: r4(c.first ?? c.mean), se: r4(c.firstSe ?? c.se), n: c.firstN ?? c.n, ...(c.first != null ? { d: r4(c.mean), dse: r4(c.se), dn: c.n } : {}), ...(c.resp && c.resp[0] + c.resp[1] + c.resp[2] ? { r: c.resp } : {}) })),
     v: pick >= 0 ? r4(res.list[pick].mean) : null, looks: res.deeper || 0,
     med: 0, pick, every: 1, ...(q ? { qd: 1 } : {}), ...(hold ? { hold: 1 } : {}), ...(x3 != null ? { x3 } : {}),
   };

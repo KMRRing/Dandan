@@ -69,6 +69,12 @@ RES = rd("res.f32", np.float32) if has("res.f32") else None
 RESP = rd("resp.i8", np.int8).astype(np.int64) if has("resp.i8") else None
 AUX_RES = A.aux_res if RES is not None and A.form == "head2" else 0.0
 AUX_RESP = A.aux_resp if RESP is not None and A.form == "head2" else 0.0
+# rc.f32 (18 Nov 2026, Korbi: the opponent's response to every candidate): three a candidate, the search's replies over its deals
+# as shares (−1: none); when the pack has it, the response output learns from every candidate with replies, not the move played only
+RC = rd("rc.f32", np.float32).reshape(-1, 3) if has("rc.f32") else None
+if RC is not None and not (RC[:, 0] >= 0).any(): RC = None   # games from before the search kept its replies: the move played only
+AUX_RC = A.aux_resp if RC is not None and A.form == "head2" else 0.0
+if AUX_RC: AUX_RESP = 0.0
 kind = MARKS[mark[:-1]]                                   # a candidate's first mark is its kind
 held_mask = (flags & 1) > 0
 WEIGHT = np.where((flags & 2) > 0, 1.0, A.light)
@@ -187,6 +193,14 @@ def step(g, t):
             G["w4"] = c["h"].T @ df
             dpre = np.outer(df, P["w4"]) * (c["pre"] > 0)
             GA = {}
+            if AUX_RC:
+                T_ = RC[g["cid"]]; k = np.flatnonzero(T_[:, 0] >= 0)
+                if len(k):
+                    lq = c["h"][k] @ PA["Wq"] + PA["bq"]; lq -= lq.max(1, keepdims=True); pq = np.exp(lq); pq /= pq.sum(1, keepdims=True)
+                    loss += AUX_RC * -(T_[k] * np.log(pq + 1e-12)).sum()
+                    dl = (pq - T_[k]) * AUX_RC / n
+                    GA["Wq"] = c["h"][k].T @ dl; GA["bq"] = dl.sum(0)
+                    np.add.at(dpre, k, (dl @ PA["Wq"].T) * (c["pre"][k] > 0))
             if AUX_RESP:
                 k, rows, y = resp_rows(g)
                 if len(k):
@@ -226,7 +240,7 @@ def step(g, t):
 def measure(idx):
     """policy-train.mjs's metrics on decisions idx, with agreement by the kind of the search's move and pass/act errors."""
     loss = soft_loss = med_up = mod_up = agree_med = agree_mod = 0.0
-    res_loss = res_right = resp_right = resp_n = resp_base = 0.0
+    res_loss = res_right = resp_right = resp_n = resp_base = rc_loss = 0.0
     off_n = off_first = 0
     by = {k: [0, 0, 0] for k in KINDS}       # decisions, Medium agrees, the model agrees
     acted = passed = pass_err = act_err = med_pass_err = med_act_err = 0
@@ -239,6 +253,12 @@ def measure(idx):
         if AUX_RES:
             y = RES[g["idx"]]; pr = sig(cm["z"] @ PA["wr"] + PA["br"][0])
             res_loss -= (y * np.log(pr + 1e-9) + (1 - y) * np.log(1 - pr + 1e-9)).sum(); res_right += ((pr > 0.5) == (y > 0.5)).sum()
+        if AUX_RC:
+            T_ = RC[g["cid"]]; k = np.flatnonzero(T_[:, 0] >= 0)
+            if len(k):
+                lq = cm["h"][k] @ PA["Wq"] + PA["bq"]; lq -= lq.max(1, keepdims=True); pq = np.exp(lq); pq /= pq.sum(1, keepdims=True)
+                resp_right += (pq.argmax(1) == T_[k].argmax(1)).sum(); resp_n += len(k); resp_base += (T_[k].argmax(1) == 0).sum()
+                rc_loss -= (T_[k] * np.log(pq + 1e-12)).sum()
         if AUX_RESP:
             k, rows, y = resp_rows(g)
             if len(k): resp_right += ((cm["h"][rows] @ PA["Wq"] + PA["bq"]).argmax(1) == y).sum(); resp_n += len(k); resp_base += (y == 0).sum()
@@ -266,7 +286,7 @@ def measure(idx):
     r4 = lambda v: round(float(v), 4)
     aux = {}
     if AUX_RES: aux.update(resultLoss=r4(res_loss / n), resultRight=r4(res_right / n))
-    if AUX_RESP and resp_n: aux.update(responseRight=r4(resp_right / resp_n), responseLetResolve=r4(resp_base / resp_n), responses=int(resp_n))
+    if (AUX_RESP or AUX_RC) and resp_n: aux.update(responseRight=r4(resp_right / resp_n), responseLetResolve=r4(resp_base / resp_n), responses=int(resp_n), **({'responseLoss': r4(rc_loss / resp_n)} if AUX_RC else {}))
     return dict(decisions=n, loss=r4(loss / n), **({"softLoss": r4(soft_loss / n)} if A.soft > 0 else {}), **aux, mediumGivesUp=round(float(100 * med_up / n), 3), modelGivesUp=round(float(100 * mod_up / n), 3),
                 mediumAgrees=r4(agree_med / n), modelAgrees=r4(agree_mod / n), offPicks=int(off_n), offFirst=r4(off_first / max(1, off_n)),
                 byKind={k: dict(decisions=v[0], mediumAgrees=r4(v[1] / max(1, v[0])), modelAgrees=r4(v[2] / max(1, v[0]))) for k, v in by.items()},

@@ -18,8 +18,8 @@ for sub in [x for x in ("p", "q", "a") if os.path.exists(os.path.join(ins[0], x,
     os.makedirs(os.path.join(out, sub), exist_ok=True)
     XN = next((m["XN"] for m in metas if m["XN"]), 0)
     XF = "x.f16" if os.path.exists(os.path.join(ins[0], sub, "x.f16")) else "x.f32"   # the general encoding stores 16-bit floats
-    # res.f32, resp.i8 (18 Nov 2026): the policy's training-only targets, one a decision, when every pack has them
-    AUXF = tuple(k for k in ("res.f32", "resp.i8") if all(os.path.exists(os.path.join(d, sub, k)) for d in ins))
+    # res.f32, resp.i8 (18 Nov 2026): the policy's training-only targets, one a decision; rc.f32 three a candidate; when every pack has them
+    AUXF = tuple(k for k in ("res.f32", "resp.i8", "rc.f32") if all(os.path.exists(os.path.join(d, sub, k)) for d in ins))
     for k in (XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8") + AUXF:
         open(os.path.join(out, sub, k), "wb").close()
     C = K = D = 0

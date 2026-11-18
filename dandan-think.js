@@ -403,6 +403,14 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
       if (played++ >= cut) break;
       m = rollout ? rollout(c, who, rng) : policyMove(c, who, { rng });
     }
+    // the reply to the move tried (18 Nov 2026, Korbi: the opponent's response to each candidate): with seen.w the sid of the
+    // seat's spell, the other seat's first move while it is still on the stack — 0 a pass, 1 a spell aimed at it, 2 another play
+    // — or 0 once it has left the stack with no such move; the seat playing again first leaves it unknown (as replay-pack2)
+    if (seen && seen.w != null && seen.r == null) {
+      if (!c.stack.some(x => x.sid === seen.w)) seen.r = 0;
+      else if (who === opp) seen.r = m.t === "pass" ? 0 : m.t === "cast" && (m.targets || []).some(t => t.k === "s" && t.sid === seen.w) ? 1 : 2;
+      else if (m.t !== "pass") seen.w = null;
+    }
     // their answer, for the coach: what they do first in their own main phase (their turn's plan), else first at all
     // (a land is no answer)
     if (seen && who === opp && m.t !== "pass" && m.t !== "land" && !seen.main && c.turn < to) {
@@ -411,6 +419,7 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
     }
     if (typeof act(c, who, m, { rng, quiet: true }) === "string") break;
   }
+  if (seen && seen.w != null && seen.r == null && !c.stack.some(x => x.sid === seen.w)) seen.r = 0;
   const v = judge(c, seat);
   for (const [k, who] of path) { k.n++; k.w += who === seat ? v : 1 - v; }
   if (seen) Object.assign(seen, where(c, seat));
@@ -533,6 +542,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       const c = fork(base), r = seeded(runSeed);
       const res = act(c, seat, cands[i], { rng: r, quiet: true });
       const at = {};
+      if (cands[i].t === "cast" && typeof res !== "string") { const top = c.stack[c.stack.length - 1]; if (top && top.ctl === seat) at.w = top.sid; }
       if (typeof res === "string") vals[i].push(-1);
       else vals[i].push(playOne(i, c, r, at, runSeed));
       seen[i].push(at);
@@ -588,6 +598,8 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     return {
       move, mean, se: k ? sd / Math.sqrt(k) : 0, n: k, i, cls: cls[i],
       seen: { d: avg("d"), D: avg("D"), l: avg("l"), L: avg("L"), h: avg("h"), H: avg("H"), a: top?.[0] ?? null, an: top?.[1] ?? 0 },
+      // the replies to this move over the deals (a cast only): let it resolve, a spell aimed at it, another play
+      ...(cands[i].t === "cast" ? { resp: seen[i].reduce((a, x) => { if (x.r != null) a[x.r]++; return a; }, [0, 0, 0]) } : {}),
     };
   });
   // the best of the moves still in the race, by their average over the same deals (a move dropped on a few deals keeps

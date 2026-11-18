@@ -53,8 +53,9 @@ function sink(sub, names) {
 }
 // res.f32 and resp.i8 (18 Nov 2026, the policy's training-only outputs): each decision's game result for its seat, and the other
 // seat's response to the move played while it was on the stack: 0 let it resolve, 1 a spell aimed at it, 2 another play; −1 not a
-// cast, or the seat played again first
-const XF = GEN ? "x.f16" : "x.f32", A = sink("a", [XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8", ...(GEN ? ["res.f32", "resp.i8"] : [])]), PC = { D: 0, C: 0, K: 0, Q: 0 };
+// cast, or the seat played again first; rc.f32, three a candidate: the search's replies to that candidate over its deals (a cast,
+// dandan-think.js: let it resolve, aimed at, another play), as shares, −1 each where the decision line has none
+const XF = GEN ? "x.f16" : "x.f32", A = sink("a", [XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8", ...(GEN ? ["res.f32", "resp.i8", "rc.f32"] : [])]), PC = { D: 0, C: 0, K: 0, Q: 0 };
 const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "hold.u8"]);
 let nv = 0, games = 0, broken = 0, unmatched = 0, skipped = 0, old = 0, pickOff = 0, moved = 0, twins = 0;
 
@@ -101,6 +102,7 @@ function putDecision(s, d, o, x, p) {
   for (const js of grp.values()) { const m = js.reduce((a, j) => a + d.c[j].q, 0) / js.length; for (const j of js) q[j] = m; if (js.length > 1) twins += js.length; }
   ms.forEach((m, j) => { mark[j] = PC.K + marks.length; marks.push(...mk[j]); });
   A.put("q.f32", q); A.put("mark.i32", mark); A.put("marks.u8", Uint8Array.from(marks));
+  if (GEN) { const rc = new Float32Array(3 * ms.length).fill(-1); ms.forEach((_, j) => { const r = d.c[j]?.r, n = r ? r[0] + r[1] + r[2] : 0; if (n) for (let k = 0; k < 3; k++) rc[3 * j + k] = r[k] / n; }); A.put("rc.f32", rc); }
   PC.D++; PC.C += ms.length; PC.K += marks.length; if (s.pending) PC.Q++;
 }
 
