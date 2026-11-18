@@ -3,7 +3,15 @@
 // `replay` below), the state it ended in (the log of everything done, both hands, the judge's chances after each action) and a
 // summary. Each game is a room of its own under crates/rooms (results.js), and a short line about it goes in the one
 // room whose code is always the same, which is how a reader finds the rest.
-import { newRecord, applyMove } from "./seats.js";
+import { newRecord, applyMove, seeded, mix } from "./seats.js";
+
+// a lab game (18 Nov 2026, the history's sample games): Zero's self-play deals each move's chance from the seed and the move's
+// number (lab/zero/zero-play.mjs), so it plays again only that way
+const step = (rules, G, seat, move, now, game, i) => {
+  if (!game.zero) return applyMove(rules, G, seat, move, now);
+  const real = Math.random; Math.random = seeded(mix(game.seed, i + 1));
+  try { return applyMove(rules, G, seat, move, now); } finally { Math.random = real; }
+};
 
 /** The room that lists the games. Its code has an I in it, which the codes a table is given never do, so no table is ever it. */
 export const INDEX_ROOM = "DDIX";
@@ -46,7 +54,7 @@ export function walk(rules, game) {
   let G = newRecord(rules, { seats: game.seats, options: game.options || {}, seed: game.seed, seq: game.seq || 1, now: game.started, prev });
   const lens = [];
   for (let i = 0; i < moves.length; i++) {
-    const [seat, move] = moves[i], r = applyMove(rules, G, seat, move, game.started);
+    const [seat, move] = moves[i], r = step(rules, G, seat, move, game.started, game, i);
     if (r.error) return { error: r.error, at: i, lens, G };
     G = r.G;
     lens.push(G.state.log.length);
@@ -70,7 +78,7 @@ export function replay(rules, game, until = Infinity) {
   const prev = first === 0 || first === 1 ? { state: { over: true, winner: 1 - first } } : null;
   let G = newRecord(rules, { seats: game.seats, options: game.options || {}, seed: game.seed, seq: game.seq || 1, now: game.started, prev });
   for (let i = 0; i < moves.length && i < until; i++) {
-    const [seat, move] = moves[i], r = applyMove(rules, G, seat, move, game.started);
+    const [seat, move] = moves[i], r = step(rules, G, seat, move, game.started, game, i);
     if (r.error) return { error: r.error, at: i };
     G = r.G;
   }

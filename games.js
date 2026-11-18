@@ -6,7 +6,7 @@
 // reads; a game is played again from its seed and moves (records.js) and shown move by move, both hands open.
 import { getSync } from "./net.js";
 import { INDEX_ROOM, walk, replay } from "./records.js";
-import { shownRules } from "./dandan-rules.js";
+import { shownRules, rules as labRules } from "./dandan-rules.js";
 import { nm } from "./dandan-core.js";
 
 import { keyOk } from "./games-key.js";
@@ -51,9 +51,9 @@ async function load() {
 
 // ---- tabs, players, removing ----
 let sure = null;                                           // what is waiting for a second tap: "player" or a game's key
-const tabs = on => `<div class="gv-bar"><button type="button" data-tab="games"${on === "games" ? ' class="on"' : ""}>Games</button><button type="button" data-tab="players"${on === "players" ? ' class="on"' : ""}>Players</button><button type="button" id="refresh" title="Read the games again">Refresh</button><span class="gv-sub">${stamp ? "read " + new Date(stamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}</span></div>`;
+const tabs = on => `<div class="gv-bar"><button type="button" data-tab="games"${on === "games" ? ' class="on"' : ""}>Games</button><button type="button" data-tab="players"${on === "players" ? ' class="on"' : ""}>Players</button><button type="button" data-tab="samples"${on === "samples" ? ' class="on"' : ""}>Sample games</button><button type="button" id="refresh" title="Read the games again">Refresh</button><span class="gv-sub">${stamp ? "read " + new Date(stamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}</span></div>`;
 function wireTabs() {
-  const rf = root.querySelector("#refresh"); if (rf) rf.onclick = () => { sure = null; load(); }; root.querySelectorAll("[data-tab]").forEach(b => { b.onclick = () => { sure = null; b.dataset.tab === "players" ? players() : list(); }; }); }
+  const rf = root.querySelector("#refresh"); if (rf) rf.onclick = () => { sure = null; load(); }; root.querySelectorAll("[data-tab]").forEach(b => { b.onclick = () => { sure = null; b.dataset.tab === "players" ? players() : b.dataset.tab === "samples" ? samples() : list(); }; }); }
 // a remove button that asks once more in the page itself (no browser pop-ups)
 const removeBar = (rs, what, id = "player") => rs.length ? `<div class="gv-bar gv-remove">${sure === id
   ? `<span class="gv-lost">Remove ${what} and all their data?</span><button type="button" data-yes="1">Yes, remove</button><button type="button" data-no="1">Cancel</button>`
@@ -70,7 +70,7 @@ function wireRemove(getRows, after, id = "player") {
     after(); open = null; list();
   };
 }
-const redraw = () => (open ? draw() : (view === "players" ? players() : list()));
+const redraw = () => (open ? draw() : (view === "players" ? players() : view === "samples" ? samples() : list()));
 let view = "games";
 /** Takes the games out of the index, the unfinished list and their rooms, and leaves a mark the collector obeys (its copy on the records branch goes at its next run). */
 async function removeGames(rs) {
@@ -111,7 +111,7 @@ function players() {
 }
 
 // a conceded game is a lost one (10 November 2026, Korbi: a player concedes once they know they have lost), so it shows as that
-const verdict = r => (r.live ? ["in progress", "gv-live"] : r.result.drawn ? ["drawn", ""] : r.result.won ? ["won", "gv-won"] : ["lost", "gv-lost"]);
+const verdict = r => (r.sample ? [`won by ${r.game.seats[r.result.winner]?.name || "seat " + (r.result.winner + 1)}`, ""] : r.live ? ["in progress", "gv-live"] : r.result.drawn ? ["drawn", ""] : r.result.won ? ["won", "gv-won"] : ["lost", "gv-lost"]);
 function list() {
   open = null; view = "games";
   const people = [...new Set(rows.map(r => r.name))].sort();
@@ -131,6 +131,27 @@ function list() {
   root.querySelector("#sAll").onsubmit = e => { e.preventDefault(); searchAll(root.querySelector("#sQ").value.trim(), shown); };
   const clear = root.querySelector("#sClear"); if (clear) clear.onclick = () => { search = { q: "", hits: [], busy: false, done: 0, of: 0, failed: 0 }; list(); };
   root.querySelectorAll("[data-hit]").forEach(b => { b.onclick = () => { const h = search.hits[Number(b.dataset.hit)]; show(h.r, h.i); }; });
+}
+
+// ---- sample games (18 Nov 2026, Korbi: games from the lab kept to look back through, each set with a note on why) ----
+// samples/samples.json: { sets: [{ title, note, games: [{ key, title, note, at, result, game }] }] }; Zero's games replay under the
+// lab's rules with their own chance (records.js, game.zero)
+const rulesOf = r => (r.sample ? labRules : shownRules);
+let sampleSets = null;
+async function samples() {
+  view = "samples"; open = null;
+  if (!sampleSets) {
+    root.innerHTML = `<h1>Dandan games</h1>${tabs("samples")}<p class="gv-sub">Loading the sample games…</p>`; wireTabs();
+    try { sampleSets = (await (await fetch("samples/samples.json", { cache: "no-cache" })).json()).sets.map(set => ({ ...set,
+      rows: set.games.map(g => ({ key: g.key, name: g.title, result: g.result, game: g.game, sample: { set: set.title, note: g.note, at: g.at } })) })); }
+    catch (e) { root.innerHTML = `<h1>Dandan games</h1>${tabs("samples")}<p class="gv-sub">Could not read the sample games: ${esc(e?.message || e)}</p>`; wireTabs(); return; }
+  }
+  const all = sampleSets.flatMap(x => x.rows);
+  root.innerHTML = `<h1>Dandan games</h1>${tabs("samples")}
+    ${sampleSets.map((set, k) => `<div class="gv-box"><h3>${esc(set.title)}</h3><p>${esc(set.note)}</p></div>
+    <ol class="gv-list">${set.rows.map(r => `<li><button type="button" data-s="${esc(r.key)}"><span class="meta">${esc(r.result.level)}</span><span><span class="who">${esc(r.name)}</span> <span class="meta">turn ${r.result.turns} · ${r.result.moves} moves · ${esc(r.sample.note)}</span></span><span class="res">${esc(verdict(r)[0])}</span></button></li>`).join("")}</ol>`).join("")}`;
+  wireTabs();
+  root.querySelectorAll("[data-s]").forEach(b => { b.onclick = () => show(all.find(r => r.key === b.dataset.s)); });
 }
 
 // ---- searching every game's log ----
@@ -185,13 +206,13 @@ async function show(r, line = null) {
   try {
     if (!game) game = (await once(sync, `crates/rooms/${r.room}/dandan/game`));
   } catch (e) { root.innerHTML = `<p class="gv-sub">Could not open it: ${esc(e?.message || e)}</p><button id="back">Back</button>`; root.querySelector("#back").onclick = list; return; }
-  const seats = names(game.seats, r.name), run = r.run || walk(shownRules, game), total = run.lens.length;
+  const seats = names(game.seats, r.name), run = r.run || walk(rulesOf(r), game), total = run.lens.length;
   // a game begun before the page recorded moves has only the moves made since (the page was updated while it was in hand), so it
   // cannot be played again from the deal: `n` counts every move, and a game with the first one missing starts at a land, not a keep
   const kept = typeof game.moves === "string" ? JSON.parse(game.moves) : game.moves || [], first = kept[0]?.[1]?.t;
   run.partial = (game.n > kept.length) ? game.n - kept.length : (run.error && run.at === 0 && first && !["keep", "mull"].includes(first)) ? -1 : 0;
   // opened from a search: at the move after which the line found is in the log, with the search words to find it again
-  const after = line == null ? total : (i => (i < 0 ? total : i + 1))(run.lens.findIndex(n => n > line));
+  const after = line == null ? (r.sample ? Math.min(total, r.sample.at) : total) : (i => (i < 0 ? total : i + 1))(run.lens.findIndex(n => n > line));
   open = { r, game, seats, run, total, at: after, find: line == null ? "" : search.q };
   draw();
 }
@@ -201,18 +222,18 @@ export const flagsOf = r => { try { return JSON.parse(r?.result?.flags || "[]");
 
 function draw() {
   const { r, game, seats, run, total, at, find } = open, [v, c] = verdict(r), flags = flagsOf(r);
-  const G = replay(shownRules, game, at), s = G.error ? null : G.state;
+  const G = replay(rulesOf(r), game, at), s = G.error ? null : G.state;
   const hits = find ? run.G.state.log.map((e, i) => ({ e, i })).filter(x => x.e.t && matches(words(x.e.t, seats), find)).slice(0, 40) : [];
   const cards = ids => ids.map(id => nm(id)).join(", ") || "—";
   const bf = seat => (s.bf || []).filter(p => p.ctl === seat).map(p => nm(p.id) + (p.tapped ? " (tapped)" : "")).join(", ") || "—";
   root.innerHTML = `<h1>Dandan games</h1>
-    <div class="gv-bar"><button type="button" id="back">All games</button></div>
-    ${removeBar([r], "this game", "game")}
-    <p><b>${esc(r.name)}</b> vs ${esc(seats[1]?.name || "Monte")} · ${when(r.key)} · <span class="${c}">${v}</span></p>
+    <div class="gv-bar"><button type="button" id="back">${r.sample ? "All sample games" : "All games"}</button></div>
+    ${r.sample ? `<div class="gv-box"><h3>${esc(r.sample.set)}</h3><p>${esc(r.sample.note)}</p><p class="gv-sub">Opened at move ${r.sample.at}, the resign point.</p></div>` : removeBar([r], "this game", "game")}
+    <p><b>${esc(seats[0]?.name)}</b> vs ${esc(seats[1]?.name || "Monte")} · ${r.sample ? esc(r.result.level) : when(r.key)} · <span class="${c}">${v}</span></p>
     <p class="gv-sub">${esc(r.result.level || "")}${r.result.think ? " · thinks " + esc(r.result.think) : ""} · turn ${r.result.turns} · ${total} moves${r.live ? " · last move written " + when(r.result.ended) : ""} · player ${esc(String(r.uid || "").slice(0, 8))} · ${esc(r.result.page || "")}</p>
     ${run.partial ? `<p class="gv-lost">This game began before moves were recorded${run.partial > 0 ? ` (${run.partial} of its first moves are missing)` : ""}, so it cannot be played again from the deal; only its result and summary are kept.</p>` : run.error ? `<p class="gv-lost">The moves stop making sense at move ${run.at + 1}: ${esc(run.error)} (the rules may have changed since).</p>` : ""}
     ${flags.length ? `<div class="gv-box"><h3>Flagged picks (coaches ${esc(r.result.coaches || "")})</h3><ol class="gv-found">${flags.map(f => `<li><button type="button" data-at="${f.at}">Turn ${f.turn} · move ${f.at}: <b>${esc(f.name)}</b> ${esc(f.pick)}${f.chance == null ? "" : ` (${Math.round(f.chance * 100)}%)`}${f.others?.length ? ` · others: ${esc(f.others.join(", "))}` : ""}</button></li>`).join("")}</ol></div>` : ""}
-    ${run.partial || run.error ? "" : `<div class="gv-bar"><a class="gv-btn" href="lab.html?k=${encodeURIComponent(new URLSearchParams(location.search).get("k") || "")}&replay=${encodeURIComponent(r.key)}&m=${at}">Replay in the lab, from move ${at}</a></div>`}
+    ${run.partial || run.error || r.sample ? "" : `<div class="gv-bar"><a class="gv-btn" href="lab.html?k=${encodeURIComponent(new URLSearchParams(location.search).get("k") || "")}&replay=${encodeURIComponent(r.key)}&m=${at}">Replay in the lab, from move ${at}</a></div>`}
     <div class="gv-bar"><button type="button" data-d="-10">−10</button><button type="button" data-d="-1">◀</button><b>move ${at} of ${total}</b><button type="button" data-d="1">▶</button><button type="button" data-d="10">+10</button></div>
     <input class="gv-slider" id="sl" type="range" min="0" max="${total}" value="${at}">
     ${s ? `<div class="gv-state">
@@ -224,7 +245,7 @@ function draw() {
     <div class="gv-bar"><input type="text" id="find" placeholder="Find in the log, e.g. Repulse" value="${esc(find)}"></div>
     <ol class="gv-found">${hits.map(h => `<li><button type="button" data-line="${h.i}">${esc(words(h.e.t, seats))}</button></li>`).join("")}</ol>`;
   const log = root.querySelector(".gv-log"); if (log) log.scrollTop = log.scrollHeight;
-  root.querySelector("#back").onclick = () => { sure = null; list(); };
+  root.querySelector("#back").onclick = () => { sure = null; r.sample ? samples() : list(); };
   wireRemove(() => [r], () => {}, "game");
   root.querySelector("#sl").oninput = e => { open.at = Number(e.target.value); draw(); };
   root.querySelector("#sl").onchange = e => { open.at = Number(e.target.value); draw(); };
