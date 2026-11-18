@@ -24,7 +24,15 @@ import { netOf } from "./zero-lib.mjs";
 
 const AT = new Map(NAMES.map((n, k) => [n, k])), EVERY = 6, J = x => JSON.parse(JSON.stringify(x)), real = Math.random;
 const nats = p => -Math.log((p || 0) + 1e-9);
+const lcgE = x => () => ((x = (x * 1664525 + 1013904223) >>> 0) / 4294967296);
+// log-gamma (Lanczos), for the pool's hypergeometric counts
+function lg(z) { const g = [676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if (z < 0.5) return Math.log(Math.PI / Math.abs(Math.sin(Math.PI * z))) - lg(1 - z); z -= 1; let x = 0.99999999999980993; g.forEach((v, i) => { x += v / (z + i + 1); }); const t = z + 7.5; return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x); }
 const NN = NAMES.length, LAND = NAMES.map(n => isLandId(DECK.indexOf(n))), CALLS = ["Memory Lapse", "Dandân"].map(n => NAMES.indexOf(n));
+// counts in the hidden hand (18 Nov 2026, Korbi: "how good is the belief tracking opponent cards, especially land count and
+// counter count"): lands, and the answers to a spell on the stack (Memory Lapse, Commit // Memory, Narset's Reversal)
+const ANSWER = NAMES.map(n => ["Memory Lapse", "Commit // Memory", "Narset's Reversal"].includes(n)), COUNTS = [LAND, ANSWER];
+const countsOf = ids => COUNTS.map(set => ids.reduce((a, id) => a + (set[AT.get(DECK[id])] ? 1 : 0), 0));
 /** The truth of the three calls for the unknown cards `ids`: [a Lapse, a Dandân, a land] as 0 or 1. */
 const truthOf = ids => { const ks = ids.map(id => AT.get(DECK[id])); return [...CALLS.map(c => (ks.includes(c) ? 1 : 0)), ks.some(k => LAND[k]) ? 1 : 0]; };
 /** Card by card (independent cards): the chance of at least one of name k, and of at least one land. */
@@ -33,8 +41,9 @@ const byCard = slots => [...CALLS.map(c => 1 - slots.reduce((a, p) => a * (1 - p
 if (process.argv[2] === "--sum") {
   const tot = {};
   for (const f of process.argv.slice(3)) for (const [k, v] of Object.entries(JSON.parse(fs.readFileSync(f, "utf8")))) {
-    const t = (tot[k] ||= { each: 0, chain: 0, n: 0, games: 0, brier: [0, 0, 0], m: 0 });
+    const t = (tot[k] ||= { each: 0, chain: 0, n: 0, games: 0, brier: [0, 0, 0], m: 0, cnt: null });
     t.each += v.each; t.chain += v.chain; t.n += v.n; t.games += v.games || 0; t.m += v.m || 0; (v.brier || []).forEach((b, i) => { t.brier[i] += b; });
+    if (v.cnt) { t.cnt ||= v.cnt.map(() => ({ n: 0, ae: 0, se: 0, nats: 0, exact: 0, bias: 0 })); v.cnt.forEach((c, i) => { for (const f in c) t.cnt[i][f] += c[f]; }); }
   }
   const pool = tot.pool, per = t => [t.each / t.n, t.chain / t.n];
   const [pe, pc] = per(pool);
@@ -43,6 +52,12 @@ if (process.argv[2] === "--sum") {
   for (const [k, t] of Object.entries(tot)) {
     const [e, c] = per(t), b = t.m ? t.brier.map(v => (v / t.m).toFixed(4).padStart(9)).join("") : "        -        -        -";
     console.log(k.padEnd(28) + e.toFixed(4).padStart(9) + c.toFixed(4).padStart(12) + (pe - e).toFixed(4).padStart(11) + (pc - c).toFixed(4).padStart(12) + "        " + b);
+  }
+  console.log("\ncounts in the hidden hand: mean abs error, RMS error, bias (guess less truth), chance of the exact count (higher is better), nats on it");
+  for (const [i, what] of ["lands", "answers (Lapse, Commit, Narset's)"].entries()) {
+    console.log(`  ${what}`);
+    for (const [k, t] of Object.entries(tot)) if (t.cnt) { const c = t.cnt[i], n = c.n || 1;
+      console.log("    " + k.padEnd(24) + `MAE ${(c.ae / n).toFixed(3)}  RMS ${Math.sqrt(c.se / n).toFixed(3)}  bias ${(c.bias / n >= 0 ? "+" : "") + (c.bias / n).toFixed(3)}  exact ${(100 * c.exact / n).toFixed(1)}%  nats ${(c.nats / n).toFixed(3)}  (${c.n} positions)`); }
   }
   process.exit(0);
 }
@@ -61,7 +76,11 @@ function scorer(sp) {
       // dealing n of U without putting back: the chance of none of x copies is the product of (U - x - j) / (U - j)
       const none = x => { let q = 1; for (let j = 0; j < ids.length; j++) q *= Math.max(0, U - x - j) / (U - j); return q; };
       const lands = u.reduce((a, v, k) => a + (LAND[k] ? v : 0), 0);
-      return { each: e, chain: c, calls: [...CALLS.map(k => 1 - none(u[k])), 1 - none(lands)] };
+      // the count's distribution: hypergeometric, n of U with K of the kind
+      const lnC = (a, b) => (b < 0 || b > a ? -Infinity : lg(a + 1) - lg(b + 1) - lg(a - b + 1));
+      const dist = COUNTS.map(set => { const K = u.reduce((a, v, k) => a + (set[k] ? v : 0), 0), n = ids.length;
+        return Array.from({ length: n + 1 }, (_, x) => Math.exp(lnC(K, x) + lnC(U - K, n - x) - lnC(U, n))); });
+      return { each: e, chain: c, calls: [...CALLS.map(k => 1 - none(u[k])), 1 - none(lands)], dist };
     } });
   }
   if (kind === "s1") {
@@ -75,7 +94,12 @@ function scorer(sp) {
     return () => { const F = [new ScryG(0, net), new ScryG(1, net)]; return { update(s, who, m, after) { for (const x of F) x.update(s, who, m, after); }, score(s, me, ids) {
       const r = F[me].score(s, ids.length);
       if (r.n !== ids.length) throw new Error(`Scry G scored ${r.n} hand cards, the eval ${ids.length}`);
-      return { each: r.each, chain: r.chain };
+      // the counts from whole hands it deals (256), the hand's cards alone
+      F[me].belief(s, 0);
+      const dist = COUNTS.map(() => new Float64Array(ids.length + 1)), rng = lcgE(7 + ids.length);
+      for (let h = 0; h < 256; h++) { const sl = F[me].hand(rng, ids.length).slots;
+        COUNTS.forEach((set, i) => { let x = 0; for (const c of sl) if (set[AT.get(F[me].P.vocab[c])]) x++; dist[i][x] += 1 / 256; }); }
+      return { each: r.each, chain: r.chain, dist };
     } }; };
   }
   const net = netOf(`${kind === "old12" ? b : a}-scry12`), Cls = kind === "old12" ? old.get(a) : Scry12;
@@ -86,7 +110,7 @@ function scorer(sp) {
     return { each: r.each, chain: r.chain, calls: [...CALLS.map(c => b.hit[c]), b.land] };
   } }; };
 }
-const makers = specs.map(scorer), out = Object.fromEntries(specs.map(k => [k, { each: 0, chain: 0, n: 0, games: 0, brier: [0, 0, 0], m: 0 }]));
+const makers = specs.map(scorer), out = Object.fromEntries(specs.map(k => [k, { each: 0, chain: 0, n: 0, games: 0, brier: [0, 0, 0], m: 0, cnt: COUNTS.map(() => ({ n: 0, ae: 0, se: 0, nats: 0, exact: 0, bias: 0 })) }]));
 let broken = 0;
 
 function replay(game) {
@@ -99,10 +123,12 @@ function replay(game) {
     if (seeded(mix(seed, 31337 + i))() < 1 / EVERY) for (const me of [0, 1]) {
       if (seenBy(s, me).unknown <= 0) continue;
       const truth = unknownSlots(s, me);
-      const tr = truthOf(truth);
+      const tr = truthOf(truth), tc = countsOf(truth);
       B.forEach((b, k) => {
         const r = b.score(s, me, truth), o = out[specs[k]]; o.each += r.each; o.chain += r.chain; o.n += truth.length;
         if (r.calls) { r.calls.forEach((q, i) => { o.brier[i] += (q - tr[i]) ** 2; }); o.m++; }
+        if (r.dist) r.dist.forEach((d, i) => { const x = tc[i], mean = d.reduce((a, p, j) => a + p * j, 0), c = o.cnt[i];
+          c.n++; c.ae += Math.abs(mean - x); c.se += (mean - x) ** 2; c.bias += mean - x; c.exact += d[x] || 0; c.nats += nats(d[x]); });
       });
     }
     Math.random = seeded(mix(seed, i + 1));

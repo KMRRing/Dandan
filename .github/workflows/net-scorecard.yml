@@ -1,0 +1,71 @@
+# The nets' scorecard (18 Nov 2026, Korbi: "metrics for each of the nets to test their performance, tests or numbers; how good is
+# the belief tracking opponent cards, especially land count and counter count"). Every net on the same held-out games (every
+# fifth seed of the batches given, never trained on by any net), so the numbers line up across generations:
+#   dealer (Scry G): nats a hidden card, the edge over the pool's odds, and the opponent's hidden lands and answers (Memory Lapse,
+#                    Commit // Memory, Narset's Reversal) counted: mean abs error, bias, chance of the exact count
+#   policy:          agreement with the search's move (all and by kind), the soft loss on the search's spread, the points given up
+#   value:           log loss and Brier on the game's result (the search's value left out), a coin 0.693
+# Read-only: the bucket with the fleet-reader key, the numbers in the run's summary.
+name: Nets' scorecard
+on:
+  workflow_dispatch:
+    inputs:
+      nets: { description: "Nets to score, comma-separated (lab/zero/nets/<name>-gpolicy, -gvalue, -scryg)", required: true, default: "gm2,zl15,zl16,zl17" }
+      games: { description: "Zero game jobs whose held-out games are the test", required: true, default: "zps018" }
+permissions:
+  contents: read
+jobs:
+  belief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Dealers
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          specs="pool"; for n in $(echo "${{ inputs.nets }}" | tr , ' '); do [ -f "lab/zero/nets/$n-scryg.json" ] && specs="$specs sg:$n"; done
+          for k in 0 1 2 3; do LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/belief-eval.mjs "${{ inputs.games }}" $k 4 $specs > "$RUNNER_TEMP/b$k.json" & done; wait
+          rm -f "$RUNNER_TEMP/key.json"
+          node lab/zero/belief-eval.mjs --sum "$RUNNER_TEMP"/b?.json | tee "$RUNNER_TEMP/belief.txt"
+          { echo '### Dealers (Scry G)'; echo '```'; cat "$RUNNER_TEMP/belief.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+  list:
+    runs-on: ubuntu-latest
+    outputs: { nets: "${{ steps.l.outputs.nets }}" }
+    steps:
+      - id: l
+        run: echo "nets=$(echo '${{ inputs.nets }}' | tr -cd 'A-Za-z0-9_,-' | jq -Rc 'split(",")')" >> "$GITHUB_OUTPUT"
+  nets:
+    needs: list
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix: { net: "${{ fromJSON(needs.list.outputs.nets) }}" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Pack the held-out games with this net's dealer, and score
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          pip install -q numpy
+          N="${{ matrix.net }}"; D="$RUNNER_TEMP/p"; S="lab/zero/nets/$N-scryg.json"
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          # VBLEND=0: the value rows' target is the game's result alone
+          for k in 0 1 2 3; do HOLD_ONLY=1 ENC=general VBLEND=0 HANDS=256 LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D/$k" "${{ inputs.games }}" "$S" $k 4 > "$RUNNER_TEMP/t$k.txt" & done; wait
+          rm -f "$RUNNER_TEMP/key.json"
+          tail -n 1 "$RUNNER_TEMP"/t?.txt
+          python3 lab/zero/pack-merge.py "$RUNNER_TEMP/m" "$D"/[0-9]
+          set -o pipefail
+          python3 lab/policy_np.py "$RUNNER_TEMP/m/a" /tmp/p.json --form head2 --h1 128 --h2 64 --h3 64 --soft 0.02 --epochs 0 --init "lab/zero/nets/$N-gpolicy.json" | tee "$RUNNER_TEMP/pol.txt"
+          python3 lab/zero/value_np.py "$RUNNER_TEMP/m/v" /tmp/v.json --shape 128x64 --epochs 0 --init "lab/zero/nets/$N-gvalue.json" | tee "$RUNNER_TEMP/val.txt"
+          python3 lab/zero/scorecard-line.py "$N" "$RUNNER_TEMP/pol.txt" "$RUNNER_TEMP/val.txt" | tee -a "$GITHUB_STEP_SUMMARY"

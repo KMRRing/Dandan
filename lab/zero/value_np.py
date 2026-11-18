@@ -103,4 +103,14 @@ for l, (w, b) in enumerate(zip(Wb, Bb)):
 json.dump(dict(source="lab/zero/value_np.py", note=f"Zero value net, {A.shape}, {R} rows", metrics=dict(heldLoss=round(float(best), 4), rows=int(R), epoch=bestE), layers=layers), open(A.out, "w"))
 open(A.out, "a").write("\n")
 say(f"best held-out loss {best:.4f} at epoch {bestE} (a coin: 0.6931)")
+# the scorecard's other numbers on the held-out rows with the net kept (18 Nov 2026): Brier and how often the favourite wins
+W, B = [w.copy() for w in Wb], [b.copy() for b in Bb]
+if len(he):
+    ps = []
+    for s0 in range(0, len(he), 65536):
+        j = he[s0:s0 + 65536]
+        d = g(np.asarray(M[j], dtype=np.float32))[-1][:, 0] - g(np.asarray(T[j], dtype=np.float32))[-1][:, 0]
+        ps.append(1 / (1 + np.exp(-np.clip(d, -30, 30))))
+    p_ = np.concatenate(ps); y_ = Y[he]
+    say(f"scorecard: rows {len(he)}, log loss {best:.4f}, Brier {float(((p_ - y_) ** 2).mean()):.4f}, favourite right {float(((p_ > 0.5) == (y_ > 0.5)).mean()):.4f}")
 if A.init and bestE == 0: say("WARNING: no epoch beat the warm start: the net written is the warm start, unchanged")

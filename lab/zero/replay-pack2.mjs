@@ -25,6 +25,8 @@ const GEN = process.env.ENC === "general";
 // the general view is ~1,260 numbers: stored as 16-bit floats (half the room; the trainers read them in place, a memory map)
 // and, with KEEP / VKEEP (env), a share of the decisions and of the value rows kept, chosen by the game's seed (17 Nov 2026)
 const KEEP = Number(process.env.KEEP || 1), VKEEP = Number(process.env.VKEEP || 1);
+// HOLD_ONLY=1 (18 Nov 2026, the nets' scorecard, lab/zero/scorecard): the held-out games alone (every fifth seed, never trained on)
+const HOLD_ONLY = process.env.HOLD_ONLY === "1";
 const F32 = new Float32Array(1), U32 = new Uint32Array(F32.buffer);
 function half(v) {   // a float32 as IEEE 754 binary16, rounded to nearest
   F32[0] = v; const x = U32[0], sign = (x >>> 16) & 0x8000, e = ((x >>> 23) & 0xff) - 127 + 15, m = x & 0x7fffff;
@@ -106,6 +108,7 @@ function valueOld(s, d, played, explored) {
 }
 function replay(game, decisions) {
   const seed = game.seed, x3 = game.explore3 ? game.explore3.i : null, hold = seed % 5 === 0;
+  if (HOLD_ONLY && !hold) return;
   let G = newRecord(rules, { seats: 2, seed, now: 0 }), lastTurn = -1;
   const F = net.scryg ? [new ScryG(0, net), new ScryG(1, net)] : [new Scry12(0, net, { hands: HANDS }), new Scry12(1, net, { hands: HANDS })], vrows = [];
   for (let i = 0; i < game.moves.length; i++) {
