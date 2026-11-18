@@ -1313,3 +1313,5 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   of the shortcuts (no early or decided stops), and it never resigns; the clean side keeps its rules. zps011 so far: decided
   positions 1.5% of the search's deals (22% before), 110 searched decisions a game (187), 100 of 128 games resigned, 0 of 12
   would-be resignations wrong. One local run with the yardstick rival: 4 games, the g12r-C one played to the library's end.
+
+- 2026-11-18 04:00Z ops: Chicago 8c 3c385656 4→3 (3 workers on 4 nodes for 2 checks; the 02:27Z trim took a working node). Chicago 2c held at 4 despite $0.001 (new k8s nodes get no pods). All classes at floor. Queue zps011 478 waiting (~04:45Z empty). Fleet 03:46Z: 83 machines, 625/634 busy, reqCostH $0.26. Google: no compute, fleet/ 7 files, private/ scheduler.json only.
