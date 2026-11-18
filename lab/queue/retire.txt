@@ -42,3 +42,4 @@ zps013  # 2026-11-18T07:36:35.750Z Zero's loop: made with the nets before zl16
 zps014  # 2026-11-18T07:36:35.750Z Zero's loop: made with the nets before zl16
 zps015  # 2026-11-18T09:35:58.028Z Zero's loop: made with the nets before zl17
 zps016  # 2026-11-18T09:35:58.028Z Zero's loop: made with the nets before zl17
+zps017  # 2026-11-18T09:42:04Z closed by hand: made with the playout cap; training games go deep from here (Korbi 11:41 local)
