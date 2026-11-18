@@ -26,7 +26,8 @@
     "2026-11-18T05:28:35.711Z generation 16: zl15 against gm2: 50.2% over 265 games",
     "2026-11-18T05:28:35.711Z generation 16: zl15 against the leaky g12r-C: 50.5% over 105 games",
     "2026-11-18T05:28:35.711Z generation 16: training zl16 warm from zl15 on zps006,zps007,zps008,zps009,zps010,zps011,zps012",
-    "2026-11-18T07:25:00Z generation 16: the 05:28Z step's training dispatch was refused (HTTP 422: the dispatcher turned policy_args into \"policy args\"); fixed in zero-loop.yml, training started by hand at 07:25Z; the loop now asks again when nets are 100 minutes late"
+    "2026-11-18T07:25:00Z generation 16: the 05:28Z step's training dispatch was refused (HTTP 422: the dispatcher turned policy_args into \"policy args\"); fixed in zero-loop.yml, training started by hand at 07:25Z; the loop now asks again when nets are 100 minutes late",
+    "2026-11-18T07:28:31.909Z generation 16: zl16's nets are late: training asked for again (1)"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -50,7 +51,8 @@
     "dispatch": [
       "general-train.yml games=zps006,zps007,zps008,zps009,zps010,zps011,zps012 name=zl16 init=zl15 scry=zl15 belief=scryg value=128x64 keep=0.25 vkeep=0.15 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--decay_0.9_--soft_0.02",
       "scryg-train.yml games=zps006,zps007,zps008,zps009,zps010,zps011,zps012 name=zl16 init=zl15 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128"
-    ]
+    ],
+    "retries": 1
   },
   "history": [
     {
