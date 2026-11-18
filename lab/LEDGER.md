@@ -1320,3 +1320,5 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   cap=0.25:128 — a quarter of decisions get the full search and become policy targets, the rest play from 128 deals with no
   close-call look and leave no decision line (value rows from the result). From the filler's next batch (zps012). One local run
   of 2 games packed clean.
+
+- 2026-11-18 04:47Z ops: Chicago 8c 3c385656 shows 2 workers on 3 nodes — both trims (5→4, 4→3) removed a working node and kept the idle one. Stopped count-trimming it; the idle node needs removing by name, or the pod fixed (exec). Queue nearly empty: zps011 8 left. Fleet 04:39Z: 82 machines, 617/626 busy, reqCostH $0.20. Prices at floor. Google clean.
