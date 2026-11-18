@@ -108,8 +108,9 @@ if (L.phase === "play") {
     log(`generation ${L.gen}: training ${L.challenger} warm from ${L.champion} on ${window.join(",")}`);
     if (GEN && BELIEF === "scryg") {
       // the policy and value packed with the latest dealer's beliefs; the dealer trained on the same games, warm from the latest
-      say(`DISPATCH general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.champion} belief=scryg value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
-      say(`DISPATCH scryg-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion}${L.beliefArgs ? " " + L.beliefArgs : ""}`);
+      L.trained.dispatch = [`general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.champion} belief=scryg value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`,
+        `scryg-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion}${L.beliefArgs ? " " + L.beliefArgs : ""}`];
+      for (const d of L.trained.dispatch) say(`DISPATCH ${d}`);
     } else if (GEN) say(`DISPATCH general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.scry} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
     else say(`DISPATCH zero-train-ext.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
     L.nextFrom = got.length ? got[got.length - 1].n + 1 : L.genFrom;   // the next generation's first batch
@@ -145,6 +146,14 @@ if (L.phase === "play") {
     L.genFrom = open.length ? open[open.length - 1].n + 1 : L.nextFrom;
     L.gen++; L.phase = "play"; delete L.challenger; delete L.genSince; delete L.reading; delete L.yardReading;
   } else if (Date.now() - Date.parse(L.trained.at) > 12 * 3600e3) log(`generation ${L.gen}: no nets for ${L.challenger} 12 hours after training began: look at zero-train-ext.yml's runs`);
+  // the training asked for again when its nets are 100 minutes late (18 Nov: a refused dispatch left generation 16 waiting two
+  // hours); twice at most, the nets that are already in are kept (the runs commit only their own files)
+  else if (L.trained.dispatch && Date.now() - Date.parse(L.trained.at) > 100 * 60e3 * ((L.trained.retries || 0) + 1) && (L.trained.retries || 0) < 2) {
+    L.trained.retries = (L.trained.retries || 0) + 1;
+    log(`generation ${L.gen}: ${L.challenger}'s nets are late: training asked for again (${L.trained.retries})`);
+    const have = n => fs.existsSync(new URL(`./nets/${L.challenger}-${n}.json`, import.meta.url));
+    for (const d of L.trained.dispatch) if (d.startsWith("general") ? !(have("gpolicy") && have("gvalue")) : !have("scryg")) say(`DISPATCH ${d}`);
+  }
   else say(`generation ${L.gen}: ${L.challenger} still training (since ${L.trained.at})`);
 }
 save();

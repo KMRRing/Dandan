@@ -34,7 +34,9 @@ jobs:
           fi
           # what it asked for
           grep '^DISPATCH ' "$RUNNER_TEMP/out.txt" | while read -r _ wf rest; do
-            args=(); for kv in $rest; do args+=(-f "${kv//_/ }"); done   # "_" stands for a space in a value
+            # "_" stands for a space in a value only: the key keeps its underscores (18 Nov 07:20Z: policy_args became "policy args",
+            # GitHub refused the dispatch with 422, and generation 16 waited two hours for a training that never started)
+            args=(); for kv in $rest; do k="${kv%%=*}"; v="${kv#*=}"; args+=(-f "$k=${v//_/ }"); done
             gh workflow run "$wf" --ref main "${args[@]}"
           done
           if grep -q '^QUEUE \|^RETIRE ' "$RUNNER_TEMP/out.txt" || ! git diff --quiet HEAD~1 -- lab/filler.json 2>/dev/null; then gh workflow run queue.yml --ref main; fi
