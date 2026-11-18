@@ -12,6 +12,7 @@ for (const id of ids.split(",")) for (const name of (await store.list(`results/$
   for (const g of lines) {
     if (g.game == null || !g.would || g.winner !== g.would.seat) continue;
     const dec = lines.filter(d => d.c && d.g === g.seed && d.seat === g.would.seat && d.i >= g.would.i - 6).map(d => ({ i: d.i, v: d.v }));
-    console.log("WOULDWON " + JSON.stringify({ job: id, part: name, ...g, dec }));
+    // base64: the run log masks characters of the key file (braces) in plain JSON
+    console.log("WOULDWON " + Buffer.from(JSON.stringify({ job: id, part: name, ...g, dec })).toString("base64"));
   }
 }
