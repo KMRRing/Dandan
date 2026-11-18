@@ -20,6 +20,7 @@ on:
       vblend: { description: "Share of the search's value in the value targets", required: false, default: "0.5" }
       belief: { description: "The belief the pack reads: scry12 (Scry 1.2) or scryg (the general dealer, lab/zero/nets/<scry>-scryg.json)", required: false, default: "scry12" }
       init: { description: "Warm start: the general nets to begin from (lab/zero/nets/<init>-gpolicy, -gvalue), same sizes; empty fresh", required: false, default: "" }
+      policy_init: { description: "warm: the policy starts from init too; fresh: only the value does (18 Nov 2026: fresh on 8 batches gave up 0.783 points, warm 0.810)", required: false, default: "warm" }
       hands: { description: "Scry 1.2's dealt hands a decision in the pack (1,024 in play; 256 packs four times as fast)", required: false, default: "256" }
 permissions:
   contents: write
@@ -73,7 +74,7 @@ jobs:
           if [ "${{ matrix.net }}" = gvalue ]; then
             python3 lab/zero/value_np.py "$D/v" "out/$N-gvalue.json" --shape "${{ inputs.value }}" $(ini gvalue) ${{ inputs.value_args }} | tee "$RUNNER_TEMP/log.txt"
           else
-            python3 lab/policy_np.py "$D/a" "out/$N-gpolicy.json" --form head $(ini gpolicy) ${{ inputs.policy_args }} | tee "$RUNNER_TEMP/log.txt"
+            python3 lab/policy_np.py "$D/a" "out/$N-gpolicy.json" --form head $([ "${{ inputs.policy_init }}" = fresh ] || ini gpolicy) ${{ inputs.policy_args }} | tee "$RUNNER_TEMP/log.txt"
           fi
           cp out/* "$RUNNER_TEMP/" 2>/dev/null || true
           { echo '```'; tail -c 20000 "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

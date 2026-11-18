@@ -99,14 +99,16 @@ if (L.phase === "play") {
       if (y?.n) { log(`generation ${L.gen}: ${L.champion} against the leaky ${L.yardVs.split(":")[0]}: ${(100 * y.score).toFixed(1)}% over ${y.n} games`); L.yardReading = { nets: L.champion, against: L.yardVs.split(":")[0], ...y }; }
     }
     L.challenger = `${L.prefix}${L.gen}`;
-    // the window: this generation's games and the one before's, at most maxWindow games (the oldest batches go first)
+    // the window: every game since windowFrom, at most maxWindow games (the oldest batches go first); 18 Nov 2026: windowFrom no
+    // longer moves at the crown, so the window is the last maxWindow games (about three generations): the policy trained on
+    // 8 batches gave up 0.783 points against 0.820 on 4
     const all = await games(L.windowFrom);
     while (all.length > 1 && all.reduce((x, b) => x + b.games, 0) - all[0].games >= L.maxWindow) all.shift();
     // batches from outside the filler's numbering kept in the window (18 Nov 2026: zpq001, the quick test batch) until it moves past them
     const window = [...(L.extraWindow || []), ...all.map(b => b.id)];
     L.trained = { from: window, at: now };
     L.phase = "train";
-    log(`generation ${L.gen}: training ${L.challenger} warm from ${L.champion} on ${window.join(",")}`);
+    log(`generation ${L.gen}: training ${L.challenger} (${/policy_init=fresh/.test(L.trainArgs || "") ? "policy fresh, value and dealer" : ""} warm from ${L.champion}) on ${window.join(",")}`);
     if (GEN && BELIEF === "scryg") {
       // the policy and value packed with the latest dealer's beliefs; the dealer trained on the same games, warm from the latest
       // the dealer first (18 Nov 2026): the policy and value then pack with the new dealer's beliefs, the ones they play with;
@@ -159,7 +161,9 @@ if (L.phase === "play") {
     try { const t = execSync(`node ${here}../suite.mjs ${ref(L.champion)} 256 ${L.flags} --json`, { encoding: "utf8", timeout: 20 * 60e3 }); suite = JSON.parse(t.trim().split("\n").pop()); say(`suite: ${suite.passed} of ${suite.of} passed`); }
     catch (e) { say(`suite: did not run (${String(e.message).slice(0, 120)})`); }
     L.history = [...(L.history || []), { gen: L.gen, nets: L.champion, from: prev, window: L.trained.from, at: now, ...(L.reading ? { reading: L.reading } : {}), ...(L.yardReading ? { yard: L.yardReading } : {}), ...(suite ? { suite: `${suite.passed}/${suite.of}`, failed: suite.positions.filter(x => !x.pass).map(x => x.id) } : {}) }];
-    L.windowFrom = L.genFrom;   // the window: the generation just played and the next
+    // windowFrom stays (the window is trimmed to maxWindow games instead); the batches outside the filler's numbering train
+    // one generation only
+    delete L.extraWindow;
     L.genFrom = open.length ? open[open.length - 1].n + 1 : L.nextFrom;
     L.gen++; L.phase = "play"; delete L.challenger; delete L.genSince; delete L.reading; delete L.yardReading;
   } else if (Date.now() - Date.parse(L.trained.at) > 12 * 3600e3) log(`generation ${L.gen}: no nets for ${L.challenger} 12 hours after training began: look at zero-train-ext.yml's runs`);
