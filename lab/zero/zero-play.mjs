@@ -71,7 +71,9 @@ for (let g = first; g < first + n; g++) {
   const R = rivalOf(g), rival = R?.brain || null, VS_NETS = R?.nets || "";
   const vsSeat = R ? Math.floor(g / R.every) % 2 : -1, brainOf = seat => (seat === vsSeat ? rival : brain);
   brain.reset(); if (rival) rival.reset();
-  const noResign = !RESIGN || seeded(mix(seed, 777001))() < RESIGN.keep, streak = [0, 0];
+  // games against a rival always play out (18 Nov: zl16 resigned 49 of its 69 losses to the full g12r-C; the score has to be
+  // the true one, and `would` shows what resigning there would have cost)
+  const noResign = !RESIGN || vsSeat >= 0 || seeded(mix(seed, 777001))() < RESIGN.keep, streak = [0, 0];
   let resigned = null, would = null;
   const rescued = [];
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
