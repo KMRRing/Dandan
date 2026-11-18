@@ -1280,3 +1280,4 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   limited to jobs/, retired/ and the filler's results). The loop's 22:43Z step moved generation 15 to training (gm2 vs gm1
   49.7% over 368 games) but timed out before dispatching; training zl15 started by hand at 23:58Z on zps006-008. Before a
   second B2 attempt: s3Store retries with backoff on 503, and the vs score stops reading every part each step.
+- 00:18Z ops: ch.vs1.2xlarge-iad lifted $0.010 → $0.035 (close to our $0.04 bid) → e7f00bce and VM a2b0e1bf 6 → 4. Dallas now reports workers on its remaining nodes (3×2c, 1×8c) after the 23:48Z trim — consistent with a fixed number of worker pods per cluster rather than one per node. Fleet 00:06Z: 90 machines, 673/682 busy, 902 waiting, reqCostH $0.23.
