@@ -143,6 +143,9 @@ if (L.phase === "play") {
       try { const m = JSON.parse(fs.readFileSync(new URL(`./nets/${L.champion}-${k}.json`, import.meta.url))).metrics || {};
         if (m.epoch === 0) say(`WARNING: ${L.champion}-${k} is its warm start unchanged (no epoch beat it on the held-out games)`); } catch {}
     }
+    // the nets' scorecard (18 Nov 2026, Korbi 14:11 local): the new nets beside the last two on the newest games' held-out seeds
+    if (GEN) { const names = [...new Set([...(L.history || []).slice(-2).map(h => h.nets), L.champion])].join(",");
+      say(`DISPATCH net-scorecard.yml nets=${names} games=${L.trained.from.slice(-2).join(",")}`); }
     // Monte's test suite on the new nets (lab/suite.json: the positions Korbi flagged), kept with the generation
     let suite = null;
     try { const t = execSync(`node ${here}../suite.mjs ${ref(L.champion)} 256 ${L.flags} --json`, { encoding: "utf8", timeout: 20 * 60e3 }); suite = JSON.parse(t.trim().split("\n").pop()); say(`suite: ${suite.passed} of ${suite.of} passed`); }

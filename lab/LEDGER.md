@@ -1341,3 +1341,11 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
 - Fixed: the epoch kept by the loss the training lowers (softLoss with --soft); value and policy files carry the epoch kept; a WARNING in the training log and in the loop when a net comes out as its warm start.
 - Value net: its held-out loss is the training's own loss, so no mismatch; the warm start sits at its optimum and every epoch past 1 overfits on 15% of the value rows (vkeep 0.15). For the three zl18 nets: vkeep 0.5, both arms the same.
 - The held-out split is by seed (seed % 5), the same games every run: no leak of held-out games into the warm start.
+
+## 18 Nov ~12:25Z — the nets' scorecard (Korbi 14:11 local)
+- net-scorecard.yml: every net on the same held-out games (seed % 5, never trained on). First run 44302059726 on zps015+zps016 (891 held-out games):
+  - policy agrees with the search: gm2 64.4, zl15 64.5, zl16 64.4, **zl17 67.5%** (land 22→45%, cast 37→48%, pass 93→86%); soft loss 1.099 → 0.961.
+  - value log loss: gm2 0.452, zl15 0.453, zl16 0.446, zl17 0.446 (zl17 = zl16); Brier 0.148→0.146; favourite right 78.5→78.7%.
+  - dealer edge over the pool (nats a card, whole hand): gm2 0.134, zl15 0.167, zl16 0.190, zl17 0.204 — the one net that learned every generation.
+  - opponent's hidden lands: pool MAE 0.77 (bias +0.32), zl17 0.60, exact count 34→44%; answers (Lapse, Commit, Narset's): pool 0.76 (bias −0.40, players hold answers), zl17 0.65, exact 37→38%.
+- The loop dispatches it at every crown (the new nets and the last two, on the window's newest two batches).
