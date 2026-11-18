@@ -102,21 +102,29 @@ if (L.phase === "play") {
     // the window: this generation's games and the one before's, at most maxWindow games (the oldest batches go first)
     const all = await games(L.windowFrom);
     while (all.length > 1 && all.reduce((x, b) => x + b.games, 0) - all[0].games >= L.maxWindow) all.shift();
-    const window = all.map(b => b.id);
+    // batches from outside the filler's numbering kept in the window (18 Nov 2026: zpq001, the quick test batch) until it moves past them
+    const window = [...(L.extraWindow || []), ...all.map(b => b.id)];
     L.trained = { from: window, at: now };
     L.phase = "train";
     log(`generation ${L.gen}: training ${L.challenger} warm from ${L.champion} on ${window.join(",")}`);
     if (GEN && BELIEF === "scryg") {
       // the policy and value packed with the latest dealer's beliefs; the dealer trained on the same games, warm from the latest
-      L.trained.dispatch = [`general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.champion} belief=scryg value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`,
-        `scryg-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion}${L.beliefArgs ? " " + L.beliefArgs : ""}`];
+      // the dealer first (18 Nov 2026): the policy and value then pack with the new dealer's beliefs, the ones they play with;
+      // the general training is asked for once the dealer's net is in (the train phase below)
+      L.trained.dispatch = [`scryg-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion}${L.beliefArgs ? " " + L.beliefArgs : ""}`];
+      L.trained.next = `general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.challenger} belief=scryg value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`;
       for (const d of L.trained.dispatch) say(`DISPATCH ${d}`);
     } else if (GEN) say(`DISPATCH general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.scry} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
     else say(`DISPATCH zero-train-ext.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
     L.nextFrom = got.length ? got[got.length - 1].n + 1 : L.genFrom;   // the next generation's first batch
   }
 } else if (L.phase === "train") {
-  if (nets(L.challenger)) {
+  const hasNet = k => fs.existsSync(new URL(`./nets/${L.challenger}-${k}.json`, import.meta.url));
+  if (L.trained.next && hasNet(BELIEF)) {
+    log(`generation ${L.gen}: ${L.challenger}'s dealer is in: its policy and value nets asked for`);
+    L.trained.dispatch.push(L.trained.next); say(`DISPATCH ${L.trained.next}`);
+    delete L.trained.next; L.trained.asked = new Date().toISOString(); L.trained.retries = 0;
+  } else if (nets(L.challenger)) {
     const prev = L.champion;
     L.champion = L.challenger;
     // the nets the filler plays: "<name>-policy <name>-value" on the old line, "gen:<name> -" on the general

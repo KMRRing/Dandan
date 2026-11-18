@@ -2,9 +2,9 @@
   "prefix": "zps",
   "script": "zero-play.mjs",
   "shards": 1200,
-  "games": 2400,
-  "seedBase": 200014400,
+  "games": 9600,
+  "seedBase": 400000000,
   "timeoutMin": 300,
-  "args": "{shard} {shards} {out} 1024 2400 {seed} gen:zl17 - 100 deeper=0.03 deepmax=4 early=256:0.03:6,512:0.02 first=16 steady=2 decided=64:0.97:0.03 resign=0.03:2:0.1 vs=gen:zl16:10,g12r-C:20",
-  "purpose": "Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets zl17 against themselves; games for the next generation. 1 decision in 100 explored; the search rule (Korbi 19:51, \"more ambitious\"): up to 1,024 deals, the close-call look up to 4 turns ahead, stopping at 256 deals when the leader is 3 points ahead with fewer than 6 options and at 512 when 2 points ahead; 2,400 games a generation, 2 a shard (Korbi 19:51); 1 game in 10 against the previous nets. Deep training games (Korbi 18 Nov 11:41 local, \"do training on deep\"): every move fully searched, no playout cap."
+  "args": "{shard} {shards} {out} 256 9600 {seed} gen:zl18b - 100 deeper=0.03 first=16 steady=2 decided=64:0.97:0.03 resign=0.03:2:0.1 vs=gen:zl17:10,g12r-C:20",
+  "purpose": "Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets zl18b against themselves; games for the next generation. The quick recipe (Korbi 18 Nov 12:21 local test, 21:21 crown): 256 deals on every move, the close-call look one turn, 9,600 games a generation (8 a shard); resigning after the confirming deep search; 1 game in 10 against the previous nets and 1 in 20 against g12r-C, both sides full, played out. Decision lines carry the search's replies to every cast (`r`)."
 }
