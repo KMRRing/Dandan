@@ -5,6 +5,6 @@
   "games": 2400,
   "seedBase": 200014400,
   "timeoutMin": 300,
-  "args": "{shard} {shards} {out} 1024 2400 {seed} gen:gm2 - 100 deeper=0.03 deepmax=4 early=256:0.03:6,512:0.02 first=16 steady=2 vs=gen:gm1:10",
-  "purpose": "Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets gm2 against themselves; games for the next generation. mjs) plays the latest nets gm1 against themselves; games for the next generation. 03), 1 decision in 100 explored; the search rule (Korbi 19:51, \"more ambitious\"): up to 1,024 deals, the close-call look up to 4 turns ahead, stopping at 256 deals when the leader is 3 points ahead with fewer than 6 options and at 512 when 2 points ahead; 2,400 games a generation, 2 a shard (Korbi 19:51); 1 game in 10 against the previous nets."
+  "args": "{shard} {shards} {out} 1024 2400 {seed} gen:zl15 - 100 deeper=0.03 deepmax=4 early=256:0.03:6,512:0.02 first=16 steady=2 vs=gen:gm2:10",
+  "purpose": "Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets zl15 against themselves; games for the next generation. 1 decision in 100 explored; the search rule (Korbi 19:51, \"more ambitious\"): up to 1,024 deals, the close-call look up to 4 turns ahead, stopping at 256 deals when the leader is 3 points ahead with fewer than 6 options and at 512 when 2 points ahead; 2,400 games a generation, 2 a shard (Korbi 19:51); 1 game in 10 against the previous nets."
 }
