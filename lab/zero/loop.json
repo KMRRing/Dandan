@@ -12,8 +12,8 @@
   "trainArgs": "keep=0.25 vkeep=0.15 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--decay_0.9_--soft_0.02",
   "genFrom": 9,
   "windowFrom": 6,
-  "nextFrom": 9,
-  "phase": "play",
+  "nextFrom": 13,
+  "phase": "train",
   "log": [
     "2026-11-17T15:10:53.743Z generation 13: gm1 (warm from g12r-C) plays from the filler's next batch",
     "2026-11-17T16:10:40Z generation 14: gm2 (gm1 grown to view 2, 2602 inputs, with the general dealer sg1: Korbi 17:27, full general) to be crowned by the next step; the belief from here on is scryg",
@@ -22,7 +22,10 @@
     "2026-11-17T22:43:34.336Z generation 15: gm2 against gm1: 49.7% over 368 games",
     "2026-11-17T22:43:34.336Z generation 15: training zl15 warm from gm2 on zps006,zps007,zps008",
     "2026-11-18T01:03:05.620Z generation 15: zl15 (warm from gm2) plays from the filler's next batch",
-    "2026-11-18T01:58:00Z the yardstick (Korbi 03:52: since the leak was closed, is the honest line gaining?): 1 game in 20 against the leaky old engine g12r-C, every generation, read as yardReading; zps009 closed so generation 16 has them"
+    "2026-11-18T01:58:00Z the yardstick (Korbi 03:52: since the leak was closed, is the honest line gaining?): 1 game in 20 against the leaky old engine g12r-C, every generation, read as yardReading; zps009 closed so generation 16 has them",
+    "2026-11-18T05:28:35.711Z generation 16: zl15 against gm2: 50.2% over 265 games",
+    "2026-11-18T05:28:35.711Z generation 16: zl15 against the leaky g12r-C: 50.5% over 105 games",
+    "2026-11-18T05:28:35.711Z generation 16: training zl16 warm from zl15 on zps006,zps007,zps008,zps009,zps010,zps011,zps012"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -36,9 +39,13 @@
     "from": [
       "zps006",
       "zps007",
-      "zps008"
+      "zps008",
+      "zps009",
+      "zps010",
+      "zps011",
+      "zps012"
     ],
-    "at": "2026-11-17T22:43:34.336Z"
+    "at": "2026-11-18T05:28:35.711Z"
   },
   "history": [
     {
@@ -107,15 +114,11 @@
   ],
   "progress": {
     "gen": 16,
-    "games": 2364,
+    "games": 2682,
     "of": 2400,
-    "at": "2026-11-18T05:18:31.591Z",
+    "at": "2026-11-18T05:28:35.711Z",
     "nets": "zl15",
     "pace": [
-      [
-        "2026-11-18T01:37:40.062Z",
-        0
-      ],
       [
         "2026-11-18T01:38:31.733Z",
         0
@@ -207,16 +210,3183 @@
       [
         "2026-11-18T05:18:31.591Z",
         2364
+      ],
+      [
+        "2026-11-18T05:28:35.711Z",
+        2682
       ]
     ]
   },
   "belief": "scryg",
   "beliefArgs": "args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
   "reading": {
-    "nets": "gm2",
-    "against": "gm1",
-    "n": 368,
-    "score": 0.49728260869565216
+    "nets": "zl15",
+    "against": "gm2",
+    "n": 265,
+    "score": 0.5018867924528302
   },
-  "yardVs": "g12r-C:20"
+  "yardVs": "g12r-C:20",
+  "vsParts": {
+    "results/zps009/part-0.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-1.jsonl": {},
+    "results/zps009/part-10.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-100.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-101.jsonl": {},
+    "results/zps009/part-103.jsonl": {},
+    "results/zps009/part-104.jsonl": {},
+    "results/zps009/part-105.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-106.jsonl": {},
+    "results/zps009/part-107.jsonl": {},
+    "results/zps009/part-108.jsonl": {},
+    "results/zps009/part-109.jsonl": {},
+    "results/zps009/part-11.jsonl": {},
+    "results/zps009/part-110.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-111.jsonl": {},
+    "results/zps009/part-112.jsonl": {},
+    "results/zps009/part-113.jsonl": {},
+    "results/zps009/part-115.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-116.jsonl": {},
+    "results/zps009/part-117.jsonl": {},
+    "results/zps009/part-118.jsonl": {},
+    "results/zps009/part-119.jsonl": {},
+    "results/zps009/part-12.jsonl": {},
+    "results/zps009/part-120.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-121.jsonl": {},
+    "results/zps009/part-122.jsonl": {},
+    "results/zps009/part-123.jsonl": {},
+    "results/zps009/part-124.jsonl": {},
+    "results/zps009/part-125.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-127.jsonl": {},
+    "results/zps009/part-129.jsonl": {},
+    "results/zps009/part-13.jsonl": {},
+    "results/zps009/part-130.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-131.jsonl": {},
+    "results/zps009/part-132.jsonl": {},
+    "results/zps009/part-133.jsonl": {},
+    "results/zps009/part-134.jsonl": {},
+    "results/zps009/part-135.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-136.jsonl": {},
+    "results/zps009/part-137.jsonl": {},
+    "results/zps009/part-138.jsonl": {},
+    "results/zps009/part-139.jsonl": {},
+    "results/zps009/part-14.jsonl": {},
+    "results/zps009/part-140.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-141.jsonl": {},
+    "results/zps009/part-142.jsonl": {},
+    "results/zps009/part-143.jsonl": {},
+    "results/zps009/part-144.jsonl": {},
+    "results/zps009/part-145.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-146.jsonl": {},
+    "results/zps009/part-148.jsonl": {},
+    "results/zps009/part-149.jsonl": {},
+    "results/zps009/part-15.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-151.jsonl": {},
+    "results/zps009/part-152.jsonl": {},
+    "results/zps009/part-155.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-156.jsonl": {},
+    "results/zps009/part-158.jsonl": {},
+    "results/zps009/part-159.jsonl": {},
+    "results/zps009/part-160.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-161.jsonl": {},
+    "results/zps009/part-162.jsonl": {},
+    "results/zps009/part-163.jsonl": {},
+    "results/zps009/part-165.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-167.jsonl": {},
+    "results/zps009/part-168.jsonl": {},
+    "results/zps009/part-169.jsonl": {},
+    "results/zps009/part-17.jsonl": {},
+    "results/zps009/part-172.jsonl": {},
+    "results/zps009/part-173.jsonl": {},
+    "results/zps009/part-175.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-176.jsonl": {},
+    "results/zps009/part-178.jsonl": {},
+    "results/zps009/part-18.jsonl": {},
+    "results/zps009/part-180.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-181.jsonl": {},
+    "results/zps009/part-184.jsonl": {},
+    "results/zps009/part-19.jsonl": {},
+    "results/zps009/part-20.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-21.jsonl": {},
+    "results/zps009/part-23.jsonl": {},
+    "results/zps009/part-24.jsonl": {},
+    "results/zps009/part-25.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-26.jsonl": {},
+    "results/zps009/part-27.jsonl": {},
+    "results/zps009/part-28.jsonl": {},
+    "results/zps009/part-29.jsonl": {},
+    "results/zps009/part-3.jsonl": {},
+    "results/zps009/part-30.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-31.jsonl": {},
+    "results/zps009/part-32.jsonl": {},
+    "results/zps009/part-33.jsonl": {},
+    "results/zps009/part-34.jsonl": {},
+    "results/zps009/part-35.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-36.jsonl": {},
+    "results/zps009/part-37.jsonl": {},
+    "results/zps009/part-39.jsonl": {},
+    "results/zps009/part-4.jsonl": {},
+    "results/zps009/part-40.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-41.jsonl": {},
+    "results/zps009/part-43.jsonl": {},
+    "results/zps009/part-44.jsonl": {},
+    "results/zps009/part-45.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-46.jsonl": {},
+    "results/zps009/part-47.jsonl": {},
+    "results/zps009/part-48.jsonl": {},
+    "results/zps009/part-49.jsonl": {},
+    "results/zps009/part-5.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-50.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-51.jsonl": {},
+    "results/zps009/part-52.jsonl": {},
+    "results/zps009/part-53.jsonl": {},
+    "results/zps009/part-54.jsonl": {},
+    "results/zps009/part-55.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-56.jsonl": {},
+    "results/zps009/part-57.jsonl": {},
+    "results/zps009/part-58.jsonl": {},
+    "results/zps009/part-59.jsonl": {},
+    "results/zps009/part-6.jsonl": {},
+    "results/zps009/part-60.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-61.jsonl": {},
+    "results/zps009/part-62.jsonl": {},
+    "results/zps009/part-63.jsonl": {},
+    "results/zps009/part-64.jsonl": {},
+    "results/zps009/part-65.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-66.jsonl": {},
+    "results/zps009/part-67.jsonl": {},
+    "results/zps009/part-68.jsonl": {},
+    "results/zps009/part-69.jsonl": {},
+    "results/zps009/part-7.jsonl": {},
+    "results/zps009/part-70.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-71.jsonl": {},
+    "results/zps009/part-72.jsonl": {},
+    "results/zps009/part-73.jsonl": {},
+    "results/zps009/part-76.jsonl": {},
+    "results/zps009/part-77.jsonl": {},
+    "results/zps009/part-78.jsonl": {},
+    "results/zps009/part-79.jsonl": {},
+    "results/zps009/part-8.jsonl": {},
+    "results/zps009/part-80.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-81.jsonl": {},
+    "results/zps009/part-82.jsonl": {},
+    "results/zps009/part-83.jsonl": {},
+    "results/zps009/part-85.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-86.jsonl": {},
+    "results/zps009/part-87.jsonl": {},
+    "results/zps009/part-88.jsonl": {},
+    "results/zps009/part-89.jsonl": {},
+    "results/zps009/part-9.jsonl": {},
+    "results/zps009/part-90.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps009/part-91.jsonl": {},
+    "results/zps009/part-92.jsonl": {},
+    "results/zps009/part-93.jsonl": {},
+    "results/zps009/part-94.jsonl": {},
+    "results/zps009/part-95.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps009/part-96.jsonl": {},
+    "results/zps009/part-97.jsonl": {},
+    "results/zps009/part-98.jsonl": {},
+    "results/zps009/part-99.jsonl": {},
+    "results/zps010/part-1.jsonl": {},
+    "results/zps010/part-10.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps010/part-12.jsonl": {},
+    "results/zps010/part-13.jsonl": {},
+    "results/zps010/part-14.jsonl": {},
+    "results/zps010/part-15.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps010/part-17.jsonl": {},
+    "results/zps010/part-18.jsonl": {},
+    "results/zps010/part-19.jsonl": {},
+    "results/zps010/part-2.jsonl": {},
+    "results/zps010/part-20.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps010/part-24.jsonl": {},
+    "results/zps010/part-25.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps010/part-26.jsonl": {},
+    "results/zps010/part-27.jsonl": {},
+    "results/zps010/part-28.jsonl": {},
+    "results/zps010/part-29.jsonl": {},
+    "results/zps010/part-3.jsonl": {},
+    "results/zps010/part-31.jsonl": {},
+    "results/zps010/part-32.jsonl": {},
+    "results/zps010/part-35.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps010/part-36.jsonl": {},
+    "results/zps010/part-37.jsonl": {},
+    "results/zps010/part-38.jsonl": {},
+    "results/zps010/part-39.jsonl": {},
+    "results/zps010/part-4.jsonl": {},
+    "results/zps010/part-40.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps010/part-41.jsonl": {},
+    "results/zps010/part-42.jsonl": {},
+    "results/zps010/part-43.jsonl": {},
+    "results/zps010/part-44.jsonl": {},
+    "results/zps010/part-46.jsonl": {},
+    "results/zps010/part-47.jsonl": {},
+    "results/zps010/part-48.jsonl": {},
+    "results/zps010/part-49.jsonl": {},
+    "results/zps010/part-5.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps010/part-51.jsonl": {},
+    "results/zps010/part-53.jsonl": {},
+    "results/zps010/part-55.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps010/part-6.jsonl": {},
+    "results/zps010/part-62.jsonl": {},
+    "results/zps010/part-64.jsonl": {},
+    "results/zps010/part-66.jsonl": {},
+    "results/zps010/part-67.jsonl": {},
+    "results/zps010/part-68.jsonl": {},
+    "results/zps010/part-7.jsonl": {},
+    "results/zps010/part-74.jsonl": {},
+    "results/zps010/part-76.jsonl": {},
+    "results/zps010/part-8.jsonl": {},
+    "results/zps010/part-82.jsonl": {},
+    "results/zps010/part-9.jsonl": {},
+    "results/zps011/part-0.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-1.jsonl": {},
+    "results/zps011/part-100.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1000.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1002.jsonl": {},
+    "results/zps011/part-1004.jsonl": {},
+    "results/zps011/part-1006.jsonl": {},
+    "results/zps011/part-1008.jsonl": {},
+    "results/zps011/part-1009.jsonl": {},
+    "results/zps011/part-101.jsonl": {},
+    "results/zps011/part-1013.jsonl": {},
+    "results/zps011/part-1015.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1016.jsonl": {},
+    "results/zps011/part-1019.jsonl": {},
+    "results/zps011/part-102.jsonl": {},
+    "results/zps011/part-1021.jsonl": {},
+    "results/zps011/part-1025.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1026.jsonl": {},
+    "results/zps011/part-1028.jsonl": {},
+    "results/zps011/part-103.jsonl": {},
+    "results/zps011/part-1031.jsonl": {},
+    "results/zps011/part-1034.jsonl": {},
+    "results/zps011/part-1035.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1036.jsonl": {},
+    "results/zps011/part-1037.jsonl": {},
+    "results/zps011/part-104.jsonl": {},
+    "results/zps011/part-1040.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1043.jsonl": {},
+    "results/zps011/part-1045.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1046.jsonl": {},
+    "results/zps011/part-1047.jsonl": {},
+    "results/zps011/part-1048.jsonl": {},
+    "results/zps011/part-1049.jsonl": {},
+    "results/zps011/part-105.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-1051.jsonl": {},
+    "results/zps011/part-1052.jsonl": {},
+    "results/zps011/part-1053.jsonl": {},
+    "results/zps011/part-106.jsonl": {},
+    "results/zps011/part-1062.jsonl": {},
+    "results/zps011/part-1064.jsonl": {},
+    "results/zps011/part-1066.jsonl": {},
+    "results/zps011/part-1067.jsonl": {},
+    "results/zps011/part-1068.jsonl": {},
+    "results/zps011/part-1069.jsonl": {},
+    "results/zps011/part-107.jsonl": {},
+    "results/zps011/part-1070.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1077.jsonl": {},
+    "results/zps011/part-108.jsonl": {},
+    "results/zps011/part-1080.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1081.jsonl": {},
+    "results/zps011/part-1082.jsonl": {},
+    "results/zps011/part-1084.jsonl": {},
+    "results/zps011/part-109.jsonl": {},
+    "results/zps011/part-1090.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-1091.jsonl": {},
+    "results/zps011/part-1095.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-1097.jsonl": {},
+    "results/zps011/part-1098.jsonl": {},
+    "results/zps011/part-1099.jsonl": {},
+    "results/zps011/part-11.jsonl": {},
+    "results/zps011/part-110.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-1100.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1101.jsonl": {},
+    "results/zps011/part-1103.jsonl": {},
+    "results/zps011/part-1108.jsonl": {},
+    "results/zps011/part-111.jsonl": {},
+    "results/zps011/part-1110.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1112.jsonl": {},
+    "results/zps011/part-112.jsonl": {},
+    "results/zps011/part-1122.jsonl": {},
+    "results/zps011/part-1123.jsonl": {},
+    "results/zps011/part-1124.jsonl": {},
+    "results/zps011/part-1128.jsonl": {},
+    "results/zps011/part-113.jsonl": {},
+    "results/zps011/part-1134.jsonl": {},
+    "results/zps011/part-1136.jsonl": {},
+    "results/zps011/part-1137.jsonl": {},
+    "results/zps011/part-114.jsonl": {},
+    "results/zps011/part-1140.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1142.jsonl": {},
+    "results/zps011/part-1143.jsonl": {},
+    "results/zps011/part-1144.jsonl": {},
+    "results/zps011/part-1146.jsonl": {},
+    "results/zps011/part-1147.jsonl": {},
+    "results/zps011/part-115.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1150.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1152.jsonl": {},
+    "results/zps011/part-1153.jsonl": {},
+    "results/zps011/part-1154.jsonl": {},
+    "results/zps011/part-1155.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1159.jsonl": {},
+    "results/zps011/part-116.jsonl": {},
+    "results/zps011/part-1161.jsonl": {},
+    "results/zps011/part-1163.jsonl": {},
+    "results/zps011/part-1164.jsonl": {},
+    "results/zps011/part-1167.jsonl": {},
+    "results/zps011/part-1169.jsonl": {},
+    "results/zps011/part-117.jsonl": {},
+    "results/zps011/part-1170.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-1172.jsonl": {},
+    "results/zps011/part-1176.jsonl": {},
+    "results/zps011/part-1179.jsonl": {},
+    "results/zps011/part-118.jsonl": {},
+    "results/zps011/part-1180.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-1181.jsonl": {},
+    "results/zps011/part-1186.jsonl": {},
+    "results/zps011/part-1187.jsonl": {},
+    "results/zps011/part-1188.jsonl": {},
+    "results/zps011/part-1189.jsonl": {},
+    "results/zps011/part-119.jsonl": {},
+    "results/zps011/part-1193.jsonl": {},
+    "results/zps011/part-12.jsonl": {},
+    "results/zps011/part-120.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-121.jsonl": {},
+    "results/zps011/part-122.jsonl": {},
+    "results/zps011/part-123.jsonl": {},
+    "results/zps011/part-124.jsonl": {},
+    "results/zps011/part-125.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-126.jsonl": {},
+    "results/zps011/part-127.jsonl": {},
+    "results/zps011/part-128.jsonl": {},
+    "results/zps011/part-129.jsonl": {},
+    "results/zps011/part-13.jsonl": {},
+    "results/zps011/part-130.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-131.jsonl": {},
+    "results/zps011/part-132.jsonl": {},
+    "results/zps011/part-133.jsonl": {},
+    "results/zps011/part-134.jsonl": {},
+    "results/zps011/part-135.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-136.jsonl": {},
+    "results/zps011/part-137.jsonl": {},
+    "results/zps011/part-138.jsonl": {},
+    "results/zps011/part-139.jsonl": {},
+    "results/zps011/part-14.jsonl": {},
+    "results/zps011/part-141.jsonl": {},
+    "results/zps011/part-142.jsonl": {},
+    "results/zps011/part-143.jsonl": {},
+    "results/zps011/part-144.jsonl": {},
+    "results/zps011/part-145.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-146.jsonl": {},
+    "results/zps011/part-147.jsonl": {},
+    "results/zps011/part-148.jsonl": {},
+    "results/zps011/part-149.jsonl": {},
+    "results/zps011/part-15.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-150.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-151.jsonl": {},
+    "results/zps011/part-152.jsonl": {},
+    "results/zps011/part-153.jsonl": {},
+    "results/zps011/part-154.jsonl": {},
+    "results/zps011/part-155.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-156.jsonl": {},
+    "results/zps011/part-157.jsonl": {},
+    "results/zps011/part-158.jsonl": {},
+    "results/zps011/part-159.jsonl": {},
+    "results/zps011/part-16.jsonl": {},
+    "results/zps011/part-160.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-161.jsonl": {},
+    "results/zps011/part-162.jsonl": {},
+    "results/zps011/part-163.jsonl": {},
+    "results/zps011/part-164.jsonl": {},
+    "results/zps011/part-165.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-166.jsonl": {},
+    "results/zps011/part-167.jsonl": {},
+    "results/zps011/part-168.jsonl": {},
+    "results/zps011/part-169.jsonl": {},
+    "results/zps011/part-17.jsonl": {},
+    "results/zps011/part-170.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-171.jsonl": {},
+    "results/zps011/part-172.jsonl": {},
+    "results/zps011/part-173.jsonl": {},
+    "results/zps011/part-174.jsonl": {},
+    "results/zps011/part-175.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-176.jsonl": {},
+    "results/zps011/part-177.jsonl": {},
+    "results/zps011/part-178.jsonl": {},
+    "results/zps011/part-179.jsonl": {},
+    "results/zps011/part-18.jsonl": {},
+    "results/zps011/part-180.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-181.jsonl": {},
+    "results/zps011/part-182.jsonl": {},
+    "results/zps011/part-183.jsonl": {},
+    "results/zps011/part-184.jsonl": {},
+    "results/zps011/part-185.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-186.jsonl": {},
+    "results/zps011/part-187.jsonl": {},
+    "results/zps011/part-188.jsonl": {},
+    "results/zps011/part-189.jsonl": {},
+    "results/zps011/part-19.jsonl": {},
+    "results/zps011/part-190.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-191.jsonl": {},
+    "results/zps011/part-192.jsonl": {},
+    "results/zps011/part-193.jsonl": {},
+    "results/zps011/part-194.jsonl": {},
+    "results/zps011/part-195.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-196.jsonl": {},
+    "results/zps011/part-197.jsonl": {},
+    "results/zps011/part-198.jsonl": {},
+    "results/zps011/part-199.jsonl": {},
+    "results/zps011/part-2.jsonl": {},
+    "results/zps011/part-20.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-200.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-201.jsonl": {},
+    "results/zps011/part-202.jsonl": {},
+    "results/zps011/part-203.jsonl": {},
+    "results/zps011/part-204.jsonl": {},
+    "results/zps011/part-205.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-206.jsonl": {},
+    "results/zps011/part-207.jsonl": {},
+    "results/zps011/part-208.jsonl": {},
+    "results/zps011/part-209.jsonl": {},
+    "results/zps011/part-21.jsonl": {},
+    "results/zps011/part-210.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-211.jsonl": {},
+    "results/zps011/part-212.jsonl": {},
+    "results/zps011/part-213.jsonl": {},
+    "results/zps011/part-214.jsonl": {},
+    "results/zps011/part-215.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-216.jsonl": {},
+    "results/zps011/part-217.jsonl": {},
+    "results/zps011/part-218.jsonl": {},
+    "results/zps011/part-219.jsonl": {},
+    "results/zps011/part-22.jsonl": {},
+    "results/zps011/part-220.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-221.jsonl": {},
+    "results/zps011/part-222.jsonl": {},
+    "results/zps011/part-223.jsonl": {},
+    "results/zps011/part-224.jsonl": {},
+    "results/zps011/part-225.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-226.jsonl": {},
+    "results/zps011/part-227.jsonl": {},
+    "results/zps011/part-228.jsonl": {},
+    "results/zps011/part-229.jsonl": {},
+    "results/zps011/part-23.jsonl": {},
+    "results/zps011/part-230.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-231.jsonl": {},
+    "results/zps011/part-232.jsonl": {},
+    "results/zps011/part-233.jsonl": {},
+    "results/zps011/part-234.jsonl": {},
+    "results/zps011/part-235.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-236.jsonl": {},
+    "results/zps011/part-237.jsonl": {},
+    "results/zps011/part-238.jsonl": {},
+    "results/zps011/part-239.jsonl": {},
+    "results/zps011/part-24.jsonl": {},
+    "results/zps011/part-240.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-241.jsonl": {},
+    "results/zps011/part-242.jsonl": {},
+    "results/zps011/part-244.jsonl": {},
+    "results/zps011/part-245.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-246.jsonl": {},
+    "results/zps011/part-247.jsonl": {},
+    "results/zps011/part-248.jsonl": {},
+    "results/zps011/part-249.jsonl": {},
+    "results/zps011/part-25.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-250.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-251.jsonl": {},
+    "results/zps011/part-252.jsonl": {},
+    "results/zps011/part-253.jsonl": {},
+    "results/zps011/part-255.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-256.jsonl": {},
+    "results/zps011/part-257.jsonl": {},
+    "results/zps011/part-258.jsonl": {},
+    "results/zps011/part-259.jsonl": {},
+    "results/zps011/part-26.jsonl": {},
+    "results/zps011/part-260.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-261.jsonl": {},
+    "results/zps011/part-262.jsonl": {},
+    "results/zps011/part-263.jsonl": {},
+    "results/zps011/part-264.jsonl": {},
+    "results/zps011/part-265.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-266.jsonl": {},
+    "results/zps011/part-267.jsonl": {},
+    "results/zps011/part-268.jsonl": {},
+    "results/zps011/part-269.jsonl": {},
+    "results/zps011/part-27.jsonl": {},
+    "results/zps011/part-270.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-271.jsonl": {},
+    "results/zps011/part-272.jsonl": {},
+    "results/zps011/part-273.jsonl": {},
+    "results/zps011/part-274.jsonl": {},
+    "results/zps011/part-275.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-276.jsonl": {},
+    "results/zps011/part-277.jsonl": {},
+    "results/zps011/part-279.jsonl": {},
+    "results/zps011/part-28.jsonl": {},
+    "results/zps011/part-280.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-281.jsonl": {},
+    "results/zps011/part-282.jsonl": {},
+    "results/zps011/part-283.jsonl": {},
+    "results/zps011/part-284.jsonl": {},
+    "results/zps011/part-285.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-286.jsonl": {},
+    "results/zps011/part-287.jsonl": {},
+    "results/zps011/part-288.jsonl": {},
+    "results/zps011/part-289.jsonl": {},
+    "results/zps011/part-29.jsonl": {},
+    "results/zps011/part-290.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-291.jsonl": {},
+    "results/zps011/part-292.jsonl": {},
+    "results/zps011/part-293.jsonl": {},
+    "results/zps011/part-294.jsonl": {},
+    "results/zps011/part-295.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-296.jsonl": {},
+    "results/zps011/part-297.jsonl": {},
+    "results/zps011/part-298.jsonl": {},
+    "results/zps011/part-299.jsonl": {},
+    "results/zps011/part-3.jsonl": {},
+    "results/zps011/part-300.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-301.jsonl": {},
+    "results/zps011/part-302.jsonl": {},
+    "results/zps011/part-303.jsonl": {},
+    "results/zps011/part-304.jsonl": {},
+    "results/zps011/part-305.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-307.jsonl": {},
+    "results/zps011/part-308.jsonl": {},
+    "results/zps011/part-309.jsonl": {},
+    "results/zps011/part-31.jsonl": {},
+    "results/zps011/part-310.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-311.jsonl": {},
+    "results/zps011/part-313.jsonl": {},
+    "results/zps011/part-314.jsonl": {},
+    "results/zps011/part-315.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-316.jsonl": {},
+    "results/zps011/part-317.jsonl": {},
+    "results/zps011/part-318.jsonl": {},
+    "results/zps011/part-319.jsonl": {},
+    "results/zps011/part-32.jsonl": {},
+    "results/zps011/part-320.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-321.jsonl": {},
+    "results/zps011/part-323.jsonl": {},
+    "results/zps011/part-324.jsonl": {},
+    "results/zps011/part-325.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-326.jsonl": {},
+    "results/zps011/part-327.jsonl": {},
+    "results/zps011/part-328.jsonl": {},
+    "results/zps011/part-329.jsonl": {},
+    "results/zps011/part-33.jsonl": {},
+    "results/zps011/part-330.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-331.jsonl": {},
+    "results/zps011/part-332.jsonl": {},
+    "results/zps011/part-333.jsonl": {},
+    "results/zps011/part-334.jsonl": {},
+    "results/zps011/part-336.jsonl": {},
+    "results/zps011/part-337.jsonl": {},
+    "results/zps011/part-339.jsonl": {},
+    "results/zps011/part-34.jsonl": {},
+    "results/zps011/part-340.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-341.jsonl": {},
+    "results/zps011/part-342.jsonl": {},
+    "results/zps011/part-343.jsonl": {},
+    "results/zps011/part-344.jsonl": {},
+    "results/zps011/part-345.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-346.jsonl": {},
+    "results/zps011/part-347.jsonl": {},
+    "results/zps011/part-348.jsonl": {},
+    "results/zps011/part-349.jsonl": {},
+    "results/zps011/part-35.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-350.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-351.jsonl": {},
+    "results/zps011/part-352.jsonl": {},
+    "results/zps011/part-353.jsonl": {},
+    "results/zps011/part-354.jsonl": {},
+    "results/zps011/part-355.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-356.jsonl": {},
+    "results/zps011/part-357.jsonl": {},
+    "results/zps011/part-358.jsonl": {},
+    "results/zps011/part-359.jsonl": {},
+    "results/zps011/part-36.jsonl": {},
+    "results/zps011/part-360.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-361.jsonl": {},
+    "results/zps011/part-362.jsonl": {},
+    "results/zps011/part-363.jsonl": {},
+    "results/zps011/part-364.jsonl": {},
+    "results/zps011/part-365.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-366.jsonl": {},
+    "results/zps011/part-367.jsonl": {},
+    "results/zps011/part-368.jsonl": {},
+    "results/zps011/part-369.jsonl": {},
+    "results/zps011/part-37.jsonl": {},
+    "results/zps011/part-370.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-371.jsonl": {},
+    "results/zps011/part-372.jsonl": {},
+    "results/zps011/part-373.jsonl": {},
+    "results/zps011/part-374.jsonl": {},
+    "results/zps011/part-375.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-376.jsonl": {},
+    "results/zps011/part-377.jsonl": {},
+    "results/zps011/part-378.jsonl": {},
+    "results/zps011/part-379.jsonl": {},
+    "results/zps011/part-38.jsonl": {},
+    "results/zps011/part-380.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-381.jsonl": {},
+    "results/zps011/part-382.jsonl": {},
+    "results/zps011/part-383.jsonl": {},
+    "results/zps011/part-384.jsonl": {},
+    "results/zps011/part-385.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-386.jsonl": {},
+    "results/zps011/part-387.jsonl": {},
+    "results/zps011/part-388.jsonl": {},
+    "results/zps011/part-389.jsonl": {},
+    "results/zps011/part-39.jsonl": {},
+    "results/zps011/part-390.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-391.jsonl": {},
+    "results/zps011/part-392.jsonl": {},
+    "results/zps011/part-393.jsonl": {},
+    "results/zps011/part-394.jsonl": {},
+    "results/zps011/part-396.jsonl": {},
+    "results/zps011/part-397.jsonl": {},
+    "results/zps011/part-398.jsonl": {},
+    "results/zps011/part-399.jsonl": {},
+    "results/zps011/part-4.jsonl": {},
+    "results/zps011/part-40.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-400.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-401.jsonl": {},
+    "results/zps011/part-402.jsonl": {},
+    "results/zps011/part-403.jsonl": {},
+    "results/zps011/part-405.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-406.jsonl": {},
+    "results/zps011/part-407.jsonl": {},
+    "results/zps011/part-408.jsonl": {},
+    "results/zps011/part-409.jsonl": {},
+    "results/zps011/part-41.jsonl": {},
+    "results/zps011/part-410.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-411.jsonl": {},
+    "results/zps011/part-412.jsonl": {},
+    "results/zps011/part-413.jsonl": {},
+    "results/zps011/part-414.jsonl": {},
+    "results/zps011/part-415.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-416.jsonl": {},
+    "results/zps011/part-417.jsonl": {},
+    "results/zps011/part-418.jsonl": {},
+    "results/zps011/part-419.jsonl": {},
+    "results/zps011/part-42.jsonl": {},
+    "results/zps011/part-420.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-421.jsonl": {},
+    "results/zps011/part-422.jsonl": {},
+    "results/zps011/part-423.jsonl": {},
+    "results/zps011/part-424.jsonl": {},
+    "results/zps011/part-425.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-427.jsonl": {},
+    "results/zps011/part-428.jsonl": {},
+    "results/zps011/part-429.jsonl": {},
+    "results/zps011/part-43.jsonl": {},
+    "results/zps011/part-430.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-431.jsonl": {},
+    "results/zps011/part-432.jsonl": {},
+    "results/zps011/part-433.jsonl": {},
+    "results/zps011/part-434.jsonl": {},
+    "results/zps011/part-435.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-436.jsonl": {},
+    "results/zps011/part-437.jsonl": {},
+    "results/zps011/part-438.jsonl": {},
+    "results/zps011/part-439.jsonl": {},
+    "results/zps011/part-44.jsonl": {},
+    "results/zps011/part-440.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-441.jsonl": {},
+    "results/zps011/part-442.jsonl": {},
+    "results/zps011/part-443.jsonl": {},
+    "results/zps011/part-444.jsonl": {},
+    "results/zps011/part-445.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-446.jsonl": {},
+    "results/zps011/part-447.jsonl": {},
+    "results/zps011/part-448.jsonl": {},
+    "results/zps011/part-449.jsonl": {},
+    "results/zps011/part-45.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-450.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-451.jsonl": {},
+    "results/zps011/part-452.jsonl": {},
+    "results/zps011/part-453.jsonl": {},
+    "results/zps011/part-454.jsonl": {},
+    "results/zps011/part-455.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-456.jsonl": {},
+    "results/zps011/part-457.jsonl": {},
+    "results/zps011/part-458.jsonl": {},
+    "results/zps011/part-459.jsonl": {},
+    "results/zps011/part-46.jsonl": {},
+    "results/zps011/part-460.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-461.jsonl": {},
+    "results/zps011/part-462.jsonl": {},
+    "results/zps011/part-463.jsonl": {},
+    "results/zps011/part-464.jsonl": {},
+    "results/zps011/part-466.jsonl": {},
+    "results/zps011/part-467.jsonl": {},
+    "results/zps011/part-468.jsonl": {},
+    "results/zps011/part-47.jsonl": {},
+    "results/zps011/part-470.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-471.jsonl": {},
+    "results/zps011/part-472.jsonl": {},
+    "results/zps011/part-473.jsonl": {},
+    "results/zps011/part-474.jsonl": {},
+    "results/zps011/part-475.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-476.jsonl": {},
+    "results/zps011/part-477.jsonl": {},
+    "results/zps011/part-478.jsonl": {},
+    "results/zps011/part-479.jsonl": {},
+    "results/zps011/part-48.jsonl": {},
+    "results/zps011/part-481.jsonl": {},
+    "results/zps011/part-482.jsonl": {},
+    "results/zps011/part-483.jsonl": {},
+    "results/zps011/part-484.jsonl": {},
+    "results/zps011/part-485.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-486.jsonl": {},
+    "results/zps011/part-487.jsonl": {},
+    "results/zps011/part-488.jsonl": {},
+    "results/zps011/part-489.jsonl": {},
+    "results/zps011/part-49.jsonl": {},
+    "results/zps011/part-490.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-491.jsonl": {},
+    "results/zps011/part-492.jsonl": {},
+    "results/zps011/part-493.jsonl": {},
+    "results/zps011/part-495.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-496.jsonl": {},
+    "results/zps011/part-497.jsonl": {},
+    "results/zps011/part-498.jsonl": {},
+    "results/zps011/part-499.jsonl": {},
+    "results/zps011/part-5.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-50.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-500.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-501.jsonl": {},
+    "results/zps011/part-502.jsonl": {},
+    "results/zps011/part-503.jsonl": {},
+    "results/zps011/part-504.jsonl": {},
+    "results/zps011/part-506.jsonl": {},
+    "results/zps011/part-507.jsonl": {},
+    "results/zps011/part-508.jsonl": {},
+    "results/zps011/part-509.jsonl": {},
+    "results/zps011/part-51.jsonl": {},
+    "results/zps011/part-510.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-511.jsonl": {},
+    "results/zps011/part-513.jsonl": {},
+    "results/zps011/part-514.jsonl": {},
+    "results/zps011/part-515.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-516.jsonl": {},
+    "results/zps011/part-517.jsonl": {},
+    "results/zps011/part-518.jsonl": {},
+    "results/zps011/part-519.jsonl": {},
+    "results/zps011/part-52.jsonl": {},
+    "results/zps011/part-520.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-521.jsonl": {},
+    "results/zps011/part-522.jsonl": {},
+    "results/zps011/part-524.jsonl": {},
+    "results/zps011/part-526.jsonl": {},
+    "results/zps011/part-527.jsonl": {},
+    "results/zps011/part-528.jsonl": {},
+    "results/zps011/part-529.jsonl": {},
+    "results/zps011/part-53.jsonl": {},
+    "results/zps011/part-530.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-531.jsonl": {},
+    "results/zps011/part-532.jsonl": {},
+    "results/zps011/part-533.jsonl": {},
+    "results/zps011/part-534.jsonl": {},
+    "results/zps011/part-535.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-536.jsonl": {},
+    "results/zps011/part-537.jsonl": {},
+    "results/zps011/part-538.jsonl": {},
+    "results/zps011/part-539.jsonl": {},
+    "results/zps011/part-54.jsonl": {},
+    "results/zps011/part-540.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-541.jsonl": {},
+    "results/zps011/part-542.jsonl": {},
+    "results/zps011/part-543.jsonl": {},
+    "results/zps011/part-544.jsonl": {},
+    "results/zps011/part-545.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-546.jsonl": {},
+    "results/zps011/part-547.jsonl": {},
+    "results/zps011/part-549.jsonl": {},
+    "results/zps011/part-55.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-550.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-551.jsonl": {},
+    "results/zps011/part-552.jsonl": {},
+    "results/zps011/part-554.jsonl": {},
+    "results/zps011/part-555.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-556.jsonl": {},
+    "results/zps011/part-557.jsonl": {},
+    "results/zps011/part-558.jsonl": {},
+    "results/zps011/part-559.jsonl": {},
+    "results/zps011/part-56.jsonl": {},
+    "results/zps011/part-560.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-561.jsonl": {},
+    "results/zps011/part-562.jsonl": {},
+    "results/zps011/part-563.jsonl": {},
+    "results/zps011/part-564.jsonl": {},
+    "results/zps011/part-565.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-566.jsonl": {},
+    "results/zps011/part-567.jsonl": {},
+    "results/zps011/part-568.jsonl": {},
+    "results/zps011/part-569.jsonl": {},
+    "results/zps011/part-57.jsonl": {},
+    "results/zps011/part-570.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-571.jsonl": {},
+    "results/zps011/part-572.jsonl": {},
+    "results/zps011/part-573.jsonl": {},
+    "results/zps011/part-574.jsonl": {},
+    "results/zps011/part-575.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-576.jsonl": {},
+    "results/zps011/part-578.jsonl": {},
+    "results/zps011/part-579.jsonl": {},
+    "results/zps011/part-58.jsonl": {},
+    "results/zps011/part-580.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-581.jsonl": {},
+    "results/zps011/part-582.jsonl": {},
+    "results/zps011/part-583.jsonl": {},
+    "results/zps011/part-584.jsonl": {},
+    "results/zps011/part-586.jsonl": {},
+    "results/zps011/part-587.jsonl": {},
+    "results/zps011/part-588.jsonl": {},
+    "results/zps011/part-589.jsonl": {},
+    "results/zps011/part-59.jsonl": {},
+    "results/zps011/part-591.jsonl": {},
+    "results/zps011/part-592.jsonl": {},
+    "results/zps011/part-593.jsonl": {},
+    "results/zps011/part-594.jsonl": {},
+    "results/zps011/part-595.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-596.jsonl": {},
+    "results/zps011/part-597.jsonl": {},
+    "results/zps011/part-598.jsonl": {},
+    "results/zps011/part-6.jsonl": {},
+    "results/zps011/part-60.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-600.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-602.jsonl": {},
+    "results/zps011/part-604.jsonl": {},
+    "results/zps011/part-605.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-606.jsonl": {},
+    "results/zps011/part-607.jsonl": {},
+    "results/zps011/part-608.jsonl": {},
+    "results/zps011/part-609.jsonl": {},
+    "results/zps011/part-61.jsonl": {},
+    "results/zps011/part-610.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-611.jsonl": {},
+    "results/zps011/part-612.jsonl": {},
+    "results/zps011/part-613.jsonl": {},
+    "results/zps011/part-614.jsonl": {},
+    "results/zps011/part-615.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-616.jsonl": {},
+    "results/zps011/part-617.jsonl": {},
+    "results/zps011/part-618.jsonl": {},
+    "results/zps011/part-619.jsonl": {},
+    "results/zps011/part-62.jsonl": {},
+    "results/zps011/part-620.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-621.jsonl": {},
+    "results/zps011/part-622.jsonl": {},
+    "results/zps011/part-623.jsonl": {},
+    "results/zps011/part-624.jsonl": {},
+    "results/zps011/part-625.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-626.jsonl": {},
+    "results/zps011/part-627.jsonl": {},
+    "results/zps011/part-628.jsonl": {},
+    "results/zps011/part-629.jsonl": {},
+    "results/zps011/part-63.jsonl": {},
+    "results/zps011/part-630.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-631.jsonl": {},
+    "results/zps011/part-632.jsonl": {},
+    "results/zps011/part-633.jsonl": {},
+    "results/zps011/part-634.jsonl": {},
+    "results/zps011/part-635.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-636.jsonl": {},
+    "results/zps011/part-638.jsonl": {},
+    "results/zps011/part-639.jsonl": {},
+    "results/zps011/part-64.jsonl": {},
+    "results/zps011/part-640.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-641.jsonl": {},
+    "results/zps011/part-643.jsonl": {},
+    "results/zps011/part-644.jsonl": {},
+    "results/zps011/part-645.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-646.jsonl": {},
+    "results/zps011/part-647.jsonl": {},
+    "results/zps011/part-648.jsonl": {},
+    "results/zps011/part-649.jsonl": {},
+    "results/zps011/part-65.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-650.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-651.jsonl": {},
+    "results/zps011/part-652.jsonl": {},
+    "results/zps011/part-653.jsonl": {},
+    "results/zps011/part-654.jsonl": {},
+    "results/zps011/part-656.jsonl": {},
+    "results/zps011/part-658.jsonl": {},
+    "results/zps011/part-659.jsonl": {},
+    "results/zps011/part-66.jsonl": {},
+    "results/zps011/part-660.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-661.jsonl": {},
+    "results/zps011/part-662.jsonl": {},
+    "results/zps011/part-663.jsonl": {},
+    "results/zps011/part-664.jsonl": {},
+    "results/zps011/part-665.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-666.jsonl": {},
+    "results/zps011/part-667.jsonl": {},
+    "results/zps011/part-668.jsonl": {},
+    "results/zps011/part-67.jsonl": {},
+    "results/zps011/part-670.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-671.jsonl": {},
+    "results/zps011/part-672.jsonl": {},
+    "results/zps011/part-673.jsonl": {},
+    "results/zps011/part-674.jsonl": {},
+    "results/zps011/part-675.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-676.jsonl": {},
+    "results/zps011/part-677.jsonl": {},
+    "results/zps011/part-678.jsonl": {},
+    "results/zps011/part-679.jsonl": {},
+    "results/zps011/part-68.jsonl": {},
+    "results/zps011/part-680.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-682.jsonl": {},
+    "results/zps011/part-684.jsonl": {},
+    "results/zps011/part-686.jsonl": {},
+    "results/zps011/part-687.jsonl": {},
+    "results/zps011/part-688.jsonl": {},
+    "results/zps011/part-689.jsonl": {},
+    "results/zps011/part-69.jsonl": {},
+    "results/zps011/part-690.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-691.jsonl": {},
+    "results/zps011/part-693.jsonl": {},
+    "results/zps011/part-694.jsonl": {},
+    "results/zps011/part-695.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-696.jsonl": {},
+    "results/zps011/part-697.jsonl": {},
+    "results/zps011/part-698.jsonl": {},
+    "results/zps011/part-699.jsonl": {},
+    "results/zps011/part-7.jsonl": {},
+    "results/zps011/part-70.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-701.jsonl": {},
+    "results/zps011/part-702.jsonl": {},
+    "results/zps011/part-703.jsonl": {},
+    "results/zps011/part-705.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-706.jsonl": {},
+    "results/zps011/part-707.jsonl": {},
+    "results/zps011/part-708.jsonl": {},
+    "results/zps011/part-709.jsonl": {},
+    "results/zps011/part-71.jsonl": {},
+    "results/zps011/part-710.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-711.jsonl": {},
+    "results/zps011/part-712.jsonl": {},
+    "results/zps011/part-713.jsonl": {},
+    "results/zps011/part-715.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-716.jsonl": {},
+    "results/zps011/part-717.jsonl": {},
+    "results/zps011/part-719.jsonl": {},
+    "results/zps011/part-72.jsonl": {},
+    "results/zps011/part-720.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-721.jsonl": {},
+    "results/zps011/part-722.jsonl": {},
+    "results/zps011/part-723.jsonl": {},
+    "results/zps011/part-725.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-726.jsonl": {},
+    "results/zps011/part-727.jsonl": {},
+    "results/zps011/part-728.jsonl": {},
+    "results/zps011/part-729.jsonl": {},
+    "results/zps011/part-73.jsonl": {},
+    "results/zps011/part-730.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-731.jsonl": {},
+    "results/zps011/part-733.jsonl": {},
+    "results/zps011/part-734.jsonl": {},
+    "results/zps011/part-735.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-736.jsonl": {},
+    "results/zps011/part-737.jsonl": {},
+    "results/zps011/part-738.jsonl": {},
+    "results/zps011/part-739.jsonl": {},
+    "results/zps011/part-74.jsonl": {},
+    "results/zps011/part-740.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-741.jsonl": {},
+    "results/zps011/part-742.jsonl": {},
+    "results/zps011/part-743.jsonl": {},
+    "results/zps011/part-744.jsonl": {},
+    "results/zps011/part-745.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-746.jsonl": {},
+    "results/zps011/part-747.jsonl": {},
+    "results/zps011/part-748.jsonl": {},
+    "results/zps011/part-75.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-750.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-751.jsonl": {},
+    "results/zps011/part-753.jsonl": {},
+    "results/zps011/part-754.jsonl": {},
+    "results/zps011/part-755.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-756.jsonl": {},
+    "results/zps011/part-757.jsonl": {},
+    "results/zps011/part-758.jsonl": {},
+    "results/zps011/part-759.jsonl": {},
+    "results/zps011/part-76.jsonl": {},
+    "results/zps011/part-760.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-762.jsonl": {},
+    "results/zps011/part-764.jsonl": {},
+    "results/zps011/part-767.jsonl": {},
+    "results/zps011/part-77.jsonl": {},
+    "results/zps011/part-772.jsonl": {},
+    "results/zps011/part-773.jsonl": {},
+    "results/zps011/part-774.jsonl": {},
+    "results/zps011/part-776.jsonl": {},
+    "results/zps011/part-777.jsonl": {},
+    "results/zps011/part-778.jsonl": {},
+    "results/zps011/part-779.jsonl": {},
+    "results/zps011/part-78.jsonl": {},
+    "results/zps011/part-780.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-781.jsonl": {},
+    "results/zps011/part-782.jsonl": {},
+    "results/zps011/part-784.jsonl": {},
+    "results/zps011/part-785.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-786.jsonl": {},
+    "results/zps011/part-787.jsonl": {},
+    "results/zps011/part-788.jsonl": {},
+    "results/zps011/part-789.jsonl": {},
+    "results/zps011/part-79.jsonl": {},
+    "results/zps011/part-790.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-791.jsonl": {},
+    "results/zps011/part-792.jsonl": {},
+    "results/zps011/part-793.jsonl": {},
+    "results/zps011/part-795.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-796.jsonl": {},
+    "results/zps011/part-797.jsonl": {},
+    "results/zps011/part-799.jsonl": {},
+    "results/zps011/part-8.jsonl": {},
+    "results/zps011/part-80.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-801.jsonl": {},
+    "results/zps011/part-806.jsonl": {},
+    "results/zps011/part-807.jsonl": {},
+    "results/zps011/part-81.jsonl": {},
+    "results/zps011/part-810.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-811.jsonl": {},
+    "results/zps011/part-813.jsonl": {},
+    "results/zps011/part-814.jsonl": {},
+    "results/zps011/part-815.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-816.jsonl": {},
+    "results/zps011/part-819.jsonl": {},
+    "results/zps011/part-82.jsonl": {},
+    "results/zps011/part-820.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-821.jsonl": {},
+    "results/zps011/part-822.jsonl": {},
+    "results/zps011/part-824.jsonl": {},
+    "results/zps011/part-825.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-826.jsonl": {},
+    "results/zps011/part-828.jsonl": {},
+    "results/zps011/part-829.jsonl": {},
+    "results/zps011/part-83.jsonl": {},
+    "results/zps011/part-830.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-832.jsonl": {},
+    "results/zps011/part-833.jsonl": {},
+    "results/zps011/part-834.jsonl": {},
+    "results/zps011/part-835.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-837.jsonl": {},
+    "results/zps011/part-839.jsonl": {},
+    "results/zps011/part-84.jsonl": {},
+    "results/zps011/part-841.jsonl": {},
+    "results/zps011/part-842.jsonl": {},
+    "results/zps011/part-843.jsonl": {},
+    "results/zps011/part-844.jsonl": {},
+    "results/zps011/part-845.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-846.jsonl": {},
+    "results/zps011/part-847.jsonl": {},
+    "results/zps011/part-848.jsonl": {},
+    "results/zps011/part-849.jsonl": {},
+    "results/zps011/part-85.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-851.jsonl": {},
+    "results/zps011/part-852.jsonl": {},
+    "results/zps011/part-853.jsonl": {},
+    "results/zps011/part-854.jsonl": {},
+    "results/zps011/part-855.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-856.jsonl": {},
+    "results/zps011/part-857.jsonl": {},
+    "results/zps011/part-858.jsonl": {},
+    "results/zps011/part-859.jsonl": {},
+    "results/zps011/part-86.jsonl": {},
+    "results/zps011/part-861.jsonl": {},
+    "results/zps011/part-864.jsonl": {},
+    "results/zps011/part-867.jsonl": {},
+    "results/zps011/part-869.jsonl": {},
+    "results/zps011/part-87.jsonl": {},
+    "results/zps011/part-871.jsonl": {},
+    "results/zps011/part-872.jsonl": {},
+    "results/zps011/part-873.jsonl": {},
+    "results/zps011/part-874.jsonl": {},
+    "results/zps011/part-876.jsonl": {},
+    "results/zps011/part-877.jsonl": {},
+    "results/zps011/part-879.jsonl": {},
+    "results/zps011/part-88.jsonl": {},
+    "results/zps011/part-881.jsonl": {},
+    "results/zps011/part-882.jsonl": {},
+    "results/zps011/part-883.jsonl": {},
+    "results/zps011/part-884.jsonl": {},
+    "results/zps011/part-886.jsonl": {},
+    "results/zps011/part-887.jsonl": {},
+    "results/zps011/part-89.jsonl": {},
+    "results/zps011/part-890.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-891.jsonl": {},
+    "results/zps011/part-893.jsonl": {},
+    "results/zps011/part-894.jsonl": {},
+    "results/zps011/part-895.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-897.jsonl": {},
+    "results/zps011/part-899.jsonl": {},
+    "results/zps011/part-9.jsonl": {},
+    "results/zps011/part-90.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-900.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-901.jsonl": {},
+    "results/zps011/part-902.jsonl": {},
+    "results/zps011/part-904.jsonl": {},
+    "results/zps011/part-905.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-906.jsonl": {},
+    "results/zps011/part-907.jsonl": {},
+    "results/zps011/part-91.jsonl": {},
+    "results/zps011/part-910.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-911.jsonl": {},
+    "results/zps011/part-912.jsonl": {},
+    "results/zps011/part-914.jsonl": {},
+    "results/zps011/part-915.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-917.jsonl": {},
+    "results/zps011/part-918.jsonl": {},
+    "results/zps011/part-919.jsonl": {},
+    "results/zps011/part-92.jsonl": {},
+    "results/zps011/part-920.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-921.jsonl": {},
+    "results/zps011/part-923.jsonl": {},
+    "results/zps011/part-924.jsonl": {},
+    "results/zps011/part-925.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-929.jsonl": {},
+    "results/zps011/part-93.jsonl": {},
+    "results/zps011/part-932.jsonl": {},
+    "results/zps011/part-934.jsonl": {},
+    "results/zps011/part-936.jsonl": {},
+    "results/zps011/part-939.jsonl": {},
+    "results/zps011/part-94.jsonl": {},
+    "results/zps011/part-942.jsonl": {},
+    "results/zps011/part-943.jsonl": {},
+    "results/zps011/part-944.jsonl": {},
+    "results/zps011/part-945.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-949.jsonl": {},
+    "results/zps011/part-95.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-950.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-951.jsonl": {},
+    "results/zps011/part-953.jsonl": {},
+    "results/zps011/part-957.jsonl": {},
+    "results/zps011/part-96.jsonl": {},
+    "results/zps011/part-960.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-962.jsonl": {},
+    "results/zps011/part-964.jsonl": {},
+    "results/zps011/part-965.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-968.jsonl": {},
+    "results/zps011/part-969.jsonl": {},
+    "results/zps011/part-97.jsonl": {},
+    "results/zps011/part-971.jsonl": {},
+    "results/zps011/part-972.jsonl": {},
+    "results/zps011/part-973.jsonl": {},
+    "results/zps011/part-974.jsonl": {},
+    "results/zps011/part-977.jsonl": {},
+    "results/zps011/part-979.jsonl": {},
+    "results/zps011/part-98.jsonl": {},
+    "results/zps011/part-981.jsonl": {},
+    "results/zps011/part-982.jsonl": {},
+    "results/zps011/part-985.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps011/part-986.jsonl": {},
+    "results/zps011/part-987.jsonl": {},
+    "results/zps011/part-988.jsonl": {},
+    "results/zps011/part-99.jsonl": {},
+    "results/zps011/part-991.jsonl": {},
+    "results/zps011/part-992.jsonl": {},
+    "results/zps011/part-993.jsonl": {},
+    "results/zps011/part-995.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps011/part-998.jsonl": {},
+    "results/zps011/part-999.jsonl": {},
+    "results/zps012/part-0.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-1.jsonl": {},
+    "results/zps012/part-10.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-100.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-101.jsonl": {},
+    "results/zps012/part-102.jsonl": {},
+    "results/zps012/part-103.jsonl": {},
+    "results/zps012/part-104.jsonl": {},
+    "results/zps012/part-106.jsonl": {},
+    "results/zps012/part-107.jsonl": {},
+    "results/zps012/part-108.jsonl": {},
+    "results/zps012/part-109.jsonl": {},
+    "results/zps012/part-11.jsonl": {},
+    "results/zps012/part-111.jsonl": {},
+    "results/zps012/part-113.jsonl": {},
+    "results/zps012/part-114.jsonl": {},
+    "results/zps012/part-115.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-116.jsonl": {},
+    "results/zps012/part-117.jsonl": {},
+    "results/zps012/part-118.jsonl": {},
+    "results/zps012/part-119.jsonl": {},
+    "results/zps012/part-120.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-121.jsonl": {},
+    "results/zps012/part-123.jsonl": {},
+    "results/zps012/part-124.jsonl": {},
+    "results/zps012/part-126.jsonl": {},
+    "results/zps012/part-127.jsonl": {},
+    "results/zps012/part-128.jsonl": {},
+    "results/zps012/part-129.jsonl": {},
+    "results/zps012/part-13.jsonl": {},
+    "results/zps012/part-130.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-131.jsonl": {},
+    "results/zps012/part-132.jsonl": {},
+    "results/zps012/part-134.jsonl": {},
+    "results/zps012/part-135.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-136.jsonl": {},
+    "results/zps012/part-137.jsonl": {},
+    "results/zps012/part-138.jsonl": {},
+    "results/zps012/part-139.jsonl": {},
+    "results/zps012/part-14.jsonl": {},
+    "results/zps012/part-140.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-141.jsonl": {},
+    "results/zps012/part-142.jsonl": {},
+    "results/zps012/part-144.jsonl": {},
+    "results/zps012/part-145.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-146.jsonl": {},
+    "results/zps012/part-147.jsonl": {},
+    "results/zps012/part-148.jsonl": {},
+    "results/zps012/part-149.jsonl": {},
+    "results/zps012/part-15.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-150.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-154.jsonl": {},
+    "results/zps012/part-156.jsonl": {},
+    "results/zps012/part-157.jsonl": {},
+    "results/zps012/part-158.jsonl": {},
+    "results/zps012/part-159.jsonl": {},
+    "results/zps012/part-16.jsonl": {},
+    "results/zps012/part-160.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-161.jsonl": {},
+    "results/zps012/part-162.jsonl": {},
+    "results/zps012/part-163.jsonl": {},
+    "results/zps012/part-164.jsonl": {},
+    "results/zps012/part-166.jsonl": {},
+    "results/zps012/part-167.jsonl": {},
+    "results/zps012/part-168.jsonl": {},
+    "results/zps012/part-170.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-172.jsonl": {},
+    "results/zps012/part-173.jsonl": {},
+    "results/zps012/part-174.jsonl": {},
+    "results/zps012/part-178.jsonl": {},
+    "results/zps012/part-179.jsonl": {},
+    "results/zps012/part-18.jsonl": {},
+    "results/zps012/part-180.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-182.jsonl": {},
+    "results/zps012/part-184.jsonl": {},
+    "results/zps012/part-186.jsonl": {},
+    "results/zps012/part-188.jsonl": {},
+    "results/zps012/part-189.jsonl": {},
+    "results/zps012/part-19.jsonl": {},
+    "results/zps012/part-190.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-192.jsonl": {},
+    "results/zps012/part-193.jsonl": {},
+    "results/zps012/part-194.jsonl": {},
+    "results/zps012/part-196.jsonl": {},
+    "results/zps012/part-197.jsonl": {},
+    "results/zps012/part-198.jsonl": {},
+    "results/zps012/part-199.jsonl": {},
+    "results/zps012/part-20.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-200.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-201.jsonl": {},
+    "results/zps012/part-202.jsonl": {},
+    "results/zps012/part-203.jsonl": {},
+    "results/zps012/part-204.jsonl": {},
+    "results/zps012/part-205.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-206.jsonl": {},
+    "results/zps012/part-207.jsonl": {},
+    "results/zps012/part-209.jsonl": {},
+    "results/zps012/part-21.jsonl": {},
+    "results/zps012/part-212.jsonl": {},
+    "results/zps012/part-213.jsonl": {},
+    "results/zps012/part-214.jsonl": {},
+    "results/zps012/part-216.jsonl": {},
+    "results/zps012/part-217.jsonl": {},
+    "results/zps012/part-219.jsonl": {},
+    "results/zps012/part-22.jsonl": {},
+    "results/zps012/part-220.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-226.jsonl": {},
+    "results/zps012/part-227.jsonl": {},
+    "results/zps012/part-228.jsonl": {},
+    "results/zps012/part-229.jsonl": {},
+    "results/zps012/part-23.jsonl": {},
+    "results/zps012/part-230.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-233.jsonl": {},
+    "results/zps012/part-236.jsonl": {},
+    "results/zps012/part-237.jsonl": {},
+    "results/zps012/part-239.jsonl": {},
+    "results/zps012/part-240.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-242.jsonl": {},
+    "results/zps012/part-243.jsonl": {},
+    "results/zps012/part-244.jsonl": {},
+    "results/zps012/part-245.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-246.jsonl": {},
+    "results/zps012/part-247.jsonl": {},
+    "results/zps012/part-248.jsonl": {},
+    "results/zps012/part-25.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-256.jsonl": {},
+    "results/zps012/part-258.jsonl": {},
+    "results/zps012/part-259.jsonl": {},
+    "results/zps012/part-26.jsonl": {},
+    "results/zps012/part-261.jsonl": {},
+    "results/zps012/part-262.jsonl": {},
+    "results/zps012/part-263.jsonl": {},
+    "results/zps012/part-264.jsonl": {},
+    "results/zps012/part-268.jsonl": {},
+    "results/zps012/part-269.jsonl": {},
+    "results/zps012/part-27.jsonl": {},
+    "results/zps012/part-270.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-271.jsonl": {},
+    "results/zps012/part-272.jsonl": {},
+    "results/zps012/part-273.jsonl": {},
+    "results/zps012/part-277.jsonl": {},
+    "results/zps012/part-279.jsonl": {},
+    "results/zps012/part-28.jsonl": {},
+    "results/zps012/part-280.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-282.jsonl": {},
+    "results/zps012/part-283.jsonl": {},
+    "results/zps012/part-289.jsonl": {},
+    "results/zps012/part-29.jsonl": {},
+    "results/zps012/part-290.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-293.jsonl": {},
+    "results/zps012/part-294.jsonl": {},
+    "results/zps012/part-296.jsonl": {},
+    "results/zps012/part-298.jsonl": {},
+    "results/zps012/part-3.jsonl": {},
+    "results/zps012/part-30.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-305.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-306.jsonl": {},
+    "results/zps012/part-31.jsonl": {},
+    "results/zps012/part-310.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-312.jsonl": {},
+    "results/zps012/part-313.jsonl": {},
+    "results/zps012/part-32.jsonl": {},
+    "results/zps012/part-325.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-329.jsonl": {},
+    "results/zps012/part-336.jsonl": {},
+    "results/zps012/part-34.jsonl": {},
+    "results/zps012/part-340.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-342.jsonl": {},
+    "results/zps012/part-344.jsonl": {},
+    "results/zps012/part-348.jsonl": {},
+    "results/zps012/part-351.jsonl": {},
+    "results/zps012/part-356.jsonl": {},
+    "results/zps012/part-36.jsonl": {},
+    "results/zps012/part-364.jsonl": {},
+    "results/zps012/part-369.jsonl": {},
+    "results/zps012/part-37.jsonl": {},
+    "results/zps012/part-370.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-378.jsonl": {},
+    "results/zps012/part-38.jsonl": {},
+    "results/zps012/part-380.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-384.jsonl": {},
+    "results/zps012/part-387.jsonl": {},
+    "results/zps012/part-39.jsonl": {},
+    "results/zps012/part-396.jsonl": {},
+    "results/zps012/part-4.jsonl": {},
+    "results/zps012/part-40.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-406.jsonl": {},
+    "results/zps012/part-408.jsonl": {},
+    "results/zps012/part-41.jsonl": {},
+    "results/zps012/part-414.jsonl": {},
+    "results/zps012/part-42.jsonl": {},
+    "results/zps012/part-423.jsonl": {},
+    "results/zps012/part-43.jsonl": {},
+    "results/zps012/part-44.jsonl": {},
+    "results/zps012/part-446.jsonl": {},
+    "results/zps012/part-447.jsonl": {},
+    "results/zps012/part-448.jsonl": {},
+    "results/zps012/part-45.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-459.jsonl": {},
+    "results/zps012/part-46.jsonl": {},
+    "results/zps012/part-461.jsonl": {},
+    "results/zps012/part-48.jsonl": {},
+    "results/zps012/part-50.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-51.jsonl": {},
+    "results/zps012/part-52.jsonl": {},
+    "results/zps012/part-53.jsonl": {},
+    "results/zps012/part-54.jsonl": {},
+    "results/zps012/part-56.jsonl": {},
+    "results/zps012/part-57.jsonl": {},
+    "results/zps012/part-58.jsonl": {},
+    "results/zps012/part-59.jsonl": {},
+    "results/zps012/part-6.jsonl": {},
+    "results/zps012/part-60.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-62.jsonl": {},
+    "results/zps012/part-63.jsonl": {},
+    "results/zps012/part-64.jsonl": {},
+    "results/zps012/part-66.jsonl": {},
+    "results/zps012/part-67.jsonl": {},
+    "results/zps012/part-68.jsonl": {},
+    "results/zps012/part-70.jsonl": {
+      "gen:gm2": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-71.jsonl": {},
+    "results/zps012/part-73.jsonl": {},
+    "results/zps012/part-74.jsonl": {},
+    "results/zps012/part-75.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ],
+      "g12r-C": [
+        1,
+        1
+      ]
+    },
+    "results/zps012/part-76.jsonl": {},
+    "results/zps012/part-77.jsonl": {},
+    "results/zps012/part-78.jsonl": {},
+    "results/zps012/part-79.jsonl": {},
+    "results/zps012/part-8.jsonl": {},
+    "results/zps012/part-80.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-81.jsonl": {},
+    "results/zps012/part-82.jsonl": {},
+    "results/zps012/part-84.jsonl": {},
+    "results/zps012/part-88.jsonl": {},
+    "results/zps012/part-89.jsonl": {},
+    "results/zps012/part-9.jsonl": {},
+    "results/zps012/part-90.jsonl": {
+      "gen:gm2": [
+        1,
+        0
+      ]
+    },
+    "results/zps012/part-91.jsonl": {},
+    "results/zps012/part-92.jsonl": {},
+    "results/zps012/part-93.jsonl": {},
+    "results/zps012/part-94.jsonl": {},
+    "results/zps012/part-96.jsonl": {},
+    "results/zps012/part-97.jsonl": {},
+    "results/zps012/part-98.jsonl": {},
+    "results/zps012/part-99.jsonl": {}
+  },
+  "yardReading": {
+    "nets": "zl15",
+    "against": "g12r-C",
+    "n": 105,
+    "score": 0.5047619047619047
+  },
+  "challenger": "zl16"
 }
