@@ -1,19 +1,19 @@
 {
   "on": true,
   "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. On since 17 Nov 15:15Z on Google (Korbi 17:12, Fable 15:10Z: the store moves to B2 between generations). From gm1 (17 Nov, Korbi: the loop on the general line): line general, the first step crowns gm1 (trained fresh on the stored games, general-train run 44078371393), the filler then plays gen:gm1 with 1 game in 10 against g12r-C.",
-  "gen": 16,
+  "gen": 17,
   "prefix": "zl",
-  "champion": "zl15",
+  "champion": "zl16",
   "flags": "deeper=0.03",
   "deals": 64,
   "games": 2400,
   "maxWindow": 30000,
   "value": "128x64",
   "trainArgs": "keep=0.25 vkeep=0.15 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--decay_0.9_--soft_0.02",
-  "genFrom": 9,
-  "windowFrom": 6,
+  "genFrom": 15,
+  "windowFrom": 9,
   "nextFrom": 13,
-  "phase": "train",
+  "phase": "play",
   "log": [
     "2026-11-17T15:10:53.743Z generation 13: gm1 (warm from g12r-C) plays from the filler's next batch",
     "2026-11-17T16:10:40Z generation 14: gm2 (gm1 grown to view 2, 2602 inputs, with the general dealer sg1: Korbi 17:27, full general) to be crowned by the next step; the belief from here on is scryg",
@@ -27,14 +27,15 @@
     "2026-11-18T05:28:35.711Z generation 16: zl15 against the leaky g12r-C: 50.5% over 105 games",
     "2026-11-18T05:28:35.711Z generation 16: training zl16 warm from zl15 on zps006,zps007,zps008,zps009,zps010,zps011,zps012",
     "2026-11-18T07:25:00Z generation 16: the 05:28Z step's training dispatch was refused (HTTP 422: the dispatcher turned policy_args into \"policy args\"); fixed in zero-loop.yml, training started by hand at 07:25Z; the loop now asks again when nets are 100 minutes late",
-    "2026-11-18T07:28:31.909Z generation 16: zl16's nets are late: training asked for again (1)"
+    "2026-11-18T07:28:31.909Z generation 16: zl16's nets are late: training asked for again (1)",
+    "2026-11-18T07:36:35.750Z generation 16: zl16 (warm from zl15) plays from the filler's next batch"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
   "yardPairs": 300,
   "yardSeed": 3100000,
   "vsEvery": 10,
-  "previous": "gm2",
+  "previous": "zl15",
   "line": "general",
   "scry": "g12h2",
   "trained": {
@@ -111,6 +112,38 @@
         "against": "gm1",
         "n": 368,
         "score": 0.49728260869565216
+      },
+      "suite": "3/5",
+      "failed": [
+        "no-island-dandan-4",
+        "no-island-dandan-5"
+      ]
+    },
+    {
+      "gen": 16,
+      "nets": "zl16",
+      "from": "zl15",
+      "window": [
+        "zps006",
+        "zps007",
+        "zps008",
+        "zps009",
+        "zps010",
+        "zps011",
+        "zps012"
+      ],
+      "at": "2026-11-18T07:36:35.750Z",
+      "reading": {
+        "nets": "zl15",
+        "against": "gm2",
+        "n": 265,
+        "score": 0.5018867924528302
+      },
+      "yard": {
+        "nets": "zl15",
+        "against": "g12r-C",
+        "n": 105,
+        "score": 0.5047619047619047
       },
       "suite": "3/5",
       "failed": [
@@ -226,12 +259,6 @@
   },
   "belief": "scryg",
   "beliefArgs": "args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
-  "reading": {
-    "nets": "zl15",
-    "against": "gm2",
-    "n": 265,
-    "score": 0.5018867924528302
-  },
   "yardVs": "g12r-C:20",
   "vsParts": {
     "results/zps009/part-0.jsonl": {
@@ -3388,12 +3415,5 @@
     "results/zps012/part-97.jsonl": {},
     "results/zps012/part-98.jsonl": {},
     "results/zps012/part-99.jsonl": {}
-  },
-  "yardReading": {
-    "nets": "zl15",
-    "against": "g12r-C",
-    "n": 105,
-    "score": 0.5047619047619047
-  },
-  "challenger": "zl16"
+  }
 }

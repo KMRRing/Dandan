@@ -34,3 +34,9 @@ zps008  # 2026-11-18T01:28:05Z by hand: open when zl15 went live (the loop close
 zps009  # 2026-11-18T01:54:13Z by hand: closed minutes in so generation 16 has the g12r-C yardstick games (zps010 on)
 zps010  # 2026-11-18T02:02:40Z by hand: closed early so the rest of generation 16 (zps011 on) resigns and skips decided searches (Korbi 03:56); its shards in hand finish and count
 sps120  # 2026-11-18T03:04:59Z stray: the worker's built-in default filler (Hard 128 deals, S5), made when a worker couldn't read fleet/filler.json
+zps009  # 2026-11-18T07:36:35.750Z Zero's loop: made with the nets before zl16
+zps010  # 2026-11-18T07:36:35.750Z Zero's loop: made with the nets before zl16
+zps011  # 2026-11-18T07:36:35.750Z Zero's loop: made with the nets before zl16
+zps012  # 2026-11-18T07:36:35.750Z Zero's loop: made with the nets before zl16
+zps013  # 2026-11-18T07:36:35.750Z Zero's loop: made with the nets before zl16
+zps014  # 2026-11-18T07:36:35.750Z Zero's loop: made with the nets before zl16
