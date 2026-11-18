@@ -5,9 +5,10 @@
 import { labStore } from "./lib.mjs";
 
 const [ids] = process.argv.slice(2);
-const store = await labStore(), by = {};
+const store = await labStore(), by = {}, all = {};
 for (const id of ids.split(",")) for (const name of (await store.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n))) {
   for (const line of ((await store.get(name)) || "").split("\n")) {
+    if (line.startsWith('{"game"')) all[id] = (all[id] || 0) + 1;
     if (!line.includes('"vs"')) continue;
     const o = JSON.parse(line);
     if (o.game == null || !o.vs) continue;
@@ -21,6 +22,7 @@ for (const id of ids.split(",")) for (const name of (await store.list(`results/$
     else if (o.resign) r.lostResigned++; else r.lostPlayed++;
   }
 }
+console.log(`games in: ${JSON.stringify(all)}`);
 for (const [k, r] of Object.entries(by)) {
   const t = r.turns.sort((a, b) => a - b);
   console.log(`${k}: ${r.n} games, the latest nets won ${r.won} (${(100 * (r.won + r.draw / 2) / r.n).toFixed(1)}%), ${r.draw} drawn`);
