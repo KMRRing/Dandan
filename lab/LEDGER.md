@@ -1306,3 +1306,5 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   person; once a full search finds its best move worth 3% or less it plays the rest of that turn light (64 deals, no second
   look) and searches in full again at the first decision of every turn; at 97% or more, the rest of the turn at a careful
   quarter of the deals (at least 256, the second look kept). One local game with the live engine at 256 deals: 43 moves, 26 s.
+
+- 2026-11-18 02:27Z ops: Chicago 8c 3c385656 5→4 (4 workers on 5 nodes for 2 checks). VM a2b0e1bf at 6, all 6 reporting. ch.vs1.medium-ord back at $0.001 (1 of 2). All our classes at floor. Queue refilled: zps011 1,103 waiting. Fleet 02:16Z: 84 machines, 633/642 busy, reqCostH $0.22. Google: no compute, fleet/ 7 files, private/ scheduler.json only.
