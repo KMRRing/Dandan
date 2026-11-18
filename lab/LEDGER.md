@@ -1322,3 +1322,5 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   of 2 games packed clean.
 
 - 2026-11-18 04:47Z ops: Chicago 8c 3c385656 shows 2 workers on 3 nodes — both trims (5→4, 4→3) removed a working node and kept the idle one. Stopped count-trimming it; the idle node needs removing by name, or the pod fixed (exec). Queue nearly empty: zps011 8 left. Fleet 04:39Z: 82 machines, 617/626 busy, reqCostH $0.20. Prices at floor. Google clean.
+
+- 2026-11-18 07:12Z ops correction: Chicago 8c 3c385656 now 3 workers on 3 nodes — the idle node got its worker pod after ~3 h, so new k8s nodes do get pods, just slowly. The 04:47Z 'no pods' conclusion was too strong; don't count-trim k8s pools on short idleness. Sydney 4c VMs report 7 (expected 4: e086d81d 3 + 09546bc6 1); 3 are 13 min old; not an ops change — rechecking. Fleet 06:59Z: 87 machines, 639/648 busy, reqCostH $0.28. Prices at floor. Google clean.
