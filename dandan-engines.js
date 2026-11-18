@@ -215,13 +215,33 @@ async function zeroAt(engine, game, load) {
   }
   return z.brain;
 }
-/** Zero's weighing of a decision: { best, list, only } as think's. */
+/**
+ * Decided positions against people (18 Nov 2026, Korbi 04:08, "yep ok" 04:22): Monte never resigns against a person, but once a
+ * full search finds the game all but lost (its best move worth LOST or less) it plays the rest of that turn in a light mode
+ * (LIGHT deals, no second look), and looks again in full at the first decision of every turn, so an out a person's mistake
+ * opens is seen. All but won (WON or more): the rest of the turn at a careful medium search (a quarter of the deals, at least
+ * 256, the second look kept), as a slip there throws a won game away. Anything else: the full search, as before.
+ */
+const LOST = 0.03, WON = 0.97, LIGHT = 64;
+function modeBudget(z, s, seat, deals) {
+  const m = z.mode?.[seat];
+  if (!m || m.turn !== s.turn || m.game !== z.game) return { deals, full: true };
+  return m.kind === "lost" ? { deals: Math.min(deals, LIGHT), full: false, light: true } : { deals: Math.min(deals, Math.max(256, deals >> 2)), full: false };
+}
+/** Zero's weighing of a decision: { best, list, only, mode } as think's. */
 async function zeroThink(engine, s, seat, { budget = {}, must = null, load, game } = {}) {
-  const brain = await zeroAt(engine, game, load), { zeroOptions } = await import("./dandan-zero.js");
+  const brain = await zeroAt(engine, game, load), z = await zeroOf(engine, load), { zeroOptions } = await import("./dandan-zero.js");
   const ms = zeroOptions(s, seat);
   if (ms.length <= 1) return { best: ms[0] ?? PASS, list: [], only: true };
+  const D = budget.deals || 64, mb = modeBudget(z, s, seat, D);
   // the budget's time backstop as Hard's (Deep 40 s, Deepest 120 s): a slow phone stops there, each look of a close call its own
-  return brain.think(s, seat, budget.deals || 64, { ...(budget.ms ? { ms: budget.ms } : {}), ...(engine.deeper ? { deeper: { gap: engine.deeper } } : {}), ...(must ? { must } : {}) });
+  const r = brain.think(s, seat, mb.deals, { ...(budget.ms ? { ms: budget.ms } : {}), ...(engine.deeper && !mb.light ? { deeper: { gap: engine.deeper } } : {}), ...(must ? { must } : {}) });
+  if (mb.full && !r.only && D > LIGHT) {
+    const best = Math.max(...r.list.map(c => c.mean).filter(Number.isFinite));
+    z.mode ||= {};
+    z.mode[seat] = best <= LOST ? { kind: "lost", turn: s.turn, game: z.game } : best >= WON ? { kind: "won", turn: s.turn, game: z.game } : null;
+  }
+  return { ...r, mode: mb.full ? "full" : mb.light ? "light" : "careful" };
 }
 
 // ---------- asking an engine ----------

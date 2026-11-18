@@ -1302,3 +1302,7 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
   (rescued, in the game line). One local run: 4 games resigned, one rescue on the way (4.1% at the deep look), packed clean.
   For play against people (light mode when lost, a full look each turn; a careful medium search when winning, never resign):
   waits for Korbi's word, as it changes the game.
+- 02:35Z Korbi 04:22 ("yep ok", to 04:08's play half): the game's Monte (dandan-engines.js zeroThink) never resigns against a
+  person; once a full search finds its best move worth 3% or less it plays the rest of that turn light (64 deals, no second
+  look) and searches in full again at the first decision of every turn; at 97% or more, the rest of the turn at a careful
+  quarter of the deals (at least 256, the second look kept). One local game with the live engine at 256 deals: 43 moves, 26 s.
