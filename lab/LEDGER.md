@@ -1334,3 +1334,10 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
 - Korbi: one big batch of each, let them compete, train a model on both, continue with the method that shows better improvement.
 - Deep: zps018 (filler, 2,400 games from zl17, the ambitious rule; zps017's 186 cap games left out). Quick: zpq001 (9,600 games from zl17, 256 deals every move, about equal compute). The loop is off until the test is done.
 - Then from zl17, on the same earlier window: zl18-deep (+zps018), zl18-quick (+zpq001), zl18-both (+both). Matches at full depth on both sides: deep vs quick head to head, each vs zl17 and vs g12r-C.
+
+## 18 Nov ~12:40Z — the audit: the nets mostly did not learn
+- Weights compared: **gm2's policy = zl15's = zl16's, bit for bit; zl16's value = zl17's.** zl15 and zl16's values moved by ≤0.05 (best epoch 1, held-out 0.4654→0.4652 kind of gains). The flat line (49.7%, 50.2%, 51.2%) is mostly nets that did not change.
+- Cause (policy): policy_np.py trains on soft targets (--soft 0.02, softmax of the search's values) but kept the epoch with the lowest held-out loss **on the top move alone**. Soft training makes the warm net less sharp on that measure while it improves on its own (agreement 0.65→0.68 every run), so epoch 0, the warm start, won every time but zl17's. Shown locally on 16 fresh zl17 games: hard loss 0.777→0.790 while the soft loss falls 0.852→0.849 and agreement rises 0.637→0.662.
+- Fixed: the epoch kept by the loss the training lowers (softLoss with --soft); value and policy files carry the epoch kept; a WARNING in the training log and in the loop when a net comes out as its warm start.
+- Value net: its held-out loss is the training's own loss, so no mismatch; the warm start sits at its optimum and every epoch past 1 overfits on 15% of the value rows (vkeep 0.15). For the three zl18 nets: vkeep 0.5, both arms the same.
+- The held-out split is by seed (seed % 5), the same games every run: no leak of held-out games into the warm start.

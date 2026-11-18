@@ -68,6 +68,7 @@ def back(hs, gout):
     return gW, gB
 
 best, bestW, t = loss_of(he), ([w.copy() for w in W], [b.copy() for b in B]), 0
+bestE = 0
 say(f"before training: held-out loss {best:.4f}")
 for e in range(1, A.epochs + 1):
     order = rng.permutation(tr)
@@ -89,7 +90,7 @@ for e in range(1, A.epochs + 1):
             if A.wd: W[l] *= 1 - A.lr * A.wd
     h = loss_of(he)
     say(f"epoch {e}: held-out loss {h:.4f}")
-    if h < best: best, bestW = h, ([w.copy() for w in W], [b.copy() for b in B])
+    if h < best: best, bestW, bestE = h, ([w.copy() for w in W], [b.copy() for b in B]), e
 
 Wb, Bb = bestW
 if OUT == 2:   # the value output alone is kept: the deck-out output only shaped the layers below it
@@ -99,6 +100,7 @@ for l, (w, b) in enumerate(zip(Wb, Bb)):
     sc = np.maximum(np.abs(w).max(0), 1e-8) / 127
     q = np.clip(np.round(w / sc), -127, 127).astype(np.int8)
     layers.append(dict(n=[int(w.shape[0]), int(w.shape[1])], q=base64.b64encode(q.tobytes()).decode(), s=[float(round(x, 8)) for x in sc], b=[float(round(x, 6)) for x in b] if l < len(Wb) - 1 else []))
-json.dump(dict(source="lab/zero/value_np.py", note=f"Zero value net, {A.shape}, {R} rows", metrics=dict(heldLoss=round(float(best), 4), rows=int(R)), layers=layers), open(A.out, "w"))
+json.dump(dict(source="lab/zero/value_np.py", note=f"Zero value net, {A.shape}, {R} rows", metrics=dict(heldLoss=round(float(best), 4), rows=int(R), epoch=bestE), layers=layers), open(A.out, "w"))
 open(A.out, "a").write("\n")
-say(f"best held-out loss {best:.4f} (a coin: 0.6931)")
+say(f"best held-out loss {best:.4f} at epoch {bestE} (a coin: 0.6931)")
+if A.init and bestE == 0: say("WARNING: no epoch beat the warm start: the net written is the warm start, unchanged")

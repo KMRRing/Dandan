@@ -186,7 +186,7 @@ def step(g, t):
 
 def measure(idx):
     """policy-train.mjs's metrics on decisions idx, with agreement by the kind of the search's move and pass/act errors."""
-    loss = med_up = mod_up = agree_med = agree_mod = 0.0
+    loss = soft_loss = med_up = mod_up = agree_med = agree_mod = 0.0
     off_n = off_first = 0
     by = {k: [0, 0, 0] for k in KINDS}       # decisions, Medium agrees, the model agrees
     acted = passed = pass_err = act_err = med_pass_err = med_act_err = 0
@@ -195,6 +195,7 @@ def measure(idx):
         f, _ = forward(g)
         p = softmax(f, g)
         loss -= np.log(p[g["target"]] + 1e-12).sum()
+        if A.soft > 0: soft_loss -= (softmax(Q[g["cid"]] / A.soft, g) * np.log(p + 1e-12)).sum()
         best = np.maximum.reduceat(f, g["cstart"])
         # the first candidate with the top score (ties as the engine breaks them: the first listed)
         is_top = f == best[g["dec"]]
@@ -217,13 +218,14 @@ def measure(idx):
         med_pass_err += (a & (k_med == 0)).sum(); med_act_err += (ps & (k_med != 0)).sum()
     n = len(idx)
     r4 = lambda v: round(float(v), 4)
-    return dict(decisions=n, loss=r4(loss / n), mediumGivesUp=round(float(100 * med_up / n), 3), modelGivesUp=round(float(100 * mod_up / n), 3),
+    return dict(decisions=n, loss=r4(loss / n), **({"softLoss": r4(soft_loss / n)} if A.soft > 0 else {}), mediumGivesUp=round(float(100 * med_up / n), 3), modelGivesUp=round(float(100 * mod_up / n), 3),
                 mediumAgrees=r4(agree_med / n), modelAgrees=r4(agree_mod / n), offPicks=int(off_n), offFirst=r4(off_first / max(1, off_n)),
                 byKind={k: dict(decisions=v[0], mediumAgrees=r4(v[1] / max(1, v[0])), modelAgrees=r4(v[2] / max(1, v[0]))) for k, v in by.items()},
                 passWhereActed=dict(model=r4(pass_err / max(1, acted)), medium=r4(med_pass_err / max(1, acted)), of=int(acted)),
                 actWherePassed=dict(model=r4(act_err / max(1, passed)), medium=r4(med_act_err / max(1, passed)), of=int(passed)))
 
 
+KEY = "softLoss" if A.soft > 0 else "loss"
 best = dict(measure(held_idx), epoch=0); bestP = {k: v.copy() for k, v in P.items()}
 say(f"before training: {json.dumps(best)}")
 t = 0
@@ -237,7 +239,9 @@ for e in range(1, A.epochs + 1):
     h = measure(held_idx)
     say(f"epoch {e}: training loss {tl / len(order):.4f}, held out {json.dumps(h)}")
     LR[0] *= A.decay
-    if h["loss"] < best["loss"]:
+    # the epoch kept by the loss the training lowers (18 Nov 2026): with soft targets the held-out loss on the top move alone
+    # rewarded the sharp warm-start net, epoch 0 was kept and gm2's policy went unchanged through zl15 and zl16
+    if h[KEY] < best[KEY]:
         best = dict(h, epoch=e); bestP = {k: v.copy() for k, v in P.items()}
 
 r5 = lambda a: [round(float(v), 5) for v in np.asarray(a, dtype=np.float64).ravel()]
@@ -260,3 +264,4 @@ metrics = dict(best, every=dict(best), deep=deep, games=None, train=int(len(trai
 out = dict(alpha=0, beta=0, medium=False, **({"form": A.form} if A.form != "mlp" else {}), net=net, metrics=metrics)
 open(A.out, "w").write(json.dumps(out) + "\n")
 say(f"best epoch {best['epoch']}: {json.dumps(best)}")
+if A.init and best["epoch"] == 0: say("WARNING: no epoch beat the warm start: the net written is the warm start, unchanged")
