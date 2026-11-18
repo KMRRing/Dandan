@@ -1328,3 +1328,9 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
 ## 18 Nov 09:45Z — training games deep again; rival games like for like
 - zl16 vs full g12r-C 32.7%/98 was not like for like: zl16 played 3 moves in 4 from the 128-deal fast search. Rival games now: both sides full on every move, never resigning (the would-resign point recorded).
 - Korbi 11:41 local, "do training on deep": the playout cap is off; every move fully searched, as g12r-C's line was. zps017 (made with the cap, under 10 min old) closed.
+
+## 18 Nov ~10:25Z — deep vs quick, one big batch each (Korbi 12:21 local)
+- The record (14 Nov): approach C (256 deals, 4× the games) beat approach A (1,024 deals) 63.7% at Deep; g12r-C is line C. The ambitious rule (17 Nov 19:51) made training games costlier than A.
+- Korbi: one big batch of each, let them compete, train a model on both, continue with the method that shows better improvement.
+- Deep: zps018 (filler, 2,400 games from zl17, the ambitious rule; zps017's 186 cap games left out). Quick: zpq001 (9,600 games from zl17, 256 deals every move, about equal compute). The loop is off until the test is done.
+- Then from zl17, on the same earlier window: zl18-deep (+zps018), zl18-quick (+zpq001), zl18-both (+both). Matches at full depth on both sides: deep vs quick head to head, each vs zl17 and vs g12r-C.

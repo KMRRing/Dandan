@@ -1,5 +1,5 @@
 {
-  "on": true,
+  "on": false,
   "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. On since 17 Nov 15:15Z on Google (Korbi 17:12, Fable 15:10Z: the store moves to B2 between generations). From gm1 (17 Nov, Korbi: the loop on the general line): line general, the first step crowns gm1 (trained fresh on the stored games, general-train run 44078371393), the filler then plays gen:gm1 with 1 game in 10 against g12r-C.",
   "gen": 18,
   "prefix": "zl",
@@ -3203,5 +3203,6 @@
     "results/zps016/part-97.jsonl": {},
     "results/zps016/part-98.jsonl": {},
     "results/zps016/part-99.jsonl": {}
-  }
+  },
+  "offNote": "Off 18 Nov ~10:25Z for the deep-vs-quick test (Korbi 12:21 local): zps018 (deep, 2,400 from zl17) and zpq001 (quick, 9,600 from zl17); then zl18-deep, zl18-quick and zl18-both trained by hand from zl17, matched, and the loop goes on with the better method and the both-data nets."
 }
