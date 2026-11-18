@@ -28,7 +28,7 @@ import { DEPTH } from "./dandan-think.js";
 import { getSync } from "./net.js";
 import { INDEX_ROOM } from "./records.js";
 import { savedName } from "./name.js";
-import { shownRules } from "./dandan-rules.js";
+import { shownRules, rules as labRules } from "./dandan-rules.js";
 import { replay as replayGame } from "./records.js";
 import { khSet, BOTH } from "./dandan-core.js";
 
@@ -160,6 +160,12 @@ let RP = null;                                     // { key, game, names, at, to
 const once = (sync, path) => new Promise((res, rej) => { let off = null, done = false; off = sync.watch(path, v => { if (done) return; done = true; res(v); queueMicrotask(() => off?.()); }, rej); });
 /** A kept game from the database: its index line's room, or the unfinished games' copy. */
 async function fetchGame(key) {
+  // a sample game from the history (games.js, samples/samples.json; 18 Nov 2026): sample:<key>
+  if (key.startsWith("sample:")) {
+    const sets = (await (await fetch("samples/samples.json", { cache: "no-cache" })).json()).sets, g = sets.flatMap(x => x.games).find(x => x.key === key.slice(7));
+    if (!g) throw new Error("that sample game isn't kept");
+    return { game: g.game, name: g.game.seats?.[0]?.name };
+  }
   const sync = await getSync(), line = await once(sync, `crates/rooms/${INDEX_ROOM}/games/${key}`);
   if (line?.room) { const g = await once(sync, `crates/rooms/${line.room}/dandan/game`); if (g) return { game: g, name: line.name }; }
   const live = await once(sync, `crates/rooms/${INDEX_ROOM}/live/${key}`);
@@ -168,7 +174,8 @@ async function fetchGame(key) {
 }
 /** The view of a replay at a move: the game as it stood, both hands face up. */
 function replayView() {
-  const G = replayGame(shownRules, RP.game, RP.at);
+  // a lab game (Zero's self-play) plays again under the lab's rules with its own chance (records.js, game.zero)
+  const G = replayGame(RP.game.zero ? labRules : shownRules, RP.game, RP.at);
   if (G.error) throw new Error(`the moves stop making sense at move ${G.at + 1}: ${G.error}`);
   const state = JSON.parse(JSON.stringify(G.state));
   for (const seat of [0, 1]) for (const id of state.hand[seat]) khSet(state, id, BOTH);
