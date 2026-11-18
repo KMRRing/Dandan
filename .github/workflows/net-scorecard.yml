@@ -69,6 +69,9 @@ jobs:
           tail -n 1 "$RUNNER_TEMP"/t?.txt
           python3 lab/zero/pack-merge.py "$RUNNER_TEMP/m" "$D"/[0-9]
           set -o pipefail
-          python3 lab/policy_np.py "$RUNNER_TEMP/m/a" /tmp/p.json --form head2 --h1 128 --h2 64 --h3 64 --soft 0.02 --epochs 0 --init "lab/zero/nets/$N-gpolicy.json" | tee "$RUNNER_TEMP/pol.txt"
-          python3 lab/zero/value_np.py "$RUNNER_TEMP/m/v" /tmp/v.json --shape 128x64 --epochs 0 --init "lab/zero/nets/$N-gvalue.json" | tee "$RUNNER_TEMP/val.txt"
+          # the nets' own sizes (18 Nov 2026: the size test's 4x and 10x nets)
+          read H1 H2 H3 < <(python3 -c "import json; n=json.load(open('lab/zero/nets/$N-gpolicy.json'))['net']; print(n['H1'], n['H2'], n.get('H3', 64))")
+          VS=$(python3 -c "import json; L=json.load(open('lab/zero/nets/$N-gvalue.json'))['layers']; print('x'.join(str(l['n'][1]) for l in L[:-1]))")
+          python3 lab/policy_np.py "$RUNNER_TEMP/m/a" /tmp/p.json --form head2 --h1 $H1 --h2 $H2 --h3 $H3 --soft 0.02 --epochs 0 --init "lab/zero/nets/$N-gpolicy.json" | tee "$RUNNER_TEMP/pol.txt"
+          python3 lab/zero/value_np.py "$RUNNER_TEMP/m/v" /tmp/v.json --shape "$VS" --epochs 0 --init "lab/zero/nets/$N-gvalue.json" | tee "$RUNNER_TEMP/val.txt"
           python3 lab/zero/scorecard-line.py "$N" "$RUNNER_TEMP/pol.txt" "$RUNNER_TEMP/val.txt" | tee -a "$GITHUB_STEP_SUMMARY"
