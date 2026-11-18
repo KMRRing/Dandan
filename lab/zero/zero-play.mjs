@@ -93,7 +93,9 @@ for (let g = first; g < first + n; g++) {
       // cap=<share>:<deals> (18 Nov 2026, KataGo's playout cap randomisation; Korbi 04:48 "KataGo in for sure"): a share of
       // decisions gets the full search and only those become policy targets; the rest play from a fast search (that many deals,
       // no close-call look) and leave no decision line (their positions still give value rows from the game's result)
-      const full = yard || !CAP || seeded(mix(seed, 3300017 + i))() < CAP.share;
+      // in a game against a rival both sides search fully on every move (18 Nov: zl16 scored 32.7% against the full g12r-C
+      // while 3 of its own moves in 4 came from the 128-deal fast search; a reading has to be like for like)
+      const full = vsSeat >= 0 || !CAP || seeded(mix(seed, 3300017 + i))() < CAP.share;
       let res = brainOf(who).think(s, who, full ? deals : CAP.deals, yard ? FULL : full ? DEEPER : FAST);
       move = res.best;
       if (RESIGN && !res.only && !yard) {
