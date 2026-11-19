@@ -22,6 +22,7 @@ on:
       init: { description: "Warm start: the general nets to begin from (lab/zero/nets/<init>-gpolicy, -gvalue), same sizes; empty fresh", required: false, default: "" }
       rean: { description: "Reanalysis (lab/zero/reanalyse.mjs): <job ids>:<use 1|0>:<only 1|0>; the deep values replace the quick search's in the value targets (use), only reanalysed positions give value rows (only); empty none", required: false, default: "" }
       refine: { description: "Refinement (19 Nov 2026, Korbi: deep games refine what the quick games set): <batch ids, + between>:<epochs>:<policy lr>:<value lr>; after the main stage, each net trained on those batches alone, from the main stage's net; empty none", required: false, default: "" }
+      vtd: { description: "Value targets' search half from the same seat's searched value this many of its turns later (replay-pack2 VTD); 0 off", required: false, default: "0" }
       policy_init: { description: "warm: the policy starts from init too; fresh: only the value does (18 Nov 2026: fresh on 8 batches gave up 0.783 points, warm 0.810)", required: false, default: "warm" }
       hands: { description: "Scry 1.2's dealt hands a decision in the pack (1,024 in play; 256 packs four times as fast)", required: false, default: "256" }
 permissions:
@@ -46,7 +47,7 @@ jobs:
           S="lab/zero/nets/${{ inputs.scry }}-${{ inputs.belief }}.json"; D="$RUNNER_TEMP/r"; P=${{ matrix.part }}
           IFS=: read RJ RU RO <<< "${{ inputs.rean }}"
           RF="${{ inputs.refine }}"; RF="${RF%%:*}"
-          for k in 0 1 2 3; do REFINE="${RF//+/,}" REAN="$RJ" REAN_USE="$RU" REAN_ONLY="$RO" ENC=general KEEP="${{ inputs.keep }}" VKEEP="${{ inputs.vkeep }}" VBLEND="${{ inputs.vblend }}" HANDS="${{ inputs.hands }}" LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D/$k" "${{ inputs.games }}" "$S" $((P * 4 + k)) 48 > "$RUNNER_TEMP/t$k.txt" & done; wait
+          for k in 0 1 2 3; do VTD="${{ inputs.vtd }}" REFINE="${RF//+/,}" REAN="$RJ" REAN_USE="$RU" REAN_ONLY="$RO" ENC=general KEEP="${{ inputs.keep }}" VKEEP="${{ inputs.vkeep }}" VBLEND="${{ inputs.vblend }}" HANDS="${{ inputs.hands }}" LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D/$k" "${{ inputs.games }}" "$S" $((P * 4 + k)) 48 > "$RUNNER_TEMP/t$k.txt" & done; wait
           rm -f "$RUNNER_TEMP/key.json"
           tail -n 1 "$RUNNER_TEMP"/t?.txt | tee -a "$GITHUB_STEP_SUMMARY"
           cp "$RUNNER_TEMP"/t?.txt "$D/"

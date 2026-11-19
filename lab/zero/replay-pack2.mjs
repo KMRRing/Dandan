@@ -50,6 +50,11 @@ const marksAt = GEN ? (s, seat, m) => generalMarks(s, seat, m, POOL, LEGACY) : m
 const valueOf = GEN ? (s, me) => valueView(s, me) : (s, me) => ext(s, me, handCounts(s, 1 - me));
 
 const [dir, ids, sfile] = process.argv.slice(2), SH = Number(process.argv[5] || 0), SHS = Number(process.argv[6] || 1);
+// VTD=<turns> (19 Nov 2026, Fable's second idea for the thrown-away card, Korbi: "we need value networks"): the search half of the
+// value target taken from the same seat's searched value that many of its own turns later in the game (temporal difference), not
+// at the position itself: a card spent for nothing shows in the later searches long before it shows in the result; where the game
+// ends first, the result
+const VTD = Number(process.env.VTD || 0);
 const VBLEND = Number(process.env.VBLEND ?? 0.5), HANDS = Number(process.env.HANDS || 1024), net = JSON.parse(fs.readFileSync(sfile, "utf8").split("\n")[0]);
 const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random, key = m => JSON.stringify(m), other = x => 1 - x;
 function sink(sub, names) {
@@ -225,7 +230,12 @@ function replay(game, decisions) {
   for (const r of vrows) {
     V.put("fut.f32", futOf(r));
     if (VJ) { V.put("pt.f32", Float32Array.of(r.pt)); V.put("pd.f32", Float32Array.of(r.pd)); }
-    const y = r.v == null ? won(r.me) : (1 - VBLEND) * won(r.me) + VBLEND * r.v;
+    let sv = r.v;
+    if (VTD && !(HOLD_ONLY)) {   // the same seat's next searched value VTD of its own turns later (2 turns a round)
+      const later = vrows.find(q => q.me === r.me && q.turn >= r.turn + 2 * VTD && q.v != null);
+      sv = later ? later.v : won(r.me);
+    }
+    const y = sv == null ? won(r.me) : (1 - VBLEND) * won(r.me) + VBLEND * sv;
     V.put(MF, GEN ? halves(r.f) : Float32Array.from(r.f)); V.put(TF, GEN ? halves(r.g) : Float32Array.from(r.g)); V.put("won.f32", Float32Array.of(y));
     V.put("aux.f32", Float32Array.of(end.lost?.[r.me] ? 1 : 0)); V.put("hold.u8", Uint8Array.of(hold ? 1 : 0)); V.put("rf.u8", Uint8Array.of(refineNow ? 1 : 0)); V.put("lib.u8", Uint8Array.of(Math.min(255, r.lib))); V.put("gid.u32", Uint32Array.of(seed >>> 0)); nv++;
   }
