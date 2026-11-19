@@ -65,6 +65,18 @@ const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32"
 // DEALT=<n> with VNET=<file> (19 Nov 2026, Fable: "the value net is scored on true hands and used on dealt hands"): each value row
 // also gets the net's chance on the true position (pt.f32) and its mean over n worlds dealt from the seat's own belief (pd.f32),
 // as the search uses it; lab/zero/value-dealt.py reads both against the result
+// REAN=<reanalysis job ids> (19 Nov 2026, lab/zero/reanalyse.mjs): the deep search's values of the positions it reanalysed; with
+// REAN_USE=1 they replace the quick search's value in the value targets; with REAN_ONLY=1 only those positions give value rows
+// (the A/B: the same rows with REAN_USE=1 and 0)
+const REAN = new Map(), REAN_USE = process.env.REAN_USE === "1", REAN_ONLY = process.env.REAN_ONLY === "1";
+if (process.env.REAN?.startsWith("file:")) { for (const l of fs.readFileSync(process.env.REAN.slice(5), "utf8").split("\n")) if (l) { const o = JSON.parse(l); REAN.set(`${o.g}:${o.i}`, o); } }
+else if (process.env.REAN) {
+  const st = await (await import("../lib.mjs")).labStore();
+  for (const id of process.env.REAN.split(","))
+    for (const n of (await st.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)))
+      for (const l of ((await st.get(n)) || "").split("\n")) if (l) { const o = JSON.parse(l); REAN.set(`${o.g}:${o.i}`, o); }
+  console.error(`reanalysed positions read: ${REAN.size}`);
+}
 const DEALT = Number(process.env.DEALT || 0), VJ = DEALT ? generalJudge(JSON.parse(fs.readFileSync(process.env.VNET, "utf8").split("\n")[0])) : null;
 let nv = 0, games = 0, broken = 0, unmatched = 0, skipped = 0, old = 0, pickOff = 0, moved = 0, twins = 0;
 
@@ -143,9 +155,10 @@ function replay(game, decisions) {
       else {
         // the value target: the picked option's final mean (item 9; an old line: the played move's q, its group's on a twin),
         // not the best of the first look's
-        const d = ds.find(x => x.c?.length), vs = !d ? null : d.v != null ? d.v : valueOld(s, d, m, x3 === i);
-        for (const me of [0, 1]) {
-          const row = { me, turn: s.turn, active: s.active, f: valueOf(s, me), g: valueOf(s, other(me)), v: vs == null ? null : me === d.seat ? vs : 1 - vs };
+        const d = ds.find(x => x.c?.length), vs = !d ? null : d.v != null ? d.v : valueOld(s, d, m, x3 === i), rv = REAN.get(`${seed}:${i}`);
+        if (!(REAN_ONLY && !rv)) for (const me of [0, 1]) {
+          const quick = vs == null ? null : me === d.seat ? vs : 1 - vs;
+          const row = { me, turn: s.turn, active: s.active, f: valueOf(s, me), g: valueOf(s, other(me)), v: REAN_USE && rv ? (me === rv.seat ? rv.v : 1 - rv.v) : quick };
           if (VJ) {
             const deal = F[me].deal(), rng = seeded(mix(seed, 9090 + 2 * i + me));
             let sum = 0;
