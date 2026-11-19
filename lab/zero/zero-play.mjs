@@ -165,7 +165,10 @@ for (let g = first; g < first + n; g++) {
       // oracle=1 (19 Nov 2026, Korbi: a diagnostic, never self-play): our side's search sees the other hand as it is (determinize
       // open: only the library's order dealt), the upper bound of what a perfect dealer could give it
       const ab2 = flag("oracle") && who !== vsSeat ? { ...ab, open: true } : ab;
-      let res = brainOf(who).think(s, who, full ? deals : CAP.deals, ab2);
+      // rdeals=<n> (19 Nov 2026, Fable: which engine gains from depth): the rival searches at n deals with the close-call look one
+      // turn deeper only (quick), our side as the flags say (deep): the same nets on both sides make a depth-against-quick match
+      const R_DEALS = Number(flag("rdeals") || 0), rq = R_DEALS && who === vsSeat;
+      let res = brainOf(who).think(s, who, rq ? R_DEALS : full ? deals : CAP.deals, rq ? (DEEPER.deeper ? { deeper: { gap: DEEPER.deeper.gap } } : {}) : ab2);
       move = res.best;
       if (RESIGN && !res.only && !yard) {
         const v = res.list.find(c => key(c.move) === key(res.best))?.mean;
