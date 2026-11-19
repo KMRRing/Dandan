@@ -20,8 +20,8 @@ const [nets = "g9x-C", deals = "256", flags = "deeper=0.03"] = args;
 const suite = JSON.parse(fs.readFileSync(new URL("./suite.json", import.meta.url), "utf8"));
 const extraOf = f => {
   // as lab/hard-match.mjs reads a side's flags: deeper=<gap>, turns=<n>, and the switches (twins, qtree, qall, keepFirst…)
-  const fl = f.split("~").filter(Boolean), d = fl.find(x => x.startsWith("deeper=")), t = fl.find(x => x.startsWith("turns=")), dm = fl.find(x => x.startsWith("deepmax="));
-  return { ...(d ? { deeper: { gap: Number(d.slice(7)), ...(dm ? { max: Number(dm.slice(8)) } : {}) } } : {}), ...(t ? { turns: Number(t.slice(6)) } : {}), ...Object.fromEntries(fl.filter(x => !x.includes("=")).map(x => [x === "keepfirst" ? "keepFirst" : x, true])) };
+  const fl = f.split("~").filter(Boolean), d = fl.find(x => x.startsWith("deeper=")), t = fl.find(x => x.startsWith("turns=")), dm = fl.find(x => x.startsWith("deepmax=")), pr = fl.find(x => x.startsWith("prior="));
+  return { ...(pr ? { prior: Number(pr.slice(6)) } : {}), ...(d ? { deeper: { gap: Number(d.slice(7)), ...(dm ? { max: Number(dm.slice(8)) } : {}) } } : {}), ...(t ? { turns: Number(t.slice(6)) } : {}), ...Object.fromEntries(fl.filter(x => !x.includes("=")).map(x => [x === "keepfirst" ? "keepFirst" : x, true])) };
 };
 execSync("git fetch -q origin game-records", { stdio: "ignore" });
 const name = m => `${m.t}${m.card != null ? " " + DECK[m.card] : ""}`;
@@ -44,12 +44,13 @@ for (const p of suite.positions) {
   const isBad = m => m.t === p.bad.t && DECK[m.card] === p.bad.name, bad = isBad(pick);
   // the margin (Fable 10:50Z): the best other option less the bad move, in points, all at the first look's depth (the deeper
   // look reweighs only the best two, so final means mix depths); a pass by a hair says little
-  const v = o => o.first ?? o.mean, badO = r.list.find(o => isBad(o.move)), other = r.list.filter(o => !isBad(o.move)).sort((a, b) => v(b) - v(a))[0];
+  const v = o => o.score ?? o.first ?? o.mean,   // with prior=: the score the pick was made on
+   badO = r.list.find(o => isBad(o.move)), other = r.list.filter(o => !isBad(o.move)).sort((a, b) => v(b) - v(a))[0];
   const margin = badO && other ? Math.round(1000 * (v(other) - v(badO))) / 10 : null;
   // and whether the pick is a null move (lab/null-move.mjs: the measure Korbi asked for, never a rule)
   const nul = isNull(s, who, pick, seeded(7));
   out.push({ id: p.id, pass: !bad, margin, null: nul, pick: name(pick), top: r.list.slice(0, 4).map(o => [name(o.move), Math.round(1000 * o.mean) / 10]) });
-  console.log(`${bad ? "FAIL" : "pass"}  ${p.id}: picks ${name(pick)}${nul ? " (a null move)" : ""}, margin ${margin ?? "-"} points; ${r.list.slice(0, 4).map(o => `${name(o.move)} ${(100 * o.mean).toFixed(1)}`).join(", ")}`);
+  console.log(`${bad ? "FAIL" : "pass"}  ${p.id}: picks ${name(pick)}${nul ? " (a null move)" : ""}, margin ${margin ?? "-"} points; ${r.list.slice(0, 4).map(o => `${name(o.move)} ${(100 * o.mean).toFixed(1)}${o.prior != null ? ` (policy ${(100 * o.prior).toFixed(0)}%)` : ""}`).join(", ")}`);
 }
 const passed = out.filter(x => x.pass).length, margins = out.map(x => x.margin).filter(x => x != null);
 console.log(`suite: ${passed} of ${out.length} passed, mean margin ${(margins.reduce((a, b) => a + b, 0) / Math.max(1, margins.length)).toFixed(1)} points, ${out.filter(x => x.null).length} null picks (nets ${nets}, ${deals === "policy" ? "policy alone, no search; numbers are its chances, margins in points of probability" : `${deals} deals, ${flags || "no flags"}`})`);

@@ -5,13 +5,16 @@
 //            marks by marks2 (moves and answers in one encoding, every target in full), its searched value q
 //   <dir>/v  value rows face up over the extended view alone (EXT_N a seat, lab/zero/value_np.py): won.f32 the game's result
 //            blended with the search's value at that position (VBLEND, default 0.5, where the position was searched), aux.f32
-//            whether that seat lost by drawing from an empty library (value_np.py --aux)
+//            whether that seat lost by drawing from an empty library (value_np.py --aux), fut.f32 (19 Nov 2026, value_np.py
+//            --fut) three a row: the seat's lead in cards in hand and in lands at the start of its next turn (or the game's end),
+//            each /7, and the share of the game left ((last turn - this turn) / 40, at most 1)
 // ENC (env, 17 Nov 2026, stage 3 step 3): "general" packs dandan-general.js's view, value view and marks (every input from the card
 // files, nothing named by hand) in place of Zero 2's; the same games, the same picks and values.
 // HANDS (env): the belief's dealt hands a decision (1,024 as in play; the training workflow packs at 256, Fable 20:45Z)
 // usage: node lab/zero/replay-pack2.mjs <dir> <zero-play job ids, comma-separated | file:<local output>> <Scry 1.2 file> [shard shards]
 import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
+import { lands } from "../../dandan-core.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
 import { marksOf } from "../../dandan-netpolicy.js";
 import { zeroOptions, qMarksOf } from "../../dandan-zero.js";
@@ -56,7 +59,7 @@ function sink(sub, names) {
 // cast, or the seat played again first; rc.f32, three a candidate: the search's replies to that candidate over its deals (a cast,
 // dandan-think.js: let it resolve, aimed at, another play), as shares, −1 each where the decision line has none
 const XF = GEN ? "x.f16" : "x.f32", A = sink("a", [XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8", ...(GEN ? ["res.f32", "resp.i8", "rc.f32"] : [])]), PC = { D: 0, C: 0, K: 0, Q: 0 };
-const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "hold.u8"]);
+const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "fut.f32", "hold.u8"]);
 let nv = 0, games = 0, broken = 0, unmatched = 0, skipped = 0, old = 0, pickOff = 0, moved = 0, twins = 0;
 
 // a decision line's options are its moves (Fable's review, item 8: zero-play stores each, mv), checked against zeroOptions.
@@ -113,26 +116,29 @@ function valueOld(s, d, played, explored) {
   const at = explored ? -1 : o.ms.findIndex(m => key(m) === key(played)), p = at >= 0 ? at : d.pick, js = o.groups.find(g => g.includes(p)) || [p];   // the line's pick when the move played isn't among them (Fable 20:10Z)
   return js.reduce((a, j) => a + d.c[j].q, 0) / js.length;
 }
+// cards in hand and lands, each seat (the value net's future outputs)
+const matOf = s => ({ hand: [0, 1].map(x => s.hand[x].length), lands: [0, 1].map(x => lands(s, x).length) });
 function replay(game, decisions) {
   const seed = game.seed, x3 = game.explore3 ? game.explore3.i : null, hold = seed % 5 === 0;
   if (HOLD_ONLY && !hold) return;
   let G = newRecord(rules, { seats: 2, seed, now: 0 }), lastTurn = -1, watch = null;
   const gameDec = [];   // this game's decisions in order: { who, resp }, written once the game's result is known
   const F = net.scryg ? [new ScryG(0, net), new ScryG(1, net)] : [new Scry12(0, net, { hands: HANDS }), new Scry12(1, net, { hands: HANDS })], vrows = [];
+  const snaps = new Map();   // turn → each seat's cards in hand and lands at that turn's start (the future outputs)
   if (LEGACY) for (const f of F) f.legacy = true;
   for (let i = 0; i < game.moves.length; i++) {
     const [who, m] = game.moves[i], s = rules.restore(J(G.state)), ds = decisions.get(i) || [];
     // the value rows: every turn's start and one position with priority in three besides (as replay-pack.mjs), after any
     // random move only; the search's value where this position was searched
     const turnStart = s.turn !== lastTurn && !s.pending;
-    if (turnStart) lastTurn = s.turn;
+    if (turnStart) { lastTurn = s.turn; snaps.set(s.turn, matOf(s)); }
     if (!s.pending && (turnStart || seeded(mix(seed, 4242 + i))() < 1 / 3) && (VKEEP >= 1 || seeded(mix(seed, 5151 + i))() < VKEEP)) {
       if (x3 != null && i <= x3) skipped += 2;
       else {
         // the value target: the picked option's final mean (item 9; an old line: the played move's q, its group's on a twin),
         // not the best of the first look's
         const d = ds.find(x => x.c?.length), vs = !d ? null : d.v != null ? d.v : valueOld(s, d, m, x3 === i);
-        for (const me of [0, 1]) vrows.push({ me, f: valueOf(s, me), g: valueOf(s, other(me)), v: vs == null ? null : me === d.seat ? vs : 1 - vs });
+        for (const me of [0, 1]) vrows.push({ me, turn: s.turn, active: s.active, f: valueOf(s, me), g: valueOf(s, other(me)), v: vs == null ? null : me === d.seat ? vs : 1 - vs });
       }
     }
     // the response to a cast being watched: the other seat's first play while the spell is still on the stack
@@ -164,7 +170,14 @@ function replay(game, decisions) {
   // a resigned game (zero-play.mjs resign=, 18 Nov 2026) ends before the rules end it: its winner is the game line's
   const end = game.resign ? { ...G.state, winner: game.winner } : G.state, won = x => (end.winner === x ? 1 : end.winner == null || end.winner < 0 ? 0.5 : 0);
   if (GEN) for (const g of gameDec) { A.put("res.f32", Float32Array.of(won(g.who))); A.put("resp.i8", Int8Array.of(g.resp)); }
+  const last = matOf(end), lastTurn_ = end.turn;
+  // the seat's next turn's start: the turn after the next whose active seat is this one (turns alternate)
+  const futOf = r => {
+    const t = r.active === r.me ? r.turn + 2 : r.turn + 1, m = snaps.get(t) || last, o = other(r.me);
+    return Float32Array.of((m.hand[r.me] - m.hand[o]) / 7, (m.lands[r.me] - m.lands[o]) / 7, Math.min(1, Math.max(0, (lastTurn_ - r.turn) / 40)));
+  };
   for (const r of vrows) {
+    V.put("fut.f32", futOf(r));
     const y = r.v == null ? won(r.me) : (1 - VBLEND) * won(r.me) + VBLEND * r.v;
     V.put(MF, GEN ? halves(r.f) : Float32Array.from(r.f)); V.put(TF, GEN ? halves(r.g) : Float32Array.from(r.g)); V.put("won.f32", Float32Array.of(y));
     V.put("aux.f32", Float32Array.of(end.lost?.[r.me] ? 1 : 0)); V.put("hold.u8", Uint8Array.of(hold ? 1 : 0)); nv++;

@@ -15,6 +15,9 @@ ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--seed", typ
 ap.add_argument("--init", default="")  # warm start from a value net of the same shape (15 Nov 2026), its int8 weights read back
 ap.add_argument("--aux", type=float, default=0.0)  # weight of the second output (16 Nov 2026, Zero 2): whether this seat decks out (aux.f32); dropped from the file written
 ap.add_argument("--wd", type=float, default=0.0)  # decoupled weight decay a step (14 Nov: the face-up net overfits from epoch 2)
+# the future outputs (19 Nov 2026, Korbi: "do both"): this seat's lead in cards in hand and in lands at its next turn's start, and
+# the share of the game left (fut.f32, 3 a row, replay-pack2.mjs); squared error, this weight; dropped from the file written
+ap.add_argument("--fut", type=float, default=0.0)
 # the removal test (18 Nov 2026): inputs from this column on read as zero, so their first-layer weights stay at zero in the file
 ap.add_argument("--zero_from", "--zero-from", dest="zero_from", type=int, default=0)
 A = ap.parse_args()
@@ -34,7 +37,12 @@ def xin(a):
     if A.zero_from: z[:, A.zero_from:] = 0
     return z
 AUX = rd("aux.f32", np.float32) if A.aux and os.path.exists(os.path.join(A.dir, "aux.f32")) else None
-OUT = 2 if AUX is not None else 1   # with --aux the last layer has a second output, the deck-out logit
+FUT = rd("fut.f32", np.float32).reshape(R, 3) if A.fut and os.path.exists(os.path.join(A.dir, "fut.f32")) else None
+if A.fut and FUT is None: say("WARNING: --fut asked for, but the pack has no fut.f32: trained without it")
+# the last layer: the value, then the deck-out logit (--aux), then the 3 future outputs (--fut); all but the value read from this
+# seat's side only, and only the value is written
+IA, IF = 1, 1 + (AUX is not None)
+OUT = IF + (3 if FUT is not None else 0)
 sizes = [N] + [int(x) for x in A.shape.split("x")] + [OUT]
 rng = np.random.default_rng(A.seed)
 W = [rng.normal(0, np.sqrt(2 / a), (a, b)) for a, b in zip(sizes[:-1], sizes[1:])]; B = [np.zeros(b) for b in sizes[1:]]
@@ -46,7 +54,7 @@ if A.init:
     W = [np.frombuffer(base64.b64decode(l["q"]), np.int8).reshape(l["n"]).astype(np.float64) * np.asarray(l["s"]) for l in L0]
     if got[0][0] < want[0][0]: W[0] = np.concatenate([W[0], np.zeros((want[0][0] - got[0][0], W[0].shape[1]))], 0); print(f"--init {A.init}: the view grown from {got[0][0]} to {want[0][0]} inputs", flush=True)
     B = [np.asarray(l["b"], np.float64) if l["b"] else np.zeros(l["n"][1]) for l in L0]
-    if OUT == 2: W[-1] = np.concatenate([W[-1], np.zeros((W[-1].shape[0], 1))], 1); B[-1] = np.zeros(2)
+    if OUT > 1: W[-1] = np.concatenate([W[-1], np.zeros((W[-1].shape[0], OUT - 1))], 1); B[-1] = np.concatenate([B[-1][:1], np.zeros(OUT - 1)])
 mW = [np.zeros_like(w) for w in W]; vW = [np.zeros_like(w) for w in W]; mB = [np.zeros_like(b) for b in B]; vB = [np.zeros_like(b) for b in B]
 say(f"{R} rows ({len(tr)} training, {len(he)} held out), {N} inputs, shape {A.shape}")
 
@@ -84,11 +92,11 @@ for e in range(1, A.epochs + 1):
         d = hm[-1][:, 0] - ht[-1][:, 0]
         p = 1 / (1 + np.exp(-np.clip(d, -30, 30)))
         gd = ((p - Y[j]) / len(j))[:, None]
-        if OUT == 2:   # the deck-out output, read from this seat's side only
-            pa = 1 / (1 + np.exp(-np.clip(hm[-1][:, 1], -30, 30)))
-            aW, aB = back(hm, np.concatenate([gd, (A.aux * (pa - AUX[j]) / len(j))[:, None]], 1)); bW, bB = back(ht, np.concatenate([-gd, np.zeros_like(gd)], 1))
-        else:
-            aW, aB = back(hm, gd); bW, bB = back(ht, -gd)
+        gm, gt = np.zeros((len(j), OUT)), np.zeros((len(j), OUT))
+        gm[:, :1], gt[:, :1] = gd, -gd
+        if AUX is not None: gm[:, IA] = A.aux * (1 / (1 + np.exp(-np.clip(hm[-1][:, IA], -30, 30))) - AUX[j]) / len(j)
+        if FUT is not None: gm[:, IF:IF + 3] = A.fut * 2 * (hm[-1][:, IF:IF + 3] - FUT[j]) / len(j)
+        aW, aB = back(hm, gm); bW, bB = back(ht, gt)
         for l in range(len(W)):
             for P_, G_, m_, v_ in ((W, aW[l] + bW[l], mW, vW), (B, aB[l] + bB[l], mB, vB)):
                 m_[l] = 0.9 * m_[l] + 0.1 * G_; v_[l] = 0.999 * v_[l] + 0.001 * G_ ** 2
@@ -99,7 +107,7 @@ for e in range(1, A.epochs + 1):
     if h < best: best, bestW, bestE = h, ([w.copy() for w in W], [b.copy() for b in B]), e
 
 Wb, Bb = bestW
-if OUT == 2:   # the value output alone is kept: the deck-out output only shaped the layers below it
+if OUT > 1:   # the value output alone is kept: the other outputs only shaped the layers below it
     Wb = Wb[:-1] + [Wb[-1][:, :1]]; Bb = Bb[:-1] + [Bb[-1][:1]]
 layers = []
 for l, (w, b) in enumerate(zip(Wb, Bb)):

@@ -111,6 +111,20 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
     walls = W ? [0, 1].map(x => new Wall(x, engine, { ...W, seed: (W.seed || 1) + x, policy: player.probs, dealer: filters ? filters[x] : null })) : null;
   };
   fresh();
+  // the policy as the search's prior (19 Nov 2026, Korbi: "do both"; AlphaZero's use of the policy): with priority, each option's
+  // score is its searched mean plus prior × ln(the policy's chance of it), and the best score is played. A difference the search
+  // can't resolve (Monte's test suite: Dandân against passing, 0.1 to 0.7 points apart) goes the policy's way; a clear one (prior
+  // 0.01: about 2 points against a 1-in-6 policy view) stays the search's. The means themselves are not changed: they are the
+  // policy's targets and the resign check's. Questions (options outside zeroOptions) are left as the search ranks them.
+  const withPrior = (r, s, seat, k) => {
+    if (r.only || !r.list || r.list.length < 2) return r;
+    const ms = zeroOptions(s, seat), at = new Map(ms.map((m, i) => [JSON.stringify(m), i]));
+    if (!r.list.every(c => at.has(JSON.stringify(c.move)))) return r;
+    const p = player.probs(s, seat, ms);
+    let best = null;
+    for (const c of r.list) { c.prior = p[at.get(JSON.stringify(c.move))]; c.score = c.mean + k * Math.log(Math.max(c.prior, 1e-4)); if (!best || c.score > best.score) best = c; }
+    return { ...r, best: best.move, list: [...r.list].sort((a, b) => b.score - a.score) };
+  };
   return {
     player, judge, wide: true, dealing: !!(scry12 || scryg), filters: () => filters, walls: () => walls, scry: null,
     reset: fresh,
@@ -136,9 +150,10 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
       return { deal: wd ? (pool, n, rng) => wd(pool, n, rng) || sd(pool, n, rng) : sd };
     },
     think(s, seat, deals, extra = {}) {
-      const { qtree, ...rest } = extra;
-      return think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge, focus: player.focus,
+      const { qtree, prior, ...rest } = extra;
+      const r = think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge, focus: player.focus,
         ...(qtree ? { qfocus: player.qfocus } : {}), ...this.root(s, seat), ...rest });
+      return prior && policy ? withPrior(r, s, seat, prior) : r;
     },
   };
 }

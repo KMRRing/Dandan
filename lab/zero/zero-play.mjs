@@ -39,9 +39,11 @@ const DEEPER = {
   ...(flag("steady") ? { steady: Number(flag("steady")) } : {}),
   // decided=<at>:<hi>:<lo> (18 Nov 2026, Korbi 03:56): the search stops at `at` deals when the best move's mean is hi+ or lo-
   ...(flag("decided") ? { decided: (([at, hi, lo]) => ({ at, hi, lo }))(flag("decided").split(":").map(Number)) } : {}),
+  // prior=<k> (19 Nov 2026, Korbi: "do both"): the policy as the search's prior, the general nets only (lab/zero/general.mjs withPrior)
+  ...(flag("prior") ? { prior: Number(flag("prior")) } : {}),
 };
 const CAP = flag("cap") ? (([share, d]) => ({ share, deals: d || 64 }))(flag("cap").split(":").map(Number)) : null;
-const FAST = DEEPER.decided ? { decided: DEEPER.decided } : {};
+const FAST = { ...(DEEPER.decided ? { decided: DEEPER.decided } : {}), ...(DEEPER.prior ? { prior: DEEPER.prior } : {}) };
 // the old engine's search as the yardstick plays it: the close-call look only
 const FULL = DEEPER.deeper ? { deeper: DEEPER.deeper } : {};
 // resign=<threshold>:<run>:<keep> (18 Nov 2026, Korbi 03:56; AlphaZero's resignation): a seat whose searched best move is worth
