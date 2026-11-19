@@ -1,19 +1,19 @@
 {
   "on": true,
   "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. On since 17 Nov 15:15Z on Google (Korbi 17:12, Fable 15:10Z: the store moves to B2 between generations). From gm1 (17 Nov, Korbi: the loop on the general line): line general, the first step crowns gm1 (trained fresh on the stored games, general-train run 44078371393), the filler then plays gen:gm1 with 1 game in 10 against g12r-C.",
-  "gen": 19,
+  "gen": 20,
   "prefix": "zl",
-  "champion": "zl18b",
+  "champion": "zl19",
   "flags": "deeper=0.03",
   "deals": 64,
   "games": 9600,
   "maxWindow": 30000,
   "value": "128x64",
   "trainArgs": "keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8",
-  "genFrom": 20,
+  "genFrom": 23,
   "windowFrom": 15,
   "nextFrom": 23,
-  "phase": "train",
+  "phase": "play",
   "log": [
     "2026-11-17T15:10:53.743Z generation 13: gm1 (warm from g12r-C) plays from the filler's next batch",
     "2026-11-17T16:10:40Z generation 14: gm2 (gm1 grown to view 2, 2602 inputs, with the general dealer sg1: Korbi 17:27, full general) to be crowned by the next step; the belief from here on is scryg",
@@ -40,14 +40,15 @@
     "2026-11-19T05:03:12.392Z generation 19: zl19's nets are late: training asked for again (1)",
     "2026-11-19T06:43:12.852Z generation 19: zl19's nets are late: training asked for again (2)",
     "2026-11-19T06:57:30.000Z generation 19: zl19's policy training failed twice (the dispatcher turned --aux_res into \"--aux res\"; policy_np now also takes --aux-res, --aux-resp); training asked for by hand",
-    "2026-11-19T08:43:11.713Z generation 19: zl19's nets are late: training asked for again (1)"
+    "2026-11-19T08:43:11.713Z generation 19: zl19's nets are late: training asked for again (1)",
+    "2026-11-19T08:43:33.535Z generation 19: zl19 (warm from zl18b) plays from the filler's next batch"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
   "yardPairs": 300,
   "yardSeed": 3100000,
   "vsEvery": 10,
-  "previous": "zl17",
+  "previous": "zl18b",
   "line": "general",
   "scry": "g12h2",
   "history": [
@@ -172,6 +173,40 @@
         "against": "g12r-C",
         "n": 98,
         "score": 0.32653061224489793
+      },
+      "suite": "3/5",
+      "failed": [
+        "no-island-dandan-4",
+        "no-island-dandan-5"
+      ]
+    },
+    {
+      "gen": 19,
+      "nets": "zl19",
+      "from": "zl18b",
+      "window": [
+        "zpq001",
+        "zps015",
+        "zps016",
+        "zps017",
+        "zps018",
+        "zps019",
+        "zps020",
+        "zps021",
+        "zps022"
+      ],
+      "at": "2026-11-19T08:43:33.535Z",
+      "reading": {
+        "nets": "zl18b",
+        "against": "zl17",
+        "n": 765,
+        "score": 0.5241830065359477
+      },
+      "yard": {
+        "nets": "zl18b",
+        "against": "g12r-C",
+        "n": 498,
+        "score": 0.4678714859437751
       },
       "suite": "3/5",
       "failed": [
@@ -9466,23 +9501,7 @@
       ]
     }
   },
-  "extraWindow": [
-    "zpq001"
-  ],
   "onNote": "On again 18 Nov ~19:30Z (Korbi 21:21 local: crown zl18-both for the lab): zl18b from the deep-vs-quick test (zps018 + zpq001), the quick recipe (256 deals every move, 9,600 games a generation), the dealer trained first; zps019 (zl17, deep) closed.",
-  "reading": {
-    "nets": "zl18b",
-    "against": "zl17",
-    "n": 765,
-    "score": 0.5241830065359477
-  },
-  "yardReading": {
-    "nets": "zl18b",
-    "against": "g12r-C",
-    "n": 498,
-    "score": 0.4678714859437751
-  },
-  "challenger": "zl19",
   "trained": {
     "from": [
       "zpq001",

@@ -44,3 +44,6 @@ zps015  # 2026-11-18T09:35:58.028Z Zero's loop: made with the nets before zl17
 zps016  # 2026-11-18T09:35:58.028Z Zero's loop: made with the nets before zl17
 zps017  # 2026-11-18T09:42:04Z closed by hand: made with the playout cap; training games go deep from here (Korbi 11:41 local)
 zps019  # 2026-11-18T19:21:54Z crown of zl18b by hand: made with zl17 (deep), not this generation's games
+zps020  # 2026-11-19T08:43:33.535Z Zero's loop: made with the nets before zl19
+zps021  # 2026-11-19T08:43:33.535Z Zero's loop: made with the nets before zl19
+zps022  # 2026-11-19T08:43:33.535Z Zero's loop: made with the nets before zl19
