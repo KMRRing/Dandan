@@ -33,7 +33,9 @@ function policyPick(brain, s, who) {
   const list = ms.map((move, k) => ({ move, mean: pr[k] })).sort((a, b) => b.mean - a.mean);
   return { best: list[0].move, list };
 }
-for (const p of suite.positions) {
+// SUITE_ONLY=<id,id>: just those positions (a quick look at a new flag)
+const only = process.env.SUITE_ONLY?.split(",");
+for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
   const rec = JSON.parse(execSync(`git show FETCH_HEAD:games/${p.game}.json`, { encoding: "utf8", maxBuffer: 1 << 28 })), g = rec.game, moves = JSON.parse(g.moves);
   let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
   // "gen:<name>": the general Monte (lab/zero/general.mjs), its nets <name>-gpolicy, -gvalue, -scry12

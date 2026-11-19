@@ -90,6 +90,16 @@
         "name": "Mind Bend"
       },
       "why": "Korbi's flag (19 Nov, same game, 98%): Mind Bend on the opponent's Island again, instead of holding it for a Dandân."
+    },
+    {
+      "id": "predict-under-lapses-1",
+      "game": "1795122154678",
+      "move": 222,
+      "bad": {
+        "t": "cast",
+        "name": "Predict"
+      },
+      "why": "Korbi's flag (19 Nov, lab game vs zl20 at deepest, turn 23): zl20 casts Predict on top of two unresolved Memory Lapses (Korbi's Lapse on its Lapse on his spell). Waiting lets the Lapses resolve and put a known card on top of the library for Predict to name; cast now, it names an unknown card (it named Island). Flagged by Korbi as an objective error."
     }
   ]
 }
