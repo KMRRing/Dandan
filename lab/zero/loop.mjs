@@ -154,7 +154,7 @@ if (L.phase === "play") {
         if (m.epoch === 0) say(`WARNING: ${L.champion}-${k} is its warm start unchanged (no epoch beat it on the held-out games)`); } catch {}
     }
     // the nets' scorecard (18 Nov 2026, Korbi 14:11 local): the new nets beside the last two on the newest games' held-out seeds
-    if (GEN) { const names = [...new Set([...(L.history || []).slice(-2).map(h => h.nets), L.champion])].join(",");
+    if (GEN) { const names = [...new Set([...(L.history || []).map(h => h.nets), L.previous, L.champion].filter(Boolean))].slice(-3).join(",");   // L.previous too (19 Nov: zl18b, crowned by hand, was missing from history, so zl19 was scored beside zl16 and zl17)
       say(`DISPATCH net-scorecard.yml nets=${names} games=${L.trained.from.slice(-2).join(",")}`); }
     // Monte's test suite on the new nets (lab/suite.json: the positions Korbi flagged), kept with the generation
     let suite = null;
