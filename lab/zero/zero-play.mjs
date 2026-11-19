@@ -43,7 +43,14 @@ const DEEPER = {
   ...(flag("prior") ? { prior: Number(flag("prior")) } : {}),
 };
 const CAP = flag("cap") ? (([share, d]) => ({ share, deals: d || 64 }))(flag("cap").split(":").map(Number)) : null;
-const FAST = { ...(DEEPER.decided ? { decided: DEEPER.decided } : {}), ...(DEEPER.prior ? { prior: DEEPER.prior } : {}) };
+// priorsplit (19 Nov 2026, Fable): the prior on even shards only, so a batch reads with and without it side by side; the game
+// line says which (prior: c, or 0)
+if (DEEPER.prior && flag("priorsplit") && shard % 2 === 1) delete DEEPER.prior;
+const PRIOR = DEEPER.prior || 0;
+const FAST = { ...(DEEPER.decided ? { decided: DEEPER.decided } : {}), ...(PRIOR ? { prior: PRIOR } : {}) };
+// vsresign=<share> (19 Nov 2026, Fable): that share of the rival games resigns for real (the goal's engine, resigning included);
+// the rest play out as before, with `would` keeping count
+const VS_RESIGN = Number(flag("vsresign") || 0);
 // the old engine's search as the yardstick plays it: the close-call look only
 const FULL = DEEPER.deeper ? { deeper: DEEPER.deeper } : {};
 // resign=<threshold>:<run>:<keep> (18 Nov 2026, Korbi 03:56; AlphaZero's resignation): a seat whose searched best move is worth
@@ -75,7 +82,8 @@ for (let g = first; g < first + n; g++) {
   brain.reset(); if (rival) rival.reset();
   // games against a rival always play out (18 Nov: zl16 resigned 49 of its 69 losses to the full g12r-C; the score has to be
   // the true one, and `would` shows what resigning there would have cost)
-  const noResign = !RESIGN || vsSeat >= 0 || seeded(mix(seed, 777001))() < RESIGN.keep, streak = [0, 0];
+  const realVs = vsSeat >= 0 && VS_RESIGN > 0 && seeded(mix(seed, 777003))() < VS_RESIGN;
+  const noResign = !RESIGN || (vsSeat >= 0 ? !realVs : seeded(mix(seed, 777001))() < RESIGN.keep), streak = [0, 0];
   let resigned = null, would = null;
   const rescued = [];
   for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
@@ -131,7 +139,7 @@ for (let g = first; g < first + n; g++) {
   if (explored3) for (const d of lines) d.x3 = Math.sign(d.i - explored3.i);
   const text = [...lines.map(d => JSON.stringify(d)),
     ...rows.map(r => JSON.stringify({ v: 1, g: seed, seat: r.seat, turn: r.turn, f: r.f, won: won(r.seat), ...(seed % 5 === 0 ? { hold: 1 } : {}), ...(explored3 ? { x3: Math.sign(r.i - explored3.i) } : {}) })),
-    JSON.stringify({ game: g, seed, winner: st.winner, why: st.why, turns: st.turn, moves: G.moves ?? [], ...(explored3 ? { explore3: explored3 } : {}), ...(vsSeat >= 0 ? { vs: { nets: VS_NETS, seat: vsSeat } } : {}), ...(resigned ? { resign: resigned } : {}), ...(would ? { would } : {}), ...(rescued.length ? { rescued } : {}) })];
+    JSON.stringify({ game: g, seed, winner: st.winner, why: st.why, turns: st.turn, moves: G.moves ?? [], ...(explored3 ? { explore3: explored3 } : {}), ...(vsSeat >= 0 ? { vs: { nets: VS_NETS, seat: vsSeat, ...(realVs ? { resign: true } : {}) } } : {}), ...(PRIOR ? { prior: PRIOR } : flag("priorsplit") ? { prior: 0 } : {}), ...(resigned ? { resign: resigned } : {}), ...(would ? { would } : {}), ...(rescued.length ? { rescued } : {}) })];
   fs.appendFileSync(out, text.join("\n") + "\n");
   if (WALL && brain.walls?.()) for (const w of brain.walls()) console.error(`wall ${w.me} game ${g}: ${JSON.stringify(w.stats)} worlds ${w.parts.filter(p => p.alive).length} ess ${w.ess().toFixed(1)}`);
 }

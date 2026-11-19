@@ -111,19 +111,21 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
     walls = W ? [0, 1].map(x => new Wall(x, engine, { ...W, seed: (W.seed || 1) + x, policy: player.probs, dealer: filters ? filters[x] : null })) : null;
   };
   fresh();
-  // the policy as the search's prior (19 Nov 2026, Korbi: "do both"; AlphaZero's use of the policy): with priority, each option's
-  // score is its searched mean plus prior × ln(the policy's chance of it), and the best score is played. A difference the search
-  // can't resolve (Monte's test suite: Dandân against passing, 0.1 to 0.7 points apart) goes the policy's way; a clear one (prior
-  // 0.01: about 2 points against a 1-in-6 policy view) stays the search's. The means themselves are not changed: they are the
-  // policy's targets and the resign check's. Questions (options outside zeroOptions) are left as the search ranks them.
-  const withPrior = (r, s, seat, k) => {
+  // the policy as the search's prior (19 Nov 2026, Korbi: "do both"; sized by Fable 14:49 local): with priority, each option's score
+  // is its searched mean plus k × ln(the policy's chance of it), k = c × the standard error of the gap between the search's top
+  // two (gapSe, dandan-think.js: deal by deal over shared deals), so the policy decides only what the search's own noise can't
+  // (about 0.01 at 256 deals, half that at 1,024). A tie-break, not AlphaZero's steering of the search. The means are unchanged:
+  // they are the policy's targets and the resign check's. Questions (options outside zeroOptions) are left as the search ranks them.
+  const withPrior = (r, s, seat, c) => {
     if (r.only || !r.list || r.list.length < 2) return r;
     const ms = zeroOptions(s, seat), at = new Map(ms.map((m, i) => [JSON.stringify(m), i]));
-    if (!r.list.every(c => at.has(JSON.stringify(c.move)))) return r;
-    const p = player.probs(s, seat, ms);
+    if (!r.list.every(o => at.has(JSON.stringify(o.move)))) return r;
+    const byMean = [...r.list].sort((a, b) => b.mean - a.mean), se = byMean[1].gapSe ?? byMean[0].gapSe;
+    if (se == null) return r;
+    const k = c * se, p = player.probs(s, seat, ms);
     let best = null;
-    for (const c of r.list) { c.prior = p[at.get(JSON.stringify(c.move))]; c.score = c.mean + k * Math.log(Math.max(c.prior, 1e-4)); if (!best || c.score > best.score) best = c; }
-    return { ...r, best: best.move, list: [...r.list].sort((a, b) => b.score - a.score) };
+    for (const o of r.list) { o.prior = p[at.get(JSON.stringify(o.move))]; o.score = o.mean + k * Math.log(Math.max(o.prior, 1e-4)); if (!best || o.score > best.score) best = o; }
+    return { ...r, best: best.move, list: [...r.list].sort((a, b) => b.score - a.score), priorK: k };
   };
   return {
     player, judge, wide: true, dealing: !!(scry12 || scryg), filters: () => filters, walls: () => walls, scry: null,

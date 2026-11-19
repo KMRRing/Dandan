@@ -15,6 +15,8 @@
 import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
 import { lands } from "../../dandan-core.js";
+import { determinize } from "../../dandan-think.js";
+import { generalJudge } from "./general.mjs";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
 import { marksOf } from "../../dandan-netpolicy.js";
 import { zeroOptions, qMarksOf } from "../../dandan-zero.js";
@@ -59,7 +61,11 @@ function sink(sub, names) {
 // cast, or the seat played again first; rc.f32, three a candidate: the search's replies to that candidate over its deals (a cast,
 // dandan-think.js: let it resolve, aimed at, another play), as shares, −1 each where the decision line has none
 const XF = GEN ? "x.f16" : "x.f32", A = sink("a", [XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8", ...(GEN ? ["res.f32", "resp.i8", "rc.f32"] : [])]), PC = { D: 0, C: 0, K: 0, Q: 0 };
-const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "fut.f32", "hold.u8"]);
+const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "fut.f32", "hold.u8", ...(process.env.DEALT ? ["pt.f32", "pd.f32"] : [])]);
+// DEALT=<n> with VNET=<file> (19 Nov 2026, Fable: "the value net is scored on true hands and used on dealt hands"): each value row
+// also gets the net's chance on the true position (pt.f32) and its mean over n worlds dealt from the seat's own belief (pd.f32),
+// as the search uses it; lab/zero/value-dealt.py reads both against the result
+const DEALT = Number(process.env.DEALT || 0), VJ = DEALT ? generalJudge(JSON.parse(fs.readFileSync(process.env.VNET, "utf8").split("\n")[0])) : null;
 let nv = 0, games = 0, broken = 0, unmatched = 0, skipped = 0, old = 0, pickOff = 0, moved = 0, twins = 0;
 
 // a decision line's options are its moves (Fable's review, item 8: zero-play stores each, mv), checked against zeroOptions.
@@ -138,7 +144,16 @@ function replay(game, decisions) {
         // the value target: the picked option's final mean (item 9; an old line: the played move's q, its group's on a twin),
         // not the best of the first look's
         const d = ds.find(x => x.c?.length), vs = !d ? null : d.v != null ? d.v : valueOld(s, d, m, x3 === i);
-        for (const me of [0, 1]) vrows.push({ me, turn: s.turn, active: s.active, f: valueOf(s, me), g: valueOf(s, other(me)), v: vs == null ? null : me === d.seat ? vs : 1 - vs });
+        for (const me of [0, 1]) {
+          const row = { me, turn: s.turn, active: s.active, f: valueOf(s, me), g: valueOf(s, other(me)), v: vs == null ? null : me === d.seat ? vs : 1 - vs };
+          if (VJ) {
+            const deal = F[me].deal(), rng = seeded(mix(seed, 9090 + 2 * i + me));
+            let sum = 0;
+            for (let k = 0; k < DEALT; k++) sum += VJ(determinize(s, me, rng, false, false, (pool, n, r) => deal(pool, n, r) || pool), me);
+            row.pt = VJ(s, me); row.pd = sum / DEALT;
+          }
+          vrows.push(row);
+        }
       }
     }
     // the response to a cast being watched: the other seat's first play while the spell is still on the stack
@@ -178,6 +193,7 @@ function replay(game, decisions) {
   };
   for (const r of vrows) {
     V.put("fut.f32", futOf(r));
+    if (VJ) { V.put("pt.f32", Float32Array.of(r.pt)); V.put("pd.f32", Float32Array.of(r.pd)); }
     const y = r.v == null ? won(r.me) : (1 - VBLEND) * won(r.me) + VBLEND * r.v;
     V.put(MF, GEN ? halves(r.f) : Float32Array.from(r.f)); V.put(TF, GEN ? halves(r.g) : Float32Array.from(r.g)); V.put("won.f32", Float32Array.of(y));
     V.put("aux.f32", Float32Array.of(end.lost?.[r.me] ? 1 : 0)); V.put("hold.u8", Uint8Array.of(hold ? 1 : 0)); nv++;

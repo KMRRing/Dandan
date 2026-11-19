@@ -479,7 +479,7 @@ export function think(s, seat, opts = {}) {
   }
   // the last look's values for every option of a class it weighed (by class: a twin of a weighed move takes them too)
   const clsOf = c => c.cls ?? key(c.move), by = new Map(r2.list.map(c => [clsOf(c), c])), isDeep = c => deep.has(clsOf(c));
-  const list = r.list.map(c => (isDeep(c) && by.has(clsOf(c)) ? { ...c, first: c.mean, firstSe: c.se, firstN: c.n, mean: by.get(clsOf(c)).mean, se: by.get(clsOf(c)).se, n: by.get(clsOf(c)).n } : c));
+  const list = r.list.map(c => (isDeep(c) && by.has(clsOf(c)) ? { ...c, first: c.mean, firstSe: c.se, firstN: c.n, mean: by.get(clsOf(c)).mean, se: by.get(clsOf(c)).se, n: by.get(clsOf(c)).n, gapSe: by.get(clsOf(c)).gapSe ?? null } : c));
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && isDeep(c)).sort((a, b) => b.mean - a.mean), ...list.filter(c => !isDeep(c))], deeper: looks };
 }
@@ -648,9 +648,12 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
   for (const c of list) {
     if (c === best) continue;
     const k = Math.min(vals[c.i].length, vals[best.i].length);
-    let better = 0, worse = 0;
-    for (let j = 0; j < k; j++) { const g = vals[best.i][j] - vals[c.i][j]; if (g > 1e-6) better++; else if (g < -1e-6) worse++; }
-    Object.assign(c, { vs: k, better, worse });
+    let better = 0, worse = 0, sg = 0, sg2 = 0;
+    for (let j = 0; j < k; j++) { const g = vals[best.i][j] - vals[c.i][j]; sg += g; sg2 += g * g; if (g > 1e-6) better++; else if (g < -1e-6) worse++; }
+    // gapSe (19 Nov 2026, Fable): the standard error of the gap to the chosen move, deal by deal (the paired difference), for the
+    // lab's policy prior (lab/zero/general.mjs withPrior), sized to the search's own noise
+    const gm = k ? sg / k : 0, gapSe = k > 1 ? Math.sqrt(Math.max(0, (sg2 - k * gm * gm) / (k - 1)) / k) : null;
+    Object.assign(c, { vs: k, better, worse, gapSe });
   }
   return { best: best.move, list: [best, ...ranked.filter(c => c !== best)], deals: d, only: false, off, shortPick };
 }
