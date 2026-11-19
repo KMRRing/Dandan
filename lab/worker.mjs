@@ -120,7 +120,10 @@ async function refill() {
   // the last batch's own size, not the spec's now (16:40Z, the fleet director: after shards went 24 → 240, 24-shard batches
   // never looked fully taken, so the chain stalled)
   const lastShards = last ? (await specOf({ name: `jobs/${batch(last)}.json`, generation: "open" }).catch(() => null))?.shards || F.shards : F.shards;
-  if (last && ids.includes(batch(last)) && (await doneCount(batch(last))) < lastShards && (await store.list(`claims/${batch(last)}/`)).length < lastShards) {
+  // a few free shards left (2% or fewer) no longer hold the next batch back (19 Nov 2026, ops 08:43Z: one shard of zps022 sat
+  // unclaimed from about 07:08Z, refill waited on it, and the fleet drained to 25% busy); the stragglers stay on the open list
+  const slack = Math.ceil(lastShards * 0.02);
+  if (last && ids.includes(batch(last)) && (await doneCount(batch(last))) < lastShards && (await store.list(`claims/${batch(last)}/`)).length < lastShards - slack) {
     // the last batch still has free shards, yet the open list (which sent us here) didn't name it: an update was lost
     await editOpen(store, jobs => (jobs[batch(last)] ? false : ((jobs[batch(last)] = 1), true)), { by: NAME }).catch(e => log("open list:", e.message));
     return false;

@@ -167,10 +167,11 @@ if (L.phase === "play") {
     L.genFrom = open.length ? open[open.length - 1].n + 1 : L.nextFrom;
     L.gen++; L.phase = "play"; delete L.challenger; delete L.genSince; delete L.reading; delete L.yardReading;
   } else if (Date.now() - Date.parse(L.trained.at) > 12 * 3600e3) log(`generation ${L.gen}: no nets for ${L.challenger} 12 hours after training began: look at zero-train-ext.yml's runs`);
-  // the training asked for again when its nets are 100 minutes late (18 Nov: a refused dispatch left generation 16 waiting two
+  // the training asked for again when its nets are 150 minutes late (19 Nov: 100 until then; the fresh policy on the long window
+  // takes about 100 minutes, so a needless second run started at 08:43Z, two minutes before zl19's nets landed) (18 Nov: a refused dispatch left generation 16 waiting two
   // hours); twice at most, the nets that are already in are kept (the runs commit only their own files)
   // the clock runs from the last request (18 Nov: a request by hand at 07:20Z was followed by a needless second one at 07:28Z)
-  else if (L.trained.dispatch && Date.now() - Date.parse(L.trained.asked || L.trained.at) > 100 * 60e3 && (L.trained.retries || 0) < 2) {
+  else if (L.trained.dispatch && Date.now() - Date.parse(L.trained.asked || L.trained.at) > 150 * 60e3 && (L.trained.retries || 0) < 2) {
     L.trained.retries = (L.trained.retries || 0) + 1; L.trained.asked = new Date().toISOString();
     log(`generation ${L.gen}: ${L.challenger}'s nets are late: training asked for again (${L.trained.retries})`);
     const have = n => fs.existsSync(new URL(`./nets/${L.challenger}-${n}.json`, import.meta.url));
