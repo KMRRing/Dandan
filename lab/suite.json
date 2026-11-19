@@ -1,12 +1,65 @@
 {
   "note": "Monte's test suite (Korbi 17 Nov 12:17): positions from real games where Monte's move was clearly wrong. A position passes when Zero's search no longer picks the bad move. Fixed by search and training only, never by a rule naming the cards (Korbi). lab/suite.mjs runs it; Zero's loop runs it on every generation.",
   "positions": [
-    { "id": "no-island-dandan-1", "game": "1794511767232", "move": 31, "bad": { "t": "cast", "name": "Dandân" },
-      "why": "Monte, no Island of its own, an Island and two Thundering Falls in hand, casts Dandân: sacrificed at once. Three turns ahead the Island is best (Fable 10:20Z); two turns ahead the Island is cut at 128 deals. Lost on the library." },
-    { "id": "no-island-dandan-2", "game": "1794511767232", "move": 64, "bad": { "t": "cast", "name": "Dandân" }, "why": "The same cast again in that game." },
-    { "id": "no-island-dandan-3", "game": "1794511767232", "move": 97, "bad": { "t": "cast", "name": "Dandân" }, "why": "The same cast again in that game." },
-    { "id": "no-island-dandan-4", "game": "1794876432406", "move": 324, "bad": { "t": "cast", "name": "Dandân" },
-      "why": "Turn 40: every Island bent to Plains, two Islands in hand, land drop unused, Korbi at 8. The cast tapped its only blue; Korbi Memory Lapsed it to the top of the shared library, drew it and cast it with Monte unable to answer." },
-    { "id": "no-island-dandan-5", "game": "1794876432406", "move": 339, "bad": { "t": "cast", "name": "Dandân" }, "why": "Turn 42, the same cast with Korbi's Dandân now on the table." }
+    {
+      "id": "no-island-dandan-1",
+      "game": "1794511767232",
+      "move": 31,
+      "bad": {
+        "t": "cast",
+        "name": "Dandân"
+      },
+      "why": "Monte, no Island of its own, an Island and two Thundering Falls in hand, casts Dandân: sacrificed at once. Three turns ahead the Island is best (Fable 10:20Z); two turns ahead the Island is cut at 128 deals. Lost on the library."
+    },
+    {
+      "id": "no-island-dandan-2",
+      "game": "1794511767232",
+      "move": 64,
+      "bad": {
+        "t": "cast",
+        "name": "Dandân"
+      },
+      "why": "The same cast again in that game."
+    },
+    {
+      "id": "no-island-dandan-3",
+      "game": "1794511767232",
+      "move": 97,
+      "bad": {
+        "t": "cast",
+        "name": "Dandân"
+      },
+      "why": "The same cast again in that game."
+    },
+    {
+      "id": "no-island-dandan-4",
+      "game": "1794876432406",
+      "move": 324,
+      "bad": {
+        "t": "cast",
+        "name": "Dandân"
+      },
+      "why": "Turn 40: every Island bent to Plains, two Islands in hand, land drop unused, Korbi at 8. The cast tapped its only blue; Korbi Memory Lapsed it to the top of the shared library, drew it and cast it with Monte unable to answer."
+    },
+    {
+      "id": "no-island-dandan-5",
+      "game": "1794876432406",
+      "move": 339,
+      "bad": {
+        "t": "cast",
+        "name": "Dandân"
+      },
+      "why": "Turn 42, the same cast with Korbi's Dandân now on the table."
+    },
+    {
+      "id": "no-island-dandan-6",
+      "game": "1795083816475",
+      "move": 38,
+      "bad": {
+        "t": "cast",
+        "name": "Dandân"
+      },
+      "why": "Live Monte (19 Nov, Korbi vs Monte, turn 6, second main), no Island of its own, casts Dandân: sacrificed at once. Flagged by Korbi as an objective error."
+    }
   ]
 }
