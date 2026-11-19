@@ -19,6 +19,7 @@ import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
 import { zeroOptions, zeroBrain, generalBrain, valueRow, decisionLine, PASS } from "./zero-lib.mjs";
+import { branchPoints, drawPoint, redeal } from "./branch-lib.mjs";
 
 const [shard, shards, out, deals, games, seed0] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], Number(process.argv[5]), Number(process.argv[6]), Number(process.argv[7])];
 // the nets by name; from generation 6 (Korbi 10:04) a policy on the extended view with its Scry, and a value net face up
@@ -76,6 +77,26 @@ const random = !brain.judge;   // generation 0: no value net, no search
 const J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
 const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);
 const realRandom = Math.random;
+// branch=<share> bsrc=<batches> [bw=<weights, URI-encoded JSON>] [bparts=6] (19 Nov 2026, Korbi; lab/zero/branch-lib.mjs): that
+// share of the self-play games start from a branch point of a stored game of those batches (a rare ending, an even position, or
+// the other side of a close call), the hidden cards re-dealt from the view of the player to move; this shard draws its branch
+// points from bparts parts chosen at random
+const BRANCH = Number(flag("branch") || 0);
+let POINTS = [];
+if (BRANCH && flag("bsrc")) {
+  const local = flag("bsrc").startsWith("file:"), weights = flag("bw") ? JSON.parse(decodeURIComponent(flag("bw"))) : {};
+  const st = local ? { get: async n => fs.readFileSync(n, "utf8") } : await (await import("../lib.mjs")).labStore();
+  const names = local ? [flag("bsrc").slice(5)] : (await Promise.all(flag("bsrc").split(",").map(id => st.list(`results/${id}/`)))).flat().filter(x => /\/part-\d+\.jsonl$/.test(x));
+  const pick = seeded(mix(seed0 + shard, 4949)), chosen = [];
+  for (let k = 0; k < Math.min(Number(flag("bparts") || 6), names.length); k++) chosen.push(names.splice(Math.floor(pick() * names.length), 1)[0]);
+  const games = [], decisions = new Map();
+  for (const name of chosen) for (const l of ((await st.get(name)) || "").split("\n")) {
+    if (l.startsWith('{"game"')) games.push(JSON.parse(l));
+    else if (l.startsWith('{"g"')) { const d = JSON.parse(l); delete d.x; (decisions.get(d.g) || decisions.set(d.g, []).get(d.g)).push(d); }
+  }
+  POINTS = branchPoints(games, decisions, weights);
+  console.error(`branch points: ${POINTS.length} from ${games.length} games in ${chosen.length} parts`);
+}
 fs.writeFileSync(out, "");
 for (let g = first; g < first + n; g++) {
   const seed = seed0 + g, lines = [], rows = [];
@@ -90,14 +111,41 @@ for (let g = first; g < first + n; g++) {
   const noResign = !RESIGN || (vsSeat >= 0 ? !realVs : seeded(mix(seed, 777001))() < RESIGN.keep), streak = [0, 0];
   let resigned = null, would = null;
   const rescued = [];
-  for (let i = 0; i < 4000 && !rules.over(G.state); i++) {
+  // a branch game: the source's moves replayed up to the branch point with its randomness, then the hidden cards re-dealt from
+  // the view of the player to move; this game's own randomness from there (branch-lib.mjs rngSeedOf)
+  let i0 = 0, branch = null, force = null;
+  if (POINTS.length && vsSeat < 0 && seeded(mix(seed, 4747))() < BRANCH) {
+    const p = drawPoint(POINTS, seeded(mix(seed, 4848))), src = p.g;
+    let H = newRecord(rules, { seats: 2, seed: src.seed, now: 0 }), at = -1;
+    for (let k = 0; k < src.moves.length && !rules.over(H.state); k++) {
+      const st0 = H.state;
+      if (p.kind === "E" ? st0.turn >= p.turnAt && !st0.pending : k === p.at) { at = k; break; }
+      const [w, m] = src.moves[k], s0 = rules.restore(J(st0));
+      Math.random = seeded(mix(src.seed, k + 1));
+      const r = applyMove(rules, H, w, m, 0);
+      Math.random = realRandom;
+      if (r.error) break;
+      brain.seen(s0, w, m, r.G.state); H = r.G;
+    }
+    if (at >= 0 && !rules.over(H.state)) {
+      const seat = rules.toMove(H.state);
+      G = { ...H, state: redeal(rules, H.state, seat, seed) }; i0 = at;
+      branch = { src: src.seed, at, seat, kind: p.kind, ...(p.force ? { force: p.force } : {}) };
+      if (p.force) force = p.force;
+    } else brain.reset();
+  }
+  const holdSeed = branch ? branch.src : seed;
+  for (let i = i0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state));
     const rng = seeded(mix(seed, i + 1));
     Math.random = rng;
     if (s.turn !== lastTurn && !s.pending) { lastTurn = s.turn; for (const me of [0, 1]) rows.push({ i, seat: me, turn: s.turn, f: valueRow(s, me) }); }
     const ms = zeroOptions(s, who);
     let move;
-    if (ms.length <= 1) move = ms[0] ?? PASS;
+    // the other side of a close call: the branch's first move, if still legal after the re-deal (not written as a lesson)
+    const forced = force && i === i0 && ms.some(m => key(m) === key(force)) ? force : null;
+    if (forced) move = forced;
+    else if (ms.length <= 1) move = ms[0] ?? PASS;
     else if (random) move = ms[Math.floor(rng() * ms.length)];
     else {
       // the yardstick rival (an old-line engine, not gen:) plays straight up (Korbi 18 Nov 05:37: "the clean engine with resign and
@@ -131,7 +179,7 @@ for (let g = first; g < first + n; g++) {
         if (others.length) { move = others[Math.floor(seeded(mix(seed, 9800003 + i))() * others.length)].move; explored3 = { i, seat: who, move }; }
       }
       // every searched decision: with priority for the policy head, a question (qd) for the question head
-      if (full && !res.only && res.list.length >= 2) lines.push(decisionLine(s, who, seed, i, res, res.list.findIndex(c => key(c.move) === key(res.best)), deals, seed % 5 === 0, null));
+      if (full && !res.only && res.list.length >= 2) lines.push(decisionLine(s, who, seed, i, res, res.list.findIndex(c => key(c.move) === key(res.best)), deals, holdSeed % 5 === 0, null));
     }
     const r = applyMove(rules, G, who, move, 0);
     if (r.error) throw new Error(`zero game ${seed} move ${i}: ${r.error}`);
@@ -144,8 +192,8 @@ for (let g = first; g < first + n; g++) {
   // with a random move in the game, every decision and value row says where it stands against it (x3 −1, 0, 1)
   if (explored3) for (const d of lines) d.x3 = Math.sign(d.i - explored3.i);
   const text = [...lines.map(d => JSON.stringify(d)),
-    ...rows.map(r => JSON.stringify({ v: 1, g: seed, seat: r.seat, turn: r.turn, f: r.f, won: won(r.seat), ...(seed % 5 === 0 ? { hold: 1 } : {}), ...(explored3 ? { x3: Math.sign(r.i - explored3.i) } : {}) })),
-    JSON.stringify({ game: g, seed, winner: st.winner, why: st.why, turns: st.turn, moves: G.moves ?? [], ...(explored3 ? { explore3: explored3 } : {}), ...(vsSeat >= 0 ? { vs: { nets: VS_NETS, seat: vsSeat, ...(realVs ? { resign: true } : {}) } } : {}), ...(PRIOR ? { prior: PRIOR } : flag("priorsplit") ? { prior: 0 } : {}), ...(resigned ? { resign: resigned } : {}), ...(would ? { would } : {}), ...(rescued.length ? { rescued } : {}) })];
+    ...rows.map(r => JSON.stringify({ v: 1, g: seed, seat: r.seat, turn: r.turn, f: r.f, won: won(r.seat), ...(holdSeed % 5 === 0 ? { hold: 1 } : {}), ...(explored3 ? { x3: Math.sign(r.i - explored3.i) } : {}) })),
+    JSON.stringify({ game: g, seed, winner: st.winner, why: st.why, turns: st.turn, moves: G.moves ?? [], ...(branch ? { branch } : {}), ...(explored3 ? { explore3: explored3 } : {}), ...(vsSeat >= 0 ? { vs: { nets: VS_NETS, seat: vsSeat, ...(realVs ? { resign: true } : {}) } } : {}), ...(PRIOR ? { prior: PRIOR } : flag("priorsplit") ? { prior: 0 } : {}), ...(resigned ? { resign: resigned } : {}), ...(would ? { would } : {}), ...(rescued.length ? { rescued } : {}) })];
   fs.appendFileSync(out, text.join("\n") + "\n");
   if (WALL && brain.walls?.()) for (const w of brain.walls()) console.error(`wall ${w.me} game ${g}: ${JSON.stringify(w.stats)} worlds ${w.parts.filter(p => p.alive).length} ess ${w.ess().toFixed(1)}`);
 }

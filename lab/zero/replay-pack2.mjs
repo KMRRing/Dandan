@@ -16,6 +16,7 @@ import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
 import { lands } from "../../dandan-core.js";
 import { determinize } from "../../dandan-think.js";
+import { recordOf, redeal, rngSeedOf } from "./branch-lib.mjs";
 import { generalJudge } from "./general.mjs";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
 import { marksOf } from "../../dandan-netpolicy.js";
@@ -141,14 +142,26 @@ function valueOld(s, d, played, explored) {
 // cards in hand and lands, each seat (the value net's future outputs)
 const matOf = s => ({ hand: [0, 1].map(x => s.hand[x].length), lands: [0, 1].map(x => lands(s, x).length) });
 function replay(game, decisions) {
-  const seed = game.seed, x3 = game.explore3 ? game.explore3.i : null, hold = seed % 5 === 0;
+  // a branch game (branch-lib.mjs): its source's moves replayed with the source's randomness, the hidden cards re-dealt at the
+  // branch point, lessons from there on only; held out as its source is
+  const seed = game.seed, x3 = game.explore3 ? game.explore3.i : null, B = game.branch || null, hold = (B ? B.src : seed) % 5 === 0;
   if (HOLD_ONLY && !hold) return;
-  let G = newRecord(rules, { seats: 2, seed, now: 0 }), lastTurn = -1, watch = null;
+  let G = recordOf(rules, game), lastTurn = -1, watch = null;
   const gameDec = [];   // this game's decisions in order: { who, resp }, written once the game's result is known
   const F = net.scryg ? [new ScryG(0, net), new ScryG(1, net)] : [new Scry12(0, net, { hands: HANDS }), new Scry12(1, net, { hands: HANDS })], vrows = [];
   const snaps = new Map();   // turn → each seat's cards in hand and lands at that turn's start (the future outputs)
   if (LEGACY) for (const f of F) f.legacy = true;
   for (let i = 0; i < game.moves.length; i++) {
+    if (B && i === B.at) G = { ...G, state: redeal(rules, G.state, B.seat, seed) };
+    if (B && i < B.at) {   // the source's part: replayed for the beliefs, no lessons
+      const [who, m] = game.moves[i], s = rules.restore(J(G.state));
+      Math.random = seeded(rngSeedOf(game, i));
+      const r = applyMove(rules, G, who, m, 0);
+      Math.random = realRandom;
+      if (r.error) { broken++; return; }
+      for (const f of F) f.update(s, who, m, r.G.state);
+      G = r.G; continue;
+    }
     const [who, m] = game.moves[i], s = rules.restore(J(G.state)), ds = decisions.get(i) || [];
     // the value rows: every turn's start and one position with priority in three besides (as replay-pack.mjs), after any
     // random move only; the search's value where this position was searched
@@ -190,7 +203,7 @@ function replay(game, decisions) {
       putDecision(s, d, o, inputOf(s, who, b.counts, b.any, b.ans), pickOf(d, o.ms, m, x3 === i));
       ks.push(gameDec.length); gameDec.push({ who, resp: -1 });
     }
-    Math.random = seeded(mix(seed, i + 1));
+    Math.random = seeded(rngSeedOf(game, i));
     const r = applyMove(rules, G, who, m, 0);
     Math.random = realRandom;
     if (r.error) { broken++; if (GEN) for (const g of gameDec) { A.put("res.f32", Float32Array.of(0.5)); A.put("resp.i8", Int8Array.of(-1)); } return; }   // kept in step with the decisions written

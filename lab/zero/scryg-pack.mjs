@@ -9,6 +9,7 @@
 //   meta.json                  sizes and counts
 // usage: node lab/zero/scryg-pack.mjs <dir> <zero-play job ids, comma-separated | file:<local zero-play output>> [shard shards] [games max]
 import fs from "node:fs";
+import { recordOf, redeal, rngSeedOf } from "./branch-lib.mjs";
 import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
 import { POOL } from "../../dandan-general.js";
@@ -26,17 +27,20 @@ let nev = 0, nmarks = 0, rows = 0, nx = 0, ny = 0, games = 0, broken = 0;
 put("ev_off.i64", BigInt64Array.of(0n)); put("x_off.i64", BigInt64Array.of(0n)); put("y_off.i64", BigInt64Array.of(0n));
 
 function replay(game) {
-  const seed = game.seed, hold = seed % 5 === 0;
-  let G = newRecord(rules, { seats: 2, seed, now: 0 });
+  // a branch game (branch-lib.mjs): the source's moves with its randomness, the hidden cards re-dealt at the branch point; the
+  // records follow the whole game (they hold only what each seat saw), positions are taken from the branch point on
+  const seed = game.seed, B = game.branch || null, hold = (B ? B.src : seed) % 5 === 0;
+  let G = recordOf(rules, game);
   const R = [new RecordG(0), new RecordG(1)], pend = [[], []];
   for (let i = 0; i < game.moves.length; i++) {
+    if (B && i === B.at) G = { ...G, state: redeal(rules, G.state, B.seat, seed) };
     const [who, m] = game.moves[i], s = rules.restore(J(G.state));
-    if (seeded(mix(seed, 41337 + i))() < 1 / EVERY) for (const me of [0, 1]) {
+    if (!(B && i < B.at) && seeded(mix(seed, 41337 + i))() < 1 / EVERY) for (const me of [0, 1]) {
       const t = targetsOf(s, me, P, true);
       if (!t.names.length || t.names.some(y => y == null)) continue;
       pend[me].push({ x: posInput(s, me, t, P), t, end: R[me].events.length, turn: s.turn || 0 });
     }
-    Math.random = seeded(mix(seed, i + 1));
+    Math.random = seeded(rngSeedOf(game, i));
     const r = applyMove(rules, G, who, m, 0);
     Math.random = realRandom;
     if (r.error) { broken++; return; }

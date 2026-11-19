@@ -9,19 +9,23 @@ import { rules } from "../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../seats.js";
 import { isNull } from "./null-move.mjs";
 import { DECK } from "../dandan-core.js";
+import { recordOf, redeal, rngSeedOf } from "./zero/branch-lib.mjs";
 
 const [SH, SHS, OUT, ids] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5]];
 const real = Math.random;
 const T = { games: 0, broken: 0, moves: 0, nulls: 0, byCard: {} };
 function replay(game) {
-  let G = newRecord(rules, { seats: 2, seed: game.seed, now: 0 });
+  // a branch game (zero/branch-lib.mjs): replayed from its source, its moves counted from the branch point on
+  const B = game.branch || null;
+  let G = recordOf(rules, game);
   for (let i = 0; i < game.moves.length; i++) {
+    if (B && i === B.at) G = { ...G, state: redeal(rules, G.state, B.seat, game.seed) };
     const [who, m] = game.moves[i], s = G.state;
-    if (!s.pending && !["pass", "land", "attack", "block", "keep", "mull"].includes(m.t)) {
+    if (!(B && i < B.at) && !s.pending && !["pass", "land", "attack", "block", "keep", "mull"].includes(m.t)) {
       T.moves++;
       if (isNull(s, who, m, seeded(mix(game.seed, 999 + i)))) { T.nulls++; const n = m.card != null ? DECK[m.card] : m.t; T.byCard[n] = (T.byCard[n] || 0) + 1; }
     }
-    Math.random = seeded(mix(game.seed, i + 1));
+    Math.random = seeded(rngSeedOf(game, i));
     const r = applyMove(rules, G, who, m, 0);
     Math.random = real;
     if (r.error) { T.broken++; return; }

@@ -16,6 +16,7 @@ for (const id of ids.split(",")) {
     for (const line of ((await store.get(name)) || "").split("\n")) {
       if (!line.startsWith('{"game"') || games >= Number(most)) continue;
       const g = JSON.parse(line);
+      if (g.branch) continue;   // branch games (branch-lib.mjs) replay from their source: not counted here
       let G = newRecord(rules, { seats: 2, seed: g.seed, now: 0 }), lastTurn = -1, reached = false;
       for (let i = 0; i < g.moves.length; i++) {
         const s = G.state;

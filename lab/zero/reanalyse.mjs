@@ -24,7 +24,7 @@ for (const name of parts) {
   for (const line of ((local ? fs.readFileSync(name, "utf8") : await store.get(name)) || "").split("\n")) {
     if (!line.startsWith('{"game"')) continue;
     const g = JSON.parse(line), seed = g.seed, x3 = g.explore3 ? g.explore3.i : null;
-    if (seed % 5 === 0) continue;   // held-out seeds: never trained on, so never reanalysed
+    if (seed % 5 === 0 || g.branch) continue;   // held-out seeds never trained on; branch games (branch-lib.mjs) not reanalysed   // held-out seeds: never trained on, so never reanalysed
     brain.reset();
     let G = newRecord(rules, { seats: 2, seed, now: 0 }), lastTurn = -1;
     for (let i = 0; i < g.moves.length; i++) {
