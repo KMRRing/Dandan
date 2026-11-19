@@ -7,13 +7,19 @@
 //            blended with the search's value at that position (VBLEND, default 0.5, where the position was searched), aux.f32
 //            whether that seat lost by drawing from an empty library (value_np.py --aux), fut.f32 (19 Nov 2026, value_np.py
 //            --fut) three a row: the seat's lead in cards in hand and in lands at the start of its next turn (or the game's end),
-//            each /7, and the share of the game left ((last turn - this turn) / 40, at most 1)
+//            each /7, and the share of the game left ((last turn - this turn) / 40, at most 1); end.f32 (20 Nov 2026, KataGo's
+//            score target, value_np.py --endw) four a row: the seat's life lead at the game's end /40 (within ±1), the library
+//            left /60 (at most 1), whether it ended on life, whether the other seat lost by drawing from an empty library; fate.f32 (KataGo's
+//            ownership target, value_np.py --fate) 2 × POOL.V a row: of this seat's cards in hand now, by card, how many were
+//            ever used later (played, cycled, or cast and resolved) and how many ever cast and sent back (countered to the
+//            library or returned to hand), each /2; a card can be both. A resigned game's end is where it was resigned.
 // ENC (env, 17 Nov 2026, stage 3 step 3): "general" packs dandan-general.js's view, value view and marks (every input from the card
 // files, nothing named by hand) in place of Zero 2's; the same games, the same picks and values.
 // HANDS (env): the belief's dealt hands a decision (1,024 as in play; the training workflow packs at 256, Fable 20:45Z)
 // usage: node lab/zero/replay-pack2.mjs <dir> <zero-play job ids, comma-separated | file:<local output>> <Scry 1.2 file> [shard shards]
 import fs from "node:fs";
 import { rules } from "../../dandan-rules.js";
+import { DECK } from "../../dandan-cards.js";
 import { lands } from "../../dandan-core.js";
 import { determinize } from "../../dandan-think.js";
 import { recordOf, redeal, rngSeedOf } from "./branch-lib.mjs";
@@ -67,7 +73,7 @@ function sink(sub, names) {
 // cast, or the seat played again first; rc.f32, three a candidate: the search's replies to that candidate over its deals (a cast,
 // dandan-think.js: let it resolve, aimed at, another play), as shares, −1 each where the decision line has none
 const XF = GEN ? "x.f16" : "x.f32", A = sink("a", [XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8", ...(GEN ? ["res.f32", "resp.i8", "rc.f32"] : [])]), PC = { D: 0, C: 0, K: 0, Q: 0 };
-const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "fut.f32", "hold.u8", "rf.u8", "lib.u8", "gid.u32", ...(process.env.DEALT ? ["pt.f32", "pd.f32"] : [])]);
+const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "fut.f32", "end.f32", "fate.f32", "hold.u8", "rf.u8", "lib.u8", "gid.u32", ...(process.env.DEALT ? ["pt.f32", "pd.f32"] : [])]);
 // DEALT=<n> with VNET=<file> (19 Nov 2026, Fable: "the value net is scored on true hands and used on dealt hands"): each value row
 // also gets the net's chance on the true position (pt.f32) and its mean over n worlds dealt from the seat's own belief (pd.f32),
 // as the search uses it; lab/zero/value-dealt.py reads both against the result
@@ -145,6 +151,11 @@ function valueOld(s, d, played, explored) {
   return js.reduce((a, j) => a + d.c[j].q, 0) / js.length;
 }
 // cards in hand and lands, each seat (the value net's future outputs)
+const VOCAB = new Map(POOL.vocab.map((n, k) => [n, k])), typeOf = id => VOCAB.get(DECK[id]) ?? -1;
+/** A cast card's fate once it has left the stack: "used" (it resolved: on the battlefield, in the yard or exile) or "back"
+ * (countered to the library or returned to hand). */
+const fateOnLeaving = (st, id) => (st.lib.includes(id) || st.hand.some(h => h.includes(id)) ? "back" : "used");
+const mark = (fate, id, x) => fate.set(id, { ...(fate.get(id) || {}), [x]: true });
 const matOf = s => ({ hand: [0, 1].map(x => s.hand[x].length), lands: [0, 1].map(x => lands(s, x).length) });
 function replay(game, decisions) {
   // a branch game (branch-lib.mjs): its source's moves replayed with the source's randomness, the hidden cards re-dealt at the
@@ -156,6 +167,7 @@ function replay(game, decisions) {
   const gameDec = [];   // this game's decisions in order: { who, resp }, written once the game's result is known
   const F = net.scryg ? [new ScryG(0, net), new ScryG(1, net)] : [new Scry12(0, net, { hands: HANDS }), new Scry12(1, net, { hands: HANDS })], vrows = [];
   const snaps = new Map();   // turn → each seat's cards in hand and lands at that turn's start (the future outputs)
+  const fate = new Map(), cast = new Set();   // card id → { used, back }, what ever became of it; cast cards still on the stack
   if (LEGACY) for (const f of F) f.legacy = true;
   for (let i = 0; i < game.moves.length; i++) {
     if (B && i === B.at) G = { ...G, state: redeal(rules, G.state, B.seat, seed) };
@@ -181,7 +193,7 @@ function replay(game, decisions) {
         const d = ds.find(x => x.c?.length), vs = !d ? null : d.v != null ? d.v : valueOld(s, d, m, x3 === i), rv = REAN.get(`${seed}:${i}`);
         if (!(REAN_ONLY && !rv)) for (const me of [0, 1]) {
           const quick = vs == null ? null : me === d.seat ? vs : 1 - vs;
-          const row = { me, lib: s.lib.length, turn: s.turn, active: s.active, f: valueOf(s, me), g: valueOf(s, other(me)), v: REAN_USE && rv ? (me === rv.seat ? rv.v : 1 - rv.v) : quick };
+          const row = { me, held: [...s.hand[me]], lib: s.lib.length, turn: s.turn, active: s.active, f: valueOf(s, me), g: valueOf(s, other(me)), v: REAN_USE && rv ? (me === rv.seat ? rv.v : 1 - rv.v) : quick };
           if (VJ) {
             const deal = F[me].deal(), rng = seeded(mix(seed, 9090 + 2 * i + me));
             let sum = 0;
@@ -215,6 +227,10 @@ function replay(game, decisions) {
     if (r.error) { broken++; if (GEN) for (const g of gameDec) { A.put("res.f32", Float32Array.of(0.5)); A.put("resp.i8", Int8Array.of(-1)); } return; }   // kept in step with the decisions written
     for (const f of F) f.update(s, who, m, r.G.state);
     G = r.G;
+    // the fates (fate.f32): a land played or a card cycled is used at once; a cast card when it leaves the stack
+    if ((m.t === "land" || m.t === "cycle") && m.card != null) mark(fate, m.card, "used");
+    if (m.t === "cast" && m.card != null && m.from === "hand") cast.add(m.card);
+    for (const id of cast) if (!G.state.stack.some(x => x.card === id)) { mark(fate, id, fateOnLeaving(G.state, id)); cast.delete(id); }
     if (watch && !G.state.stack.some(x => x.sid === watch.sid)) { for (const k of watch.ks) gameDec[k].resp = 0; watch = null; }
     if (m.t === "cast" && ks.length) { const top = G.state.stack[G.state.stack.length - 1]; if (top && top.ctl === who) watch = { who, ks, sid: top.sid }; }
   }
@@ -227,8 +243,15 @@ function replay(game, decisions) {
     const t = r.active === r.me ? r.turn + 2 : r.turn + 1, m = snaps.get(t) || last, o = other(r.me);
     return Float32Array.of((m.hand[r.me] - m.hand[o]) / 7, (m.lands[r.me] - m.lands[o]) / 7, Math.min(1, Math.max(0, (lastTurn_ - r.turn) / 40)));
   };
+  const o_ = x => other(x), endOf = me => Float32Array.of(Math.max(-1, Math.min(1, (end.life[me] - end.life[o_(me)]) / 40)), Math.min(1, end.lib.length / 60),
+    end.life.some(l => l <= 0) ? 1 : 0, end.lost?.[o_(me)] ? 1 : 0);
+  const fateRow = r => {
+    const f = new Float32Array(2 * POOL.V);
+    for (const id of r.held) { const k = typeOf(id), x = fate.get(id); if (k >= 0 && x) { if (x.used) f[2 * k] += 0.5; if (x.back) f[2 * k + 1] += 0.5; } }
+    return f;
+  };
   for (const r of vrows) {
-    V.put("fut.f32", futOf(r));
+    V.put("fut.f32", futOf(r)); V.put("end.f32", endOf(r.me)); V.put("fate.f32", fateRow(r));
     if (VJ) { V.put("pt.f32", Float32Array.of(r.pt)); V.put("pd.f32", Float32Array.of(r.pd)); }
     let sv = r.v;
     if (VTD && !(HOLD_ONLY)) {   // the same seat's next searched value VTD of its own turns later (2 turns a round)
@@ -258,5 +281,5 @@ for (const name of parts) {
 }
 A.put("cand.i32", Int32Array.of(PC.C)); A.put("mark.i32", Int32Array.of(PC.K)); A.close(); V.close();
 fs.writeFileSync(`${dir}/a/meta.json`, JSON.stringify({ XN, decisions: PC.D, candidates: PC.C, marks: PC.K, markN: MN, ...(GEN ? { enc: "general" } : {}), questions: PC.Q, exports: ids, every: true }));
-fs.writeFileSync(`${dir}/v/meta.json`, JSON.stringify({ N: VN, rows: nv, ...(GEN ? { enc: "general" } : {}), skipped, ids, aux: true }));
+fs.writeFileSync(`${dir}/v/meta.json`, JSON.stringify({ N: VN, rows: nv, ...(GEN ? { enc: "general" } : {}), skipped, ids, aux: true, fateN: 2 * POOL.V }));
 console.log(`replay-pack2: ${games} games (${broken} not the same); decisions ${PC.D} (questions ${PC.Q}, ${unmatched} unmatched, ${old} from before moves were stored (learnt as hard picks), ${pickOff} picks not among the options, ${moved} where the move played was not the line's pick, ${twins} options in twin groups); value rows ${nv} (${skipped} before a random move skipped)`);

@@ -18,6 +18,11 @@ ap.add_argument("--wd", type=float, default=0.0)  # decoupled weight decay a ste
 # the future outputs (19 Nov 2026, Korbi: "do both"): this seat's lead in cards in hand and in lands at its next turn's start, and
 # the share of the game left (fut.f32, 3 a row, replay-pack2.mjs); squared error, this weight; dropped from the file written
 ap.add_argument("--fut", type=float, default=0.0)
+# KataGo's auxiliary targets (20 Nov 2026, Korbi: "yep go"): the game's end (end.f32, 4 a row: life lead, library left, ended on
+# life, the other decked; KataGo's score) and the fate of this seat's cards in hand (fate.f32, 2 a card type: used, sent back;
+# KataGo's ownership); squared error, these weights; dropped from the file written
+ap.add_argument("--endw", type=float, default=0.0)
+ap.add_argument("--fate", type=float, default=0.0)
 # the refinement stage (19 Nov 2026): train and measure on the rows from the REFINE batches alone (rf.u8)
 ap.add_argument("--refine_only", "--refine-only", dest="refine_only", action="store_true")
 # the removal test (18 Nov 2026): inputs from this column on read as zero, so their first-layer weights stay at zero in the file
@@ -42,12 +47,18 @@ def xin(a):
     if A.zero_from: z[:, A.zero_from:] = 0
     return z
 AUX = rd("aux.f32", np.float32) if A.aux and os.path.exists(os.path.join(A.dir, "aux.f32")) else None
-FUT = rd("fut.f32", np.float32).reshape(R, 3) if A.fut and os.path.exists(os.path.join(A.dir, "fut.f32")) else None
-if A.fut and FUT is None: say("WARNING: --fut asked for, but the pack has no fut.f32: trained without it")
-# the last layer: the value, then the deck-out logit (--aux), then the 3 future outputs (--fut); all but the value read from this
-# seat's side only, and only the value is written
-IA, IF = 1, 1 + (AUX is not None)
-OUT = IF + (3 if FUT is not None else 0)
+def target(name, width, weight):
+    """A squared-error output group, or None: (rows × width targets, weight)."""
+    if not weight: return None
+    if not os.path.exists(os.path.join(A.dir, name)): say(f"WARNING: {name} asked for, but the pack has none: trained without it"); return None
+    return rd(name, np.float32).reshape(R, width), weight
+# the last layer: the value, then the deck-out logit (--aux), then the squared-error groups in this order; all but the value read
+# from this seat's side only, and only the value is written
+REG = [t for t in (target("fut.f32", 3, A.fut), target("end.f32", 4, A.endw), target("fate.f32", int(meta.get("fateN", 52)), A.fate)) if t]
+IA = 1
+OFF = [1 + (AUX is not None)]
+for y, _ in REG: OFF.append(OFF[-1] + y.shape[1])
+OUT = OFF[-1]
 sizes = [N] + [int(x) for x in A.shape.split("x")] + [OUT]
 rng = np.random.default_rng(A.seed)
 W = [rng.normal(0, np.sqrt(2 / a), (a, b)) for a, b in zip(sizes[:-1], sizes[1:])]; B = [np.zeros(b) for b in sizes[1:]]
@@ -100,7 +111,7 @@ for e in range(1, A.epochs + 1):
         gm, gt = np.zeros((len(j), OUT)), np.zeros((len(j), OUT))
         gm[:, :1], gt[:, :1] = gd, -gd
         if AUX is not None: gm[:, IA] = A.aux * (1 / (1 + np.exp(-np.clip(hm[-1][:, IA], -30, 30))) - AUX[j]) / len(j)
-        if FUT is not None: gm[:, IF:IF + 3] = A.fut * 2 * (hm[-1][:, IF:IF + 3] - FUT[j]) / len(j)
+        for (y, w), a, b in zip(REG, OFF, OFF[1:]): gm[:, a:b] = w * 2 * (hm[-1][:, a:b] - y[j]) / len(j)
         aW, aB = back(hm, gm); bW, bB = back(ht, gt)
         for l in range(len(W)):
             for P_, G_, m_, v_ in ((W, aW[l] + bW[l], mW, vW), (B, aB[l] + bB[l], mB, vB)):
