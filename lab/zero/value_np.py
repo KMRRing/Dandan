@@ -16,7 +16,7 @@ ap.add_argument("--init", default="")  # warm start from a value net of the same
 ap.add_argument("--aux", type=float, default=0.0)  # weight of the second output (16 Nov 2026, Zero 2): whether this seat decks out (aux.f32); dropped from the file written
 ap.add_argument("--wd", type=float, default=0.0)  # decoupled weight decay a step (14 Nov: the face-up net overfits from epoch 2)
 # the removal test (18 Nov 2026): inputs from this column on read as zero, so their first-layer weights stay at zero in the file
-ap.add_argument("--zero_from", type=int, default=0)
+ap.add_argument("--zero_from", "--zero-from", dest="zero_from", type=int, default=0)
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 meta = json.load(open(os.path.join(A.dir, "meta.json"))); N, R = meta["N"], meta["rows"]

@@ -43,10 +43,10 @@ ap.add_argument("--init", default="")
 # training-only outputs (18 Nov 2026, Korbi 14:57–15:08; head2 only, dropped from the file written): the game's result for the
 # deciding seat from the trunk, and the other seat's response to the move while it is on the stack (let it resolve / aim a spell
 # at it / another play) from the played move's own hidden layer; their weights in the loss
-ap.add_argument("--aux_res", type=float, default=0.0)
-ap.add_argument("--aux_resp", type=float, default=0.0)
+ap.add_argument("--aux_res", "--aux-res", dest="aux_res", type=float, default=0.0)
+ap.add_argument("--aux_resp", "--aux-resp", dest="aux_resp", type=float, default=0.0)
 # the removal test (18 Nov 2026): inputs from this column on read as zero in training, so their weights stay at zero in the file
-ap.add_argument("--zero_from", type=int, default=0)
+ap.add_argument("--zero_from", "--zero-from", dest="zero_from", type=int, default=0)
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 MOVE_N = 80   # a move's marks; a pack can say otherwise (markN: Zero 2's moves and answers in one encoding, 256)

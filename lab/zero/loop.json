@@ -9,7 +9,7 @@
   "games": 9600,
   "maxWindow": 30000,
   "value": "128x64",
-  "trainArgs": "keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux_res_0.5_--aux_resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8",
+  "trainArgs": "keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8",
   "genFrom": 20,
   "windowFrom": 15,
   "nextFrom": 23,
@@ -38,7 +38,8 @@
     "2026-11-19T02:53:21.990Z generation 19: training zl19 (policy fresh, value and dealer warm from zl18b) on zpq001,zps015,zps016,zps017,zps018,zps019,zps020,zps021,zps022",
     "2026-11-19T03:17:25.413Z generation 19: zl19's dealer is in: its policy and value nets asked for",
     "2026-11-19T05:03:12.392Z generation 19: zl19's nets are late: training asked for again (1)",
-    "2026-11-19T06:43:12.852Z generation 19: zl19's nets are late: training asked for again (2)"
+    "2026-11-19T06:43:12.852Z generation 19: zl19's nets are late: training asked for again (2)",
+    "2026-11-19T06:57:30.000Z generation 19: zl19's policy training failed twice (the dispatcher turned --aux_res into \"--aux res\"; policy_np now also takes --aux-res, --aux-resp); training asked for by hand"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -9496,9 +9497,9 @@
     "at": "2026-11-19T02:53:21.990Z",
     "dispatch": [
       "scryg-train.yml games=zpq001,zps015,zps016,zps017,zps018,zps019,zps020,zps021,zps022 name=zl19 init=zl18b args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
-      "general-train.yml games=zpq001,zps015,zps016,zps017,zps018,zps019,zps020,zps021,zps022 name=zl19 init=zl18b scry=zl19 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux_res_0.5_--aux_resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8"
+      "general-train.yml games=zpq001,zps015,zps016,zps017,zps018,zps019,zps020,zps021,zps022 name=zl19 init=zl18b scry=zl19 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8"
     ],
-    "asked": "2026-11-19T06:43:13.167Z",
-    "retries": 2
+    "asked": "2026-11-19T06:57:30.000Z",
+    "retries": 0
   }
 }
