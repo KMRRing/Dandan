@@ -114,7 +114,11 @@ if (L.phase === "play") {
       // the dealer first (18 Nov 2026): the policy and value then pack with the new dealer's beliefs, the ones they play with;
       // the general training is asked for once the dealer's net is in (the train phase below)
       L.trained.dispatch = [`scryg-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion}${L.beliefArgs ? " " + L.beliefArgs : ""}`];
-      L.trained.next = `general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.challenger} belief=scryg value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`;
+      // the refinement (19 Nov 2026, Korbi: deep games refine what the quick games set): the window's batches from refineFrom on
+      // (the deep ones) trained again alone after the main stage, refineArgs = <epochs>:<policy lr>:<value lr>
+      const deepIds = L.refineFrom ? window.filter(id => Number(id.slice(-3)) >= L.refineFrom) : [];
+      const refine = deepIds.length ? ` refine=${deepIds.join("+")}:${L.refineArgs || "3:1e-4:3e-5"}` : "";
+      L.trained.next = `general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.challenger} belief=scryg value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}${refine}`;
       for (const d of L.trained.dispatch) say(`DISPATCH ${d}`);
     } else if (GEN) say(`DISPATCH general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.scry} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
     else say(`DISPATCH zero-train-ext.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
@@ -134,6 +138,15 @@ if (L.phase === "play") {
     // 1 game in vsEvery against the nets just replaced (Korbi 17 Nov): the next generation's reading, its games training as any
     if (L.vsEvery) F.args = `${F.args.replace(/ vs=\S+/, "")} vs=${L.prevLine === "old" ? prev : ref(prev)}:${L.vsEvery}${L.yardVs ? "," + L.yardVs : ""}`;
     L.previous = prev; delete L.prevLine;
+    // deep self-play from generation deepFrom on (19 Nov 2026, Korbi: quick sets the direction, deep refines it): the filler plays
+    // deep (deepDeals a move, deepFlags) and deepGames a generation, 8 a shard; F.games stays as it was, as it spaces the seeds;
+    // those batches are trained again alone after the main stage (refineFrom)
+    if (L.deepFrom && L.gen + 1 >= L.deepFrom && !L.deepOn) {
+      F.args = F.args.replace(/(\{out\} )\d+ \d+/, `$1${L.deepDeals || 1024} ${L.deepGames || 2400}`);
+      for (const f of (L.deepFlags || "deepmax=4 early=256:0.03:6,512:0.02").split(" ")) { const k = f.split("=")[0]; F.args = F.args.includes(` ${k}=`) ? F.args.replace(new RegExp(` ${k}=\\S+`), ` ${f}`) : `${F.args} ${f}`; }
+      F.shards = Math.ceil((L.deepGames || 2400) / 8); L.games = L.deepGames || 2400; L.deepOn = true; L.refinePending = true;
+      log(`generation ${L.gen + 1}: deep self-play from here (${L.deepDeals || 1024} deals, ${L.games} games)`);
+    }
     F.purpose = `Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets ${L.champion} against themselves; games for the next generation. ${F.purpose.replace(/^Filler:.*?games for the next generation\.\s*/, "").replace(/^mjs\) plays .*?games for the next generation\.\s*/, "").replace(/^\d*\), 1 decision in/, "1 decision in")}`.slice(0, 1500);
     if (!dry) fs.writeFileSync(FILLER, JSON.stringify(F, null, 2) + "\n");
     // the rule (Fable, 16 Nov): when anything goes live, close the open filler batch: it was made with the old nets
@@ -165,6 +178,7 @@ if (L.phase === "play") {
     // one generation only
     delete L.extraWindow;
     L.genFrom = open.length ? open[open.length - 1].n + 1 : L.nextFrom;
+    if (L.refinePending) { L.refineFrom = L.genFrom; delete L.refinePending; }
     L.gen++; L.phase = "play"; delete L.challenger; delete L.genSince; delete L.reading; delete L.yardReading;
   } else if (Date.now() - Date.parse(L.trained.at) > 12 * 3600e3) log(`generation ${L.gen}: no nets for ${L.challenger} 12 hours after training began: look at zero-train-ext.yml's runs`);
   // the training asked for again when its nets are 150 minutes late (19 Nov: 100 until then; the fresh policy on the long window

@@ -47,6 +47,9 @@ ap.add_argument("--aux_res", "--aux-res", dest="aux_res", type=float, default=0.
 ap.add_argument("--aux_resp", "--aux-resp", dest="aux_resp", type=float, default=0.0)
 # the removal test (18 Nov 2026): inputs from this column on read as zero in training, so their weights stay at zero in the file
 ap.add_argument("--zero_from", "--zero-from", dest="zero_from", type=int, default=0)
+# the refinement stage (19 Nov 2026, Korbi: deep games refine what the quick games set): train and measure on the decisions the
+# packer flagged 32 (REFINE batches) alone; with --init the net from the main stage
+ap.add_argument("--refine_only", "--refine-only", dest="refine_only", action="store_true")
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 MOVE_N = 80   # a move's marks; a pack can say otherwise (markN: Zero 2's moves and answers in one encoding, 256)
@@ -79,6 +82,10 @@ kind = MARKS[mark[:-1]]                                   # a candidate's first 
 held_mask = (flags & 1) > 0
 WEIGHT = np.where((flags & 2) > 0, 1.0, A.light)
 train_idx, held_idx = np.flatnonzero(~held_mask), np.flatnonzero(held_mask)
+if A.refine_only:
+    rf = (flags & 32) > 0
+    train_idx, held_idx = train_idx[rf[train_idx]], held_idx[rf[held_idx]]
+    if not len(train_idx): sys.exit("--refine_only: no decision in the pack is flagged for refinement (REFINE)")
 say(f"{D} decisions ({len(train_idx)} training, {len(held_idx)} held out), {len(Q)} candidates, {len(MARKS)} marks, {XN} inputs; "
     f"{meta['exports']}; form {A.form} {A.h1}x{A.h2}")
 

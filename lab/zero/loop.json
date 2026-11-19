@@ -9521,5 +9521,10 @@
     ],
     "asked": "2026-11-19T08:43:12.030Z",
     "retries": 1
-  }
+  },
+  "deepFrom": 21,
+  "deepDeals": 1024,
+  "deepGames": 2400,
+  "deepFlags": "deepmax=4 early=256:0.03:6,512:0.02",
+  "refineArgs": "3:1e-4:3e-5"
 }

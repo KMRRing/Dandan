@@ -61,7 +61,7 @@ function sink(sub, names) {
 // cast, or the seat played again first; rc.f32, three a candidate: the search's replies to that candidate over its deals (a cast,
 // dandan-think.js: let it resolve, aimed at, another play), as shares, −1 each where the decision line has none
 const XF = GEN ? "x.f16" : "x.f32", A = sink("a", [XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8", ...(GEN ? ["res.f32", "resp.i8", "rc.f32"] : [])]), PC = { D: 0, C: 0, K: 0, Q: 0 };
-const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "fut.f32", "hold.u8", ...(process.env.DEALT ? ["pt.f32", "pd.f32"] : [])]);
+const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "fut.f32", "hold.u8", "rf.u8", ...(process.env.DEALT ? ["pt.f32", "pd.f32"] : [])]);
 // DEALT=<n> with VNET=<file> (19 Nov 2026, Fable: "the value net is scored on true hands and used on dealt hands"): each value row
 // also gets the net's chance on the true position (pt.f32) and its mean over n worlds dealt from the seat's own belief (pd.f32),
 // as the search uses it; lab/zero/value-dealt.py reads both against the result
@@ -77,6 +77,10 @@ else if (process.env.REAN) {
       for (const l of ((await st.get(n)) || "").split("\n")) if (l) { const o = JSON.parse(l); REAN.set(`${o.g}:${o.i}`, o); }
   console.error(`reanalysed positions read: ${REAN.size}`);
 }
+// REFINE=<batch ids> (19 Nov 2026, Korbi: deep games as a refinement after the main training): decisions from those batches carry
+// flag 32, value rows rf.u8 = 1, so the trainers' --refine_only stage learns from them alone
+const REFINE = new Set((process.env.REFINE || "").split(",").filter(Boolean));
+let refineNow = false;
 const DEALT = Number(process.env.DEALT || 0), VJ = DEALT ? generalJudge(JSON.parse(fs.readFileSync(process.env.VNET, "utf8").split("\n")[0])) : null;
 let nv = 0, games = 0, broken = 0, unmatched = 0, skipped = 0, old = 0, pickOff = 0, moved = 0, twins = 0;
 
@@ -113,7 +117,7 @@ function pickOf(d, ms, played, explored) {
 function putDecision(s, d, o, x, p) {
   const ms = o.ms, hard = !!o.groups;
   A.put(XF, GEN ? halves(x) : x); A.put("cand.i32", Int32Array.of(PC.C)); A.put("pick.i16", Int16Array.of(p)); A.put("med.i16", Int16Array.of(0));
-  A.put("flags.u8", Uint8Array.of((d.hold ? 1 : 0) | (d.deep ? 2 : 0) | 4 | (hard ? 16 : 0)));
+  A.put("flags.u8", Uint8Array.of((d.hold ? 1 : 0) | (d.deep ? 2 : 0) | 4 | (hard ? 16 : 0) | (refineNow ? 32 : 0)));
   // twins get their group's mean: on a new line, the options the net reads alike (the same marks2), as it can't tell them apart;
   // on an old line, the options alike in the old marks, as the line can't tell which q was whose
   const mk = ms.map(m => marksAt(s, d.seat, m)), grp = new Map();
@@ -209,7 +213,7 @@ function replay(game, decisions) {
     if (VJ) { V.put("pt.f32", Float32Array.of(r.pt)); V.put("pd.f32", Float32Array.of(r.pd)); }
     const y = r.v == null ? won(r.me) : (1 - VBLEND) * won(r.me) + VBLEND * r.v;
     V.put(MF, GEN ? halves(r.f) : Float32Array.from(r.f)); V.put(TF, GEN ? halves(r.g) : Float32Array.from(r.g)); V.put("won.f32", Float32Array.of(y));
-    V.put("aux.f32", Float32Array.of(end.lost?.[r.me] ? 1 : 0)); V.put("hold.u8", Uint8Array.of(hold ? 1 : 0)); nv++;
+    V.put("aux.f32", Float32Array.of(end.lost?.[r.me] ? 1 : 0)); V.put("hold.u8", Uint8Array.of(hold ? 1 : 0)); V.put("rf.u8", Uint8Array.of(refineNow ? 1 : 0)); nv++;
   }
   games++;
 }
@@ -218,6 +222,7 @@ const local = ids.startsWith("file:");
 const store = local ? null : await (await import("../lib.mjs")).labStore();
 const parts = local ? [ids.slice(5)] : (await Promise.all(ids.split(",").map(id => store.list(`results/${id}/`)))).flat().filter(n => /\/part-\d+\.jsonl$/.test(n)).sort().filter((_, k) => k % SHS === SH);
 for (const name of parts) {
+  refineNow = REFINE.has(name.split("/").at(-2));
   const decisions = new Map();
   for (const line of ((local ? fs.readFileSync(name, "utf8") : await store.get(name)) || "").split("\n")) {
     if (!line || line.startsWith('{"v":1')) continue;

@@ -18,6 +18,8 @@ ap.add_argument("--wd", type=float, default=0.0)  # decoupled weight decay a ste
 # the future outputs (19 Nov 2026, Korbi: "do both"): this seat's lead in cards in hand and in lands at its next turn's start, and
 # the share of the game left (fut.f32, 3 a row, replay-pack2.mjs); squared error, this weight; dropped from the file written
 ap.add_argument("--fut", type=float, default=0.0)
+# the refinement stage (19 Nov 2026): train and measure on the rows from the REFINE batches alone (rf.u8)
+ap.add_argument("--refine_only", "--refine-only", dest="refine_only", action="store_true")
 # the removal test (18 Nov 2026): inputs from this column on read as zero, so their first-layer weights stay at zero in the file
 ap.add_argument("--zero_from", "--zero-from", dest="zero_from", type=int, default=0)
 A = ap.parse_args()
@@ -32,6 +34,9 @@ else:
     M, T = rd("mine.f32", np.float32).reshape(R, N), rd("theirs.f32", np.float32).reshape(R, N)
 Y, H = rd("won.f32", np.float32), rd("hold.u8", np.uint8) > 0
 tr, he = np.flatnonzero(~H), np.flatnonzero(H)
+if A.refine_only:
+    if not os.path.exists(os.path.join(A.dir, "rf.u8")): sys.exit("--refine_only: the pack has no rf.u8 (REFINE)")
+    RF = rd("rf.u8", np.uint8) > 0; tr, he = tr[RF[tr]], he[RF[he]]
 def xin(a):
     z = np.asarray(a, dtype=np.float32)
     if A.zero_from: z[:, A.zero_from:] = 0
