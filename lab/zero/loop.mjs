@@ -136,7 +136,8 @@ if (L.phase === "play") {
     // the nets the filler plays: "<name>-policy <name>-value" on the old line, "gen:<name> -" on the general
     F.args = F.args.replace(/(\{seed\} )\S+ \S+/, GEN ? `$1gen:${L.champion} -` : `$1${L.champion}-policy ${L.champion}-value`);
     // 1 game in vsEvery against the nets just replaced (Korbi 17 Nov): the next generation's reading, its games training as any
-    if (L.vsEvery) F.args = `${F.args.replace(/ vs=\S+/, "")} vs=${L.prevLine === "old" ? prev : ref(prev)}:${L.vsEvery}${L.yardVs ? "," + L.yardVs : ""}`;
+    // vsExtra (19 Nov 2026): further rivals kept across crowns, e.g. "noprior:4" (the prior head-to-head, Korbi)
+    if (L.vsEvery) F.args = `${F.args.replace(/ vs=\S+/, "")} vs=${L.prevLine === "old" ? prev : ref(prev)}:${L.vsEvery}${L.yardVs ? "," + L.yardVs : ""}${L.vsExtra ? "," + L.vsExtra : ""}`;
     L.previous = prev; delete L.prevLine;
     // deep self-play from generation deepFrom on (19 Nov 2026, Korbi: quick sets the direction, deep refines it): the filler plays
     // deep (deepDeals a move, deepFlags) and deepGames a generation, 8 a shard; F.games stays as it was, as it spaces the seeds;

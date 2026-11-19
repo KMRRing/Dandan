@@ -63,9 +63,13 @@ const RESIGN = flag("resign") ? (([t, run, keep, confirm]) => ({ t, run, keep, c
 // vs=<nets>:<every>[,<nets>:<every>…] (18 Nov 2026, Korbi 03:52: is the honest line gaining? the previous nets every generation,
 // and the leaky old engine g12r-C as a fixed yardstick): the first rival plays games g % every = 0, each later one games
 // g % every = every / 2 + its place (1, 2…), off the first rival's multiples (with 10 and 20: games 0, 10, 20… and 11, 31…)
+// "noprior:<every>" (19 Nov 2026, Korbi: "a sample … prior vs no prior, both deep"): the same nets as ours, playing without the
+// policy prior while our side plays with it, whatever the shard; the head-to-head reading of the prior, its games training as any
 const RIVALS = await Promise.all((flag("vs") || "").split(",").filter(Boolean).map(async (spec, k) => {
   const cut = spec.lastIndexOf(":"), nets = spec.slice(0, cut), every = Number(spec.slice(cut + 1)) || 0;
-  return { nets, every, at: k ? Math.floor(every / 2) + k : 0, brain: await brainBy(nets.startsWith("gen:") ? nets : `${nets}-policy`, `${nets}-value`) };
+  const at = k ? (Math.floor(every / 2) + k) % every : 0;
+  if (nets === "noprior") return { nets, every, at, noprior: true, brain: await brainBy(process.argv[8], process.argv[9]) };
+  return { nets, every, at, brain: await brainBy(nets.startsWith("gen:") ? nets : `${nets}-policy`, `${nets}-value`) };
 }));
 const rivalOf = g => RIVALS.find(r => r.every && g % r.every === r.at) || null;
 const random = !brain.judge;   // generation 0: no value net, no search
@@ -106,7 +110,9 @@ for (let g = first; g < first + n; g++) {
       // in a game against a rival both sides search fully on every move (18 Nov: zl16 scored 32.7% against the full g12r-C
       // while 3 of its own moves in 4 came from the 128-deal fast search; a reading has to be like for like)
       const full = vsSeat >= 0 || !CAP || seeded(mix(seed, 3300017 + i))() < CAP.share;
-      let res = brainOf(who).think(s, who, full ? deals : CAP.deals, yard ? FULL : full ? DEEPER : FAST);
+      // the prior head-to-head: our side with the prior (the flag's weight, or 1), the rival without
+      const opts = yard ? FULL : full ? DEEPER : FAST, ab = R?.noprior ? (who === vsSeat ? (({ prior, ...o }) => o)(opts) : { ...opts, prior: Number(flag("prior")) || 1 }) : opts;
+      let res = brainOf(who).think(s, who, full ? deals : CAP.deals, ab);
       move = res.best;
       if (RESIGN && !res.only && !yard) {
         const v = res.list.find(c => key(c.move) === key(res.best))?.mean;

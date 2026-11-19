@@ -13,7 +13,7 @@ for (const id of ids.split(",")) for (const name of (await store.list(`results/$
     const o = JSON.parse(line);
     if (o.game == null || !o.vs) continue;
     // split by the prior (19 Nov 2026: priorsplit) and by real resigning (vsresign), where the game line says
-    const tag = `${o.prior != null ? ` prior ${o.prior || "off"}` : ""}${o.vs.resign ? " resigning" : ""}`;
+    const tag = `${o.prior != null && o.vs.nets !== "noprior" ? ` prior ${o.prior || "off"}` : ""}${o.vs.resign ? " resigning" : ""}`;
     const r = (by[`${id} ${o.vs.nets}${tag}`] ||= { n: 0, won: 0, draw: 0, lostResigned: 0, wonByResign: 0, lostPlayed: 0, would: 0, wouldWon: 0, seat: [[0, 0], [0, 0]], turns: [], why: {} });
     const mine = 1 - o.vs.seat;
     r.n++; r.turns.push(o.turns); r.seat[mine][0]++;
