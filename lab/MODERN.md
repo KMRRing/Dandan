@@ -33,3 +33,22 @@ the engine to shortcut loops, a general feature for later). Gemini's metagame ta
    lists held out of training to test the belief net that reads which deck and which list the other player has.
 4. Self-improving decks (swap a card from the pool, keep it if it wins more) only once the play is strong: weak play judges
    cards wrong, and decks changing while the policy learns mix up better cards with better play. Stubborn Denial first.
+
+## The under-priced thrown-away card (19 Nov 2026, Fable; for the Modern plan)
+
+Dandan's value net barely charges for a card spent for nothing (Monte's test suite: the no-Island Dandân; the policy alone gets it
+right, the search's value net does not). A result is one bit a game, so a card's worth reaches the value net only faintly. In
+Modern it matters more: card-for-nothing mistakes are larger, and combo decks depend on valuing the cards in hand. Two ways
+that choose no concept:
+1. An auxiliary output (training only) predicting the seat's own view at its next turn: every input, so the net decides what
+   matters (hand size, lands and the rest are already in the view).
+2. Value targets from the search's estimate n turns later in the same game (temporal-difference targets), not at the same
+   position: a card thrown away shows in the next searches long before it shows in the result.
+Tested and set aside on Dandan: zv6 (hand and land lead next turn, share of the game left, scaled, weight 1, about 10-20% of
+the loss): no gain (held-out 0.4605 against zl19's 0.4599). Not tested at weight 3-5.
+
+## Dandan's refinement swap rule (19 Nov 2026, Fable, fixed in advance)
+
+A refined generation (zl21, zl22) keeps its main-stage nets as <name>m. The main-stage value net plays instead of the refined
+one if the refined one's result-only held-out log loss is worse by more than the two-seed noise, on true or on dealt hands
+(net-scorecard.yml, value-dealt.py).
