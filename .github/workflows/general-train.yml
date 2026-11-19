@@ -85,6 +85,9 @@ jobs:
           IFS=: read RB RE RP RV <<< "${{ inputs.refine }}"
           if [ -n "$RB" ]; then
             echo "refinement on $RB: $RE epochs" | tee -a "$RUNNER_TEMP/log.txt"
+            # the main stage's net kept beside the refined one as <name>m (19 Nov 2026, Fable: if the refinement makes the value net
+            # worse on the result alone, the main stage's ships)
+            for f in out/$N-*.json; do cp "$f" "out/${N}m-${f#out/$N-}"; done
             if [ "${{ matrix.net }}" = gvalue ]; then
               python3 lab/zero/value_np.py "$D/v" "out/$N-gvalue.json" --shape "${{ inputs.value }}" ${{ inputs.value_args }} --init "out/$N-gvalue.json" --epochs "$RE" --lr "$RV" --refine_only | tee -a "$RUNNER_TEMP/log.txt"
             else
@@ -106,6 +109,8 @@ jobs:
         run: |
           N="${{ inputs.name }}"; B="${{ inputs.belief }}"; S="lab/zero/nets/${{ inputs.scry }}-$B.json"
           cp nets-in/*.json lab/zero/nets/
+          # the main stage's nets (<name>m, a refined run) read with the same dealer
+          [ ! -f "lab/zero/nets/${N}m-gpolicy.json" ] || [ ! -f "lab/zero/nets/$N-scryg.json" ] || cp "lab/zero/nets/$N-scryg.json" "lab/zero/nets/${N}m-scryg.json"
           # Scry 1.2 goes with the nets; the general dealer (scryg) is trained by scryg-train.yml beside this run (Zero's loop waits for both)
           [ "$B" = scryg ] || [ "$S" = "lab/zero/nets/$N-$B.json" ] || cp "$S" "lab/zero/nets/$N-$B.json"
           git config user.name "github-actions[bot]"
