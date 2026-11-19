@@ -49,3 +49,5 @@ zps021  # 2026-11-19T08:43:33.535Z Zero's loop: made with the nets before zl19
 zps022  # 2026-11-19T08:43:33.535Z Zero's loop: made with the nets before zl19
 zps023  # 2026-11-19T17:55:20.552Z Zero's loop: made with the nets before zl20
 zps024  # 2026-11-19T17:55:20.552Z Zero's loop: made with the nets before zl20
+zdr001  # 2026-11-19T21:47:30.000Z Korbi 23:46 local: stop testing against live Monte, work on zl (read at 320 of 600)
+zdo001  # 2026-11-19T21:47:30.000Z Korbi 23:46 local: same
