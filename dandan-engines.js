@@ -105,7 +105,14 @@ export const ENGINES = [
     id: "zero-g12r", name: "Monte Scry Zero: live", short: "Zero", kind: "zero", tag: "What the live game plays since 17 November 2026: Monte Scry Zero with generation 12's nets (g12r-C), trained from scratch on that generation's games; the latest nets play, no gate (Korbi). Monte's test suite: 4 of 5 (g9x-C 0 of 5).", nets: "g12r-C", deeper: 0.03, available: true,
     description: "The from-scratch line (lab, 14–15 November 2026): nothing of Medium inside. Its options are every legal move and passing; its look-aheads are played by its own policy net (g12r-C, 654 inputs: the position as its seat sees it and Scry's estimate of the other hand) and its questions by its own question head; the hidden cards are dealt by Scry, a net that follows the other player's play and gives each unseen card in their hand its own chance of every name; positions are judged by its own value net (both hands face up). Close calls (the best two within 3 points) are weighed again three turns ahead instead of two (Korbi's variable look-ahead). Its nets (about 2 MB) ship with the app and are kept offline.",
     expect: "Monte's test suite (lab/suite.json, the no-Island Dandân positions from Korbi's games) at 256 deals: 4 of 5 passed, against 0 of 5 for g9x-C. Each warm generation has measured 2 to 3 points ahead of the one before at Quick.",
-  },  {
+  },
+  {
+    id: "zero-zl20", name: "Monte Zero zl20 (lab)", short: "zl20", kind: "zero", general: true, belief: "scryg", nets: "zl20", deeper: 0.03, deepmax: 4, prior: 1, available: true,
+    tag: "The clean line's generation 20 (19 Nov 2026), in the lab for Korbi to play: honest end to end (its value net sees both hands, as every value net does; its dealer and policy only what a seat may), with the policy as the search's prior on near-ties. Not the live game's Monte.",
+    description: "The general Monte: one view of the game for any card set (3,009 inputs), a dealer (belief net) for the other hand, a policy that scores every legal move, a value net judging positions; the search deals the hidden cards from the dealer, plays look-aheads with the policy and weighs close calls up to four turns ahead; where the search can't tell two moves apart, the policy's view decides (prior). zl19, its parent, scored 58.5% against live Monte (g12r-C) at quick over 585 games.",
+    expect: "Monte's test suite (the no-Island Dandân positions): zl19 passed 5 of 6 at 2,048 deals and 5 of 6 at quick with the prior. zl20's deep reading against live Monte runs on 19 Nov evening.",
+  },
+  {
     id: "zero-g9x", name: "Monte Scry Zero (g9x-C)", short: "Zero g9x", kind: "zero", tag: "The live game's Monte from 15 to 17 November 2026: the from-scratch line's generation 9 nets; 62.2% against the benchmark at Deep.", nets: "g9x-C", deeper: 0.03, available: true,
     description: "The from-scratch line (lab, 14–15 November 2026): nothing of Medium inside. Its options are every legal move and passing; its look-aheads are played by its own policy net (g9x-C, 654 inputs: the position as its seat sees it and Scry's estimate of the other hand) and its questions by its own question head; the hidden cards are dealt by Scry, a net that follows the other player's play and gives each unseen card in their hand its own chance of every name; positions are judged by its own value net (both hands face up). Close calls (the best two within 3 points) are weighed again three turns ahead instead of two (Korbi's variable look-ahead). Its nets (about 2 MB) ship with the app and are kept offline.",
     expect: "Against the lab's benchmark (the live Hard with a Medium-free look-ahead, within a point of the live Hard), both at Deep: 61.7% (99%: 55.0 to 68.5) over 175 of 200 pairs (lab job az-yd9-c); at Quick 59.0% over 200. Not crown-tested yet (1,200 pairs at Deep) and never at Deepest. It thinks about 1.5 to 2 times as long as Hard a deal: its nets are larger than Hard's.",
@@ -184,9 +191,11 @@ async function zeroOf(engine, load = fetchJson) {
     // its files move beside this one and are kept (the path is built here so the offline list doesn't ask for them before then)
     if (engine.general) {
       const lab = ["lab", "zero", "general.mjs"].join("/");
-      const [{ makeGeneral }, [policy, value, scry12]] = await Promise.all([import(`./${lab}`),
-        Promise.all(["gpolicy", "gvalue", "scry12"].map(k => load(new URL(`./judges/general-${engine.nets}-${k}.json`, import.meta.url).href)))]);
-      return { brain: makeGeneral({ policy, value, scry12 }), game: null, G: null, at: 0 };
+      // the belief: the general dealer (engine.belief "scryg", 19 Nov 2026: zl20 on) or Scry 1.2 (scry12)
+      const belief = engine.belief || "scry12";
+      const [{ makeGeneral }, [policy, value, b]] = await Promise.all([import(`./${lab}`),
+        Promise.all(["gpolicy", "gvalue", belief].map(k => load(new URL(`./judges/general-${engine.nets}-${k}.json`, import.meta.url).href)))]);
+      return { brain: makeGeneral({ policy, value, [belief]: b }), game: null, G: null, at: 0 };
     }
     const [{ makeZero }, nets] = await Promise.all([import("./dandan-zero.js"),
       Promise.all(["policy", "qpolicy", "scry", "value"].map(k => load(new URL(`./judges/zero-${engine.nets}-${k}.json`, import.meta.url).href)))]);
@@ -235,7 +244,7 @@ async function zeroThink(engine, s, seat, { budget = {}, must = null, load, game
   if (ms.length <= 1) return { best: ms[0] ?? PASS, list: [], only: true };
   const D = budget.deals || 64, mb = modeBudget(z, s, seat, D);
   // the budget's time backstop as Hard's (Deep 40 s, Deepest 120 s): a slow phone stops there, each look of a close call its own
-  const r = brain.think(s, seat, mb.deals, { ...(budget.ms ? { ms: budget.ms } : {}), ...(engine.deeper && !mb.light ? { deeper: { gap: engine.deeper } } : {}), ...(must ? { must } : {}) });
+  const r = brain.think(s, seat, mb.deals, { ...(budget.ms ? { ms: budget.ms } : {}), ...(engine.deeper && !mb.light ? { deeper: { gap: engine.deeper, ...(engine.deepmax ? { max: engine.deepmax } : {}) } } : {}), ...(engine.prior ? { prior: engine.prior } : {}), ...(must ? { must } : {}) });
   if (mb.full && !r.only && D > LIGHT) {
     const best = Math.max(...r.list.map(c => c.mean).filter(Number.isFinite));
     z.mode ||= {};
