@@ -21,7 +21,10 @@ check(new Set(ENGINES.map(e => e.id)).size === ENGINES.length && new Set(ENGINES
 check(["medium-tempo", "medium-squeeze", "medium-deckout", "hard-today", "hard-jh2", "hard-v14"].every(id => engineOf(id)), "the engines are listed");
 check(!engineOf("medium-deckout").available && /not built yet/i.test(engineOf("medium-deckout").description) && !seatable().some(e => e.id === "medium-deckout"), "the deckout Medium is listed but cannot be seated");
 check(ENGINES.filter(e => e.judge).every(e => JUDGES[e.judge] && [JUDGES[e.judge]].flat().every(f => fs.existsSync(new URL(f, new URL("../dandan-engines.js", import.meta.url))))), "every retrained judge named has its file (each of a mean's)");
-check(ENGINES.filter(e => e.kind === "zero").every(e => ["policy", "qpolicy", "scry", "value"].every(k => fs.existsSync(new URL(`../judges/zero-${e.nets}-${k}.json`, import.meta.url)))), "every Zero engine's four nets ship with the app (judges/)");
+// a general engine (19 Nov 2026: zl20) ships its policy, value net and belief as judges/general-<nets>-<k>.json
+check(ENGINES.filter(e => e.kind === "zero").every(e => e.general
+  ? ["gpolicy", "gvalue", e.belief || "scry12"].every(k => fs.existsSync(new URL(`../judges/general-${e.nets}-${k}.json`, import.meta.url)))
+  : ["policy", "qpolicy", "scry", "value"].every(k => fs.existsSync(new URL(`../judges/zero-${e.nets}-${k}.json`, import.meta.url)))), "every Zero engine's nets ship with the app (judges/)");
 check(DEFAULT_ENGINE === LIVE_ENGINE && engineOf(LIVE_ENGINE)?.available && JUDGES[LIVE_JUDGE], "Monte starts as the live game's engine (Monte Scry Zero since 15 Nov 2026); the coach's live judge has its file");
 
 // ---------- the settings ----------
