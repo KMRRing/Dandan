@@ -47,13 +47,14 @@
     "2026-11-19T16:01:59.032Z generation 20: training zl20 (policy fresh, value and dealer warm from zl19) on zps020,zps021,zps022,zps023,zps024",
     "2026-11-19T16:24:21.463Z generation 20: zl20's dealer is in: its policy and value nets asked for",
     "2026-11-19T17:55:20.552Z generation 21: deep self-play from here (1024 deals, 2400 games)",
-    "2026-11-19T17:55:20.552Z generation 20: zl20 (warm from zl19) plays from the filler's next batch"
+    "2026-11-19T17:55:20.552Z generation 20: zl20 (warm from zl19) plays from the filler's next batch",
+    "2026-11-19T21:52:00Z no more live-Monte games in training (Korbi 23:49 local: more zl against zl, live Monte isn't good for training): yardVs dropped; 1 game in 5 against the previous nets (was 1 in 10)"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
   "yardPairs": 300,
   "yardSeed": 3100000,
-  "vsEvery": 10,
+  "vsEvery": 5,
   "previous": "zl19",
   "line": "general",
   "scry": "g12h2",
@@ -357,7 +358,6 @@
   },
   "belief": "scryg",
   "beliefArgs": "args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
-  "yardVs": "g12r-C:20",
   "vsParts": {
     "results/zps023/part-0.jsonl": {
       "gen:zl18b": [
