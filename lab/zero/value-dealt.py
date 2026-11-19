@@ -8,6 +8,12 @@ d = sys.argv[1]
 rd = lambda n: np.fromfile(os.path.join(d, n), np.float32)
 if not os.path.exists(os.path.join(d, "pd.f32")): sys.exit("value-dealt: no pd.f32 in the pack (DEALT not set)")
 y, h = rd("won.f32"), np.fromfile(os.path.join(d, "hold.u8"), np.uint8) > 0
-for name, f in (("true hands", "pt.f32"), ("dealt hands", "pd.f32")):
-    p = np.clip(rd(f)[h], 1e-6, 1 - 1e-6); t = y[h]
+# the library race (19 Nov 2026, Fable): the same on the rows with 10 cards or fewer left in the library, where branch games
+# should help if they help at all
+LIB = np.fromfile(os.path.join(d, "lib.u8"), np.uint8) if os.path.exists(os.path.join(d, "lib.u8")) else None
+sets = [("", h)] + ([(" (library <= 10)", h & (LIB <= 10))] if LIB is not None else [])
+for (tag, m), (name, f) in [(a, b) for a in sets for b in (("true hands", "pt.f32"), ("dealt hands", "pd.f32"))]:
+    p = np.clip(rd(f)[m], 1e-6, 1 - 1e-6); t = y[m]
+    if not len(t): continue
+    name = name + tag
     print(f"value on {name}: rows {len(t)}, log loss {float(-(t * np.log(p) + (1 - t) * np.log(1 - p)).mean()):.4f}, Brier {float(((p - t) ** 2).mean()):.4f}, favourite right {float(((p > 0.5) == (t > 0.5)).mean()):.4f}")
