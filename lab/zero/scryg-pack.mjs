@@ -29,6 +29,7 @@ put("ev_off.i64", BigInt64Array.of(0n)); put("x_off.i64", BigInt64Array.of(0n));
 function replay(game) {
   // a branch game (branch-lib.mjs): the source's moves with its randomness, the hidden cards re-dealt at the branch point; the
   // records follow the whole game (they hold only what each seat saw), positions are taken from the branch point on
+  if (game.branch) return;   // the dealer never trains on branch games (Fable, 19 Nov): plenty of ordinary games, and none mixed in
   const seed = game.seed, B = game.branch || null, hold = (B ? B.src : seed) % 5 === 0;
   let G = recordOf(rules, game);
   const R = [new RecordG(0), new RecordG(1)], pend = [[], []];

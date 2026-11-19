@@ -135,6 +135,8 @@ for (let g = first; g < first + n; g++) {
     } else brain.reset();
   }
   const holdSeed = branch ? branch.src : seed;
+  // a branch game plays out (Fable, 19 Nov): the rare endings it is for would be conceded before they happen; `would` still counts
+  const noResignHere = noResign || !!branch;
   for (let i = i0; i < 4000 && !rules.over(G.state); i++) {
     const who = rules.toMove(G.state), s = rules.restore(J(G.state));
     const rng = seeded(mix(seed, i + 1));
@@ -170,7 +172,7 @@ for (let g = first; g < first + n; g++) {
           // the close-call look up to 4 turns; an out found there plays on (the streak starts again)
           const deep = brainOf(who).think(s, who, RESIGN.confirm, { deeper: { gap: 0.03, max: 4 } }), dv = deep.only ? null : Math.max(...deep.list.map(c => c.mean));
           if (dv != null && dv >= RESIGN.t) { streak[who] = 0; rescued.push({ seat: who, i, v: +dv.toFixed(4) }); res = deep; move = deep.best; }   // the deep search's line is the one kept
-          else if (!noResign) { resigned = { seat: who, i }; Math.random = realRandom; break; }
+          else if (!noResignHere) { resigned = { seat: who, i }; Math.random = realRandom; break; }
           else if (!would) would = { seat: who, i };
         }
       }

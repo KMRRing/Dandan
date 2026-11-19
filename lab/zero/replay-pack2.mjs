@@ -144,6 +144,7 @@ const matOf = s => ({ hand: [0, 1].map(x => s.hand[x].length), lands: [0, 1].map
 function replay(game, decisions) {
   // a branch game (branch-lib.mjs): its source's moves replayed with the source's randomness, the hidden cards re-dealt at the
   // branch point, lessons from there on only; held out as its source is
+  if (game.branch && process.env.NOBRANCH === "1") return;   // the with/without check (Fable, 19 Nov): branch games left out
   const seed = game.seed, x3 = game.explore3 ? game.explore3.i : null, B = game.branch || null, hold = (B ? B.src : seed) % 5 === 0;
   if (HOLD_ONLY && !hold) return;
   let G = recordOf(rules, game), lastTurn = -1, watch = null;

@@ -3,6 +3,11 @@
 // so it carries to Modern). Nothing here knows Dandan: an ending is the rules' own reason a game ended (st.why) and how long it
 // ran; a branch re-deals the hidden cards from the view of the player to move, consistent with everything public, and plays on.
 //
+// The re-deal (19 Nov 2026, Fable): both hands stay as they were; only the library places neither player knows are shuffled.
+// A re-dealt hand would contradict its holder's recorded play (passing with two Islands up while "holding" the counter), and the
+// dealer learns exactly that link; the unknown library order shaped nobody's past play, so any reshuffle of it is consistent
+// with the whole history and still gives each branch its own future.
+//
 // Three kinds of branch point, from stored self-play games of the window:
 //   E  an ending the generation under-represents: a few turns (2, 4 or 6) before that game's end
 //   V  a roughly even position: the search read 40-60% for the player to move
@@ -13,7 +18,7 @@
 // (rngSeedOf); the packer (replay-pack2.mjs) replays it the same way and writes lessons from `at` on only. Its hold-out follows
 // the source (training seeds only are branched), so no held-out game leaks into training.
 import { newRecord, seeded, mix } from "../../seats.js";
-import { determinize } from "../../dandan-think.js";
+import { knOf } from "../../dandan-core.js";
 
 const J = x => JSON.parse(JSON.stringify(x));
 
@@ -34,8 +39,19 @@ export function weightsOf(census, { most = 8, least = 5 } = {}) {
 export const rngSeedOf = (game, i) => (game.branch && i < game.branch.at ? mix(game.branch.src, i + 1) : mix(game.seed, i + 1));
 /** The record a game starts from: a branch game's from its source's seed. */
 export const recordOf = (rules, game) => newRecord(rules, { seats: 2, seed: game.branch ? game.branch.src : game.seed, now: 0 });
-/** The re-deal at the branch point: the hidden cards dealt afresh from `seat`'s view, consistent with all it has seen. */
-export const redeal = (rules, state, seat, seed) => rules.restore(J(determinize(rules.restore(J(state)), seat, seeded(mix(seed, 991)), false, false)));
+/** The re-deal at the branch point: the library places neither player knows, shuffled (`seat` is kept in the record only). */
+export function redeal(rules, state, seat, seed) {
+  const s = rules.restore(J(state)), rng = seeded(mix(seed, 991)), at = [];
+  s.lib.forEach((id, i) => { if (!knOf(s, id)) at.push(i); });
+  const ids = at.map(i => s.lib[i]);
+  for (let k = ids.length - 1; k > 0; k--) { const j = Math.floor(rng() * (k + 1)); [ids[k], ids[j]] = [ids[j], ids[k]]; }
+  at.forEach((i, k) => { s.lib[i] = ids[k]; });
+  return s;
+}
+
+/** Whether a game is one of the never-resign share (zero-play.mjs resign=<t>:<run>:<keep>: games with seeded(mix(seed, 777001)) under
+ *  keep play out): their endings are the unbiased sample of how games really finish. */
+export const neverResign = (g, keep = 0.1) => !g.vs && !g.branch && seeded(mix(g.seed, 777001))() < keep;
 
 /** The branch points of a set of stored games (parsed game lines and decision lines, by seed), each with its weight. */
 export function branchPoints(games, decisions, weights, { kinds = { E: 0.6, V: 0.2, B: 0.2 } } = {}) {
