@@ -12,13 +12,23 @@ import fs from "node:fs";
 import { recordOf, redeal, rngSeedOf } from "./branch-lib.mjs";
 import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
-import { POOL } from "../../dandan-general.js";
+import { POOL, answers } from "../../dandan-general.js";
+import { CARDS, HALVES, LIBRARY } from "../../dandan-cards.js";
 import { RecordG, targetsOf, posInput, evSize, posSize, CTX_N } from "./scryg.mjs";
 
 const [dir, ids] = process.argv.slice(2), SH = Number(process.argv[4] || 0), SHS = Number(process.argv[5] || 1), MAX = Number(process.argv[6] || 1e9), EVERY = 6;
 const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random, P = POOL, X = posSize(P);
 fs.mkdirSync(dir, { recursive: true });
-const files = ["ev_off.i64", "ev_marks.u16", "ev_ctx.u8", "ev_turn.i16", "x_off.i64", "x_idx.u16", "x_val.f16", "u.u8", "nh.u8", "nl.u8", "y_off.i64", "y.u8", "rec.i64", "turn.i16", "hold.u8"];
+const files = ["ev_off.i64", "ev_marks.u16", "ev_ctx.u8", "ev_turn.i16", "x_off.i64", "x_idx.u16", "x_val.f16", "u.u8", "nh.u8", "nl.u8", "y_off.i64", "y.u8", "rec.i64", "turn.i16", "hold.u8", "gc.u8"];
+// the groups (19 Nov 2026, Korbi: the dealer's extra outputs, training only): how many of the hidden hand's cards are lands, have
+// cycling, can answer a spell on the stack, can be cast at instant speed, take from or add to the library. Each is read off the
+// rules and the card data (answers: the rules' own targeting probe, as the view's), so they carry to any card set.
+const GROUPS = ["land", "cycling", "answer", "instant", "library"];
+const halvesOf = n => HALVES[n] || [n];
+const ANS = answers(POOL);
+const GROUP_OF = POOL.vocab.map((n, i) => [
+  halvesOf(n).some(h => CARDS[h]?.type === "land"), halvesOf(n).some(h => LIBRARY[h]?.cycle), !!ANS[i],
+  halvesOf(n).some(h => CARDS[h]?.type === "instant" || CARDS[h]?.flash), halvesOf(n).some(h => (LIBRARY[h]?.take || 0) + (LIBRARY[h]?.add || 0) > 0)].map(Number));
 const fd = Object.fromEntries(files.map(n => [n, fs.openSync(`${dir}/${n}`, "w")]));
 const put = (n, a) => fs.writeSync(fd[n], Buffer.from(a.buffer, a.byteOffset, a.byteLength));
 const f16 = new Float32Array(1), u32 = new Uint32Array(f16.buffer);
@@ -62,6 +72,7 @@ function replay(game) {
       put("u.u8", Uint8Array.from(p.t.u)); put("nh.u8", Uint8Array.of(p.t.handN)); put("nl.u8", Uint8Array.of(p.t.libN));
       put("y.u8", Uint8Array.from(p.t.names)); ny += p.t.names.length; put("y_off.i64", BigInt64Array.of(BigInt(ny)));
       put("rec.i64", BigInt64Array.of(BigInt(base), BigInt(base + p.end))); put("turn.i16", Int16Array.of(p.turn)); put("hold.u8", Uint8Array.of(hold ? 1 : 0));
+      const gc = new Uint8Array(GROUPS.length); for (const y of p.t.names.slice(0, p.t.handN)) GROUP_OF[y]?.forEach((v, g) => { gc[g] += v; }); put("gc.u8", gc);
       rows++;
     }
   }
@@ -76,5 +87,5 @@ outer: for (const name of parts) {
   for (const line of text.split("\n")) if (line.startsWith('{"game"')) { replay(JSON.parse(line)); if (games >= MAX) break outer; }
 }
 for (const f of Object.values(fd)) fs.closeSync(f);
-fs.writeFileSync(`${dir}/meta.json`, JSON.stringify({ V: P.V, MARK_N: P.MARK_N, CTX_N, EV: evSize(P), X, events: nev, marks: nmarks, rows, xnz: nx, targets: ny, games, broken }));
+fs.writeFileSync(`${dir}/meta.json`, JSON.stringify({ V: P.V, MARK_N: P.MARK_N, CTX_N, EV: evSize(P), X, events: nev, marks: nmarks, rows, xnz: nx, targets: ny, games, broken, groups: GROUPS }));
 console.log(`scryg-pack: ${games} games (${broken} not the same), ${nev} events, ${rows} positions, ${ny} cards to guess`);
