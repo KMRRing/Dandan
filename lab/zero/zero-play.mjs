@@ -162,7 +162,10 @@ for (let g = first; g < first + n; g++) {
       const full = vsSeat >= 0 || !CAP || seeded(mix(seed, 3300017 + i))() < CAP.share;
       // the prior head-to-head: our side with the prior (the flag's weight, or 1), the rival without
       const opts = yard ? FULL : full ? DEEPER : FAST, ab = R?.noprior ? (who === vsSeat ? (({ prior, ...o }) => o)(opts) : { ...opts, prior: Number(flag("prior")) || 1 }) : opts;
-      let res = brainOf(who).think(s, who, full ? deals : CAP.deals, ab);
+      // oracle=1 (19 Nov 2026, Korbi: a diagnostic, never self-play): our side's search sees the other hand as it is (determinize
+      // open: only the library's order dealt), the upper bound of what a perfect dealer could give it
+      const ab2 = flag("oracle") && who !== vsSeat ? { ...ab, open: true } : ab;
+      let res = brainOf(who).think(s, who, full ? deals : CAP.deals, ab2);
       move = res.best;
       if (RESIGN && !res.only && !yard) {
         const v = res.list.find(c => key(c.move) === key(res.best))?.mean;

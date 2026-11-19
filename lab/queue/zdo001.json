@@ -1,0 +1,8 @@
+{
+  "id": "zdo001",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 200 510000000 gen:zl20 - 100 deeper=0.03 deepmax=4 prior=1 oracle=1 vs=g12r-C:1",
+  "shards": 200,
+  "timeoutMin": 300,
+  "purpose": "Diagnostic (Korbi 19 Nov 23:02 local): zl20 with an oracle dealer (its search sees the other hand as it is) against live Monte g12r-C, both at deep, 200 games, seats alternating. If zl20 jumps well above 50%, the belief is the bottleneck at deep; if it stays near 47% (zdr001), it is not. Not trained on: an engine that sees the other hand."
+}
