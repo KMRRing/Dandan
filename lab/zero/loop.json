@@ -44,7 +44,8 @@
     "2026-11-19T08:43:33.535Z generation 19: zl19 (warm from zl18b) plays from the filler's next batch",
     "2026-11-19T16:01:59.032Z generation 20: zl19 against zl18b: 53.9% over 997 games",
     "2026-11-19T16:01:59.032Z generation 20: zl19 against the leaky g12r-C: 56.5% over 497 games",
-    "2026-11-19T16:01:59.032Z generation 20: training zl20 (policy fresh, value and dealer warm from zl19) on zps020,zps021,zps022,zps023,zps024"
+    "2026-11-19T16:01:59.032Z generation 20: training zl20 (policy fresh, value and dealer warm from zl19) on zps020,zps021,zps022,zps023,zps024",
+    "2026-11-19T16:24:21.463Z generation 20: zl20's dealer is in: its policy and value nets asked for"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -8562,9 +8563,11 @@
     ],
     "at": "2026-11-19T16:01:59.032Z",
     "dispatch": [
-      "scryg-train.yml games=zps020,zps021,zps022,zps023,zps024 name=zl20 init=zl19 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128"
+      "scryg-train.yml games=zps020,zps021,zps022,zps023,zps024 name=zl20 init=zl19 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
+      "general-train.yml games=zps020,zps021,zps022,zps023,zps024 name=zl20 init=zl19 scry=zl20 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8"
     ],
-    "next": "general-train.yml games=zps020,zps021,zps022,zps023,zps024 name=zl20 init=zl19 scry=zl20 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8"
+    "asked": "2026-11-19T16:24:21.813Z",
+    "retries": 0
   },
   "deepFrom": 21,
   "deepDeals": 1024,
