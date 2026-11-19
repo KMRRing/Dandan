@@ -1,0 +1,8 @@
+{
+  "id": "zps025",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 2400 400230400 gen:zl20 - 100 deeper=0.03 prior=1 priorsplit=1 vsresign=0.2 first=16 steady=2 decided=64:0.97:0.03 resign=0.03:2:0.1 vs=gen:zl19:5,noprior:4 deepmax=4 early=256:0.03:6,512:0.02",
+  "shards": 300,
+  "timeoutMin": 300,
+  "purpose": "Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets zl20 against themselves; games for the next generation. The quick recipe (Korbi 18 Nov 12:21 local test, 21:21 crown): 256 deals on every move, the close-call look one turn, 9,600 games a generation (8 a shard); resigning after the confirming deep search; 1 game in 10 against the previous nets and 1 in 20 against g12r-C, both sides full, played out. Decision lines carry the search's replies to every cast (`r`). From zps024 (19 Nov 2026, Korbi \"do both\", sized by Fable): prior=1, the policy as the search's prior on near-ties, k = 1 x the standard error of the top-two gap; priorsplit: on even shards only, so the batch reads with and without it; vsresign=0.2: a fifth of the rival games resign for real (the goal's engine). From 19 Nov 21:52Z (Korbi: more zl against zl, none against live Monte): 1 game in 5 against the previous nets, none against g12r-C. Queued by hand (20 Nov 2026 ~23:00Z, exec): generation 21's first deep batch; the refill makes one only when the queue runs dry, and zra001's last shards held it back while slots sat idle."
+}
