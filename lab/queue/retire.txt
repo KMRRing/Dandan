@@ -47,3 +47,5 @@ zps019  # 2026-11-18T19:21:54Z crown of zl18b by hand: made with zl17 (deep), no
 zps020  # 2026-11-19T08:43:33.535Z Zero's loop: made with the nets before zl19
 zps021  # 2026-11-19T08:43:33.535Z Zero's loop: made with the nets before zl19
 zps022  # 2026-11-19T08:43:33.535Z Zero's loop: made with the nets before zl19
+zps023  # 2026-11-19T17:55:20.552Z Zero's loop: made with the nets before zl20
+zps024  # 2026-11-19T17:55:20.552Z Zero's loop: made with the nets before zl20

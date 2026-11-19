@@ -1,19 +1,19 @@
 {
   "on": true,
   "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. On since 17 Nov 15:15Z on Google (Korbi 17:12, Fable 15:10Z: the store moves to B2 between generations). From gm1 (17 Nov, Korbi: the loop on the general line): line general, the first step crowns gm1 (trained fresh on the stored games, general-train run 44078371393), the filler then plays gen:gm1 with 1 game in 10 against g12r-C.",
-  "gen": 20,
+  "gen": 21,
   "prefix": "zl",
-  "champion": "zl19",
+  "champion": "zl20",
   "flags": "deeper=0.03",
   "deals": 64,
-  "games": 9600,
+  "games": 2400,
   "maxWindow": 30000,
   "value": "128x64",
   "trainArgs": "keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8",
-  "genFrom": 23,
+  "genFrom": 25,
   "windowFrom": 15,
   "nextFrom": 25,
-  "phase": "train",
+  "phase": "play",
   "log": [
     "2026-11-17T15:10:53.743Z generation 13: gm1 (warm from g12r-C) plays from the filler's next batch",
     "2026-11-17T16:10:40Z generation 14: gm2 (gm1 grown to view 2, 2602 inputs, with the general dealer sg1: Korbi 17:27, full general) to be crowned by the next step; the belief from here on is scryg",
@@ -45,14 +45,16 @@
     "2026-11-19T16:01:59.032Z generation 20: zl19 against zl18b: 53.9% over 997 games",
     "2026-11-19T16:01:59.032Z generation 20: zl19 against the leaky g12r-C: 56.5% over 497 games",
     "2026-11-19T16:01:59.032Z generation 20: training zl20 (policy fresh, value and dealer warm from zl19) on zps020,zps021,zps022,zps023,zps024",
-    "2026-11-19T16:24:21.463Z generation 20: zl20's dealer is in: its policy and value nets asked for"
+    "2026-11-19T16:24:21.463Z generation 20: zl20's dealer is in: its policy and value nets asked for",
+    "2026-11-19T17:55:20.552Z generation 21: deep self-play from here (1024 deals, 2400 games)",
+    "2026-11-19T17:55:20.552Z generation 20: zl20 (warm from zl19) plays from the filler's next batch"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
   "yardPairs": 300,
   "yardSeed": 3100000,
   "vsEvery": 10,
-  "previous": "zl18b",
+  "previous": "zl19",
   "line": "general",
   "scry": "g12h2",
   "history": [
@@ -215,6 +217,35 @@
       "suite": "3/5",
       "failed": [
         "no-island-dandan-4",
+        "no-island-dandan-5"
+      ]
+    },
+    {
+      "gen": 20,
+      "nets": "zl20",
+      "from": "zl19",
+      "window": [
+        "zps020",
+        "zps021",
+        "zps022",
+        "zps023",
+        "zps024"
+      ],
+      "at": "2026-11-19T17:55:20.552Z",
+      "reading": {
+        "nets": "zl19",
+        "against": "zl18b",
+        "n": 997,
+        "score": 0.5386158475426279
+      },
+      "yard": {
+        "nets": "zl19",
+        "against": "g12r-C",
+        "n": 497,
+        "score": 0.5653923541247485
+      },
+      "suite": "5/6",
+      "failed": [
         "no-island-dandan-5"
       ]
     }
@@ -8574,21 +8605,10 @@
   "deepGames": 2400,
   "deepFlags": "deepmax=4 early=256:0.03:6,512:0.02",
   "refineArgs": "3:1e-4:3e-5",
-  "reading": {
-    "nets": "zl19",
-    "against": "zl18b",
-    "n": 997,
-    "score": 0.5386158475426279
-  },
-  "yardReading": {
-    "nets": "zl19",
-    "against": "g12r-C",
-    "n": 497,
-    "score": 0.5653923541247485
-  },
-  "challenger": "zl20",
   "vsExtra": "noprior:4",
   "branchFrom": 22,
   "branchShare": 0.2,
-  "branchWeights": "%7B%22resign%7C21%2B%22%3A1%2C%22life%7C21%2B%22%3A1%2C%22resign%7C15-20%22%3A1%2C%22resign%7C9-14%22%3A1%2C%22life%7C15-20%22%3A1.69%2C%22library%7C21%2B%22%3A3.22%2C%22life%7C9-14%22%3A3.36%2C%22resign%7C%E2%89%A48%22%3A1%7D"
+  "branchWeights": "%7B%22resign%7C21%2B%22%3A1%2C%22life%7C21%2B%22%3A1%2C%22resign%7C15-20%22%3A1%2C%22resign%7C9-14%22%3A1%2C%22life%7C15-20%22%3A1.69%2C%22library%7C21%2B%22%3A3.22%2C%22life%7C9-14%22%3A3.36%2C%22resign%7C%E2%89%A48%22%3A1%7D",
+  "deepOn": true,
+  "refineFrom": 25
 }
