@@ -60,6 +60,36 @@
         "name": "Dandân"
       },
       "why": "Live Monte (19 Nov, Korbi vs Monte, turn 6, second main), no Island of its own, casts Dandân: sacrificed at once. Flagged by Korbi as an objective error."
+    },
+    {
+      "id": "repulse-own-dandan-1",
+      "game": "1794916830892",
+      "move": 202,
+      "bad": {
+        "t": "cast",
+        "name": "Repulse"
+      },
+      "why": "Korbi's flag (19 Nov, lab game vs live Monte, zl20 coaching his seat at 94%): Repulse on his own Dandân in the first main phase instead of attacking first (the attack is free)."
+    },
+    {
+      "id": "mind-bend-island-1",
+      "game": "1794916830892",
+      "move": 233,
+      "bad": {
+        "t": "cast",
+        "name": "Mind Bend"
+      },
+      "why": "Korbi's flag (19 Nov, same game, 95%): Mind Bend on the opponent's Island instead of holding it for a Dandân."
+    },
+    {
+      "id": "mind-bend-island-2",
+      "game": "1794916830892",
+      "move": 240,
+      "bad": {
+        "t": "cast",
+        "name": "Mind Bend"
+      },
+      "why": "Korbi's flag (19 Nov, same game, 98%): Mind Bend on the opponent's Island again, instead of holding it for a Dandân."
     }
   ]
 }
