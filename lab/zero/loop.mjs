@@ -139,6 +139,12 @@ if (L.phase === "play") {
     // vsExtra (19 Nov 2026): further rivals kept across crowns, e.g. "noprior:4" (the prior head-to-head, Korbi)
     if (L.vsEvery) F.args = `${F.args.replace(/ vs=\S+/, "")} vs=${L.prevLine === "old" ? prev : ref(prev)}:${L.vsEvery}${L.yardVs ? "," + L.yardVs : ""}${L.vsExtra ? "," + L.vsExtra : ""}`;
     L.previous = prev; delete L.prevLine;
+    // branch games from generation branchFrom on (19 Nov 2026, Korbi; zero/branch-lib.mjs): branchShare of the self-play games
+    // start from branch points of the window's batches, weighted by the ending census (branchWeights, lab/endings.mjs)
+    if (L.branchFrom && L.gen + 1 >= L.branchFrom && L.branchShare) {
+      F.args = F.args.replace(/ (branch|bsrc|bw)=\S+/g, "") + ` branch=${L.branchShare} bsrc=${L.trained.from.join(",")}${L.branchWeights ? ` bw=${L.branchWeights}` : ""}`;
+      log(`generation ${L.gen + 1}: ${Math.round(100 * L.branchShare)}% branch games from ${L.trained.from.join(",")}`);
+    }
     // deep self-play from generation deepFrom on (19 Nov 2026, Korbi: quick sets the direction, deep refines it): the filler plays
     // deep (deepDeals a move, deepFlags) and deepGames a generation, 8 a shard; F.games stays as it was, as it spaces the seeds;
     // those batches are trained again alone after the main stage (refineFrom)

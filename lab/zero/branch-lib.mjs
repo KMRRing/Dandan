@@ -25,7 +25,8 @@ export const endingOf = g => `${g.why || "?"}|${lengthBucket(g.turns || 0)}`;
  *  median class, between 1 and `most`). Classes with fewer than `least` games are left at 1 (too few to say). */
 export function weightsOf(census, { most = 8, least = 5 } = {}) {
   const n = Object.values(census).filter(c => c >= least).sort((a, b) => a - b), med = n.length ? n[Math.floor(n.length / 2)] : 1, w = {};
-  for (const [k, c] of Object.entries(census)) w[k] = c < least ? 1 : Math.min(most, Math.max(1, med / c));
+  // a conceded game's true ending is unknown (the concession cut it short): its class stays at 1
+  for (const [k, c] of Object.entries(census)) w[k] = c < least || k.startsWith("resign|") ? 1 : Math.min(most, Math.max(1, med / c));
   return w;
 }
 

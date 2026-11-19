@@ -8587,5 +8587,8 @@
     "score": 0.5653923541247485
   },
   "challenger": "zl20",
-  "vsExtra": "noprior:4"
+  "vsExtra": "noprior:4",
+  "branchFrom": 22,
+  "branchShare": 0.2,
+  "branchWeights": "%7B%22resign%7C21%2B%22%3A1%2C%22life%7C21%2B%22%3A1%2C%22resign%7C15-20%22%3A1%2C%22resign%7C9-14%22%3A1%2C%22life%7C15-20%22%3A1.69%2C%22library%7C21%2B%22%3A3.22%2C%22life%7C9-14%22%3A3.36%2C%22resign%7C%E2%89%A48%22%3A1%7D"
 }
