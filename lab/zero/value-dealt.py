@@ -21,7 +21,8 @@ for (tag, m), (name, f) in [(a, b) for a in sets for b in (("true hands", "pt.f3
 # The value net's resolution by level (19 Nov 2026, Fable): held-out rows bucketed by the net's own prediction (5 points); inside
 # each bucket, does a higher prediction still mean more wins? The slope of the result on the prediction (least squares, with its
 # standard error): near 1, the net's differences at that level are real at face value; near 0, they are noise there. Positions
-# of one game are not independent, so the errors are optimistic.
+# of one game share its result, so the error is clustered by game (gid.u32, 19 Nov 2026, Fable) where the pack has it.
+GID = np.fromfile(os.path.join(d, "gid.u32"), np.uint32) if os.path.exists(os.path.join(d, "gid.u32")) else None
 def buckets(name, f):
     p, t = rd(f)[h], y[h]
     print(f"resolution by level, {name}: bucket | rows | mean prediction | wins | slope ± se")
@@ -31,6 +32,10 @@ def buckets(name, f):
         if n < 200: continue
         x, r = p[m] - p[m].mean(), t[m]
         sxx = float((x * x).sum()); b = float((x * (r - r.mean())).sum() / sxx) if sxx > 0 else 0.0
-        res = r - r.mean() - b * x; se = float(np.sqrt((res * res).sum() / max(1, n - 2) / sxx)) if sxx > 0 else float("inf")
+        res = r - r.mean() - b * x
+        if GID is not None:   # clustered (sandwich) error: the residual-weighted sums are added up by game first
+            g = GID[h][m]; u, inv = np.unique(g, return_inverse=True); sc = np.bincount(inv, weights=x * res)
+            se = float(np.sqrt((sc * sc).sum()) / sxx) if sxx > 0 else float("inf")
+        else: se = float(np.sqrt((res * res).sum() / max(1, n - 2) / sxx)) if sxx > 0 else float("inf")
         print(f"  {lo:>2}-{lo + 5:<3}% | {n:>6} | {100 * p[m].mean():5.1f} | {100 * r.mean():5.1f} | {b:5.2f} ± {se:.2f}")
 for name, f in (("true hands", "pt.f32"), ("dealt hands", "pd.f32")): buckets(name, f)

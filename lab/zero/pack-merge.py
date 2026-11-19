@@ -38,7 +38,7 @@ metas = [json.load(open(os.path.join(d, "v", "meta.json"))) for d in ins]
 os.makedirs(os.path.join(out, "v"), exist_ok=True)
 VF = "f16" if os.path.exists(os.path.join(ins[0], "v", "mine.f16")) else "f32"
 # aux.f32 (deck-out) and fut.f32 (19 Nov 2026: the value net's future outputs) when every pack has them
-VAUX = tuple(k for k in ("aux.f32", "fut.f32", "pt.f32", "pd.f32", "rf.u8", "lib.u8") if all(os.path.exists(os.path.join(d, "v", k)) for d in ins))
+VAUX = tuple(k for k in ("aux.f32", "fut.f32", "pt.f32", "pd.f32", "rf.u8", "lib.u8", "gid.u32") if all(os.path.exists(os.path.join(d, "v", k)) for d in ins))
 for k in (f"mine.{VF}", f"theirs.{VF}", "won.f32", "hold.u8") + VAUX:
     open(os.path.join(out, "v", k), "wb").close()
     for d in ins: append(os.path.join(out, "v", k), os.path.join(d, "v", k))
