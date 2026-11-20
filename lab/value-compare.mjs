@@ -1,44 +1,52 @@
-// The value nets side by side on the same positions (18 Nov 2026, Korbi: "the current generation underperforms because the guiding
-// derived inputs were removed"): the old line's value net (g12r-C, dandan-eval.js featuresRace + the extended view: the hand-built
-// inputs) against the general ones, face up, on every turn's start of the held-out games (seed % 5 = 0, trained on by none),
-// scored against each game's result: log loss, Brier, how often the favourite won, by game phase. Read-only.
-// usage: node lab/value-compare.mjs <zero-play job ids> <net>... (a net: g12r-C, or a general line's name such as zl17)
-import fs from "node:fs";
-import { labStore } from "./lib.mjs";
+// Live Monte's value net against ours on the same positions (20 Nov 2026, Korbi: every difference between live Monte and the zl
+// series): games neither net trained on, each position from both seats, the true hands; the result's log loss and Brier overall
+// and with 10 or fewer cards left in the library. If live Monte's value net predicts these games better, the value net is the gap;
+// if not, the gap is elsewhere (the policy, the search, the dealer in play).
+// usage: node lab/value-compare.mjs <batch | file:<zero-play output>> [every 3] [most 300 games]
 import { rules } from "../dandan-rules.js";
-import { newRecord, applyMove, seeded, mix } from "../seats.js";
+import { applyMove, seeded } from "../seats.js";
 import { valueJudge } from "../dandan-zero.js";
 import { generalJudge } from "./zero/general.mjs";
+import { recordOf, rngSeedOf } from "./zero/branch-lib.mjs";
+import { labStore } from "./lib.mjs";
+import fs from "node:fs";
 
-const [ids, ...names] = process.argv.slice(2);
-const load = f => JSON.parse(fs.readFileSync(new URL(`./zero/nets/${f}`, import.meta.url), "utf8").split("\n")[0]);
-const judges = names.map(n => [n, fs.existsSync(new URL(`./zero/nets/${n}-gvalue.json`, import.meta.url)) ? generalJudge(load(`${n}-gvalue.json`)) : valueJudge(load(`${n}-value.json`))]);
-const tot = Object.fromEntries(names.map(n => [n, { all: [0, 0, 0, 0], ph: [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]] }]));
-const add = (a, p, y) => { a[0] += -(y * Math.log(p + 1e-9) + (1 - y) * Math.log(1 - p + 1e-9)); a[1] += (p - y) ** 2; a[2] += (p > 0.5) === (y > 0.5) ? 1 : 0; a[3]++; };
-const local = ids.startsWith("file:"), store = local ? null : await labStore(), real = Math.random;
+const [batch, every = "3", most = "300"] = process.argv.slice(2);
+const read = f => JSON.parse(fs.readFileSync(new URL(f, import.meta.url), "utf8").split("\n")[0]);
+const judges = {
+  "g12r-C (live Monte)": valueJudge(read("../judges/zero-g12r-C-value.json")),
+  zl21: generalJudge(read("./zero/nets/zl21-gvalue.json")),
+  zl20: generalJudge(read("./zero/nets/zl20-gvalue.json")),
+  zs06: generalJudge(read("./zero/nets/zs06-gvalue.json")),
+};
+const acc = Object.fromEntries(Object.keys(judges).map(k => [k, { n: 0, ll: 0, br: 0, ln: 0, lll: 0 }]));
+const local = batch.startsWith("file:"), store = local ? null : await labStore(), real = Math.random;
 let games = 0;
-const parts = local ? [[ids, ids.slice(5)]] : (await Promise.all(ids.split(",").map(id => store.list(`results/${id}/`)))).flat().filter(n => /\/part-\d+\.jsonl$/.test(n)).map(n => [n, null]);
-for (const [name, file] of parts) {
-  for (const line of (file ? fs.readFileSync(file, "utf8") : (await store.get(name)) || "").split("\n")) {
-    if (!line.startsWith('{"game"')) continue;
-    const g = JSON.parse(line);
-    if ((!local && g.seed % 5 !== 0) || g.winner == null || g.winner < 0) continue;
-    let G = newRecord(rules, { seats: 2, seed: g.seed, now: 0 }), last = -1;
-    const rows = [];
+const names = local ? [batch.slice(5)] : (await store.list(`results/${batch}/`)).filter(n => /part-\d+\.jsonl$/.test(n)).sort();
+outer: for (const n of names) {
+  for (const l of ((local ? fs.readFileSync(n, "utf8") : await store.get(n)) || "").split("\n")) {
+    if (!l.startsWith('{"game"')) continue;
+    const g = JSON.parse(l);
+    if (g.winner == null || g.winner < 0 || g.branch) continue;
+    let G = recordOf(rules, g);
     for (let i = 0; i < g.moves.length; i++) {
       const s = G.state;
-      if (s.turn !== last && !s.pending && !s.over && s.turn > 0) { last = s.turn; rows.push(JSON.parse(JSON.stringify(s))); }
-      Math.random = seeded(mix(g.seed, i + 1)); const r = applyMove(rules, G, g.moves[i][0], g.moves[i][1], 0); Math.random = real;
+      if (i % Number(every) === 0 && !s.over) for (const me of [0, 1]) {
+        const y = g.winner === me ? 1 : 0, late = s.lib.length <= 10;
+        for (const [k, j] of Object.entries(judges)) {
+          const p = Math.min(1 - 1e-6, Math.max(1e-6, j(s, me))), a = acc[k], ll = -(y * Math.log(p) + (1 - y) * Math.log(1 - p));
+          a.n++; a.ll += ll; a.br += (p - y) ** 2; if (late) { a.ln++; a.lll += ll; }
+        }
+      }
+      const [who, m] = g.moves[i];
+      Math.random = seeded(rngSeedOf(g, i));
+      const r = applyMove(rules, G, who, m, 0);
+      Math.random = real;
       if (r.error) break;
       G = r.G;
     }
-    rows.forEach((s, k) => {
-      const ph = Math.min(2, Math.floor(3 * k / rows.length));
-      for (const me of [0, 1]) { const y = g.winner === me ? 1 : 0; for (const [n, j] of judges) { const p = j(rules.restore(JSON.parse(JSON.stringify(s))), me); add(tot[n].all, p, y); add(tot[n].ph[ph], p, y); } }
-    });
-    games++;
+    if (++games >= Number(most)) break outer;
   }
 }
-const f = a => `log loss ${(a[0] / a[3]).toFixed(4)}  Brier ${(a[1] / a[3]).toFixed(4)}  favourite won ${(100 * a[2] / a[3]).toFixed(1)}%  (${a[3]} positions)`;
-console.log(`${games} held-out games of ${ids}; every turn's start, both seats, face up; a coin: log loss 0.6931, Brier 0.25`);
-for (const n of names) { console.log(`${n.padEnd(8)} ${f(tot[n].all)}`); ["early", "middle", "late"].forEach((p, i) => console.log(`   ${p.padEnd(7)} ${f(tot[n].ph[i])}`)); }
+console.log(`${games} games from ${batch}, every ${every}th position from both seats, true hands (lower is better)`);
+for (const [k, a] of Object.entries(acc)) console.log(`${k.padEnd(20)} positions ${a.n}: log loss ${(a.ll / a.n).toFixed(4)}, Brier ${(a.br / a.n).toFixed(4)}; library <= 10: ${a.ln} positions, log loss ${(a.lll / Math.max(1, a.ln)).toFixed(4)}`);
