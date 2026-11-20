@@ -173,7 +173,10 @@ for (let g = first; g < first + n; g++) {
       if (RESIGN && !res.only && !yard) {
         const v = res.list.find(c => key(c.move) === key(res.best))?.mean;
         streak[who] = v != null && v < RESIGN.t ? streak[who] + 1 : 0;
-        if (streak[who] >= RESIGN.run) {
+        // a game that never resigns stops asking once its would-resign point is noted (20 Nov 2026, Korbi 10:28: "keep documenting
+        // when resignation would happen but don't actually do it"; every game now plays out, so a lost one would otherwise run the
+        // 2,048-deal confirmation on every later move)
+        if (streak[who] >= RESIGN.run && !(noResignHere && would)) {
           // one deep search confirms it first (Korbi 04:08: "do one deep search, if it's obvious still, resign"): 2,048 deals,
           // the close-call look up to 4 turns; an out found there plays on (the streak starts again)
           const deep = brainOf(who).think(s, who, RESIGN.confirm, { deeper: { gap: 0.03, max: 4 } }), dv = deep.only ? null : Math.max(...deep.list.map(c => c.mean));
