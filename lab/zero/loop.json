@@ -9,9 +9,9 @@
   "games": 2400,
   "maxWindow": 30000,
   "value": "128x64",
-  "trainArgs": "keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 vtd=3",
+  "trainArgs": "keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8",
   "genFrom": 28,
-  "windowFrom": 25,
+  "windowFrom": 21,
   "nextFrom": 26,
   "phase": "play",
   "log": [
@@ -56,7 +56,8 @@
     "2026-11-20T08:56:57.166Z generation 21: zl21's nets are late: training asked for again (1)",
     "2026-11-20T09:11:55.434Z generation 22: 20% branch games from zps021,zps022,zps023,zps024,zps025",
     "2026-11-20T09:11:55.434Z generation 21: zl21 (warm from zl20) plays from the filler's next batch",
-    "2026-11-20T13:25:00Z deep self-play 1,200 shards of 2 games from the next batch (Korbi 15:21 local: yes), same 2,400 games a generation"
+    "2026-11-20T13:25:00Z deep self-play 1,200 shards of 2 games from the next batch (Korbi 15:21 local: yes), same 2,400 games a generation",
+    "2026-11-20T19:50:00Z generation 22's window back to quick and deep (Korbi 21:44 local): from zps021 plus zps018, at most maxWindow games, so the policy, trained fresh, has about 30,000 games, not 9,000 (zld1, deep only, lost on every measure); the deep batches (refineFrom 25) still refine after the main stage at the lower learning rate, Korbi's fine-tuning; vtd=3 off again (the sweep's zs03 and zl21t: no gain on dealt hands, worse late)"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -2763,5 +2764,8 @@
   "branchShare": 0.2,
   "branchWeights": "%7B%22life%7C21%2B%22%3A1%2C%22life%7C15-20%22%3A1%2C%22life%7C9-14%22%3A1.5%2C%22library%7C21%2B%22%3A3.1%7D",
   "deepOn": true,
-  "refineFrom": 25
+  "refineFrom": 25,
+  "extraWindow": [
+    "zps018"
+  ]
 }
