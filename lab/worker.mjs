@@ -339,7 +339,9 @@ async function slotLoop(slot) {
     }
     // a filler batch only when the open list had nothing: with work listed, the refill's own listings would be wasted
     if (FILL && empty) { try { if (await refill()) { backoff = POLL_MS; continue; } } catch (e) { log("refill:", e.message); } }
-    else if (Date.now() - idleSince > IDLE_MS) break;
+    // only a machine that makes no filler batches stops for want of work (20 Nov 2026, Ops: on lab machines a slot that found
+    // nothing for IDLE_MS while long shards held every claim stopped for good, and the machine ran on with 4 of 16 slots)
+    else if (!FILL && Date.now() - idleSince > IDLE_MS) break;
     if (!gate) { closeGate(); polling = true; }
     // with LAB_FILL the queue is only ever empty until someone makes the next batch, so the poller keeps POLL_MS (16:28Z, the
     // fleet director: backed-off pollers left batch-making to old workers, which made small batches on the old spec)
