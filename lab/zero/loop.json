@@ -15,7 +15,6 @@
   "nextFrom": 30,
   "phase": "train",
   "log": [
-    "2026-11-17T22:43:34.336Z generation 15: training zl15 warm from gm2 on zps006,zps007,zps008",
     "2026-11-18T01:03:05.620Z generation 15: zl15 (warm from gm2) plays from the filler's next batch",
     "2026-11-18T01:58:00Z the yardstick (Korbi 03:52: since the leak was closed, is the honest line gaining?): 1 game in 20 against the leaky old engine g12r-C, every generation, read as yardReading; zps009 closed so generation 16 has them",
     "2026-11-18T05:28:35.711Z generation 16: zl15 against gm2: 50.2% over 265 games",
@@ -55,7 +54,8 @@
     "2026-11-20T13:25:00Z deep self-play 1,200 shards of 2 games from the next batch (Korbi 15:21 local: yes), same 2,400 games a generation",
     "2026-11-20T19:50:00Z generation 22's window back to quick and deep (Korbi 21:44 local): from zps021 plus zps018, at most maxWindow games, so the policy, trained fresh, has about 30,000 games, not 9,000 (zld1, deep only, lost on every measure); the deep batches (refineFrom 25) still refine after the main stage at the lower learning rate, Korbi's fine-tuning; vtd=3 off again (the sweep's zs03 and zl21t: no gain on dealt hands, worse late)",
     "2026-11-20T19:56:09.369Z generation 22: zl21 against zl20: 50.9% over 291 games",
-    "2026-11-20T19:56:09.369Z generation 22: training zl22 (policy fresh, value and dealer warm from zl21) on zps018,zps022,zps023,zps024,zps025,zps026,zps027,zps028,zps029"
+    "2026-11-20T19:56:09.369Z generation 22: training zl22 (policy fresh, value and dealer warm from zl21) on zps018,zps022,zps023,zps024,zps025,zps026,zps027,zps028,zps029",
+    "2026-11-20T20:13:47.249Z generation 22: zl22's dealer is in: its policy and value nets asked for"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -2970,9 +2970,11 @@
     ],
     "at": "2026-11-20T19:56:09.369Z",
     "dispatch": [
-      "scryg-train.yml games=zps018,zps022,zps023,zps024,zps025,zps026,zps027,zps028,zps029 name=zl22 init=zl21 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128"
+      "scryg-train.yml games=zps018,zps022,zps023,zps024,zps025,zps026,zps027,zps028,zps029 name=zl22 init=zl21 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
+      "general-train.yml games=zps018,zps022,zps023,zps024,zps025,zps026,zps027,zps028,zps029 name=zl22 init=zl21 scry=zl22 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 refine=zps025+zps026+zps027+zps028+zps029:3:1e-4:3e-5"
     ],
-    "next": "general-train.yml games=zps018,zps022,zps023,zps024,zps025,zps026,zps027,zps028,zps029 name=zl22 init=zl21 scry=zl22 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 refine=zps025+zps026+zps027+zps028+zps029:3:1e-4:3e-5"
+    "asked": "2026-11-20T20:13:47.458Z",
+    "retries": 0
   },
   "deepFrom": 21,
   "deepDeals": 1024,
