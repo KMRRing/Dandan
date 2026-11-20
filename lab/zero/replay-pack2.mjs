@@ -92,7 +92,7 @@ else if (process.env.REAN) {
 // REFINE=<batch ids> (19 Nov 2026, Korbi: deep games as a refinement after the main training): decisions from those batches carry
 // flag 32, value rows rf.u8 = 1, so the trainers' --refine_only stage learns from them alone
 const REFINE = new Set((process.env.REFINE || "").split(",").filter(Boolean));
-let refineNow = false;
+let refineNow = false, noValue = false;   // the part being read: a REFINE batch; a policy-only batch (<id>:p)
 const DEALT = Number(process.env.DEALT || 0), VJ = DEALT ? generalJudge(JSON.parse(fs.readFileSync(process.env.VNET, "utf8").split("\n")[0])) : null;
 let nv = 0, games = 0, broken = 0, unmatched = 0, skipped = 0, old = 0, pickOff = 0, moved = 0, twins = 0;
 
@@ -203,7 +203,7 @@ function replay(game, decisions) {
             for (let k = 0; k < DEALT; k++) sum += VJ(determinize(s, me, rng, false, false, (pool, n, r) => deal(pool, n, r) || pool), me);
             row.pt = VJ(s, me); row.pd = sum / DEALT;
           }
-          vrows.push(row);
+          if (!noValue) vrows.push(row);
         }
       }
     }
@@ -270,9 +270,12 @@ function replay(game, decisions) {
 
 const local = ids.startsWith("file:");
 const store = local ? null : await (await import("../lib.mjs")).labStore();
-const parts = local ? [ids.slice(5)] : (await Promise.all(ids.split(",").map(id => store.list(`results/${id}/`)))).flat().filter(n => /\/part-\d+\.jsonl$/.test(n)).sort().filter((_, k) => k % SHS === SH);
+// <id>:p (20 Nov 2026, Korbi: a batch whose moves were mostly searched shallow, the deep batches with a playout cap, zps007-016):
+// its fully searched decisions train the policy, but its results train no value net: who won reflects the shallow play
+const POLICY_ONLY = new Set(local ? [] : ids.split(",").filter(id => id.endsWith(":p")).map(id => id.slice(0, -2)));
+const parts = local ? [ids.slice(5)] : (await Promise.all(ids.split(",").map(id => store.list(`results/${id.replace(/:p$/, "")}/`)))).flat().filter(n => /\/part-\d+\.jsonl$/.test(n)).sort().filter((_, k) => k % SHS === SH);
 for (const name of parts) {
-  refineNow = REFINE.has(name.split("/").at(-2));
+  refineNow = REFINE.has(name.split("/").at(-2)); noValue = POLICY_ONLY.has(name.split("/").at(-2));
   const decisions = new Map();
   for (const line of ((local ? fs.readFileSync(name, "utf8") : await store.get(name)) || "").split("\n")) {
     if (!line || line.startsWith('{"v":1')) continue;
