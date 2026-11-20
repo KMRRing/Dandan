@@ -156,6 +156,9 @@ const VOCAB = new Map(POOL.vocab.map((n, k) => [n, k])), typeOf = id => VOCAB.ge
  * (countered to the library or returned to hand). */
 const fateOnLeaving = (st, id) => (st.lib.includes(id) || st.hand.some(h => h.includes(id)) ? "back" : "used");
 const mark = (fate, id, x) => fate.set(id, { ...(fate.get(id) || {}), [x]: true });
+// FUTK=k (20 Nov 2026, Korbi: "hand value in 5 turns", to stop cards being thrown away): fut.f32's hand and land leads at the
+// start of the seat's k-th own turn from now (default 1, the next), or the game's end if sooner
+const FUTK = Math.max(1, Number(process.env.FUTK || 1));
 const matOf = s => ({ hand: [0, 1].map(x => s.hand[x].length), lands: [0, 1].map(x => lands(s, x).length) });
 function replay(game, decisions) {
   // a branch game (branch-lib.mjs): its source's moves replayed with the source's randomness, the hidden cards re-dealt at the
@@ -240,7 +243,7 @@ function replay(game, decisions) {
   const last = matOf(end), lastTurn_ = end.turn;
   // the seat's next turn's start: the turn after the next whose active seat is this one (turns alternate)
   const futOf = r => {
-    const t = r.active === r.me ? r.turn + 2 : r.turn + 1, m = snaps.get(t) || last, o = other(r.me);
+    const t = (r.active === r.me ? r.turn + 2 : r.turn + 1) + 2 * (FUTK - 1), m = snaps.get(t) || last, o = other(r.me);
     return Float32Array.of((m.hand[r.me] - m.hand[o]) / 7, (m.lands[r.me] - m.lands[o]) / 7, Math.min(1, Math.max(0, (lastTurn_ - r.turn) / 40)));
   };
   const o_ = x => other(x), endOf = me => Float32Array.of(Math.max(-1, Math.min(1, (end.life[me] - end.life[o_(me)]) / 40)), Math.min(1, end.lib.length / 60),
