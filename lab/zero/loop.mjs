@@ -146,12 +146,12 @@ if (L.phase === "play") {
       log(`generation ${L.gen + 1}: ${Math.round(100 * L.branchShare)}% branch games from ${L.trained.from.join(",")}`);
     }
     // deep self-play from generation deepFrom on (19 Nov 2026, Korbi: quick sets the direction, deep refines it): the filler plays
-    // deep (deepDeals a move, deepFlags) and deepGames a generation, 8 a shard; F.games stays as it was, as it spaces the seeds;
+    // deep (deepDeals a move, deepFlags) and deepGames a generation, 2 a shard; F.games stays as it was, as it spaces the seeds;
     // those batches are trained again alone after the main stage (refineFrom)
     if (L.deepFrom && L.gen + 1 >= L.deepFrom && !L.deepOn) {
       F.args = F.args.replace(/(\{out\} )\d+ \d+/, `$1${L.deepDeals || 1024} ${L.deepGames || 2400}`);
       for (const f of (L.deepFlags || "deepmax=4 early=256:0.03:6,512:0.02").split(" ")) { const k = f.split("=")[0]; F.args = F.args.includes(` ${k}=`) ? F.args.replace(new RegExp(` ${k}=\\S+`), ` ${f}`) : `${F.args} ${f}`; }
-      F.shards = Math.ceil((L.deepGames || 2400) / 8); L.games = L.deepGames || 2400; L.deepOn = true; L.refinePending = true;
+      F.shards = Math.ceil((L.deepGames || 2400) / 2);   // 2 a shard (20 Nov 2026, Korbi 15:21 local: 8 played-out deep games a shard held every count back for hours) L.games = L.deepGames || 2400; L.deepOn = true; L.refinePending = true;
       log(`generation ${L.gen + 1}: deep self-play from here (${L.deepDeals || 1024} deals, ${L.games} games)`);
     }
     F.purpose = `Filler: Zero's loop (lab/zero/loop.mjs) plays the latest nets ${L.champion} against themselves; games for the next generation. ${F.purpose.replace(/^Filler:.*?games for the next generation\.\s*/, "").replace(/^mjs\) plays .*?games for the next generation\.\s*/, "").replace(/^\d*\), 1 decision in/, "1 decision in")}`.slice(0, 1500);

@@ -55,7 +55,8 @@
     "2026-11-20T08:40:00Z deep games only from generation 22 (Korbi 10:26/10:28 local): the window from zps025 plus zps018 (the 18 Nov deep batch with every move fully searched; zps007-016 were deep with a playout cap, 3 moves in 4 from a 128-deal search, so left out); self-play never resigns (the would-resign point noted) and no decided-game shortcut, as g12r-C's games",
     "2026-11-20T08:56:57.166Z generation 21: zl21's nets are late: training asked for again (1)",
     "2026-11-20T09:11:55.434Z generation 22: 20% branch games from zps021,zps022,zps023,zps024,zps025",
-    "2026-11-20T09:11:55.434Z generation 21: zl21 (warm from zl20) plays from the filler's next batch"
+    "2026-11-20T09:11:55.434Z generation 21: zl21 (warm from zl20) plays from the filler's next batch",
+    "2026-11-20T13:25:00Z deep self-play 1,200 shards of 2 games from the next batch (Korbi 15:21 local: yes), same 2,400 games a generation"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
