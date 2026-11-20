@@ -1,21 +1,20 @@
 {
   "on": true,
   "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. On since 17 Nov 15:15Z on Google (Korbi 17:12, Fable 15:10Z: the store moves to B2 between generations). From gm1 (17 Nov, Korbi: the loop on the general line): line general, the first step crowns gm1 (trained fresh on the stored games, general-train run 44078371393), the filler then plays gen:gm1 with 1 game in 10 against g12r-C.",
-  "gen": 21,
+  "gen": 22,
   "prefix": "zl",
-  "champion": "zl20",
+  "champion": "zl21",
   "flags": "deeper=0.03",
   "deals": 64,
   "games": 2400,
   "maxWindow": 30000,
   "value": "128x64",
   "trainArgs": "keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 vtd=3",
-  "genFrom": 25,
+  "genFrom": 28,
   "windowFrom": 25,
   "nextFrom": 26,
-  "phase": "train",
+  "phase": "play",
   "log": [
-    "2026-11-17T15:10:53.743Z generation 13: gm1 (warm from g12r-C) plays from the filler's next batch",
     "2026-11-17T16:10:40Z generation 14: gm2 (gm1 grown to view 2, 2602 inputs, with the general dealer sg1: Korbi 17:27, full general) to be crowned by the next step; the belief from here on is scryg",
     "2026-11-17T16:25:51.074Z generation 14: gm2 (warm from gm1) plays from the filler's next batch",
     "2026-11-17T19:20:00Z generation 15: counted from zps006 too, its parts written from 18:10Z on (surely gm2's): zps006 was retired at gm2's crowning, but the refill made a batch of the same name again (it listed jobs/ only), and the fleet played gm2 there, uncounted; lab/worker.mjs now counts retired batches when it names the next one",
@@ -54,14 +53,16 @@
     "2026-11-20T06:21:07.307Z generation 21: zl21's dealer is in: its policy and value nets asked for",
     "2026-11-20T08:27:00Z value targets from the searched value 3 own turns later (vtd=3) from generation 22 (Korbi 10:23 local: zv10 best on the scorecard, clearest with 10 or fewer cards left); generation 21's zl21 was already training without it, so zl21t (warm from zl20, vtd=3) and zl21s (from scratch, vtd=3) train beside it on the same window: the scratch-vs-warm test; the best value net plays, swapped in by hand",
     "2026-11-20T08:40:00Z deep games only from generation 22 (Korbi 10:26/10:28 local): the window from zps025 plus zps018 (the 18 Nov deep batch with every move fully searched; zps007-016 were deep with a playout cap, 3 moves in 4 from a 128-deal search, so left out); self-play never resigns (the would-resign point noted) and no decided-game shortcut, as g12r-C's games",
-    "2026-11-20T08:56:57.166Z generation 21: zl21's nets are late: training asked for again (1)"
+    "2026-11-20T08:56:57.166Z generation 21: zl21's nets are late: training asked for again (1)",
+    "2026-11-20T09:11:55.434Z generation 22: 20% branch games from zps021,zps022,zps023,zps024,zps025",
+    "2026-11-20T09:11:55.434Z generation 21: zl21 (warm from zl20) plays from the filler's next batch"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
   "yardPairs": 300,
   "yardSeed": 3100000,
   "vsEvery": 5,
-  "previous": "zl19",
+  "previous": "zl20",
   "line": "general",
   "scry": "g12h2",
   "history": [
@@ -254,6 +255,31 @@
       "suite": "5/6",
       "failed": [
         "no-island-dandan-5"
+      ]
+    },
+    {
+      "gen": 21,
+      "nets": "zl21",
+      "from": "zl20",
+      "window": [
+        "zps021",
+        "zps022",
+        "zps023",
+        "zps024",
+        "zps025"
+      ],
+      "at": "2026-11-20T09:11:55.434Z",
+      "reading": {
+        "nets": "zl20",
+        "against": "zl19",
+        "n": 304,
+        "score": 0.45394736842105265
+      },
+      "suite": "7/10",
+      "failed": [
+        "mind-bend-island-1",
+        "mind-bend-island-2",
+        "predict-under-lapses-1"
       ]
     }
   ],
@@ -2736,15 +2762,5 @@
   "branchShare": 0.2,
   "branchWeights": "%7B%22life%7C21%2B%22%3A1%2C%22life%7C15-20%22%3A1%2C%22life%7C9-14%22%3A1.5%2C%22library%7C21%2B%22%3A3.1%7D",
   "deepOn": true,
-  "refineFrom": 25,
-  "reading": {
-    "nets": "zl20",
-    "against": "zl19",
-    "n": 304,
-    "score": 0.45394736842105265
-  },
-  "challenger": "zl21",
-  "extraWindow": [
-    "zps018"
-  ]
+  "refineFrom": 25
 }
