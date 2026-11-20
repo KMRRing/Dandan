@@ -73,7 +73,7 @@ function sink(sub, names) {
 // cast, or the seat played again first; rc.f32, three a candidate: the search's replies to that candidate over its deals (a cast,
 // dandan-think.js: let it resolve, aimed at, another play), as shares, −1 each where the decision line has none
 const XF = GEN ? "x.f16" : "x.f32", A = sink("a", [XF, "cand.i32", "pick.i16", "med.i16", "flags.u8", "q.f32", "mark.i32", "marks.u8", ...(GEN ? ["res.f32", "resp.i8", "rc.f32"] : [])]), PC = { D: 0, C: 0, K: 0, Q: 0 };
-const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "fut.f32", "end.f32", "fate.f32", "hold.u8", "rf.u8", "lib.u8", "gid.u32", ...(process.env.DEALT ? ["pt.f32", "pd.f32"] : [])]);
+const MF = GEN ? "mine.f16" : "mine.f32", TF = GEN ? "theirs.f16" : "theirs.f32", V = sink("v", [MF, TF, "won.f32", "aux.f32", "fut.f32", "end.f32", "fate.f32", "result.f32", "sval.f32", "svtd.f32", "hold.u8", "rf.u8", "lib.u8", "gid.u32", ...(process.env.DEALT ? ["pt.f32", "pd.f32"] : [])]);
 // DEALT=<n> with VNET=<file> (19 Nov 2026, Fable: "the value net is scored on true hands and used on dealt hands"): each value row
 // also gets the net's chance on the true position (pt.f32) and its mean over n worlds dealt from the seat's own belief (pd.f32),
 // as the search uses it; lab/zero/value-dealt.py reads both against the result
@@ -262,6 +262,10 @@ function replay(game, decisions) {
       sv = later ? later.v : won(r.me);
     }
     const y = sv == null ? won(r.me) : (1 - VBLEND) * won(r.me) + VBLEND * sv;
+    // the targets' parts kept apart (20 Nov 2026, Korbi: many value nets on one pack): the result, the search's value here and the
+    // same seat's 3 own turns later (-1 where none), so value_np.py --blend / --td mixes them at training time
+    const later3 = vrows.find(q => q.me === r.me && q.turn >= r.turn + 6 && q.v != null);
+    V.put("result.f32", Float32Array.of(won(r.me))); V.put("sval.f32", Float32Array.of(r.v ?? -1)); V.put("svtd.f32", Float32Array.of(later3 ? later3.v : -1));
     V.put(MF, GEN ? halves(r.f) : Float32Array.from(r.f)); V.put(TF, GEN ? halves(r.g) : Float32Array.from(r.g)); V.put("won.f32", Float32Array.of(y));
     V.put("aux.f32", Float32Array.of(end.lost?.[r.me] ? 1 : 0)); V.put("hold.u8", Uint8Array.of(hold ? 1 : 0)); V.put("rf.u8", Uint8Array.of(refineNow ? 1 : 0)); V.put("lib.u8", Uint8Array.of(Math.min(255, r.lib))); V.put("gid.u32", Uint32Array.of(seed >>> 0)); nv++;
   }

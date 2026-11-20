@@ -27,6 +27,13 @@ ap.add_argument("--fate", type=float, default=0.0)
 ap.add_argument("--refine_only", "--refine-only", dest="refine_only", action="store_true")
 # the removal test (18 Nov 2026): inputs from this column on read as zero, so their first-layer weights stay at zero in the file
 ap.add_argument("--zero_from", "--zero-from", dest="zero_from", type=int, default=0)
+# many value nets on one pack (20 Nov 2026, Korbi): the target mixed at training time from the pack's parts (result.f32, sval.f32,
+# svtd.f32: replay-pack2.mjs), the result's share 1 - blend, the search's value here (or, --td, 3 of the seat's turns later) the
+# rest where the position was searched; the held-out loss (and so the epoch kept) then on the result alone
+ap.add_argument("--blend", type=float, default=None)
+ap.add_argument("--td", action="store_true")
+# a subset of the view (20 Nov 2026): a JSON file of the columns kept (dandan-general.js viewColumns), written into the net
+ap.add_argument("--cols", default="")
 A = ap.parse_args()
 say = lambda m: print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 meta = json.load(open(os.path.join(A.dir, "meta.json"))); N, R = meta["N"], meta["rows"]
@@ -38,12 +45,20 @@ if os.path.exists(os.path.join(A.dir, "mine.f16")):
 else:
     M, T = rd("mine.f32", np.float32).reshape(R, N), rd("theirs.f32", np.float32).reshape(R, N)
 Y, H = rd("won.f32", np.float32), rd("hold.u8", np.uint8) > 0
+YH = Y   # the held-out target
+if A.blend is not None:
+    if not os.path.exists(os.path.join(A.dir, "result.f32")): sys.exit("--blend: the pack has no result.f32 (replay-pack2.mjs since 20 Nov)")
+    RES, SV = rd("result.f32", np.float32), rd("svtd.f32" if A.td else "sval.f32", np.float32)
+    Y = np.where(SV >= 0, (1 - A.blend) * RES + A.blend * SV, RES).astype(np.float32); YH = RES
+COLS = np.asarray(json.load(open(A.cols)), np.int64) if A.cols else None
+if COLS is not None: say(f"{len(COLS)} of the view's {N} columns read ({A.cols})")
 tr, he = np.flatnonzero(~H), np.flatnonzero(H)
 if A.refine_only:
     if not os.path.exists(os.path.join(A.dir, "rf.u8")): sys.exit("--refine_only: the pack has no rf.u8 (REFINE)")
     RF = rd("rf.u8", np.uint8) > 0; tr, he = tr[RF[tr]], he[RF[he]]
 def xin(a):
     z = np.asarray(a, dtype=np.float32)
+    if COLS is not None: z = z[:, COLS]
     if A.zero_from: z[:, A.zero_from:] = 0
     return z
 AUX = rd("aux.f32", np.float32) if A.aux and os.path.exists(os.path.join(A.dir, "aux.f32")) else None
@@ -59,20 +74,23 @@ IA = 1
 OFF = [1 + (AUX is not None)]
 for y, _ in REG: OFF.append(OFF[-1] + y.shape[1])
 OUT = OFF[-1]
-sizes = [N] + [int(x) for x in A.shape.split("x")] + [OUT]
+NI = N if COLS is None else len(COLS)
+sizes = [NI] + [int(x) for x in A.shape.split("x")] + [OUT]
 rng = np.random.default_rng(A.seed)
 W = [rng.normal(0, np.sqrt(2 / a), (a, b)) for a, b in zip(sizes[:-1], sizes[1:])]; B = [np.zeros(b) for b in sizes[1:]]
 if A.init:
     L0 = json.load(open(A.init))["layers"]
     # a view grown at its end (dandan-general.js version 2): the first layer's new input rows start at zero
     want = [[a, b] for a, b in zip(sizes[:-1], sizes[1:-1] + [1])]; got = [l["n"] for l in L0]
+    if COLS is not None and got[0][0] == N: want[0][0] = N   # a full-view net's first layer, cut to the columns below
     if got[1:] != want[1:] or got[0][1] != want[0][1] or got[0][0] > want[0][0]: sys.exit(f"--init {A.init}: layers {got}, not the shape {sizes}")
     W = [np.frombuffer(base64.b64decode(l["q"]), np.int8).reshape(l["n"]).astype(np.float64) * np.asarray(l["s"]) for l in L0]
     if got[0][0] < want[0][0]: W[0] = np.concatenate([W[0], np.zeros((want[0][0] - got[0][0], W[0].shape[1]))], 0); print(f"--init {A.init}: the view grown from {got[0][0]} to {want[0][0]} inputs", flush=True)
     B = [np.asarray(l["b"], np.float64) if l["b"] else np.zeros(l["n"][1]) for l in L0]
+    if COLS is not None and W[0].shape[0] == N: W[0] = W[0][COLS]
     if OUT > 1: W[-1] = np.concatenate([W[-1], np.zeros((W[-1].shape[0], OUT - 1))], 1); B[-1] = np.concatenate([B[-1][:1], np.zeros(OUT - 1)])
 mW = [np.zeros_like(w) for w in W]; vW = [np.zeros_like(w) for w in W]; mB = [np.zeros_like(b) for b in B]; vB = [np.zeros_like(b) for b in B]
-say(f"{R} rows ({len(tr)} training, {len(he)} held out), {N} inputs, shape {A.shape}")
+say(f"{R} rows ({len(tr)} training, {len(he)} held out), {NI} inputs, shape {A.shape}")
 
 def g(x):
     hs = [x]
@@ -87,7 +105,7 @@ def loss_of(idx):
         j = idx[s:s + 65536]
         d = g(xin(M[j]))[-1][:, 0] - g(xin(T[j]))[-1][:, 0]
         p = 1 / (1 + np.exp(-np.clip(d, -30, 30)))
-        out += -(Y[j] * np.log(p + 1e-9) + (1 - Y[j]) * np.log(1 - p + 1e-9)).sum()
+        out += -(YH[j] * np.log(p + 1e-9) + (1 - YH[j]) * np.log(1 - p + 1e-9)).sum()
     return out / max(1, len(idx))
 
 def back(hs, gout):
@@ -130,7 +148,7 @@ for l, (w, b) in enumerate(zip(Wb, Bb)):
     sc = np.maximum(np.abs(w).max(0), 1e-8) / 127
     q = np.clip(np.round(w / sc), -127, 127).astype(np.int8)
     layers.append(dict(n=[int(w.shape[0]), int(w.shape[1])], q=base64.b64encode(q.tobytes()).decode(), s=[float(round(x, 8)) for x in sc], b=[float(round(x, 6)) for x in b] if l < len(Wb) - 1 else []))
-json.dump(dict(source="lab/zero/value_np.py", note=f"Zero value net, {A.shape}, {R} rows", metrics=dict(heldLoss=round(float(best), 4), rows=int(R), epoch=bestE), layers=layers), open(A.out, "w"))
+json.dump(dict(source="lab/zero/value_np.py", note=f"Zero value net, {A.shape}, {R} rows", metrics=dict(heldLoss=round(float(best), 4), rows=int(R), epoch=bestE), layers=layers, **({"cols": COLS.tolist()} if COLS is not None else {})), open(A.out, "w"))
 open(A.out, "a").write("\n")
 say(f"best held-out loss {best:.4f} at epoch {bestE} (a coin: 0.6931)")
 # the scorecard's other numbers on the held-out rows with the net kept (18 Nov 2026): Brier and how often the favourite wins
@@ -141,6 +159,13 @@ if len(he):
         j = he[s0:s0 + 65536]
         d = g(xin(M[j]))[-1][:, 0] - g(xin(T[j]))[-1][:, 0]
         ps.append(1 / (1 + np.exp(-np.clip(d, -30, 30))))
-    p_ = np.concatenate(ps); y_ = Y[he]
+    p_ = np.concatenate(ps); y_ = YH[he]
     say(f"scorecard: rows {len(he)}, log loss {best:.4f}, Brier {float(((p_ - y_) ** 2).mean()):.4f}, favourite right {float(((p_ > 0.5) == (y_ > 0.5)).mean()):.4f}")
+    # the late game (20 Nov 2026): the same on the held-out rows with 10 cards or fewer left in the library (lib.u8)
+    ll = lambda p, y: float(-(y * np.log(p + 1e-9) + (1 - y) * np.log(1 - p + 1e-9)).mean())
+    late = ""
+    if os.path.exists(os.path.join(A.dir, "lib.u8")):
+        m = rd("lib.u8", np.uint8)[he] <= 10
+        if m.any(): late = f", library <= 10: rows {int(m.sum())}, log loss {ll(p_[m], y_[m]):.4f}"
+    print(f"SWEEP {os.path.basename(A.out)}: held-out result log loss {ll(p_, y_):.4f}{late}, epoch {bestE}", flush=True)
 if A.init and bestE == 0: say("WARNING: no epoch beat the warm start: the net written is the warm start, unchanged")

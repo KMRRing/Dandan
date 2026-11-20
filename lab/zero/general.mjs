@@ -60,8 +60,11 @@ export function generalJudge(value) {
     if (L.b.length) b.set(L.b);
     return { nIn, nOut, W, b, y: new Float32Array(nOut) };
   });
-  const N = net[0].nIn;
-  if (!VIEW_VERSIONS(POOL).includes(N)) throw new Error(`the general value net reads ${N} inputs, not a view's (${VIEW_VERSIONS(POOL)})`);
+  // a net on a subset of the view (20 Nov 2026: value_np.py --cols, dandan-general.js viewColumns) reads those columns of it
+  const cols = value.cols ? Int32Array.from(value.cols) : null, N = cols ? viewSize(POOL, 3) : net[0].nIn;
+  if (cols ? cols.length !== net[0].nIn : !VIEW_VERSIONS(POOL).includes(N)) throw new Error(`the general value net reads ${net[0].nIn} inputs, not a view's (${VIEW_VERSIONS(POOL)})${cols ? " nor its columns" : ""}`);
+  const sub = cols ? [new Float32Array(cols.length), new Float32Array(cols.length)] : null;
+  const pick = (x, side) => { if (!cols) return x; const y = sub[side]; for (let i = 0; i < cols.length; i++) y[i] = x[cols[i]]; return y; };
   // the compiled kernel when it loads (one net for each side's view, each carrying its own first layer), else the JavaScript with
   // the first layer carried between calls (dandan-netpolicy.js firstLayer)
   const K = useKernel(), compiled = K ? [K.mlp(net), K.mlp(net)] : null;
@@ -83,7 +86,7 @@ export function generalJudge(value) {
   const xs = [new Float32Array(N), new Float32Array(N)];
   return (s, me) => {
     if (s.over) return s.winner < 0 ? 0.5 : s.winner === me ? 1 : 0;
-    const a = g(valueView(s, me, POOL, xs[0]), 0), b = g(valueView(s, 1 - me, POOL, xs[1]), 1);
+    const a = g(pick(valueView(s, me, POOL, xs[0]), 0), 0), b = g(pick(valueView(s, 1 - me, POOL, xs[1]), 1), 1);
     return 1 / (1 + Math.exp(b - a));
   };
 }

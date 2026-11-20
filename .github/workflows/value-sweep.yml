@@ -1,0 +1,85 @@
+# Many value nets on one pack (20 Nov 2026, Korbi: "the training data already exists, so ... make multiple value nets with
+# different inputs and configurations, see which one performs best"). The games are packed once (value rows only, the targets'
+# parts kept apart: replay-pack2.mjs result/sval/svtd), then each config trains on its own runner (lab/zero/value_np.py) and is
+# measured on the same held-out rows: the result's log loss, overall and with 10 or fewer cards left in the library. The nets
+# are committed as lab/zero/nets/<name>-gvalue.json, with the scry nets' policy and dealer beside them, so net-scorecard.yml can
+# score the best of them on dealt hands next.
+name: Value sweep
+on:
+  workflow_dispatch:
+    inputs:
+      games: { description: "Batches to pack, comma-separated", required: true, default: "zps021,zps022,zps023,zps024,zps025,zps028" }
+      scry: { description: "The nets whose dealer packs the games (and whose policy and dealer the sweep's nets get)", required: true, default: "zl21" }
+      belief: { description: "The dealer kind", required: false, default: "scryg" }
+      vkeep: { description: "Share of value rows kept", required: false, default: "0.5" }
+      configs: { description: "JSON list of {n, shape, init, cols, args}", required: true }
+permissions:
+  contents: write
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy: { matrix: { part: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Pack
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          S="lab/zero/nets/${{ inputs.scry }}-${{ inputs.belief }}.json"; D="$RUNNER_TEMP/r"; P=${{ matrix.part }}
+          for k in 0 1 2 3; do ENC=general KEEP=0 VKEEP="${{ inputs.vkeep }}" HANDS=256 LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/replay-pack2.mjs "$D/t$k" "${{ inputs.games }}" "$S" $((P * 4 + k)) 48 > "$RUNNER_TEMP/t$k.txt" & done; wait
+          rm -f "$RUNNER_TEMP/key.json"
+          tail -n 1 "$RUNNER_TEMP"/t?.txt | tee -a "$GITHUB_STEP_SUMMARY"
+          cp "$RUNNER_TEMP"/t?.txt "$D/"
+      - uses: actions/upload-artifact@v4
+        with: { name: "pack-${{ matrix.part }}", path: "${{ runner.temp }}/r", retention-days: 2, compression-level: 1 }
+  train:
+    needs: pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy: { fail-fast: false, matrix: { c: "${{ fromJSON(inputs.configs) }}" } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/download-artifact@v4
+        with: { path: "${{ runner.temp }}/in" }
+      - name: Train ${{ matrix.c.n }}
+        run: |
+          pip install -q numpy
+          I="$RUNNER_TEMP/in"; D="$RUNNER_TEMP/r"; mkdir -p out
+          python3 lab/zero/pack-merge.py "$D" $(ls -d "$I"/pack-*/t?) | tail -n 2
+          C=""; if [ -n "${{ matrix.c.cols }}" ]; then node -e "import('./dandan-general.js').then(g => process.stdout.write(JSON.stringify(g.viewColumns(g.POOL, '${{ matrix.c.cols }}'))))" > "$RUNNER_TEMP/cols.json"; C="--cols $RUNNER_TEMP/cols.json"; fi
+          INIT=""; if [ -n "${{ matrix.c.init }}" ]; then INIT="--init lab/zero/nets/${{ matrix.c.init }}-gvalue.json"; fi
+          python3 lab/zero/value_np.py "$D/v" "out/${{ matrix.c.n }}-gvalue.json" --shape "${{ matrix.c.shape }}" $INIT $C ${{ matrix.c.args }} | tee "out/${{ matrix.c.n }}.log"
+          grep '^SWEEP' "out/${{ matrix.c.n }}.log" | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with: { name: "net-${{ matrix.c.n }}", path: out, retention-days: 7 }
+  collect:
+    needs: train
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { path: "${{ runner.temp }}/nets", pattern: "net-*" }
+      - name: Commit the nets, with the scry nets' policy and dealer beside each
+        run: |
+          shopt -s nullglob
+          for f in "$RUNNER_TEMP"/nets/net-*/*-gvalue.json; do
+            n=$(basename "$f" -gvalue.json); cp "$f" lab/zero/nets/
+            cp "lab/zero/nets/${{ inputs.scry }}-gpolicy.json" "lab/zero/nets/$n-gpolicy.json"
+            cp "lab/zero/nets/${{ inputs.scry }}-${{ inputs.belief }}.json" "lab/zero/nets/$n-${{ inputs.belief }}.json"
+          done
+          echo "| net | held-out result | library <= 10 |" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP"/nets/net-*/*.log | grep '^SWEEP' | sort -t' ' -k7 | tee -a "$GITHUB_STEP_SUMMARY"
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lab/zero/nets/
+          git commit -qm "Value sweep nets (lab/zero/nets, value-sweep.yml)" || exit 0
+          for i in 1 2 3 4 5; do git pull -q --rebase origin main && git push -q origin HEAD:main && break; sleep 10; done

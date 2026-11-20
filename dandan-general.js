@@ -147,6 +147,37 @@ const extra2 = P => 2 * LIB2(P) + 2 * (P.V + P.F) + 1;
 const SEAT3 = 6 + 1 + 2 + BASICS.length + 5 + 10, WIN3 = 6, extra3 = P => 2 * SEAT3 + WIN3 + 3 + 2 + 2 + STACK * (P.V + P.F + 2);
 export const viewSize = (P = POOL, v = 3) => viewSize1(P) + (v >= 2 ? extra2(P) : 0) + (v >= 3 ? extra3(P) : 0);
 export const VIEW_VERSIONS = P => [viewSize(P, 1), viewSize(P, 2), viewSize(P, 3)];
+/**
+ * The view's columns by kind (20 Nov 2026, Korbi: "why is it THAT many?", value nets on fewer inputs): the start of every card block
+ * (a card's name slots, then its facts), so a net can read a subset of the version-3 view. mask:
+ *   "card"      every card block's printed facts left out (the name already says them in a pool the nets know; the live facts, a
+ *               land's current types, a changed text, damage and the like, stay)
+ *   "card1lib"  that, and the other seat's library block too (Dandân's one library is the seat's: that block is always empty)
+ * Returns the kept columns in order.
+ */
+export function viewColumns(P = POOL, mask = "card") {
+  const N = viewSize(P, 3), drop = new Uint8Array(N);
+  const LIVE = /^(now-sub:|changed-from:|changed-to:|damaged$|pumped$|walks$|arrived$)/;
+  const printed = P.facts.map((f, j) => (LIVE.test(f) ? -1 : j)).filter(j => j >= 0), blocks = viewBlocks(P);
+  for (const b of blocks) for (const j of printed) drop[b + P.V + j] = 1;
+  if (mask === "card1lib") for (let i = viewSize(P, 1) + LIB2(P); i < viewSize(P, 1) + 2 * LIB2(P); i++) drop[i] = 1;
+  const keep = [];
+  for (let i = 0; i < N; i++) if (!drop[i]) keep.push(i);
+  return keep;
+}
+/** Where each card block (a card's name slots, then its facts) starts in the version-3 view. */
+export function viewBlocks(P = POOL) {
+  const Z = P.V + P.F, blocks = [];
+  for (let z = 0; z < ZONES.length; z++) blocks.push(z * Z);
+  const k1 = ZONES.length * Z + P.V;
+  for (let j = 0; j < STACK; j++) blocks.push(k1 + j * (Z + 6));
+  const k2 = viewSize(P, 1);
+  for (let L = 0; L < 2; L++) { const b = k2 + L * LIB2(P); for (let j = 0; j <= SLOTS; j++) blocks.push(b + j * (Z + 2)); }
+  blocks.push(k2 + 2 * LIB2(P), k2 + 2 * LIB2(P) + Z);
+  const k3 = viewSize(P, 2) + 2 * SEAT3 + WIN3 + 3 + 2 + 2;
+  for (let j = 0; j < STACK; j++) blocks.push(k3 + j * (Z + 2));
+  return blocks;
+}
 /** Which of the pool's names can answer a spell (target one on the stack), probed from the rules' targets once per pool. */
 export function answers(P = POOL) {
   if (P._ans) return P._ans;
