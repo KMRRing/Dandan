@@ -186,6 +186,13 @@ if (L.phase === "play") {
     // one generation only
     delete L.extraWindow;
     L.genFrom = open.length ? open[open.length - 1].n + 1 : L.nextFrom;
+    // the new generation's first batch, queued here (20 Nov 2026: twice, after zl20's and zl21's crowns, the generation played no
+    // games for hours, as the workers' refill makes a filler batch only when the whole queue runs dry, and other jobs were open);
+    // the queue push and the refill both leave a batch already in the bucket alone
+    const first = batch(L.genFrom);
+    if (!dry) fs.writeFileSync(`${QUEUE}${first}.json`, JSON.stringify({ id: first, script: F.script, args: F.args.replace("{seed}", String(F.seedBase + F.games * (L.genFrom - 1))), shards: F.shards, timeoutMin: F.timeoutMin,
+      purpose: `${F.purpose} Queued by Zero's loop at the crown of ${L.champion}.` }, null, 2) + "\n");
+    say(`QUEUE ${first}`);
     if (L.refinePending) { L.refineFrom = L.genFrom; delete L.refinePending; }
     L.gen++; L.phase = "play"; delete L.challenger; delete L.genSince; delete L.reading; delete L.yardReading;
   } else if (Date.now() - Date.parse(L.trained.at) > 12 * 3600e3) log(`generation ${L.gen}: no nets for ${L.challenger} 12 hours after training began: look at zero-train-ext.yml's runs`);
