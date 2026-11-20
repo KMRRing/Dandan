@@ -50,7 +50,8 @@
     "2026-11-19T17:55:20.552Z generation 20: zl20 (warm from zl19) plays from the filler's next batch",
     "2026-11-19T21:52:00Z no more live-Monte games in training (Korbi 23:49 local: more zl against zl, live Monte isn't good for training): yardVs dropped; 1 game in 5 against the previous nets (was 1 in 10)",
     "2026-11-20T06:05:23.020Z generation 21: zl20 against zl19: 45.4% over 304 games",
-    "2026-11-20T06:05:23.020Z generation 21: training zl21 (policy fresh, value and dealer warm from zl20) on zps021,zps022,zps023,zps024,zps025"
+    "2026-11-20T06:05:23.020Z generation 21: training zl21 (policy fresh, value and dealer warm from zl20) on zps021,zps022,zps023,zps024,zps025",
+    "2026-11-20T06:21:07.307Z generation 21: zl21's dealer is in: its policy and value nets asked for"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -2716,9 +2717,11 @@
     ],
     "at": "2026-11-20T06:05:23.020Z",
     "dispatch": [
-      "scryg-train.yml games=zps021,zps022,zps023,zps024,zps025 name=zl21 init=zl20 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128"
+      "scryg-train.yml games=zps021,zps022,zps023,zps024,zps025 name=zl21 init=zl20 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
+      "general-train.yml games=zps021,zps022,zps023,zps024,zps025 name=zl21 init=zl20 scry=zl21 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 refine=zps025:3:1e-4:3e-5"
     ],
-    "next": "general-train.yml games=zps021,zps022,zps023,zps024,zps025 name=zl21 init=zl20 scry=zl21 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 refine=zps025:3:1e-4:3e-5"
+    "asked": "2026-11-20T06:21:07.569Z",
+    "retries": 0
   },
   "deepFrom": 21,
   "deepDeals": 1024,
