@@ -1,0 +1,8 @@
+{
+  "id": "zdx001",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 300 510000000 gen:zld1 - 100 deeper=0.03 deepmax=4 prior=1 vs=g12r-C:1",
+  "shards": 300,
+  "timeoutMin": 300,
+  "purpose": "zld1 (fresh policy and value, deep games only: zps007-016 policy-only, zps018 and zps025 in full; zl20's dealer) against live Monte g12r-C, both deep (1,024 deals, close calls up to 4 turns), seats alternating, no resigning; 300 games, one a shard; as zdr001 (zl20 46.9%), so the two compare. Korbi 20 Nov 10:54 local: matches always against current Monte. Read as is; not trained on."
+}
