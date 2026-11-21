@@ -1,0 +1,8 @@
+{
+  "id": "zdm002",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 256 600 521000000 gen:zl23 - 100 deeper=0.03 prior=1 vs=g12r-C:1",
+  "shards": 300,
+  "timeoutMin": 300,
+  "purpose": "D (Korbi's go via Fable, 21 Nov): zl23 with the prior against live Monte g12r-C, both quick (256 deals, the close-call look-ahead as in quick self-play), seats alternating, no resigning, 600 games, 2 a shard. Read with A when every game is in. Not trained on."
+}
