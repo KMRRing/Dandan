@@ -1,0 +1,1 @@
+{"variant":16,"from":"today","spec":{"plus":true,"shape":"64x32","blend":0,"floor":0},"games":5205,"positions":445693,"epoch":1,"metrics":{"all":0.166,"slow":0.2041,"late":0.0775,"flaws":0.0604},"today":{"all":0.1682,"slow":0.2035,"late":0.107,"flaws":0.0374}}

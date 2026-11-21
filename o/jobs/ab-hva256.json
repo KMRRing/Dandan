@@ -1,0 +1,1 @@
+{"id":"ab-hva256","script":"halving.mjs","args":"{shard} {shards} {out} spb05 256 8 36 2","shards":32,"ref":"main","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":180,"purpose":"harder cutting at Long (256): first look at 8, 2 standard errors, passing kept; against the full search, the hv256 decisions of spb05","made":"2026-11-11"}

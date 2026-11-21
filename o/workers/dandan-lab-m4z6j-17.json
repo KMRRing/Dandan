@@ -1,0 +1,1 @@
+{"by":"dandan-lab-m4z6j-17","cloud":"rackspace","pool":"kmr-ring1-86","fin":[["zps032",14310,1795293946348]],"slots":2,"hw":{"cpus":2,"avail":2,"present":2,"possible":15,"offline":13,"memGB":4,"ips":["10.20.151.1"]},"busy":["zps032/377","zps033/76"],"req":{"list":1,"write":3,"read":900,"ms":300082},"started":1795279632981,"boot":1795279453446,"sched":1,"t":1795294935905}

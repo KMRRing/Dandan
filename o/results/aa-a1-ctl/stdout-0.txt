@@ -1,0 +1,98 @@
+{"lines":300,"withPlayOuts":300,"noPlayOuts":0}
+{"source":"kept games","cases":53,"est":4.3,"real":-1.4,"se":4.2,"games":53}
+{"source":"kept games","gain":"under 2","cases":12,"est":1.4,"real":-10.4,"se":6.1}
+{"source":"kept games","gain":"2-5","cases":28,"est":3.2,"real":3.1,"se":6.2}
+{"source":"kept games","gain":"5-10","cases":10,"est":6.9,"real":-2.5,"se":8.9}
+{"source":"kept games","gain":"over 10","cases":3,"est":16.8,"real":-4.2,"se":33.3}
+{"source":"kept games","library":"library over 20","cases":52,"est":4.3,"real":-1.2,"se":4.3}
+{"source":"kept games","library":"library 20 or fewer","cases":1,"est":1.5,"real":-12.5,"se":null}
+{"source":"kept games","kind":"cast · Piracy Charm · 2 · their player","cases":1,"est":1.4,"real":-12.5,"se":null,"games":1}
+{"source":"kept games","kind":"cast · Piracy Charm · 2 · their player","gain":"under 2","cases":1,"est":1.4,"real":-12.5,"se":null}
+{"source":"kept games","kind":"cast · Piracy Charm · 2 · their player","library":"library over 20","cases":1,"est":1.4,"real":-12.5,"se":null}
+{"source":"kept games","estAtLeast":0,"cases":53,"realSummed":-75,"realMean":-1.4}
+{"source":"kept games","estAtLeast":1,"cases":52,"realSummed":-25,"realMean":-0.5}
+{"source":"kept games","estAtLeast":2,"cases":41,"realSummed":50,"realMean":1.2}
+{"source":"kept games","estAtLeast":3,"cases":30,"realSummed":-50,"realMean":-1.7}
+{"source":"kept games","estAtLeast":5,"cases":13,"realSummed":-37.5,"realMean":-2.9}
+{"source":"kept games","keptGamesWithACaseAtLibrary20OrFewer":1,"of":53}
+{"source":"kept games","kind":"cast · Predict","cases":2,"est":12,"real":-43.8,"se":6.3}
+{"source":"kept games","kind":"cycle · Remote Isle","cases":1,"est":2.9,"real":-25,"se":null}
+{"source":"kept games","kind":"ability","cases":1,"est":3.6,"real":-12.5,"se":null}
+{"source":"kept games","kind":"land · Lonely Sandbar","cases":2,"est":6.4,"real":-12.5,"se":12.5}
+{"source":"kept games","kind":"cast · Piracy Charm · 2 · their player","cases":1,"est":1.4,"real":-12.5,"se":null}
+{"source":"kept games","kind":"cast · Chart a Course","cases":4,"est":4.2,"real":-6.3,"se":16.5}
+{"source":"kept games","kind":"cast · Metamorphose · theirs","cases":3,"est":3.5,"real":-4.2,"se":11}
+{"source":"kept games","kind":"cast · Take Inventory","cases":4,"est":7.5,"real":-3.1,"se":26.7}
+{"source":"kept games","kind":"pass","cases":17,"est":4,"real":-2.2,"se":8.3}
+{"source":"kept games","kind":"cast · Mystic Retrieval · g","cases":1,"est":3.6,"real":0,"se":null}
+{"source":"kept games","kind":"cast · Quicken","cases":2,"est":1.9,"real":0,"se":25}
+{"source":"kept games","kind":"land · Island","cases":1,"est":2.8,"real":0,"se":null}
+{"source":"kept games","kind":"cycle · Lórien Revealed","cases":3,"est":2.4,"real":0,"se":14.4}
+{"source":"kept games","kind":"land · Izzet Boilerworks","cases":1,"est":3.5,"real":0,"se":null}
+{"source":"kept games","kind":"land · Mystic Sanctuary","cases":1,"est":9.5,"real":0,"se":null}
+{"source":"kept games","kind":"cycle · Lonely Sandbar","cases":1,"est":4.1,"real":0,"se":null}
+{"source":"kept games","kind":"cast · Brainstorm","cases":2,"est":1.7,"real":12.5,"se":25}
+{"source":"kept games","kind":"cast · Gone Missing · theirs","cases":5,"est":3.4,"real":25,"se":14.3}
+{"source":"kept games","kind":"cast · Mind Bend · theirs","cases":1,"est":1.2,"real":25,"se":null}
+{"source":"self-play","cases":247,"est":5.7,"real":4.5,"se":1.7,"games":159}
+{"source":"self-play","gain":"under 2","cases":74,"est":1.3,"real":0.2,"se":2.6}
+{"source":"self-play","gain":"2-5","cases":83,"est":3.4,"real":3.2,"se":2.9}
+{"source":"self-play","gain":"5-10","cases":60,"est":7.3,"real":7.1,"se":3.3}
+{"source":"self-play","gain":"over 10","cases":30,"est":19.4,"real":13.8,"se":6.5}
+{"source":"self-play","library":"library over 20","cases":236,"est":5.2,"real":4.3,"se":1.7}
+{"source":"self-play","library":"library 20 or fewer","cases":11,"est":16.3,"real":9.1,"se":11.4}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","cases":3,"est":5.1,"real":-12.5,"se":12.5,"games":3}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","gain":"under 2","cases":1,"est":0.9,"real":0,"se":null}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","gain":"5-10","cases":2,"est":7.2,"real":-18.8,"se":18.7}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","library":"library over 20","cases":3,"est":5.1,"real":-12.5,"se":12.5}
+{"source":"self-play","estAtLeast":0,"cases":247,"realSummed":1112.5,"realMean":4.5}
+{"source":"self-play","estAtLeast":1,"cases":228,"realSummed":1187.5,"realMean":5.2}
+{"source":"self-play","estAtLeast":2,"cases":173,"realSummed":1100,"realMean":6.4}
+{"source":"self-play","estAtLeast":3,"cases":144,"realSummed":1062.5,"realMean":7.4}
+{"source":"self-play","estAtLeast":5,"cases":90,"realSummed":837.5,"realMean":9.3}
+{"source":"self-play","kind":"land · Flood Plain","cases":1,"est":1.3,"real":-37.5,"se":null}
+{"source":"self-play","kind":"land · Island","cases":1,"est":1.7,"real":-25,"se":null}
+{"source":"self-play","kind":"land · Thundering Falls","cases":1,"est":2.7,"real":-12.5,"se":null}
+{"source":"self-play","kind":"land · Mystic Sanctuary","cases":4,"est":3.9,"real":-12.5,"se":12.5}
+{"source":"self-play","kind":"cast · Piracy Charm · 2 · their player","cases":3,"est":5.1,"real":-12.5,"se":12.5}
+{"source":"self-play","kind":"cycle · Lórien Revealed","cases":3,"est":3.2,"real":-8.3,"se":4.2}
+{"source":"self-play","kind":"cast · Chart a Course","cases":8,"est":7.3,"real":-7.8,"se":8.5}
+{"source":"self-play","kind":"cast · Piracy Charm · 1 · theirs","cases":5,"est":3.1,"real":-7.5,"se":8.5}
+{"source":"self-play","kind":"cast · Deem Inferior · theirs","cases":6,"est":6.2,"real":-4.2,"se":8.3}
+{"source":"self-play","kind":"ability","cases":4,"est":3.3,"real":-3.1,"se":11.8}
+{"source":"self-play","kind":"cast · Mystic Retrieval · g","cases":24,"est":7.1,"real":0,"se":4.9}
+{"source":"self-play","kind":"land · Lonely Sandbar","cases":1,"est":1,"real":0,"se":null}
+{"source":"self-play","kind":"cast · Repulse · theirs","cases":1,"est":3.1,"real":0,"se":null}
+{"source":"self-play","kind":"cast · Metamorphose · theirs","cases":14,"est":3.1,"real":0.9,"se":3.3}
+{"source":"self-play","kind":"pass","cases":108,"est":6.3,"real":5.1,"se":2.8}
+{"source":"self-play","kind":"cast · Lórien Revealed","cases":8,"est":7.7,"real":9.4,"se":6.6}
+{"source":"self-play","kind":"cast · Quicken","cases":4,"est":4.4,"real":9.4,"se":10.7}
+{"source":"self-play","kind":"cast · Dandân","cases":18,"est":6.6,"real":9.7,"se":7.3}
+{"source":"self-play","kind":"cast · Gone Missing · theirs","cases":10,"est":3.6,"real":10,"se":10.8}
+{"source":"self-play","kind":"land · Remote Isle","cases":1,"est":5.1,"real":12.5,"se":null}
+{"source":"self-play","kind":"cast · Memory Lapse · spell","cases":2,"est":3.4,"real":12.5,"se":0}
+{"source":"self-play","kind":"land · Halimar Depths","cases":2,"est":7.3,"real":12.5,"se":12.5}
+{"source":"self-play","kind":"cycle · Lonely Sandbar","cases":1,"est":1.5,"real":12.5,"se":null}
+{"source":"self-play","kind":"cast · Mind Bend · theirs","cases":2,"est":17,"real":18.8,"se":6.3}
+{"source":"self-play","kind":"cast · Take Inventory","cases":6,"est":3,"real":20.8,"se":8.9}
+{"source":"self-play","kind":"cast · Brainstorm","cases":3,"est":2.2,"real":25,"se":25}
+{"source":"self-play","kind":"cast · Commit // Memory","cases":1,"est":2.6,"real":25,"se":null}
+{"source":"self-play","kind":"cycle · Remote Isle","cases":1,"est":2,"real":25,"se":null}
+{"source":"self-play","kind":"cast · Predict","cases":3,"est":2.2,"real":29.2,"se":11}
+{"source":"self-play","kind":"land · Izzet Boilerworks","cases":1,"est":1.2,"real":37.5,"se":null}
+{"source":"pooled","cases":300,"est":5.4,"real":3.5,"se":1.6,"games":212}
+{"source":"pooled","gain":"under 2","cases":86,"est":1.3,"real":-1.3,"se":2.4}
+{"source":"pooled","gain":"2-5","cases":111,"est":3.3,"real":3.2,"se":2.6}
+{"source":"pooled","gain":"5-10","cases":70,"est":7.3,"real":5.7,"se":3.1}
+{"source":"pooled","gain":"over 10","cases":33,"est":19.2,"real":12.1,"se":6.5}
+{"source":"pooled","library":"library over 20","cases":288,"est":5,"real":3.3,"se":1.6}
+{"source":"pooled","library":"library 20 or fewer","cases":12,"est":15.1,"real":7.3,"se":10.6}
+{"source":"pooled","kind":"cast · Piracy Charm · 2 · their player","cases":4,"est":4.2,"real":-12.5,"se":8.8,"games":4}
+{"source":"pooled","kind":"cast · Piracy Charm · 2 · their player","gain":"under 2","cases":2,"est":1.1,"real":-6.3,"se":6.3}
+{"source":"pooled","kind":"cast · Piracy Charm · 2 · their player","gain":"5-10","cases":2,"est":7.2,"real":-18.8,"se":18.7}
+{"source":"pooled","kind":"cast · Piracy Charm · 2 · their player","library":"library over 20","cases":4,"est":4.2,"real":-12.5,"se":8.8}
+{"source":"pooled","estAtLeast":0,"cases":300,"realSummed":1037.5,"realMean":3.5}
+{"source":"pooled","estAtLeast":1,"cases":280,"realSummed":1162.5,"realMean":4.2}
+{"source":"pooled","estAtLeast":2,"cases":214,"realSummed":1150,"realMean":5.4}
+{"source":"pooled","estAtLeast":3,"cases":174,"realSummed":1012.5,"realMean":5.8}
+{"source":"pooled","estAtLeast":5,"cases":103,"realSummed":800,"realMean":7.8}

@@ -1,0 +1,1 @@
+{"by":"dandan-lab-jcqzl-3804","cloud":"rackspace","pool":"kmr-ring1-71","fin":[["zps032",5180,1795288532158]],"slots":2,"hw":{"cpus":2,"avail":2,"present":2,"possible":15,"offline":13,"memGB":4,"ips":["10.20.136.129"]},"busy":["zps032/630","zps032/985"],"req":{"list":1,"write":3,"read":900,"ms":300100},"started":1795283348901,"boot":1794939338145,"sched":1,"t":1795295051361}

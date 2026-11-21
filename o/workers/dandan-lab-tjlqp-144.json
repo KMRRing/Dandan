@@ -1,0 +1,1 @@
+{"by":"dandan-lab-tjlqp-144","cloud":"rackspace","pool":"kmr-ring1-25","fin":[["zps032",12514,1795294583151]],"slots":2,"hw":{"cpus":2,"avail":2,"present":2,"possible":15,"offline":13,"memGB":4,"ips":["10.20.243.66"]},"busy":["zps032/525","zps033/91"],"req":{"list":1,"write":3,"read":900,"ms":300059},"started":1795282052493,"boot":1795252804279,"sched":1,"t":1795294955673}

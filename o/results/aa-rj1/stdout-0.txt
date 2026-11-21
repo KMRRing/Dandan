@@ -1,0 +1,13 @@
+                                        n games       today     ac-jh1     ac-jh2    won
+all weighed decisions (baseline)     2411    39         52%        52%        53%    44%
+held mana; Hard would draw/cycle      111    28         52%        56%        58%    42%
+drew/dug differently                   58    25         50%        53%        53%    45%
+let it resolve; Hard would answer      52    20         55%        58%        60%    27%
+cast a Dandân; Hard would not          51    20         54%        56%        55%    49%
+land choice                            44    20         48%        45%        46%    34%
+counter choices                        33    18         56%        58%        58%    55%
+other                                  23    13         53%        47%        49%    17%
+answer choice                          21    14         52%        50%        53%    33%
+Hard: sacrifice Flood Plain            19     6         55%        57%        56%    42%
+combat                                  8     8         60%        64%        67%    38%
+held a Dandân; Hard would cast it       2     2         39%        36%        34%    50%

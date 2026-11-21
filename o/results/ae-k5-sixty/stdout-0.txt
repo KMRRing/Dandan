@@ -1,0 +1,2 @@
+positions: 84
+{"key":"1793609040271","i":22,"g":0,"seed":1462757466,"monteSeat":1,"library":60,"realMonte":0,"monte":1,"winner":1,"turns":47}

@@ -1,0 +1,7 @@
+aa-ai-gm: 1500 deals (3000 games): 48.4% ± 1.3
+aa-ai-ml: 1500 deals (3000 games): 50.2% ± 0.4
+aa-ai-rp: 1500 deals (3000 games): 50.3% ± 0.9
+aa-ai-gh: 200 deals (400 games): 49.8% ± 4.6
+aa-jm14: 200 deals (400 games): 53.0% ± 4.6
+aa-jm14b: 400 deals (800 games): 54.0% ± 3.2
+aa-jm3: 200 deals (400 games): 51.2% ± 4.8

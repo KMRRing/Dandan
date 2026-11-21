@@ -1,0 +1,1 @@
+{"id":"aa-hvsum","script":"halving-sum.mjs","args":"hv64,hv256","shards":1,"ref":"main","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":10,"purpose":"sum up the halving agreement runs hv64 and hv256 (its stdout is the result)","made":"2026-11-11"}

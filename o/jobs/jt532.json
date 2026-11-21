@@ -1,0 +1,1 @@
+{"id":"jt532","script":"judge-train.mjs","args":"","shards":0,"timeoutMin":1,"made":"2026-11-12","purpose":"no-op (plan item 7): the old filler machines queue jt trainings that can no longer finish; this empty spec stands in so they skip it"}

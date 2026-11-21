@@ -1,0 +1,1 @@
+{"id": "aa-a0-jt1", "script": "noop-jt.mjs", "args": "{shard} {shards} {out} 380 700", "shards": 1, "timeoutMin": 30, "purpose": "plan item 7: empty specs for jt380-700 without a done-0, so the old filler machines stop training value nets that can't finish", "ref": "3e46895671f56b85dbacedba9f49157a351ba3f1", "repo": "https://github.com/KMRRing/Dandan.git", "made": "2026-11-12"}

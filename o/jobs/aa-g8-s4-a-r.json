@@ -1,0 +1,1 @@
+{"id":"aa-g8-s4-a-r","script":"judge-variants.mjs","args":"{shard} {shards} {out} spb01-446,spm001-030 19 - 0 32 3e-4","shards":1,"timeoutMin":480,"purpose":"the shards of aa-g8-s4-a lost to stopped machines (1), played again; read with aa-g8-s4-a","ref":"3e46895671f56b85dbacedba9f49157a351ba3f1","repo":"https://github.com/KMRRing/Dandan.git","made":"2026-11-12"}

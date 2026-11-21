@@ -1,0 +1,1 @@
+{"id":"az-y6-a-p","script":"plus-match.mjs","args":"{shard} {shards} {out} zero@g6x-A-policy medium 500 700000","shards":100,"timeoutMin":60,"purpose":"Zero yardstick: generation 6's policy of approach A alone against Medium, 500 pairs","ref":"03a1bd9b837ee3ed20ed87f30a5f8922e172a3da","repo":"https://github.com/KMRRing/Dandan.git","made":"2026-11-14"}

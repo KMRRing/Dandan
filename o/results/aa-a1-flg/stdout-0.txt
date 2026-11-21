@@ -1,0 +1,26 @@
+{"lines":73,"withPlayOuts":73,"noPlayOuts":0}
+{"source":"self-play","cases":73,"est":4.6,"real":6.5,"se":2.1,"games":70}
+{"source":"self-play","gain":"under 2","cases":47,"est":-0.1,"real":1.6,"se":1.6}
+{"source":"self-play","gain":"2-5","cases":2,"est":3,"real":6.3,"se":6.3}
+{"source":"self-play","gain":"5-10","cases":6,"est":6.6,"real":8.3,"se":8.3}
+{"source":"self-play","gain":"over 10","cases":18,"est":16.6,"real":18.8,"se":6}
+{"source":"self-play","library":"library over 20","cases":47,"est":7.2,"real":8,"se":2.9}
+{"source":"self-play","library":"library 20 or fewer","cases":26,"est":0,"real":3.8,"se":2.7}
+{"source":"self-play","estAtLeast":0,"cases":61,"realSummed":387.5,"realMean":6.4}
+{"source":"self-play","estAtLeast":1,"cases":26,"realSummed":400,"realMean":15.4}
+{"source":"self-play","estAtLeast":2,"cases":26,"realSummed":400,"realMean":15.4}
+{"source":"self-play","estAtLeast":3,"cases":25,"realSummed":400,"realMean":16}
+{"source":"self-play","estAtLeast":5,"cases":24,"realSummed":387.5,"realMean":16.1}
+{"source":"self-play","kind":"bend","cases":73,"est":4.6,"real":6.5,"se":2.1}
+{"source":"pooled","cases":73,"est":4.6,"real":6.5,"se":2.1,"games":70}
+{"source":"pooled","gain":"under 2","cases":47,"est":-0.1,"real":1.6,"se":1.6}
+{"source":"pooled","gain":"2-5","cases":2,"est":3,"real":6.3,"se":6.3}
+{"source":"pooled","gain":"5-10","cases":6,"est":6.6,"real":8.3,"se":8.3}
+{"source":"pooled","gain":"over 10","cases":18,"est":16.6,"real":18.8,"se":6}
+{"source":"pooled","library":"library over 20","cases":47,"est":7.2,"real":8,"se":2.9}
+{"source":"pooled","library":"library 20 or fewer","cases":26,"est":0,"real":3.8,"se":2.7}
+{"source":"pooled","estAtLeast":0,"cases":61,"realSummed":387.5,"realMean":6.4}
+{"source":"pooled","estAtLeast":1,"cases":26,"realSummed":400,"realMean":15.4}
+{"source":"pooled","estAtLeast":2,"cases":26,"realSummed":400,"realMean":15.4}
+{"source":"pooled","estAtLeast":3,"cases":25,"realSummed":400,"realMean":16}
+{"source":"pooled","estAtLeast":5,"cases":24,"realSummed":387.5,"realMean":16.1}

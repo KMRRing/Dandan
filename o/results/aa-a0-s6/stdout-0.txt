@@ -1,0 +1,9 @@
+121 decisions; against deepest:
+  quick    same move 86.0%   loses 0.37 points a decision   8 choices 2+ points worse
+  long     same move 91.7%   loses 0.21 points a decision   3 choices 2+ points worse
+  deep     same move 99.2%   loses -0.00 points a decision   0 choices 2+ points worse
+  deepest  same move 100.0%   loses 0.00 points a decision   0 choices 2+ points worse
+adjacent depths, same move:
+  quick vs long: 92.6%
+  long vs deep: 90.9%
+  deep vs deepest: 99.2%

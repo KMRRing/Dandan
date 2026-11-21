@@ -1,0 +1,1 @@
+{"id":"aa-a0-pg4","script":"progress.mjs","args":"spb ab-c1 --args","shards":1,"ref":"34f9da3eeee94f23ecdd4f44b98c4fb8fde651f7","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":10,"purpose":"which self-play batches ran with v14 and the fixes","made":"2026-11-11"}

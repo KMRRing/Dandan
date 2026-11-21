@@ -1,0 +1,1 @@
+{"name":"medium-medium","games":4,"moves":950,"seconds":1.54,"msPerMove":1.619,"hash":1445547616}

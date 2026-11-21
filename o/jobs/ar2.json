@@ -1,0 +1,1 @@
+{"id":"ar2","script":"residuals.mjs","args":"{shard} {shards} {out} kept jt01","shards":1,"ref":"main","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":30,"purpose":"Korbi's kept games with the judge trained on self-play batch 1 (jt01): does it price land and card leads better than the game's (ar1)"}

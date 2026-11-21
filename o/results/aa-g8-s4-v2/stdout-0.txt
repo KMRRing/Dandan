@@ -1,0 +1,1 @@
+[23:34:39] stopped by SIGTERM (memory 255 MB)

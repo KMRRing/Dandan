@@ -1,0 +1,69 @@
+ag-v14.json: 9096 positions from 300 Medium games, Brier 0.1746; Brier ×1000 lost when an input is scrambled:
+  40.83  dandans                            weight 14.98
+   8.09  mana                               weight 16.28
+   8.06  Memory Lapse                       weight 8.45
+   7.61  lands                              weight 15.81
+   7.43  Dandân                             weight 9.12
+   6.45  hand                               weight 12.02
+   6.07  red                                weight 8.30
+   5.12  hits                               weight 10.77
+   4.64  Mind Bend                          weight 9.43
+   3.70  Repulse                            weight 9.39
+   3.40  open                               weight 10.88
+   3.33  Narset's Reversal                  weight 9.04
+   2.93  Piracy Charm                       weight 10.20
+   2.80  attackers                          weight 11.61
+   2.55  Lórien Revealed                    weight 13.74
+   2.49  [squeeze] land lead                weight 2.45
+   2.10  Take Inventory                     weight 9.82
+   2.09  Commit // Memory                   weight 11.57
+   2.05  Take Inventory in the graveyard    weight 3.97
+   1.86  clues                              weight 8.66
+   1.77  islands                            weight 9.38
+   1.63  Deem Inferior                      weight 8.86
+   1.47  Izzet Boilerworks                  weight 11.58
+   1.40  Island                             weight 6.57
+   1.36  Commit // Memory in the graveyard  weight 6.93
+   1.31  Brainstorm                         weight 9.68
+   1.17  Metamorphose                       weight 9.12
+   1.00  Gone Missing                       weight 8.63
+   0.99  Mystic Retrieval                   weight 8.67
+   0.94  Memory Lapse in the graveyard      weight 2.45
+   0.86  twoHits                            weight 7.79
+   0.78  Predict                            weight 7.93
+   0.74  Chart a Course                     weight 6.85
+   0.64  lastHit                            weight 9.17
+   0.61  Thundering Falls                   weight 7.14
+   0.58  Mind Bend in the graveyard         weight 3.63
+   0.55  cycling land                       weight 7.67
+   0.41  Quicken                            weight 6.48
+   0.36  library                            weight 14.82
+   0.34  [squeeze] card lead                weight 1.70
+   0.32  Mystic Sanctuary                   weight 8.36
+   0.31  noIsland                           weight 8.66
+   0.29  threeHits                          weight 6.16
+   0.28  [squeeze] answers held             weight 1.22
+   0.27  Piracy Charm in the graveyard      weight 3.64
+   0.16  flashback                          weight 8.25
+   0.15  Lórien Revealed in the graveyard   weight 2.94
+   0.12  Flood Plain                        weight 5.77
+   0.11  [squeeze] Dandâns held             weight 1.22
+   0.09  [squeeze] hits it can take         weight 0.76
+   0.06  Brainstorm in the graveyard        weight 3.73
+   0.05  Quicken in the graveyard           weight 2.58
+   0.03  Dandân in the graveyard            weight 2.63
+   0.03  [squeeze] counter with mana open   weight 1.37
+   0.02  Narset's Reversal in the graveyard weight 3.07
+   0.02  Predict in the graveyard           weight 3.81
+   0.01  turn                               weight 7.49
+   0.00  [squeeze] counters held            weight 1.36
+   0.00  toMove                             weight 3.71
+  -0.02  [squeeze] draw spells held         weight 1.26
+  -0.05  Deem Inferior in the graveyard     weight 2.84
+  -0.05  Mystic Retrieval in the graveyard  weight 4.76
+  -0.09  Metamorphose in the graveyard      weight 3.37
+  -0.14  Repulse in the graveyard           weight 2.69
+  -0.17  onLastIsland                       weight 7.90
+  -0.23  Halimar Depths                     weight 7.49
+  -0.34  Gone Missing in the graveyard      weight 3.43
+  -0.37  Chart a Course in the graveyard    weight 2.90

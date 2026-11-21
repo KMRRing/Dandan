@@ -1,0 +1,1 @@
+{"by":"dandan-lab-5bnvr-2345","cloud":"rackspace","pool":"kmr-ring1-89","fin":[["zps032",12728,1795294175511]],"slots":2,"hw":{"cpus":2,"avail":2,"present":2,"possible":15,"offline":13,"memGB":4,"ips":["10.20.63.66"]},"busy":["zps032/487","zps033/121"],"req":{"list":1,"write":3,"read":900,"ms":300101},"started":1795281439324,"boot":1794937848899,"sched":1,"t":1795294942036}

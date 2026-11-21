@@ -1,0 +1,1 @@
+{"by":"dandan-lab-f6bh9-163","cloud":"rackspace","pool":"kmr-ring1-25","fin":[],"slots":2,"hw":{"cpus":2,"avail":2,"present":2,"possible":15,"offline":13,"memGB":4,"ips":["10.20.34.129"]},"busy":["zps032/695","zps032/763"],"req":{"list":1,"write":3,"read":900,"ms":300129},"started":1795285748873,"boot":1795252889473,"sched":1,"t":1795295051595}

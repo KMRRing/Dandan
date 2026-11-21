@@ -1,0 +1,1 @@
+{"by":"dandan-lab-s9g5f-4375","cloud":"rackspace","pool":"kmr-ring1-71","fin":[["zps032",7758,1795291096003]],"slots":2,"hw":{"cpus":2,"avail":2,"present":2,"possible":15,"offline":13,"memGB":4,"ips":["10.20.75.2"]},"busy":["zps032/659","zps032/1145"],"req":{"list":1,"write":3,"read":900,"ms":300028},"started":1795283328536,"boot":1794943312541,"sched":1,"t":1795295030556}

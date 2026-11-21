@@ -1,0 +1,36 @@
+{"positions":7042,"cardsTried":61909,"betterWithout":2696,"share":0.0435}
+{"card":"Commit // Memory","held":2455,"betterWithout":0.189,"meanWhenSo":0.045,"worst":0.181}
+{"card":"Mystic Retrieval","held":2926,"betterWithout":0.095,"meanWhenSo":0.033,"worst":0.126}
+{"card":"Gone Missing","held":2144,"betterWithout":0.079,"meanWhenSo":0.031,"worst":0.113}
+{"card":"Take Inventory","held":3764,"betterWithout":0.066,"meanWhenSo":0.033,"worst":0.212}
+{"card":"Lórien Revealed","held":957,"betterWithout":0.065,"meanWhenSo":0.029,"worst":0.089}
+{"card":"Chart a Course","held":1807,"betterWithout":0.064,"meanWhenSo":0.029,"worst":0.095}
+{"card":"Narset's Reversal","held":2796,"betterWithout":0.062,"meanWhenSo":0.029,"worst":0.122}
+{"card":"Mystic Sanctuary","held":893,"betterWithout":0.056,"meanWhenSo":0.024,"worst":0.053}
+{"card":"Metamorphose","held":1135,"betterWithout":0.046,"meanWhenSo":0.031,"worst":0.109}
+{"card":"Mind Bend","held":1793,"betterWithout":0.046,"meanWhenSo":0.033,"worst":0.122}
+{"card":"Predict","held":1128,"betterWithout":0.043,"meanWhenSo":0.026,"worst":0.079}
+{"card":"Flood Plain","held":1685,"betterWithout":0.04,"meanWhenSo":0.025,"worst":0.083}
+{"card":"Deem Inferior","held":2646,"betterWithout":0.039,"meanWhenSo":0.026,"worst":0.103}
+{"card":"Halimar Depths","held":977,"betterWithout":0.036,"meanWhenSo":0.022,"worst":0.09}
+{"card":"Repulse","held":2522,"betterWithout":0.035,"meanWhenSo":0.032,"worst":0.086}
+{"card":"Izzet Boilerworks","held":1457,"betterWithout":0.035,"meanWhenSo":0.034,"worst":0.082}
+{"card":"Memory Lapse","held":11014,"betterWithout":0.035,"meanWhenSo":0.027,"worst":0.096}
+{"card":"Piracy Charm","held":1446,"betterWithout":0.024,"meanWhenSo":0.025,"worst":0.06}
+{"card":"Quicken","held":882,"betterWithout":0.024,"meanWhenSo":0.026,"worst":0.069}
+{"card":"Lonely Sandbar","held":423,"betterWithout":0.024,"meanWhenSo":0.017,"worst":0.039}
+{"card":"Brainstorm","held":870,"betterWithout":0.018,"meanWhenSo":0.035,"worst":0.123}
+{"card":"Remote Isle","held":521,"betterWithout":0.01,"meanWhenSo":0.034,"worst":0.053}
+{"card":"Dandân","held":7254,"betterWithout":0.009,"meanWhenSo":0.029,"worst":0.093}
+{"card":"Island","held":7579,"betterWithout":0.009,"meanWhenSo":0.017,"worst":0.034}
+{"card":"Thundering Falls","held":835,"betterWithout":0.002,"meanWhenSo":0.034,"worst":0.043}
+{"d":0.212,"card":"Take Inventory","seed":600139,"i":398,"seat":0,"turn":66,"life":[12,20],"hand":2,"base":0.379}
+{"d":0.191,"card":"Take Inventory","seed":600193,"i":234,"seat":0,"turn":43,"life":[16,4],"hand":4,"base":0.328}
+{"d":0.181,"card":"Commit // Memory","seed":600132,"i":41,"seat":1,"turn":8,"life":[20,20],"hand":7,"base":0.263}
+{"d":0.18,"card":"Commit // Memory","seed":600133,"i":31,"seat":1,"turn":6,"life":[20,20],"hand":5,"base":0.345}
+{"d":0.16,"card":"Take Inventory","seed":600139,"i":404,"seat":0,"turn":67,"life":[12,16],"hand":2,"base":0.277}
+{"d":0.16,"card":"Take Inventory","seed":600139,"i":404,"seat":0,"turn":67,"life":[12,16],"hand":2,"base":0.277}
+{"d":0.15,"card":"Commit // Memory","seed":600132,"i":45,"seat":1,"turn":9,"life":[20,20],"hand":5,"base":0.237}
+{"d":0.149,"card":"Commit // Memory","seed":600164,"i":18,"seat":0,"turn":4,"life":[20,20],"hand":7,"base":0.447}
+{"d":0.148,"card":"Commit // Memory","seed":600173,"i":40,"seat":0,"turn":10,"life":[20,20],"hand":6,"base":0.306}
+{"d":0.144,"card":"Commit // Memory","seed":600002,"i":290,"seat":0,"turn":48,"life":[4,16],"hand":8,"base":0.65}

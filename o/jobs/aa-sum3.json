@@ -1,0 +1,1 @@
+{"id":"aa-sum3","script":"rollnet-sum.mjs","args":"ab-rn64","shards":1,"ref":"main","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":10,"purpose":"sum up the learned-policy look-ahead run (stdout is the result)","made":"2026-11-11"}

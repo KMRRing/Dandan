@@ -1,0 +1,1 @@
+{"id":"ar1","script":"residuals.mjs","args":"{shard} {shards} {out} kept","shards":1,"ref":"main","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":30,"purpose":"Korbi's kept games: the game's judge by land/hand/Dandan and its Brier, the baseline for ar2"}
