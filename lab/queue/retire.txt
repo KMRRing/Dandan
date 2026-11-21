@@ -57,3 +57,5 @@ zps027  # 2026-11-20T09:11:55.434Z Zero's loop: made with the nets before zl21
 zdx001  # 2026-11-20T12:03:35.000Z Korbi 14:03 local: cancel zld1 against live Monte (35.8% after 67 of 300)
 zps028  # 2026-11-20T21:29:34.337Z Zero's loop: made with the nets before zl22
 zps029  # 2026-11-20T21:29:34.337Z Zero's loop: made with the nets before zl22
+zps030  # 2026-11-21T12:55:08.050Z Zero's loop: made with the nets before zl23
+zps031  # 2026-11-21T12:55:08.050Z Zero's loop: made with the nets before zl23

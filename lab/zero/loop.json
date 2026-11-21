@@ -1,22 +1,20 @@
 {
   "on": true,
   "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. On since 17 Nov 15:15Z on Google (Korbi 17:12, Fable 15:10Z: the store moves to B2 between generations). From gm1 (17 Nov, Korbi: the loop on the general line): line general, the first step crowns gm1 (trained fresh on the stored games, general-train run 44078371393), the filler then plays gen:gm1 with 1 game in 10 against g12r-C.",
-  "gen": 23,
+  "gen": 24,
   "prefix": "zl",
-  "champion": "zl22",
+  "champion": "zl23",
   "flags": "deeper=0.03",
   "deals": 64,
   "games": 2400,
   "maxWindow": 30000,
   "value": "128x64",
   "trainArgs": "keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8",
-  "genFrom": 30,
+  "genFrom": 32,
   "windowFrom": 21,
   "nextFrom": 32,
-  "phase": "train",
+  "phase": "play",
   "log": [
-    "2026-11-18T07:25:00Z generation 16: the 05:28Z step's training dispatch was refused (HTTP 422: the dispatcher turned policy_args into \"policy args\"); fixed in zero-loop.yml, training started by hand at 07:25Z; the loop now asks again when nets are 100 minutes late",
-    "2026-11-18T07:28:31.909Z generation 16: zl16's nets are late: training asked for again (1)",
     "2026-11-18T07:36:35.750Z generation 16: zl16 (warm from zl15) plays from the filler's next batch",
     "2026-11-18T09:18:33.755Z generation 17: zl16 against zl15: 51.2% over 242 games",
     "2026-11-18T09:18:33.755Z generation 17: zl16 against the leaky g12r-C: 32.7% over 98 games",
@@ -55,14 +53,16 @@
     "2026-11-20T21:29:34.337Z generation 22: zl22 (warm from zl21) plays from the filler's next batch",
     "2026-11-21T10:57:35.621Z generation 23: zl22 against zl21: 50.1% over 469 games",
     "2026-11-21T10:57:35.621Z generation 23: training zl23 (policy fresh, value and dealer warm from zl22) on zps022,zps023,zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031",
-    "2026-11-21T11:13:19.125Z generation 23: zl23's dealer is in: its policy and value nets asked for"
+    "2026-11-21T11:13:19.125Z generation 23: zl23's dealer is in: its policy and value nets asked for",
+    "2026-11-21T12:55:08.050Z generation 24: 20% branch games from zps022,zps023,zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031",
+    "2026-11-21T12:55:08.050Z generation 23: zl23 (warm from zl22) plays from the filler's next batch"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
   "yardPairs": 300,
   "yardSeed": 3100000,
   "vsEvery": 5,
-  "previous": "zl21",
+  "previous": "zl22",
   "line": "general",
   "scry": "g12h2",
   "history": [
@@ -311,6 +311,38 @@
         "mind-bend-island-1",
         "mind-bend-island-2",
         "predict-under-lapses-1"
+      ]
+    },
+    {
+      "gen": 23,
+      "nets": "zl23",
+      "from": "zl22",
+      "window": [
+        "zps022",
+        "zps023",
+        "zps024",
+        "zps025",
+        "zps026",
+        "zps027",
+        "zps028",
+        "zps029",
+        "zps030",
+        "zps031"
+      ],
+      "at": "2026-11-21T12:55:08.050Z",
+      "reading": {
+        "nets": "zl22",
+        "against": "zl21",
+        "n": 469,
+        "score": 0.5010660980810234
+      },
+      "suite": "5/10",
+      "failed": [
+        "no-island-dandan-1",
+        "no-island-dandan-4",
+        "no-island-dandan-5",
+        "mind-bend-island-1",
+        "mind-bend-island-2"
       ]
     }
   ],
@@ -6292,12 +6324,5 @@
   "branchShare": 0.2,
   "branchWeights": "%7B%22life%7C21%2B%22%3A1%2C%22life%7C15-20%22%3A1%2C%22life%7C9-14%22%3A1.5%2C%22library%7C21%2B%22%3A3.1%7D",
   "deepOn": true,
-  "refineFrom": 25,
-  "reading": {
-    "nets": "zl22",
-    "against": "zl21",
-    "n": 469,
-    "score": 0.5010660980810234
-  },
-  "challenger": "zl23"
+  "refineFrom": 25
 }
