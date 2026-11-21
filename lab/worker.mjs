@@ -325,7 +325,10 @@ closeGate();
 async function slotLoop(slot) {
   await sleep(slot * 700);
   let idleSince = Date.now(), polling = slot === 0;
-  while (Date.now() - T0 < MAX_MS && !DRAIN) {
+  // the age cap (LAB_MAX_HOURS) only off the lab's filler machines (21 Nov 2026, Ops 07:35Z: past it each slot stopped claiming
+  // once its shard ended, but the process exited only after its last one, so with long played-out shards slots sat idle for
+  // hours, every cap period; a filler machine restarts on a push (DRAIN) and otherwise runs on)
+  while ((FILL || Date.now() - T0 < MAX_MS) && !DRAIN) {
     if (gate && !polling) { await gate.p; continue; }
     let work = null, empty = true;
     try { ({ work, empty } = await findWork()); } catch (e) { log("queue:", e.message); }
