@@ -144,7 +144,7 @@ for (let g = first; g < first + n && (!ARB || ARBP); g++) {
     if (at >= 0 && !rules.over(H.state)) {
       const seat = rules.toMove(H.state);
       G = { ...H, state: redeal(rules, H.state, seat, seed) }; i0 = at;
-      branch = { src: src.seed, at, seat, kind: p.kind, ...(p.force ? { force: p.force } : {}), ...(arbPoint ? { side: ARBSIDE, point: Math.floor(shard / 2), band: ARBP.band, v: ARBP.v } : {}) };
+      branch = { src: src.seed, at, seat, kind: p.kind, ...(p.force ? { force: p.force } : {}), ...(arbPoint ? { side: ARBSIDE, point: Math.floor(shard / 2), band: ARBP.band, v: ARBP.v, gap: ARBP.gap } : {}) };
       if (p.force) force = p.force;
     } else brain.reset();
   }

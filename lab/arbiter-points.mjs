@@ -1,4 +1,5 @@
-// The play-out arbiter's decisions (the two moves: the search's top and the policy's favourite, whatever the search ranked it) (22 Nov 2026, Fable's acceptance test b): close calls the nets made in a stored batch where
+// The play-out arbiter's decisions (the two moves: the search's top and the policy's favourite, whatever the search ranked it,
+// chosen by the gap between those two (Fable 22 Nov 13:52Z)) (22 Nov 2026, Fable's acceptance test b): close calls the nets made in a stored batch where
 // the search's top two were within 2 points and the policy's favourite was not the search's. Each becomes a point to play out
 // both ways (lab/zero/zero-play.mjs arb=): the search's top move and the policy's, about 20 games each, so which of the two was
 // right is settled by results rather than by either judge. Read-only: prints the points as one JSON line (ARB ...) for
@@ -16,7 +17,7 @@ const GAP = Number(gapS), J = x => JSON.parse(JSON.stringify(x)), real = Math.ra
 const name = m => `${m.t}${m.card != null ? " " + DECK[m.card] : ""}`;
 export const bandOf = v => (v < 0.2 ? "0-20" : v < 0.4 ? "20-40" : v < 0.6 ? "40-60" : v < 0.8 ? "60-80" : "80-100");
 const local = batch.startsWith("file:"), store = local ? { get: async n => (await import("node:fs")).readFileSync(n, "utf8") } : await (await import("./lib.mjs")).labStore();
-const brain = await generalBrain(nets), points = [], perBand = Math.ceil(Number(most) / 2), inBand = {}, groupOf = v => (v < 0.9 ? "<90" : ">=90");   // half below 90%, half at 90% and up (Fable 22 Nov: read in those two groups)
+const brain = await generalBrain(nets), points = [], perBand = Number(most), inBand = {}, groupOf = v => (v < 0.9 ? "<90" : ">=90");   // half below 90%, half at 90% and up (Fable 22 Nov: read in those two groups)
 const names = local ? [batch.slice(5)] : (await store.list(`results/${batch}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)).sort();
 outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part))) {
   let text = "";
@@ -35,20 +36,21 @@ outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part)
       const [who, m] = g.moves[i], s = rules.restore(J(G.state)), d = dec.get(`${g.game ?? g.seed}:${i}`) || dec.get(`${g.seed}:${i}`);
       if (taken < 2 && (mine < 0 || who === mine) && d && !d.qd && (inBand[groupOf(d.v)] || 0) < perBand && d.c?.length >= 2 && d.v != null) {
         const val = c => c.d ?? c.q, byVal = [...d.c].sort((a, b) => val(b) - val(a)), gap = val(byVal[0]) - val(byVal[1]);
-        if (gap <= GAP) {
+        const lim = d.v >= 0.9 ? Math.max(GAP, 0.05) : GAP;   // at 90% and up a reserve out to 5 points, used only if too few are within GAP
+        if (gap <= lim) {
           const ms = zeroOptions(s, who);
           brain.root(s, who);
           const p = brain.player.probs(s, who, ms), at = new Map(ms.map((x, k) => [key(x), k]));
           const pTop = ms[p.indexOf(Math.max(...p))], sTop = byVal[0].mv;
-          if (at.has(key(sTop)) && key(pTop) !== key(sTop)) {
-            const pc = d.c.find(c => key(c.mv) === key(pTop));
-            points.push({ src: g.seed, at: i, seat: who, v: d.v, band: bandOf(d.v), gap, search: sTop, policy: pTop,
+          const pc = d.c.find(c => key(c.mv) === key(pTop));
+          // the gap between the two moves compared (Fable 22 Nov 13:52Z), not the search's top two: within GAP of each other
+          if (at.has(key(sTop)) && key(pTop) !== key(sTop) && pc && val(byVal[0]) - val(pc) <= lim) {
+            points.push({ src: g.seed, at: i, seat: who, v: d.v, band: bandOf(d.v), gap: val(byVal[0]) - val(pc), gapTop2: gap, search: sTop, policy: pTop,
               pSearch: p[at.get(key(sTop))], pPolicy: p[at.get(key(pTop))], vPolicy: pc ? val(pc) : null, vSearch: val(byVal[0]),
               // rank: the policy's favourite among the search's values (2: its second; 0: not searched)
               rank: 1 + byVal.findIndex(c => key(c.mv) === key(pTop)), played: key(m) === key(sTop) ? "search" : key(m) === key(pTop) ? "policy" : "other", part: local ? null : n,
               ...(local ? { moves: g.moves.slice(0, i + 1) } : {}) });   // the source game: its part in the store (zero-play reads it), or its moves
             taken++; inBand[groupOf(d.v)] = (inBand[groupOf(d.v)] || 0) + 1;
-            if (points.length >= Number(most)) break outer;
           }
         }
       }
@@ -61,10 +63,17 @@ outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part)
     }
   }
 }
+// half the points at 90% and up, the rest below; if too few qualify at 90% and up, all of them (Fable 22 Nov 13:52Z)
+{
+  const hi = points.filter(x => x.v >= 0.9).sort((a, b) => (a.gap > GAP) - (b.gap > GAP) || (a.gap > GAP ? a.gap - b.gap : 0)), lo = points.filter(x => x.v < 0.9), nHi = Math.min(hi.length, Math.ceil(Number(most) / 2));
+  points.splice(0, points.length, ...hi.slice(0, nHi), ...lo.slice(0, Number(most) - nHi));
+}
+const gapG = x => (x.gap <= 0.01 ? "<=1" : x.gap <= 0.02 ? "1-2" : ">2");
+console.log(`  by the gap between the two moves: ${["<=1", "1-2", ">2"].map(k => `${k} ${points.filter(x => gapG(x) === k).length}`).join(", ")}`);
 const by = {};
 for (const x of points) by[x.band] = (by[x.band] || 0) + 1;
 console.error(`groups: ${JSON.stringify(inBand)}`);
-console.log(`${points.length} close calls (top two within ${100 * GAP} points, policy's favourite not the search's) from ${batch}, part ${part} of ${parts}, nets ${nets}`);
+console.log(`${points.length} close calls (the search's pick and the policy's favourite within ${100 * GAP} points; at 90% and up out to 5 if too few) from ${batch}, part ${part} of ${parts}, nets ${nets}`);
 console.log(`  by win chance: ${Object.entries(by).sort().map(([b, n]) => `${b}% ${n}`).join(", ")}`);
 console.log(`  the policy's favourite as the search ranked it: ${[2, 3, 4].map(r => `${r === 4 ? "4+" : r}: ${points.filter(x => (r === 4 ? x.rank >= 4 : x.rank === r)).length}`).join(", ")}, not searched ${points.filter(x => !x.rank).length}`);
 console.log(`  as played: ${["search", "policy", "other"].map(k => `${k} ${points.filter(x => x.played === k).length}`).join(", ")}`);
