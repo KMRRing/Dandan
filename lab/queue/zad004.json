@@ -1,0 +1,8 @@
+{
+  "id": "zad004",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 400 520000000 gen:zl23 - 100 deeper=0.03 deepmax=4 prior=2 multi=1 vs=g12r-C:1",
+  "shards": 400,
+  "timeoutMin": 300,
+  "purpose": "Fable 21:14Z: renamed from zdm004 so it sorts ahead of zarb001; Fable's go, 22 Nov 15:21Z (Korbi 19:39 local: Fable decides how the fleet is used); was zdm003, withdrawn at 13:19Z before the go. zl23 with prior x2 and the group lift (multi=1) against live Monte g12r-C, both deep, the seeds and seats of A's (zdm001) first 400 games, no resigning. For the null-move, doomed-cast and held-land counts per game against A; its win rate is a check against disaster only (the root-world seeding changes the games, so the pairing with A is mostly lost). Not trained on."
+}
