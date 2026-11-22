@@ -48,7 +48,8 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
   for (let k = 1; k < SEEDS; k++) {
     const rk = brain.think(s, who, Number(deals), { ...extraOf(flags), salt: 0x5eed + k }), vk = o => o.score ?? o.first ?? o.mean;
     const bk = rk.list.find(o => o.move.t === p.bad.t && DECK[o.move.card] === p.bad.name), ok = rk.list.filter(o => o !== bk).sort((x, y) => vk(y) - vk(x))[0];
-    per.push({ bad: rk.best.t === p.bad.t && DECK[rk.best.card] === p.bad.name, margin: bk && ok ? 100 * (vk(ok) - vk(bk)) : null });
+    const rm = o => o.first ?? o.mean, rok = rk.list.filter(o => o !== bk).sort((x, y) => rm(y) - rm(x))[0];   // raw: the search's own means, no prior, no lift
+    per.push({ bad: rk.best.t === p.bad.t && DECK[rk.best.card] === p.bad.name, margin: bk && ok ? 100 * (vk(ok) - vk(bk)) : null, raw: bk && rok ? 100 * (rm(rok) - rm(bk)) : null });
   }
   const r = deals === "policy" ? policyPick(brain, s, who) : brain.think(s, who, Number(deals), extraOf(flags)), pick = r.best;
   const isBad = m => m.t === p.bad.t && DECK[m.card] === p.bad.name, bad = isBad(pick);
@@ -61,11 +62,14 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
   const nul = isNull(s, who, pick, seeded(7));
   out.push({ id: p.id, pass: !bad, margin, null: nul, pick: name(pick), top: r.list.slice(0, 4).map(o => [name(o.move), Math.round(1000 * o.mean) / 10]) });
   console.log(`${bad ? "FAIL" : "pass"}  ${p.id}: picks ${name(pick)}${nul ? " (a null move)" : ""}, margin ${margin ?? "-"} points; ${r.list.slice(0, 4).map(o => `${name(o.move)} ${(100 * o.mean).toFixed(1)}${o.prior != null ? ` (policy ${(100 * o.prior).toFixed(0)}%)` : ""}`).join(", ")}`);
+  const rm0 = o => o.first ?? o.mean, rok0 = r.list.filter(o => o !== badO).sort((x, y) => rm0(y) - rm0(x))[0], raw = badO && rok0 ? 100 * (rm0(rok0) - rm0(badO)) : null;
   if (SEEDS > 1) {
-    const all = [{ bad, margin }, ...per], ms = all.map(x => x.margin).filter(x => x != null), m = ms.reduce((a, b) => a + b, 0) / Math.max(1, ms.length);
+    const all = [{ bad, margin, raw }, ...per], ms = all.map(x => x.margin).filter(x => x != null), m = ms.reduce((a, b) => a + b, 0) / Math.max(1, ms.length);
     const se = ms.length > 1 ? Math.sqrt(ms.reduce((a, x) => a + (x - m) ** 2, 0) / (ms.length - 1) / ms.length) : null;
     Object.assign(out[out.length - 1], { seeds: all.length, passes: all.filter(x => !x.bad).length, meanMargin: m, marginSe: se });
-    console.log(`      over ${all.length} seeds: passes ${all.filter(x => !x.bad).length}, margin ${m.toFixed(2)} ± ${se?.toFixed(2) ?? "-"} points`);
+    const rs = all.map(x => x.raw).filter(x => x != null), rmn = rs.reduce((a, b) => a + b, 0) / Math.max(1, rs.length), rse = rs.length > 1 ? Math.sqrt(rs.reduce((a, x) => a + (x - rmn) ** 2, 0) / (rs.length - 1) / rs.length) : null;
+    Object.assign(out[out.length - 1], { rawMargin: rmn, rawSe: rse });
+    console.log(`      over ${all.length} seeds: passes ${all.filter(x => !x.bad).length}, margin ${m.toFixed(2)} ± ${se?.toFixed(2) ?? "-"} points; raw (no prior, no lift) ${rmn.toFixed(2)} ± ${rse?.toFixed(2) ?? "-"}`);
   }
   // the group lift (22 Nov 2026, Fable): one card's several ways, measured deal by deal (dandan-think.js groupLifts)
   const lifts = r.list.filter(o => o.groupLift > 0);
