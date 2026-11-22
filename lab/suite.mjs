@@ -46,25 +46,29 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
   const s = shownRules.restore(JSON.parse(JSON.stringify(G.state))), who = moves[p.move][0];
   // SUITE_SEEDS=<n> (22 Nov 2026, Fable: a seed freezes one draw of the noise, it doesn't remove it): the search n times with
   // fresh salts, its verdict read as the mean margin over them with its standard error, and how many of the n pass
+  const isBad = m => m.t === p.bad.t && DECK[m.card] === p.bad.name;
   const SEEDS = deals === "policy" ? 1 : Number(argOf("seeds") || process.env.SUITE_SEEDS || 1), per = [];
   for (let k = 1; k < SEEDS; k++) {
     const rk = brain.think(s, who, Number(deals), { ...extraOf(flags), salt: 0x5eed + k }), vk = o => o.score ?? o.first ?? o.mean;
-    const bk = rk.list.find(o => o.move.t === p.bad.t && DECK[o.move.card] === p.bad.name), ok = rk.list.filter(o => o !== bk).sort((x, y) => vk(y) - vk(x))[0];
-    const rm = o => o.first ?? o.mean, rok = rk.list.filter(o => o !== bk).sort((x, y) => rm(y) - rm(x))[0];   // raw: the search's own means, no prior, no lift
-    per.push({ bad: rk.best.t === p.bad.t && DECK[rk.best.card] === p.bad.name, margin: bk && ok ? 100 * (vk(ok) - vk(bk)) : null, raw: bk && rok ? 100 * (rm(rok) - rm(bk)) : null });
+    // the bad card's best way against the best of everything else: a card with several ways (Mind Bend, Predict) is one move here
+    const top = (xs, f) => xs.sort((x, y) => f(y) - f(x))[0], badK = rk.list.filter(o => isBad(o.move)), okK = rk.list.filter(o => !isBad(o.move));
+    const bk = top([...badK], vk), ok = top([...okK], vk);
+    const rm = o => o.first ?? o.mean, rbk = top([...badK], rm), rok = top([...okK], rm);   // raw: the search's own means, no prior, no lift
+    per.push({ bad: isBad(rk.best), margin: bk && ok ? 100 * (vk(ok) - vk(bk)) : null, raw: rbk && rok ? 100 * (rm(rok) - rm(rbk)) : null });
   }
   const r = deals === "policy" ? policyPick(brain, s, who) : brain.think(s, who, Number(deals), extraOf(flags)), pick = r.best;
-  const isBad = m => m.t === p.bad.t && DECK[m.card] === p.bad.name, bad = isBad(pick);
+  const bad = isBad(pick);
   // the margin (Fable 10:50Z): the best other option less the bad move, in points, all at the first look's depth (the deeper
   // look reweighs only the best two, so final means mix depths); a pass by a hair says little
   const v = o => o.score ?? o.first ?? o.mean,   // with prior=: the score the pick was made on
-   badO = r.list.find(o => isBad(o.move)), other = r.list.filter(o => !isBad(o.move)).sort((a, b) => v(b) - v(a))[0];
+   badO = r.list.filter(o => isBad(o.move)).sort((a, b) => v(b) - v(a))[0], other = r.list.filter(o => !isBad(o.move)).sort((a, b) => v(b) - v(a))[0];
   const margin = badO && other ? Math.round(1000 * (v(other) - v(badO))) / 10 : null;
   // and whether the pick is a null move (lab/null-move.mjs: the measure Korbi asked for, never a rule)
   const nul = isNull(s, who, pick, seeded(7));
   out.push({ id: p.id, pass: !bad, margin, null: nul, pick: name(pick), top: r.list.slice(0, 4).map(o => [name(o.move), Math.round(1000 * o.mean) / 10]) });
   console.log(`${bad ? "FAIL" : "pass"}  ${p.id}: picks ${name(pick)}${nul ? " (a null move)" : ""}, margin ${margin ?? "-"} points; ${r.list.slice(0, 4).map(o => `${name(o.move)} ${(100 * o.mean).toFixed(1)}${o.prior != null ? ` (policy ${(100 * o.prior).toFixed(0)}%)` : ""}`).join(", ")}`);
-  const rm0 = o => o.first ?? o.mean, rok0 = r.list.filter(o => o !== badO).sort((x, y) => rm0(y) - rm0(x))[0], raw = badO && rok0 ? 100 * (rm0(rok0) - rm0(badO)) : null;
+  const rm0 = o => o.first ?? o.mean, best0 = (xs, f) => [...xs].sort((x, y) => f(y) - f(x))[0];
+  const rbad0 = best0(r.list.filter(o => isBad(o.move)), rm0), rok0 = best0(r.list.filter(o => !isBad(o.move)), rm0), raw = rbad0 && rok0 ? 100 * (rm0(rok0) - rm0(rbad0)) : null;
   if (SEEDS > 1) {
     const all = [{ bad, margin, raw }, ...per], ms = all.map(x => x.margin).filter(x => x != null), m = ms.reduce((a, b) => a + b, 0) / Math.max(1, ms.length);
     const se = ms.length > 1 ? Math.sqrt(ms.reduce((a, x) => a + (x - m) ** 2, 0) / (ms.length - 1) / ms.length) : null;
