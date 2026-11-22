@@ -15,7 +15,6 @@
   "nextFrom": 38,
   "phase": "train",
   "log": [
-    "2026-11-19T08:43:11.713Z generation 19: zl19's nets are late: training asked for again (1)",
     "2026-11-19T08:43:33.535Z generation 19: zl19 (warm from zl18b) plays from the filler's next batch",
     "2026-11-19T16:01:59.032Z generation 20: zl19 against zl18b: 53.9% over 997 games",
     "2026-11-19T16:01:59.032Z generation 20: zl19 against the leaky g12r-C: 56.5% over 497 games",
@@ -55,7 +54,8 @@
     "2026-11-22T12:00:02.729Z generation 26: 20% branch games from zps023,zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035",
     "2026-11-22T12:00:02.729Z generation 25: zl25 (warm from zl24) plays from the filler's next batch",
     "2026-11-22T20:30:54.663Z generation 26: zl25 against zl24: 50.2% over 480 games",
-    "2026-11-22T20:30:54.663Z generation 26: training zl26 (policy fresh, value and dealer warm from zl25) on zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037"
+    "2026-11-22T20:30:54.663Z generation 26: training zl26 (policy fresh, value and dealer warm from zl25) on zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037",
+    "2026-11-22T20:48:36.611Z generation 26: zl26's dealer is in: its policy and value nets asked for"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -6343,9 +6343,11 @@
     ],
     "at": "2026-11-22T20:30:54.663Z",
     "dispatch": [
-      "scryg-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037 name=zl26 init=zl25 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128"
+      "scryg-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037 name=zl26 init=zl25 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
+      "general-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037 name=zl26 init=zl25 scry=zl26 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 refine=zps025+zps026+zps027+zps028+zps029+zps030+zps031+zps032+zps033+zps034+zps035+zps036+zps037:3:1e-4:3e-5"
     ],
-    "next": "general-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037 name=zl26 init=zl25 scry=zl26 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 refine=zps025+zps026+zps027+zps028+zps029+zps030+zps031+zps032+zps033+zps034+zps035+zps036+zps037:3:1e-4:3e-5"
+    "asked": "2026-11-22T20:48:36.841Z",
+    "retries": 0
   },
   "deepFrom": 21,
   "deepDeals": 1024,
