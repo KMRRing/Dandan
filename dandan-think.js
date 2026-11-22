@@ -602,7 +602,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       move, mean, se: k ? sd / Math.sqrt(k) : 0, n: k, i, cls: cls[i],
       seen: { d: avg("d"), D: avg("D"), l: avg("l"), L: avg("L"), h: avg("h"), H: avg("H"), a: top?.[0] ?? null, an: top?.[1] ?? 0 },
       // with watch: each deal's leaf, the watched card's copies still in hand and the leaf's value (lab/hold-check.mjs)
-      ...(WATCH ? { watch: seen[i].map((x, k) => [x.wn ?? null, v[k]]) } : {}),
+      ...(WATCH ? { watch: seen[i].map((x, k) => [x.wn ?? null, v[k], x.r ?? null]) } : {}),   // r: the reply to a cast (0 let it resolve, 1 aimed at it, 2 another play)
       // the replies to this move over the deals (a cast only): let it resolve, a spell aimed at it, another play
       ...(cands[i].t === "cast" ? { resp: seen[i].reduce((a, x) => { if (x.r != null) a[x.r]++; return a; }, [0, 0, 0]) } : {}),
     };

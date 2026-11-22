@@ -69,6 +69,11 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
       const w = o.watch.filter(x => x[0] != null && x[1] >= 0), kept = w.filter(x => x[0] >= root), gone = w.filter(x => x[0] < root);
       const mv = xs => (xs.length ? (100 * xs.reduce((a, x) => a + x[1], 0) / xs.length).toFixed(1) : "-");
       console.log(`      look-ahead, ${tag} (${name(o.move)}): ${w.length} leaves; the ${p.bad.name} still in hand at the horizon in ${kept.length} (${w.length ? (100 * kept.length / w.length).toFixed(0) : "-"}%), leaf value ${mv(kept)}; gone from hand in ${gone.length}, leaf value ${mv(gone)}`);
+      // the opponent's reply to the cast (Fable 17:32Z: does the modelled opponent spend an answer on a doomed cast?)
+      if (tag === "spend" && o.move.t === "cast") {
+        const by = [0, 1, 2].map(r => w.filter(x => x[2] === r)), none = w.filter(x => x[2] == null);
+        console.log(`      replies to the cast: ${["let it resolve", "aimed at it", "another play"].map((t, r) => `${t} ${by[r].length} (${w.length ? (100 * by[r].length / w.length).toFixed(0) : "-"}%), leaf ${mv(by[r])}`).join("; ")}; unknown ${none.length}`);
+      }
     }
   }
   const bad = isBad(pick);
