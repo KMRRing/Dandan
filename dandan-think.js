@@ -479,7 +479,7 @@ export function think(s, seat, opts = {}) {
   }
   // the last look's values for every option of a class it weighed (by class: a twin of a weighed move takes them too)
   const clsOf = c => c.cls ?? key(c.move), by = new Map(r2.list.map(c => [clsOf(c), c])), isDeep = c => deep.has(clsOf(c));
-  const list = r.list.map(c => (isDeep(c) && by.has(clsOf(c)) ? { ...c, first: c.mean, firstSe: c.se, firstN: c.n, mean: by.get(clsOf(c)).mean, se: by.get(clsOf(c)).se, n: by.get(clsOf(c)).n, gapSe: by.get(clsOf(c)).gapSe ?? null } : c));
+  const list = r.list.map(c => (isDeep(c) && by.has(clsOf(c)) ? { ...c, first: c.mean, firstSe: c.se, firstN: c.n, mean: by.get(clsOf(c)).mean, se: by.get(clsOf(c)).se, n: by.get(clsOf(c)).n, gapSe: by.get(clsOf(c)).gapSe ?? null, groupLift: c.groupLift ?? 0, groupN: c.groupN } : c));
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && isDeep(c)).sort((a, b) => b.mean - a.mean), ...list.filter(c => !isDeep(c))], deeper: looks };
 }
@@ -655,7 +655,46 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     const gm = k ? sg / k : 0, gapSe = k > 1 ? Math.sqrt(Math.max(0, (sg2 - k * gm * gm) / (k - 1)) / k) : null;
     Object.assign(c, { vs: k, better, worse, gapSe });
   }
+  groupLifts(list, vals);
   return { best: best.move, list: [best, ...ranked.filter(c => c !== best)], deals: d, only: false, off, shortPick };
+}
+// the expected best of n standard normals, for groupLifts: E max = ∫ x · n φ(x) Φ(x)^(n-1) dx, summed on a grid, kept by n
+const MAXOF = new Map();
+function maxOf(n) {
+  if (!MAXOF.has(n)) {
+    let e = 0, cdf = 0;
+    const h = 0.01, phi = x => Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI);
+    for (let x = -8; x < 8; x += h) { const p = phi(x + h / 2) * h; e += (x + h / 2) * n * p * cdf ** (n - 1); cdf += p; }
+    MAXOF.set(n, e);
+  }
+  return MAXOF.get(n);
+}
+/**
+ * The lift of a group's best (22 Nov 2026, Fable: the bias towards doing something): one card cast or played several ways (Mind
+ * Bend at four targets, or either of two copies) is several options, and the best of several noisy means is higher than any
+ * one of them by chance. The part of their noise they share (the same dealt worlds) lifts none of them, so the lift is sized from the members' paired
+ * differences, deal by deal: tau, the spread of a member about the group's common part (half the mean variance of the paired
+ * differences, as a standard error), times the expected best of as many standard normals. Each member gets groupLift (0 alone).
+ * Nothing here changes a pick; lab/zero/general.mjs withPrior takes it off the group's scores where asked (multi).
+ */
+function groupLifts(list, vals) {
+  const groups = new Map();
+  for (const c of list) { const m = c.move, k = m && m.card != null ? `${m.t}:${DECK[m.card]}` : null; c.groupLift = 0;   // by the card's name: two copies are one card
+    if (k) (groups.get(k) || groups.set(k, []).get(k)).push(c); }
+  for (const g of groups.values()) {
+    if (g.length < 2) continue;
+    let v = 0, pairs = 0;
+    for (let a = 0; a < g.length; a++) for (let b = a + 1; b < g.length; b++) {
+      const x = vals[g[a].i], y = vals[g[b].i], n = Math.min(x.length, y.length);
+      if (n < 2) continue;
+      let s1 = 0, s2 = 0;
+      for (let j = 0; j < n; j++) { const d = x[j] - y[j]; s1 += d; s2 += d * d; }
+      v += Math.max(0, (s2 - s1 * s1 / n) / (n - 1)) / n; pairs++;
+    }
+    if (!pairs) continue;
+    const tau = Math.sqrt(v / pairs / 2), lift = tau * maxOf(g.length);
+    for (const c of g) Object.assign(c, { groupLift: lift, groupN: g.length });
+  }
 }
 /**
  * The moves still in the race: one goes when, over the deals they share, it trails the leader by more than three times

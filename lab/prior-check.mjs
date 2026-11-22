@@ -30,15 +30,13 @@ outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part)
     let G = recordOf(rules, g), taken = 0;   // at most 3 decisions a game, so a part's sample spreads over its games
     for (let i = 0; i < g.moves.length; i++) {
       const [who, m] = g.moves[i], s = rules.restore(J(G.state));
-      if (taken < 3 && i > 10 && !s.pending && pick(g, i) && zeroOptions(s, who).length > 1) {
+      if (taken < 3 && i > 10 && !s.pending && who !== g.vs?.seat && pick(g, i) && zeroOptions(s, who).length > 1) {   // the nets' own decisions, not the rival's
         Math.random = seeded(g.seed + i);
         const r = brain.think(J(s), who, Number(deals), extra);
         Math.random = real;
         if (r.priorK != null) {
           taken++;
-          const search = [...r.list].sort((a, b) => b.mean - a.mean)[0], prior = r.list[0], differ = search !== prior;
-          const gap = search.mean - prior.mean, se = prior.gapSe ?? search.gapSe ?? r.priorK;
-          rows.push({ differ, gap, z: differ && se ? gap / se : 0, k: r.priorK, pS: search.prior, pP: prior.prior, s: name(search.move), p: name(prior.move), mean: search.mean });
+          rows.push({ k: r.priorK, o: r.list.map(o => [o.mean, o.prior, o.groupLift || 0, name(o.move)]) });
           if (rows.length >= Number(most)) break outer;
         }
       }
@@ -51,11 +49,23 @@ outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part)
     }
   }
 }
-const d = rows.filter(x => x.differ), pc = (a, b) => (100 * a / Math.max(1, b)).toFixed(1);
-const band = (lo, hi) => d.filter(x => x.z >= lo && x.z < hi).length;
-console.log(`${rows.length} decisions from ${batch} (part ${part} of ${parts}), nets ${nets}, ${deals} deals, ${flags}, prior=1`);
-console.log(`  the prior changed the pick: ${d.length} (${pc(d.length, rows.length)}%)`);
-console.log(`  how far the search's own pick was ahead, in standard errors: under 1 ${band(0, 1)}, 1-2 ${band(1, 2)}, 2-3 ${band(2, 3)}, 3+ ${band(3, 1e9)}`);
-console.log(`  mean gap given up ${d.length ? (100 * d.reduce((a, x) => a + x.gap, 0) / d.length).toFixed(2) : "-"} points; mean k ${(rows.reduce((a, x) => a + x.k, 0) / Math.max(1, rows.length)).toFixed(4)}`);
-for (const x of d) console.log(`  ${x.s} (policy ${(100 * x.pS).toFixed(0)}%) -> ${x.p} (policy ${(100 * x.pP).toFixed(0)}%): ${(100 * x.gap).toFixed(2)} points, ${x.z.toFixed(1)} SE, at ${(100 * x.mean).toFixed(0)}%`);
-console.log("JSON " + JSON.stringify({ batch, part, parts, n: rows.length, differ: d.length, rows }));
+// every prior size and the group lift from the one search (22 Nov 2026, Fable: x1, x2, x4): the means and the policy's chances
+// are the search's whatever c is, so a pick at c is argmax of mean - lift + c × k × ln p, k the search's at c = 1
+const pc = (a, b) => (100 * a / Math.max(1, b)).toFixed(1);
+console.log(`${rows.length} decisions from ${batch} (part ${part} of ${parts}), nets ${nets}, ${deals} deals, ${flags}, full search`);
+const out = {};
+for (const c of [1, 2, 4]) for (const multi of [false, true]) {
+  const d = [];
+  for (const x of rows) {
+    const sc = o => o[0] - (multi ? o[2] : 0) + c * x.k * Math.log(Math.max(o[1], 1e-4)), byMean = [...x.o].sort((a, b) => b[0] - a[0])[0];
+    const pk = x.o.reduce((a, o) => (sc(o) > sc(a) ? o : a));
+    if (pk !== byMean) d.push({ gap: byMean[0] - pk[0], z: x.k ? (byMean[0] - pk[0]) / x.k : 0, s: byMean[3], p: pk[3], mean: byMean[0] });
+  }
+  const pts = (lo, hi) => d.filter(x => 100 * x.gap >= lo && 100 * x.gap < hi).length, sez = (lo, hi) => d.filter(x => x.z >= lo && x.z < hi).length;
+  const tag = `prior x${c}${multi ? " + group lift" : ""}`;
+  out[tag] = { overridden: d.length, of: rows.length };
+  console.log(`  ${tag}: overrides the search's pick in ${d.length} (${pc(d.length, rows.length)}%); gap given up, points: under 0.5 ${pts(0, 0.5)}, 0.5-1 ${pts(0.5, 1)}, 1-2 ${pts(1, 2)}, 2+ ${pts(2, 1e9)}; in standard errors: under 1 ${sez(0, 1)}, 1-2 ${sez(1, 2)}, 2+ ${sez(2, 1e9)}; mean ${d.length ? (100 * d.reduce((a, x) => a + x.gap, 0) / d.length).toFixed(2) : "-"} points`);
+  if (c === 4 && !multi) for (const x of d.filter(x => x.gap >= 0.02)) console.log(`    ${x.s} -> ${x.p}: ${(100 * x.gap).toFixed(2)} points at ${(100 * x.mean).toFixed(0)}%`);
+}
+console.log(`  mean k ${(rows.reduce((a, x) => a + x.k, 0) / Math.max(1, rows.length)).toFixed(4)}`);
+console.log("JSON " + JSON.stringify({ batch, part, parts, n: rows.length, out, rows }));

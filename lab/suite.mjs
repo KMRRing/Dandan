@@ -53,6 +53,9 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
   const nul = isNull(s, who, pick, seeded(7));
   out.push({ id: p.id, pass: !bad, margin, null: nul, pick: name(pick), top: r.list.slice(0, 4).map(o => [name(o.move), Math.round(1000 * o.mean) / 10]) });
   console.log(`${bad ? "FAIL" : "pass"}  ${p.id}: picks ${name(pick)}${nul ? " (a null move)" : ""}, margin ${margin ?? "-"} points; ${r.list.slice(0, 4).map(o => `${name(o.move)} ${(100 * o.mean).toFixed(1)}${o.prior != null ? ` (policy ${(100 * o.prior).toFixed(0)}%)` : ""}`).join(", ")}`);
+  // the group lift (22 Nov 2026, Fable): one card's several ways, measured deal by deal (dandan-think.js groupLifts)
+  const lifts = r.list.filter(o => o.groupLift > 0);
+  if (lifts.length) console.log(`      group lift: ${[...new Map(lifts.map(o => [`${name(o.move)} x${o.groupN}`, (100 * o.groupLift).toFixed(2)])).entries()].map(([k, v]) => `${k} ${v} points`).join(", ")}`);
 }
 const passed = out.filter(x => x.pass).length, margins = out.map(x => x.margin).filter(x => x != null);
 console.log(`suite: ${passed} of ${out.length} passed, mean margin ${(margins.reduce((a, b) => a + b, 0) / Math.max(1, margins.length)).toFixed(1)} points, ${out.filter(x => x.null).length} null picks (nets ${nets}, ${deals === "policy" ? "policy alone, no search; numbers are its chances, margins in points of probability" : `${deals} deals, ${flags || "no flags"}`})`);

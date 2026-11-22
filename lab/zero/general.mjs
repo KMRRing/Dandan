@@ -8,7 +8,8 @@ import { zeroOptions, PASS } from "../../dandan-zero.js";
 import { generalView, valueView, generalMarks, onPool, viewSize, VIEW_VERSIONS, POOL } from "../../dandan-general.js";
 import { Scry12 } from "./scry12.mjs";
 import { ScryG } from "./scryg.mjs";
-import { determinize } from "../../dandan-think.js";
+import { determinize, seedOf } from "../../dandan-think.js";
+import { seeded, mix } from "../../seats.js";
 import { Wall } from "./wall.mjs";
 import { DECK } from "../../dandan-cards.js";
 import { NN } from "../../dandan-zeroview.js";
@@ -119,15 +120,21 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
   // two (gapSe, dandan-think.js: deal by deal over shared deals), so the policy decides only what the search's own noise can't
   // (about 0.01 at 256 deals, half that at 1,024). A tie-break, not AlphaZero's steering of the search. The means are unchanged:
   // they are the policy's targets and the resign check's. Questions (options outside zeroOptions) are left as the search ranks them.
-  const withPrior = (r, s, seat, c) => {
+  // multi (22 Nov 2026, Fable): each option's score also less its group's lift (dandan-think.js groupLifts): the best of one
+  // card's several ways is noisily high, by the part of their noise they don't share
+  const withPrior = (r, s, seat, c, multi = false) => {
     if (r.only || !r.list || r.list.length < 2) return r;
     const ms = zeroOptions(s, seat), at = new Map(ms.map((m, i) => [JSON.stringify(m), i]));
     if (!r.list.every(o => at.has(JSON.stringify(o.move)))) return r;
     const byMean = [...r.list].sort((a, b) => b.mean - a.mean), se = byMean[1].gapSe ?? byMean[0].gapSe;
-    if (se == null) return r;
-    const k = c * se, p = player.probs(s, seat, ms);
+    if (se == null && c) return r;
+    const k = c ? c * se : 0, p = c ? player.probs(s, seat, ms) : null;
     let best = null;
-    for (const o of r.list) { o.prior = p[at.get(JSON.stringify(o.move))]; o.score = o.mean + k * Math.log(Math.max(o.prior, 1e-4)); if (!best || o.score > best.score) best = o; }
+    for (const o of r.list) {
+      o.prior = p ? p[at.get(JSON.stringify(o.move))] : null;
+      o.score = o.mean - (multi ? o.groupLift || 0 : 0) + (p ? k * Math.log(Math.max(o.prior, 1e-4)) : 0);
+      if (!best || o.score > best.score) best = o;
+    }
     return { ...r, best: best.move, list: [...r.list].sort((a, b) => b.score - a.score), priorK: k };
   };
   return {
@@ -144,8 +151,11 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
       if (walls) walls[seat].ensure();
       const tc = new Float32Array(POOL.V), ta = new Float32Array(POOL.V);
       let tans = 0;
+      // seeded from what the seat sees (22 Nov 2026): with Math.random here the same position got different means on every
+      // run (the suite's verdicts and the honesty test's means moved by a point or two); now one position, one search
+      const rw = seeded(mix(seedOf(s, seat), 0x07e5));
       for (let w = 0; w < OTHER_WORLDS; w++) {
-        const world = (walls && walls[seat].sample(Math.random)) || determinize(s, seat, Math.random, false, false, (pool, n, rng) => sd(pool, n, rng) || pool);
+        const world = (walls && walls[seat].sample(rw)) || determinize(s, seat, rw, false, false, (pool, n, rng) => sd(pool, n, rng) || pool);
         const b = filters[o].belief(world), c = on(b.counts), a = on(b.any);
         for (let k = 0; k < POOL.V; k++) { tc[k] += c[k] / OTHER_WORLDS; ta[k] += a[k] / OTHER_WORLDS; }
         tans += (b.ans ?? 0) / OTHER_WORLDS;
@@ -155,10 +165,10 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
       return { deal: wd ? (pool, n, rng) => wd(pool, n, rng) || sd(pool, n, rng) : sd };
     },
     think(s, seat, deals, extra = {}) {
-      const { qtree, prior, ...rest } = extra;
+      const { qtree, prior, multi, ...rest } = extra;
       const r = think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge, focus: player.focus,
         ...(qtree ? { qfocus: player.qfocus } : {}), ...this.root(s, seat), ...rest });
-      return prior && policy ? withPrior(r, s, seat, prior) : r;
+      return (prior && policy) || multi ? withPrior(r, s, seat, prior && policy ? prior : 0, !!multi) : r;
     },
   };
 }

@@ -42,6 +42,8 @@ const DEEPER = {
   ...(flag("decided") ? { decided: (([at, hi, lo]) => ({ at, hi, lo }))(flag("decided").split(":").map(Number)) } : {}),
   // prior=<k> (19 Nov 2026, Korbi: "do both"): the policy as the search's prior, the general nets only (lab/zero/general.mjs withPrior)
   ...(flag("prior") ? { prior: Number(flag("prior")) } : {}),
+  // multi=1 (22 Nov 2026, Fable): the group lift off one card's several ways (lab/zero/general.mjs withPrior)
+  ...(flag("multi") ? { multi: true } : {}),
 };
 const CAP = flag("cap") ? (([share, d]) => ({ share, deals: d || 64 }))(flag("cap").split(":").map(Number)) : null;
 // priorsplit (19 Nov 2026, Fable): the prior on even shards only, so a batch reads with and without it side by side; the game
