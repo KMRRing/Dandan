@@ -99,9 +99,14 @@ if (BRANCH && flag("bsrc")) {
   POINTS = branchPoints(games, decisions, weights);
   console.error(`branch points: ${POINTS.length} from ${games.length} games in ${chosen.length} parts`);
 }
+// arb=<file> (22 Nov 2026, Fable's acceptance test b; points from lab/arbiter-points.mjs): the play-out arbiter. Shard 2k plays
+// point k with the search's top move forced, shard 2k+1 with the policy's; game j of either shard re-deals with the same seed, so
+// the two sides are paired game by game. The nets play both seats from there, deep as asked, and never resign.
+const ARB = flag("arb") ? JSON.parse(fs.readFileSync(flag("arb"), "utf8")) : null, ARBP = ARB ? ARB[Math.floor(shard / 2)] : null;
+const ARBSIDE = shard % 2 ? "policy" : "search";
 fs.writeFileSync(out, "");
-for (let g = first; g < first + n; g++) {
-  const seed = seed0 + g, lines = [], rows = [];
+for (let g = first; g < first + n && (!ARB || ARBP); g++) {
+  const seed = ARB ? seed0 + 1000 * Math.floor(shard / 2) + (g - first) : seed0 + g, lines = [], rows = [];
   let G = newRecord(rules, { seats: 2, seed, now: 0 }), explored3 = null, lastTurn = -1;
   // a game against the previous nets: the seat they play, taking turns game by game
   const R = rivalOf(g), rival = R?.brain || null, VS_NETS = R?.nets || "";
@@ -116,8 +121,9 @@ for (let g = first; g < first + n; g++) {
   // a branch game: the source's moves replayed up to the branch point with its randomness, then the hidden cards re-dealt from
   // the view of the player to move; this game's own randomness from there (branch-lib.mjs rngSeedOf)
   let i0 = 0, branch = null, force = null;
-  if (POINTS.length && vsSeat < 0 && seeded(mix(seed, 4747))() < BRANCH) {
-    const p = drawPoint(POINTS, seeded(mix(seed, 4848))), src = p.g;
+  const arbPoint = ARBP ? { kind: "A", g: { seed: ARBP.src, moves: ARBP.moves }, at: ARBP.at, force: ARBP[ARBSIDE] } : null;
+  if (arbPoint || POINTS.length && vsSeat < 0 && seeded(mix(seed, 4747))() < BRANCH) {
+    const p = arbPoint || drawPoint(POINTS, seeded(mix(seed, 4848))), src = p.g;
     let H = newRecord(rules, { seats: 2, seed: src.seed, now: 0 }), at = -1;
     for (let k = 0; k < src.moves.length && !rules.over(H.state); k++) {
       const st0 = H.state;
@@ -132,7 +138,7 @@ for (let g = first; g < first + n; g++) {
     if (at >= 0 && !rules.over(H.state)) {
       const seat = rules.toMove(H.state);
       G = { ...H, state: redeal(rules, H.state, seat, seed) }; i0 = at;
-      branch = { src: src.seed, at, seat, kind: p.kind, ...(p.force ? { force: p.force } : {}) };
+      branch = { src: src.seed, at, seat, kind: p.kind, ...(p.force ? { force: p.force } : {}), ...(arbPoint ? { side: ARBSIDE, point: Math.floor(shard / 2), band: ARBP.band } : {}) };
       if (p.force) force = p.force;
     } else brain.reset();
   }
@@ -148,7 +154,7 @@ for (let g = first; g < first + n; g++) {
     let move;
     // the other side of a close call: the branch's first move, if still legal after the re-deal (not written as a lesson)
     const forced = force && i === i0 && ms.some(m => key(m) === key(force)) ? force : null;
-    if (forced) move = forced;
+    if (forced) { move = forced; branch.forced = 1; }   // forced: the branch's move was still legal after the re-deal
     else if (ms.length <= 1) move = ms[0] ?? PASS;
     else if (random) move = ms[Math.floor(rng() * ms.length)];
     else {
