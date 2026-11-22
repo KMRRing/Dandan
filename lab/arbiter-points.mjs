@@ -44,7 +44,8 @@ outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part)
             const pc = d.c.find(c => key(c.mv) === key(pTop));
             points.push({ src: g.seed, at: i, seat: who, v: d.v, band: bandOf(d.v), gap, search: sTop, policy: pTop,
               pSearch: p[at.get(key(sTop))], pPolicy: p[at.get(key(pTop))], vPolicy: pc ? val(pc) : null, vSearch: val(byVal[0]),
-              rank: 1 + byVal.findIndex(c => key(c.mv) === key(pTop)),   // the policy's favourite among the search's values (2: its second; 0: not searched) played: key(m) === key(sTop) ? "search" : key(m) === key(pTop) ? "policy" : "other", part: local ? null : n,
+              // rank: the policy's favourite among the search's values (2: its second; 0: not searched)
+              rank: 1 + byVal.findIndex(c => key(c.mv) === key(pTop)), played: key(m) === key(sTop) ? "search" : key(m) === key(pTop) ? "policy" : "other", part: local ? null : n,
               ...(local ? { moves: g.moves.slice(0, i + 1) } : {}) });   // the source game: its part in the store (zero-play reads it), or its moves
             taken++; inBand[groupOf(d.v)] = (inBand[groupOf(d.v)] || 0) + 1;
             if (points.length >= Number(most)) break outer;
