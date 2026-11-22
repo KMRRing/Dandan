@@ -54,7 +54,9 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
     const top = (xs, f) => xs.sort((x, y) => f(y) - f(x))[0], badK = rk.list.filter(o => isBad(o.move)), okK = rk.list.filter(o => !isBad(o.move));
     const bk = top([...badK], vk), ok = top([...okK], vk);
     const rm = o => o.first ?? o.mean, rbk = top([...badK], rm), rok = top([...okK], rm);   // raw: the search's own means, no prior, no lift
-    per.push({ bad: isBad(rk.best), margin: bk && ok ? 100 * (vk(ok) - vk(bk)) : null, raw: rbk && rok ? 100 * (rm(rok) - rm(rbk)) : null });
+    // rawFinal (Fable 15:57Z): at the pick's own depth (the means after the deeper looks), so scored less rawFinal is the prior and lift alone
+    const fm = o => o.mean, fbk = top([...badK], fm), fok = top([...okK], fm);
+    per.push({ bad: isBad(rk.best), margin: bk && ok ? 100 * (vk(ok) - vk(bk)) : null, raw: rbk && rok ? 100 * (rm(rok) - rm(rbk)) : null, rawFinal: fbk && fok ? 100 * (fm(fok) - fm(fbk)) : null });
   }
   const r = deals === "policy" ? policyPick(brain, s, who) : brain.think(s, who, Number(deals), extraOf(flags)), pick = r.best;
   const bad = isBad(pick);
@@ -69,13 +71,15 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
   console.log(`${bad ? "FAIL" : "pass"}  ${p.id}: picks ${name(pick)}${nul ? " (a null move)" : ""}, margin ${margin ?? "-"} points; ${r.list.slice(0, 4).map(o => `${name(o.move)} ${(100 * o.mean).toFixed(1)}${o.prior != null ? ` (policy ${(100 * o.prior).toFixed(0)}%)` : ""}`).join(", ")}`);
   const rm0 = o => o.first ?? o.mean, best0 = (xs, f) => [...xs].sort((x, y) => f(y) - f(x))[0];
   const rbad0 = best0(r.list.filter(o => isBad(o.move)), rm0), rok0 = best0(r.list.filter(o => !isBad(o.move)), rm0), raw = rbad0 && rok0 ? 100 * (rm0(rok0) - rm0(rbad0)) : null;
+  const fm0 = o => o.mean, fbad0 = best0(r.list.filter(o => isBad(o.move)), fm0), fok0 = best0(r.list.filter(o => !isBad(o.move)), fm0), rawFinal = fbad0 && fok0 ? 100 * (fm0(fok0) - fm0(fbad0)) : null;
   if (SEEDS > 1) {
-    const all = [{ bad, margin, raw }, ...per], ms = all.map(x => x.margin).filter(x => x != null), m = ms.reduce((a, b) => a + b, 0) / Math.max(1, ms.length);
+    const all = [{ bad, margin, raw, rawFinal }, ...per], ms = all.map(x => x.margin).filter(x => x != null), m = ms.reduce((a, b) => a + b, 0) / Math.max(1, ms.length);
     const se = ms.length > 1 ? Math.sqrt(ms.reduce((a, x) => a + (x - m) ** 2, 0) / (ms.length - 1) / ms.length) : null;
     Object.assign(out[out.length - 1], { seeds: all.length, passes: all.filter(x => !x.bad).length, meanMargin: m, marginSe: se });
     const rs = all.map(x => x.raw).filter(x => x != null), rmn = rs.reduce((a, b) => a + b, 0) / Math.max(1, rs.length), rse = rs.length > 1 ? Math.sqrt(rs.reduce((a, x) => a + (x - rmn) ** 2, 0) / (rs.length - 1) / rs.length) : null;
-    Object.assign(out[out.length - 1], { rawMargin: rmn, rawSe: rse });
-    console.log(`      over ${all.length} seeds: passes ${all.filter(x => !x.bad).length}, margin ${m.toFixed(2)} ± ${se?.toFixed(2) ?? "-"} points; raw (no prior, no lift) ${rmn.toFixed(2)} ± ${rse?.toFixed(2) ?? "-"}`);
+    const fs5 = all.map(x => x.rawFinal).filter(x => x != null), fmn = fs5.reduce((a, b) => a + b, 0) / Math.max(1, fs5.length), fse = fs5.length > 1 ? Math.sqrt(fs5.reduce((a, x) => a + (x - fmn) ** 2, 0) / (fs5.length - 1) / fs5.length) : null;
+    Object.assign(out[out.length - 1], { rawMargin: rmn, rawSe: rse, rawFinal: fmn, rawFinalSe: fse });
+    console.log(`      over ${all.length} seeds: passes ${all.filter(x => !x.bad).length}, margin ${m.toFixed(2)} ± ${se?.toFixed(2) ?? "-"} points; raw at the first look ${rmn.toFixed(2)} ± ${rse?.toFixed(2) ?? "-"}, raw at the pick's depth ${fmn.toFixed(2)} ± ${fse?.toFixed(2) ?? "-"} (no prior, no lift)`);
   }
   // the group lift (22 Nov 2026, Fable): one card's several ways, measured deal by deal (dandan-think.js groupLifts)
   const lifts = r.list.filter(o => o.groupLift > 0);
