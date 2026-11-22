@@ -6,12 +6,13 @@ import fs from "node:fs";
 import { rules } from "../dandan-rules.js";
 import { applyMove, seeded } from "../seats.js";
 import { recordOf, rngSeedOf } from "./zero/branch-lib.mjs";
-import { DECK, islands, typesOf, isLandId } from "../dandan-core.js";
+import { DECK, islands, typesOf, isLandId, defOf } from "../dandan-core.js";
 
 const islandCard = x => typesOf({ id: x }).includes("Island");
 
 const [SH, SHS, OUT, ids] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5]];
 // by side (22 Nov 2026, Fable: both engines in a match against live Monte): a rival game's rival seat counts under its nets
+const WHY = [], DEC = new Map();
 const real = Math.random, fresh = () => ({ games: 0, casts: 0, doomed: 0, doomedWithIslandInHand: 0, doomedLandUnplayed: 0, turns: 0, held: 0, heldIsland: 0, facedDoomed: 0, answeredDoomed: 0 });
 const SIDES = new Map(), sideOf = (game, seat) => (game.vs ? (seat === game.vs.seat ? `rival ${game.vs.nets}` : "the batch's nets") : "self-play");
 const side = (game, seat) => { const k = sideOf(game, seat); if (!SIDES.has(k)) SIDES.set(k, fresh()); return SIDES.get(k); };
@@ -26,7 +27,16 @@ function replay(game) {
       else {
         const T = side(game, who);
         T.facedDoomed++;
-        if (m.t === "cast" && (m.targets || []).some(t => t.k === "s" && t.sid === watch.sid)) T.answeredDoomed++;
+        if (m.t === "cast" && (m.targets || []).some(t => t.k === "s" && t.sid === watch.sid)) {
+          T.answeredDoomed++;
+          // why (Korbi 23:10: is it the policy, or injected randomness?): the game's one random move (explore3), whether the caster
+          // could still get an Island before it resolves (an untapped land of its that fetches an Island: then it was not doomed),
+          // and the search's own values for the answer and for passing, from the decision line
+          const fetch = s.bf.some(p => p.ctl === watch.by && !p.tapped && (defOf(p.id).fetch || []).includes("Island"));
+          const d = DEC.get(`${game.seed}:${i}`), key = x => JSON.stringify(x), val = c => c.d ?? c.q;
+          const ans = d?.c?.find(c => key(c.mv) === key(m)), pass = d?.c?.find(c => c.mv?.t === "pass");
+          WHY.push({ side: sideOf(game, who), card: DECK[m.card], random: game.explore3?.i === i, fetch, ans: ans ? val(ans) : null, pass: pass ? val(pass) : null });
+        }
         watch = null;
       }
     }
@@ -59,10 +69,12 @@ const store = local ? null : await (await import("./lib.mjs")).labStore();
 const parts = local ? [ids.slice(5)] : (await Promise.all(ids.split(",").map(id => store.list(`results/${id}/`)))).flat().filter(n => /\/part-\d+\.jsonl$/.test(n)).sort().filter((_, k) => k % SHS === SH);
 for (const name of parts) for (const line of ((local ? fs.readFileSync(name, "utf8") : await store.get(name)) || "").split("\n")) {
   if (!line || line.startsWith('{"v":1')) continue;
+  if (line.startsWith('{"g"')) { const d = JSON.parse(line); delete d.x; DEC.set(`${d.g}:${d.i}`, d); continue; }
   const o = JSON.parse(line);
   if (o.game != null && o.moves) replay(o);
 }
 const pc = (a, b) => `${a} of ${b} (${(100 * a / Math.max(1, b)).toFixed(1)}%)`;
+for (const w of WHY) console.log(`answered doomed Dandân: ${w.side} with ${w.card}; the game's random move: ${w.random ? "yes" : "no"}; caster could fetch an Island: ${w.fetch ? "yes" : "no"}; search: answer ${w.ans == null ? "-" : (100 * w.ans).toFixed(1)}, pass ${w.pass == null ? "-" : (100 * w.pass).toFixed(1)}`);
 for (const [k, T] of SIDES) console.log(`${k}: facing the other seat's doomed Dandân on the stack ${T.facedDoomed} times, answered it with a spell aimed at it ${pc(T.answeredDoomed, T.facedDoomed)}`);
 for (const [k, T] of SIDES) console.log(`${k}: ${T.games} games: Dandân cast with no Island of its own ${pc(T.doomed, T.casts)} of casts; of those, an Island in hand ${T.doomedWithIslandInHand}, and its land drop unused in its own main phase ${T.doomedLandUnplayed}. Turns ending with a land in hand and none played: ${pc(T.held, T.turns)} (an Island among them ${T.heldIsland})`);
 if (OUT && OUT !== "-") fs.writeFileSync(OUT, JSON.stringify(Object.fromEntries(SIDES)) + "\n");
