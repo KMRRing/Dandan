@@ -15,7 +15,7 @@ import fs from "node:fs";
 
 const [batch, nets, most = "50", part = "0", parts = "1", deals = "1024", flags = "deeper=0.03~deepmax=4"] = process.argv.slice(2);
 const fl = flags.split("~"), num = k => Number(fl.find(x => x.startsWith(`${k}=`))?.split("=")[1]);
-const BR = fl.includes("bestreply");
+const BR = fl.includes("bestreply") || fl.includes("commit"), ALT = fl.includes("commit") ? { commit: true } : { bestReply: true }, ALTNAME = fl.includes("commit") ? "explore-then-commit" : "best-reply scoring";
 const extra = { prior: num("prior") || 1, deeper: { gap: num("deeper") || 0.03, ...(num("deepmax") ? { max: num("deepmax") } : {}) } };
 const J = x => JSON.parse(JSON.stringify(x)), real = Math.random, name = m => `${m.t}${m.card != null ? " " + DECK[m.card] : ""}`;
 // a decision in about 1 in 12, chosen by a hash of game and move, so the parts share nothing and a rerun picks the same ones
@@ -42,7 +42,7 @@ outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part)
           // the pick it makes, and what that pick gives up by the plain search's means
           if (BR) {
             Math.random = seeded(g.seed + i);
-            const r1 = brain.think(J(s), who, Number(deals), { ...extra, bestReply: true });
+            const r1 = brain.think(J(s), who, Number(deals), { ...extra, ...ALT });
             Math.random = real;
             const mean0 = mv => r.list.find(o => JSON.stringify(o.move) === JSON.stringify(mv))?.mean;
             row.br = { pick0: name(r.best), pick1: name(r1.best), same: JSON.stringify(r.best) === JSON.stringify(r1.best), gap: (mean0(r.best) ?? 0) - (mean0(r1.best) ?? mean0(r.best) ?? 0), v: mean0(r.best) };
@@ -80,7 +80,7 @@ for (const c of [1, 2, 4]) for (const multi of [false, true]) {
 }
 if (BR) {
   const ch = rows.filter(x => x.br && !x.br.same);
-  console.log(`  best-reply scoring (prior x${num("prior") || 1}): changes the pick in ${ch.length} of ${rows.length} (${pc(ch.length, rows.length)}%); the plain search's means give up: under 0.5 ${ch.filter(x => 100 * x.br.gap < 0.5).length}, 0.5-1 ${ch.filter(x => 100 * x.br.gap >= 0.5 && 100 * x.br.gap < 1).length}, 1-2 ${ch.filter(x => 100 * x.br.gap >= 1 && 100 * x.br.gap < 2).length}, 2+ ${ch.filter(x => 100 * x.br.gap >= 2).length} points`);
+  console.log(`  ${ALTNAME} (prior x${num("prior") || 1}): changes the pick in ${ch.length} of ${rows.length} (${pc(ch.length, rows.length)}%); the plain search's means give up: under 0.5 ${ch.filter(x => 100 * x.br.gap < 0.5).length}, 0.5-1 ${ch.filter(x => 100 * x.br.gap >= 0.5 && 100 * x.br.gap < 1).length}, 1-2 ${ch.filter(x => 100 * x.br.gap >= 1 && 100 * x.br.gap < 2).length}, 2+ ${ch.filter(x => 100 * x.br.gap >= 2).length} points`);
   for (const x of ch) console.log(`    ${x.br.pick0} -> ${x.br.pick1}: ${(100 * x.br.gap).toFixed(2)} points at ${(100 * x.br.v).toFixed(0)}%`);
 }
 console.log(`  mean k ${(rows.reduce((a, x) => a + x.k, 0) / Math.max(1, rows.length)).toFixed(4)}`);

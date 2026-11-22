@@ -46,6 +46,8 @@ const DEEPER = {
   ...(flag("multi") ? { multi: true } : {}),
   // bestreply=1 (22 Nov 2026, Fable 19:08Z): a root move scored by the other seat's best first reply (dandan-think.js)
   ...(flag("bestreply") ? { bestReply: true } : {}),
+  // commit=1 (22 Nov 2026, Fable 19:40Z): explore, then commit, at the other seat's first reply (dandan-think.js)
+  ...(flag("commit") ? { commit: true } : {}),
 };
 const CAP = flag("cap") ? (([share, d]) => ({ share, deals: d || 64 }))(flag("cap").split(":").map(Number)) : null;
 // priorsplit (19 Nov 2026, Fable): the prior on even shards only, so a batch reads with and without it side by side; the game

@@ -371,7 +371,7 @@ function tableFor(s, seat) {
  */
 export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null, focus = null, options = null, qfocus = null, cut = Infinity) {
   const opp = other(seat), path = [];
-  let node = root, growing = true, played = 0;
+  let node = root, growing = true, played = 0, firstReply = !!COMMIT;
   for (let i = 0; i < 4000 && !c.over; i++) {
     if (c.turn >= to && !c.stack.length) break;
     const who = toMove(c);
@@ -390,7 +390,18 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
         if (table) { const k = posKey(c, seat, table.reads); node = table.get(k); if (!node) { node = newNode(); table.set(k, node); fresh = true; } }
         // a decision's children are keyed by who decides and where, as well as by the move: in other deals the same
         // line can reach another seat's decision first (a hand with nothing to do there is passed over)
-        const pick = choose(node, ms, c, seat, who, `${who}${c.step}${c.stack.length}${c.pending?.t ?? ""}:`, explore, !!open);
+        const at0 = `${who}${c.step}${c.stack.length}${c.pending?.t ?? ""}:`;
+        let pick = null;
+        if (firstReply && who === opp) {
+          firstReply = false;
+          if (COMMIT.phase === 1) {
+            let bm = null, bv = -Infinity;
+            for (const x of ms) { const st = COMMIT.stats.get(key(x)); if (st && st.n >= 2 && st.t / st.n > bv) { bv = st.t / st.n; bm = x; } }
+            if (bm) pick = forcePick(node, bm, c, seat, who, at0);
+          }
+        }
+        if (!pick) pick = choose(node, ms, c, seat, who, at0, explore, !!open);
+        if (COMMIT && COMMIT.phase === 0 && who === opp && COMMIT.cr == null) COMMIT.cr = key(pick.m);
         m = pick.m;
         path.push([pick.k, who]);
         if (table) { if (fresh) growing = false; }
@@ -434,6 +445,18 @@ let WATCH = null;
 // bestReply (lab, 22 Nov 2026, Fable 19:08Z): each line notes the other seat's first decision after the root move: what it played
 // (fr) and what it could have (fo), so a root move can be scored by the reply best for the other seat (thinkOnce, below)
 let BEST_REPLY = false;
+// commit (lab, 22 Nov 2026, Fable 19:40Z: explore, then commit, at the other seat's first reply only): set by thinkOnce for each
+// root move and deal; phase 0 (the first quarter of the deals) lets the tree choose that reply as ever and notes it (cr); phase 1
+// plays, of the replies offered there, the one with the best mean for the other seat over that root move's phase-0 deals
+let COMMIT = null;
+function forcePick(node, m, c, seat, who, at) {
+  node.n++;
+  const sig = at + sigOf(m, c, seat, who);
+  let k = node.kids.get(sig);
+  if (!k) { k = { n: 0, w: 0, avail: 0, node: null }; node.kids.set(sig, k); }
+  k.avail++;
+  return { k, m };
+}
 function where(c, seat) {
   const opp = other(seat);
   let d = 0, D = 0;
@@ -490,9 +513,9 @@ export function think(s, seat, opts = {}) {
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && isDeep(c)).sort((a, b) => b.mean - a.mean), ...list.filter(c => !isDeep(c))], deeper: looks };
 }
-function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null, decided = null, watch = null, bestReply = false } = {}) {
+function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null, decided = null, watch = null, bestReply = false, commit = false } = {}) {
   const t0 = Date.now();
-  WATCH = watch; BEST_REPLY = !!bestReply;
+  WATCH = watch; BEST_REPLY = !!bestReply; COMMIT = null;
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
   // read Medium's scores); weigh false: hidden cards dealt without dandan-reads.js's tells (which read Medium's play)
   const cands = (options ? options(s, seat) : candidates(s, seat, { wide, all, rank })).filter(m => !pick || pick.has(key(m)));
@@ -543,6 +566,8 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
   if (table) table.reads = merge === "reads";
   let lead = -1, steadyLooks = 0;
   let alive = cands.map((_, i) => i).filter(i => repOf[i] === i), d = 0;
+  // commit: the first quarter of the deals explores the other seat's first reply; the rest commit to its best so far
+  const commitFrom = Math.max(8, Math.floor(deals / 4)), cstats = cands.map(() => new Map());
   while (d < deals && alive.length > 1) {
     const rng = seeded(mix(seed, d + 1));
     const base = determinize(s, seat, rng, weigh, open, deal), runSeed = mix(seed ^ 0x5eed, d + 7);
@@ -551,8 +576,11 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       const res = act(c, seat, cands[i], { rng: r, quiet: true });
       const at = {};
       if (cands[i].t === "cast" && typeof res !== "string") { const top = c.stack[c.stack.length - 1]; if (top && top.ctl === seat) at.w = top.sid; }
+      const ph = commit ? (d < commitFrom ? 0 : 1) : null;
+      if (commit) COMMIT = { phase: ph, stats: cstats[i], cr: null };
       if (typeof res === "string") vals[i].push(-1);
       else vals[i].push(playOne(i, c, r, at, runSeed));
+      if (commit) { if (ph === 0 && COMMIT.cr != null && vals[i][vals[i].length - 1] >= 0) { const st = cstats[i].get(COMMIT.cr) || cstats[i].set(COMMIT.cr, { t: 0, n: 0 }).get(COMMIT.cr); st.t += 1 - vals[i][vals[i].length - 1]; st.n++; } COMMIT = null; }
       seen[i].push(at);
     }
     d++;
@@ -611,6 +639,9 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       return best ?? x;
     });
   }
+  // commit: each move scored on the commit deals only (the same deals for every move, so the pairing holds); a move with too few
+  // keeps all its deals
+  if (commit) for (let i = 0; i < n; i++) if (vals[i].length >= commitFrom + 8) { vals[i] = vals[i].slice(commitFrom); seen[i] = seen[i].slice(commitFrom); }
   // a twin takes its class's values, and is in the race while its class is
   if (twins) { for (let i = 0; i < n; i++) if (repOf[i] !== i) { vals[i] = vals[repOf[i]]; seen[i] = seen[repOf[i]]; } alive = cands.map((_, i) => i).filter(i => alive.includes(repOf[i])); }
   const list = cands.map((move, i) => {
