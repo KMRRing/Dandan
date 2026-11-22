@@ -34,7 +34,9 @@ function policyPick(brain, s, who) {
   return { best: list[0].move, list };
 }
 // SUITE_ONLY=<id,id>: just those positions (a quick look at a new flag)
-const only = process.env.SUITE_ONLY?.split(",");
+// --only=<id,id> and --seeds=<n> as arguments too, for runs on a GitHub runner (lab-read takes arguments, not env)
+const argOf = k => process.argv.find(a => a.startsWith(`--${k}=`))?.slice(k.length + 3);
+const only = (argOf("only") || process.env.SUITE_ONLY)?.split(",");
 for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
   const rec = JSON.parse(execSync(`git show FETCH_HEAD:games/${p.game}.json`, { encoding: "utf8", maxBuffer: 1 << 28 })), g = rec.game, moves = JSON.parse(g.moves);
   let G = newRecord(shownRules, { seats: 2, seed: g.seed, seq: g.seq, options: g.options || {}, now: g.started, prev: { state: { over: true, winner: 1 - g.state.first } } });
@@ -44,7 +46,7 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
   const s = shownRules.restore(JSON.parse(JSON.stringify(G.state))), who = moves[p.move][0];
   // SUITE_SEEDS=<n> (22 Nov 2026, Fable: a seed freezes one draw of the noise, it doesn't remove it): the search n times with
   // fresh salts, its verdict read as the mean margin over them with its standard error, and how many of the n pass
-  const SEEDS = deals === "policy" ? 1 : Number(process.env.SUITE_SEEDS || 1), per = [];
+  const SEEDS = deals === "policy" ? 1 : Number(argOf("seeds") || process.env.SUITE_SEEDS || 1), per = [];
   for (let k = 1; k < SEEDS; k++) {
     const rk = brain.think(s, who, Number(deals), { ...extraOf(flags), salt: 0x5eed + k }), vk = o => o.score ?? o.first ?? o.mean;
     const bk = rk.list.find(o => o.move.t === p.bad.t && DECK[o.move.card] === p.bad.name), ok = rk.list.filter(o => o !== bk).sort((x, y) => vk(y) - vk(x))[0];
