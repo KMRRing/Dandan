@@ -12,14 +12,24 @@ const islandCard = x => typesOf({ id: x }).includes("Island");
 
 const [SH, SHS, OUT, ids] = [Number(process.argv[2]), Number(process.argv[3]), process.argv[4], process.argv[5]];
 // by side (22 Nov 2026, Fable: both engines in a match against live Monte): a rival game's rival seat counts under its nets
-const real = Math.random, fresh = () => ({ games: 0, casts: 0, doomed: 0, doomedWithIslandInHand: 0, doomedLandUnplayed: 0, turns: 0, held: 0, heldIsland: 0 });
+const real = Math.random, fresh = () => ({ games: 0, casts: 0, doomed: 0, doomedWithIslandInHand: 0, doomedLandUnplayed: 0, turns: 0, held: 0, heldIsland: 0, facedDoomed: 0, answeredDoomed: 0 });
 const SIDES = new Map(), sideOf = (game, seat) => (game.vs ? (seat === game.vs.seat ? `rival ${game.vs.nets}` : "the batch's nets") : "self-play");
 const side = (game, seat) => { const k = sideOf(game, seat); if (!SIDES.has(k)) SIDES.set(k, fresh()); return SIDES.get(k); };
 function replay(game) {
   if (game.branch) return;   // branch games start mid-game from another (zero/branch-lib.mjs): left out here
-  let G = recordOf(rules, game);
+  let G = recordOf(rules, game), watch = null;   // watch: a doomed Dandân on the stack, { sid, by } (Fable 17:32Z: is it answered anyway?)
   for (let i = 0; i < game.moves.length; i++) {
     const [who, m] = game.moves[i], s = G.state;
+    // the other seat's reply to a doomed Dandân while it is on the stack: a spell aimed at it, or anything else (counted once)
+    if (watch && who !== watch.by) {
+      if (!s.stack.some(x => x.sid === watch.sid)) watch = null;
+      else {
+        const T = side(game, who);
+        T.facedDoomed++;
+        if (m.t === "cast" && (m.targets || []).some(t => t.k === "s" && t.sid === watch.sid)) T.answeredDoomed++;
+        watch = null;
+      }
+    }
     if (m.t === "cast" && DECK[m.card] === "Dandân") {
       const T = side(game, who);
       T.casts++;
@@ -34,6 +44,7 @@ function replay(game) {
     const r = applyMove(rules, G, who, m, 0);
     Math.random = real;
     if (r.error) return;
+    if (m.t === "cast" && DECK[m.card] === "Dandân" && !islands(s, who).length) { const top = r.G.state.stack[r.G.state.stack.length - 1]; if (top && top.ctl === who) watch = { sid: top.sid, by: who }; }
     if (r.G.state.turn !== s.turn) {
       const a = s.active, T = side(game, a), lands = s.hand[a].filter(isLandId);
       T.turns++;
@@ -52,5 +63,6 @@ for (const name of parts) for (const line of ((local ? fs.readFileSync(name, "ut
   if (o.game != null && o.moves) replay(o);
 }
 const pc = (a, b) => `${a} of ${b} (${(100 * a / Math.max(1, b)).toFixed(1)}%)`;
+for (const [k, T] of SIDES) console.log(`${k}: facing the other seat's doomed Dandân on the stack ${T.facedDoomed} times, answered it with a spell aimed at it ${pc(T.answeredDoomed, T.facedDoomed)}`);
 for (const [k, T] of SIDES) console.log(`${k}: ${T.games} games: Dandân cast with no Island of its own ${pc(T.doomed, T.casts)} of casts; of those, an Island in hand ${T.doomedWithIslandInHand}, and its land drop unused in its own main phase ${T.doomedLandUnplayed}. Turns ending with a land in hand and none played: ${pc(T.held, T.turns)} (an Island among them ${T.heldIsland})`);
 if (OUT && OUT !== "-") fs.writeFileSync(OUT, JSON.stringify(Object.fromEntries(SIDES)) + "\n");
