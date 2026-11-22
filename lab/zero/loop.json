@@ -1,22 +1,20 @@
 {
   "on": true,
   "note": "Zero's loop (lab/zero/loop.mjs): no gates and no yardstick matches (Korbi 17 Nov: the latest nets always play; matches are for training, not for demonstrating competence). Measured on each generation: 1 self-play game in 10 against the previous nets (Korbi 17 Nov; those games train too), Monte's test suite, the null-move rate. On since 17 Nov 15:15Z on Google (Korbi 17:12, Fable 15:10Z: the store moves to B2 between generations). From gm1 (17 Nov, Korbi: the loop on the general line): line general, the first step crowns gm1 (trained fresh on the stored games, general-train run 44078371393), the filler then plays gen:gm1 with 1 game in 10 against g12r-C.",
-  "gen": 25,
+  "gen": 26,
   "prefix": "zl",
-  "champion": "zl24",
+  "champion": "zl25",
   "flags": "deeper=0.03",
   "deals": 64,
   "games": 2400,
   "maxWindow": 30000,
   "value": "128x64",
   "trainArgs": "keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8",
-  "genFrom": 34,
+  "genFrom": 36,
   "windowFrom": 21,
   "nextFrom": 36,
-  "phase": "train",
+  "phase": "play",
   "log": [
-    "2026-11-19T03:17:25.413Z generation 19: zl19's dealer is in: its policy and value nets asked for",
-    "2026-11-19T05:03:12.392Z generation 19: zl19's nets are late: training asked for again (1)",
     "2026-11-19T06:43:12.852Z generation 19: zl19's nets are late: training asked for again (2)",
     "2026-11-19T06:57:30.000Z generation 19: zl19's policy training failed twice (the dispatcher turned --aux_res into \"--aux res\"; policy_np now also takes --aux-res, --aux-resp); training asked for by hand",
     "2026-11-19T08:43:11.713Z generation 19: zl19's nets are late: training asked for again (1)",
@@ -55,14 +53,16 @@
     "2026-11-22T00:49:25.094Z generation 24: zl24 (warm from zl23) plays from the filler's next batch",
     "2026-11-22T10:00:48.176Z generation 25: zl24 against zl23: 47.4% over 477 games",
     "2026-11-22T10:00:48.176Z generation 25: training zl25 (policy fresh, value and dealer warm from zl24) on zps023,zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035",
-    "2026-11-22T10:21:03.464Z generation 25: zl25's dealer is in: its policy and value nets asked for"
+    "2026-11-22T10:21:03.464Z generation 25: zl25's dealer is in: its policy and value nets asked for",
+    "2026-11-22T12:00:02.729Z generation 26: 20% branch games from zps023,zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035",
+    "2026-11-22T12:00:02.729Z generation 25: zl25 (warm from zl24) plays from the filler's next batch"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
   "yardPairs": 300,
   "yardSeed": 3100000,
   "vsEvery": 5,
-  "previous": "zl23",
+  "previous": "zl24",
   "line": "general",
   "scry": "g12h2",
   "history": [
@@ -373,6 +373,40 @@
       "failed": [
         "no-island-dandan-1",
         "no-island-dandan-4",
+        "no-island-dandan-5",
+        "mind-bend-island-1",
+        "mind-bend-island-2",
+        "predict-under-lapses-1"
+      ]
+    },
+    {
+      "gen": 25,
+      "nets": "zl25",
+      "from": "zl24",
+      "window": [
+        "zps023",
+        "zps024",
+        "zps025",
+        "zps026",
+        "zps027",
+        "zps028",
+        "zps029",
+        "zps030",
+        "zps031",
+        "zps032",
+        "zps033",
+        "zps034",
+        "zps035"
+      ],
+      "at": "2026-11-22T12:00:02.729Z",
+      "reading": {
+        "nets": "zl24",
+        "against": "zl23",
+        "n": 477,
+        "score": 0.47379454926624737
+      },
+      "suite": "6/10",
+      "failed": [
         "no-island-dandan-5",
         "mind-bend-island-1",
         "mind-bend-island-2",
@@ -6386,12 +6420,5 @@
   "branchShare": 0.2,
   "branchWeights": "%7B%22life%7C21%2B%22%3A1%2C%22life%7C15-20%22%3A1%2C%22life%7C9-14%22%3A1.5%2C%22library%7C21%2B%22%3A3.1%7D",
   "deepOn": true,
-  "refineFrom": 25,
-  "reading": {
-    "nets": "zl24",
-    "against": "zl23",
-    "n": 477,
-    "score": 0.47379454926624737
-  },
-  "challenger": "zl25"
+  "refineFrom": 25
 }

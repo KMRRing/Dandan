@@ -61,3 +61,5 @@ zps030  # 2026-11-21T12:55:08.050Z Zero's loop: made with the nets before zl23
 zps031  # 2026-11-21T12:55:08.050Z Zero's loop: made with the nets before zl23
 zps032  # 2026-11-22T00:49:25.094Z Zero's loop: made with the nets before zl24
 zps033  # 2026-11-22T00:49:25.094Z Zero's loop: made with the nets before zl24
+zps034  # 2026-11-22T12:00:02.729Z Zero's loop: made with the nets before zl25
+zps035  # 2026-11-22T12:00:02.729Z Zero's loop: made with the nets before zl25
