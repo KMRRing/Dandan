@@ -43,7 +43,8 @@ outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part)
           if (at.has(key(sTop)) && key(pTop) !== key(sTop)) {
             const pc = d.c.find(c => key(c.mv) === key(pTop));
             points.push({ src: g.seed, at: i, seat: who, v: d.v, band: bandOf(d.v), gap, search: sTop, policy: pTop,
-              pSearch: p[at.get(key(sTop))], pPolicy: p[at.get(key(pTop))], vPolicy: pc ? val(pc) : null, played: key(m) === key(sTop) ? "search" : key(m) === key(pTop) ? "policy" : "other", moves: g.moves.slice(0, i + 1) });   // to the decision and the move played there
+              pSearch: p[at.get(key(sTop))], pPolicy: p[at.get(key(pTop))], vPolicy: pc ? val(pc) : null, played: key(m) === key(sTop) ? "search" : key(m) === key(pTop) ? "policy" : "other", part: local ? null : n,
+              ...(local ? { moves: g.moves.slice(0, i + 1) } : {}) });   // the source game: its part in the store (zero-play reads it), or its moves
             taken++; inBand[bandOf(d.v)] = (inBand[bandOf(d.v)] || 0) + 1;
             if (points.length >= Number(most)) break outer;
           }
@@ -64,4 +65,6 @@ console.log(`${points.length} close calls (top two within ${100 * GAP} points, p
 console.log(`  by win chance: ${Object.entries(by).sort().map(([b, n]) => `${b}% ${n}`).join(", ")}`);
 console.log(`  as played: ${["search", "policy", "other"].map(k => `${k} ${points.filter(x => x.played === k).length}`).join(", ")}`);
 for (const x of points.slice(0, 15)) console.log(`  ${x.src}:${x.at} at ${(100 * x.v).toFixed(0)}%: search ${name(x.search)} vs policy ${name(x.policy)} (${(100 * x.pPolicy).toFixed(0)}% vs ${(100 * x.pSearch).toFixed(0)}%), gap ${(100 * x.gap).toFixed(2)}`);
-console.log("ARB " + JSON.stringify(points));   // lab/arbiter/points.json, for zero-play arb=
+// for lab/arbiter/points.json (zero-play arb=): base64, since the runner's log masks braces
+const b64 = Buffer.from(JSON.stringify(points)).toString("base64");
+for (let k = 0; k < b64.length; k += 4000) console.log(`ARB64 ${k / 4000} ${b64.slice(k, k + 4000)}`);

@@ -103,6 +103,12 @@ if (BRANCH && flag("bsrc")) {
 // point k with the search's top move forced, shard 2k+1 with the policy's; game j of either shard re-deals with the same seed, so
 // the two sides are paired game by game. The nets play both seats from there, deep as asked, and never resign.
 const ARB = flag("arb") ? JSON.parse(fs.readFileSync(flag("arb"), "utf8")) : null, ARBP = ARB ? ARB[Math.floor(shard / 2)] : null;
+// a point names its source game's part in the store: its moves are read from there, up to the decision
+if (ARBP && !ARBP.moves) {
+  const st = await (await import("../lib.mjs")).labStore();
+  const src = ((await st.get(ARBP.part)) || "").split("\n").filter(l => l.startsWith('{"game"')).map(l => JSON.parse(l)).find(x => x.seed === ARBP.src);
+  ARBP.moves = src ? src.moves.slice(0, ARBP.at + 1) : [];
+}
 const ARBSIDE = shard % 2 ? "policy" : "search";
 fs.writeFileSync(out, "");
 for (let g = first; g < first + n && (!ARB || ARBP); g++) {
