@@ -66,7 +66,9 @@ function replay(game) {
       }
     }
     for (const t of track) if (!t.done && who !== t.by && m.t === "cast" && (m.targets || []).some(x => x.k === "s" && x.sid === t.sid)) t.answered = true;
-    for (const t of track) if (!t.done && !r.G.state.stack.some(x => x.sid === t.sid)) {
+    // its fate once it has left the stack and the stack has emptied (its sacrifice is a trigger that waits on the stack)
+    for (const t of track) if (!t.done && !r.G.state.stack.some(x => x.sid === t.sid)) t.left = true;
+    for (const t of track) if (!t.done && t.left && !r.G.state.stack.length) {
       t.done = true;
       const alive = r.G.state.bf.some(p => p.id === t.id && p.ctl === t.by);
       if (t.fetch) { if (t.answered) t.side.fetchAnswered++; else if (alive) t.side.fetchSurvived++; else t.side.fetchDied++; }
