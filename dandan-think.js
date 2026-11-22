@@ -412,6 +412,7 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
       else if (m.t !== "pass") seen.w = null;
     }
     if (seen && WATCH && seen.r != null && seen.r > 0 && seen.rm == null && who === opp) seen.rm = moveName(m, c, seat);   // watch: the reply itself
+    if (seen && BEST_REPLY && who === opp && seen.fr == null) { seen.fr = key(m); seen.fo = (options ? options(c, who) : candidates(c, who, { wide: WIDTH, rank })).map(key); }
     // their answer, for the coach: what they do first in their own main phase (their turn's plan), else first at all
     // (a land is no answer)
     if (seen && who === opp && m.t !== "pass" && m.t !== "land" && !seen.main && c.turn < to) {
@@ -430,6 +431,9 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
 /** What the coach can say of where a game was left, for the seat: a Dandân of its own on the table and one of theirs, both lives and hands. */
 // watch (lab, 22 Nov 2026, Fable 17:00Z: inside the look-ahead): a card name whose copies in the seat's hand each leaf counts (wn)
 let WATCH = null;
+// bestReply (lab, 22 Nov 2026, Fable 19:08Z): each line notes the other seat's first decision after the root move: what it played
+// (fr) and what it could have (fo), so a root move can be scored by the reply best for the other seat (thinkOnce, below)
+let BEST_REPLY = false;
 function where(c, seat) {
   const opp = other(seat);
   let d = 0, D = 0;
@@ -486,9 +490,9 @@ export function think(s, seat, opts = {}) {
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && isDeep(c)).sort((a, b) => b.mean - a.mean), ...list.filter(c => !isDeep(c))], deeper: looks };
 }
-function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null, decided = null, watch = null } = {}) {
+function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null, decided = null, watch = null, bestReply = false } = {}) {
   const t0 = Date.now();
-  WATCH = watch;
+  WATCH = watch; BEST_REPLY = !!bestReply;
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
   // read Medium's scores); weigh false: hidden cards dealt without dandan-reads.js's tells (which read Medium's play)
   const cands = (options ? options(s, seat) : candidates(s, seat, { wide, all, rank })).filter(m => !pick || pick.has(key(m)));
@@ -588,6 +592,25 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     const j = means.indexOf(Math.max(...means));
     vals[i] = vals[i].map((v, k) => (Q.deals[k] ? Q.deals[k][j] : v));
   });
+  // bestReply (Fable 19:08Z): a root move is worth what the other seat's best first reply leaves it, not the average over the
+  // replies the tree happened to visit. Among replies seen in at least 5% of the move's deals, each deal takes the lowest mean
+  // (for the seat) of those legal there; a deal where none of them was legal, or the other seat never chose, keeps its own value
+  const raw = bestReply ? vals.map(v => v.slice()) : [];
+  if (bestReply) for (let i = 0; i < n; i++) {
+    const v = vals[i], sn = seen[i];
+    if (v.length < 8) continue;
+    const by = new Map();
+    v.forEach((x, k) => { const r = sn[k]?.fr; if (r != null && x >= 0) { const a = by.get(r) || by.set(r, { t: 0, n: 0 }).get(r); a.t += x; a.n++; } });
+    const ok = [...by].filter(([, a]) => a.n >= 0.05 * v.length).map(([r, a]) => [r, a.t / a.n]);
+    if (ok.length < 2) continue;
+    vals[i] = v.map((x, k) => {
+      const fo = sn[k]?.fo;
+      if (x < 0 || !fo) return x;
+      let best = null;
+      for (const [r, m] of ok) if (fo.includes(r) && (best == null || m < best)) best = m;
+      return best ?? x;
+    });
+  }
   // a twin takes its class's values, and is in the race while its class is
   if (twins) { for (let i = 0; i < n; i++) if (repOf[i] !== i) { vals[i] = vals[repOf[i]]; seen[i] = seen[repOf[i]]; } alive = cands.map((_, i) => i).filter(i => alive.includes(repOf[i])); }
   const list = cands.map((move, i) => {
@@ -603,7 +626,9 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       move, mean, se: k ? sd / Math.sqrt(k) : 0, n: k, i, cls: cls[i],
       seen: { d: avg("d"), D: avg("D"), l: avg("l"), L: avg("L"), h: avg("h"), H: avg("H"), a: top?.[0] ?? null, an: top?.[1] ?? 0 },
       // with watch: each deal's leaf, the watched card's copies still in hand and the leaf's value (lab/hold-check.mjs)
-      ...(WATCH ? { watch: seen[i].map((x, k) => [x.wn ?? null, v[k], x.r ?? null, x.rm ?? null]) } : {}),   // r: the reply to a cast (0 let it resolve, 1 aimed at it, 2 another play)
+      ...(WATCH ? { watch: seen[i].map((x, k) => [x.wn ?? null, v[k], x.r ?? null, x.rm ?? null]) } : {}),
+      // with bestReply: the other seat's first replies over the deals, each with its share and its mean for the seat (raw leaves)
+      ...(BEST_REPLY ? { replies: (() => { const by = new Map(); (raw[i] || v).forEach((x, k) => { const r = seen[i][k]?.fr; if (r != null && x >= 0) { const a = by.get(r) || by.set(r, { n: 0, t: 0 }).get(r); a.n++; a.t += x; } }); return [...by].map(([r, a]) => ({ r, n: a.n, mean: a.t / a.n })).sort((x, y) => y.n - x.n); })() } : {}),   // r: the reply to a cast (0 let it resolve, 1 aimed at it, 2 another play)
       // the replies to this move over the deals (a cast only): let it resolve, a spell aimed at it, another play
       ...(cands[i].t === "cast" ? { resp: seen[i].reduce((a, x) => { if (x.r != null) a[x.r]++; return a; }, [0, 0, 0]) } : {}),
     };

@@ -44,6 +44,8 @@ const DEEPER = {
   ...(flag("prior") ? { prior: Number(flag("prior")) } : {}),
   // multi=1 (22 Nov 2026, Fable): the group lift off one card's several ways (lab/zero/general.mjs withPrior)
   ...(flag("multi") ? { multi: true } : {}),
+  // bestreply=1 (22 Nov 2026, Fable 19:08Z): a root move scored by the other seat's best first reply (dandan-think.js)
+  ...(flag("bestreply") ? { bestReply: true } : {}),
 };
 const CAP = flag("cap") ? (([share, d]) => ({ share, deals: d || 64 }))(flag("cap").split(":").map(Number)) : null;
 // priorsplit (19 Nov 2026, Fable): the prior on even shards only, so a batch reads with and without it side by side; the game

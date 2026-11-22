@@ -21,7 +21,7 @@ const suite = JSON.parse(fs.readFileSync(new URL("./suite.json", import.meta.url
 const extraOf = f => {
   // as lab/hard-match.mjs reads a side's flags: deeper=<gap>, turns=<n>, and the switches (twins, qtree, qall, keepFirst…)
   const fl = f.split("~").filter(Boolean), d = fl.find(x => x.startsWith("deeper=")), t = fl.find(x => x.startsWith("turns=")), dm = fl.find(x => x.startsWith("deepmax=")), pr = fl.find(x => x.startsWith("prior="));
-  return { ...(pr ? { prior: Number(pr.slice(6)) } : {}), ...(d ? { deeper: { gap: Number(d.slice(7)), ...(dm ? { max: Number(dm.slice(8)) } : {}) } } : {}), ...(t ? { turns: Number(t.slice(6)) } : {}), ...Object.fromEntries(fl.filter(x => !x.includes("=")).map(x => [x === "keepfirst" ? "keepFirst" : x, true])) };
+  return { ...(fl.includes("bestreply") ? { bestReply: true } : {}), ...(pr ? { prior: Number(pr.slice(6)) } : {}), ...(d ? { deeper: { gap: Number(d.slice(7)), ...(dm ? { max: Number(dm.slice(8)) } : {}) } } : {}), ...(t ? { turns: Number(t.slice(6)) } : {}), ...Object.fromEntries(fl.filter(x => !x.includes("=")).map(x => [x === "keepfirst" ? "keepFirst" : x, true])) };
 };
 execSync("git fetch -q origin game-records", { stdio: "ignore" });
 const name = m => `${m.t}${m.card != null ? " " + DECK[m.card] : ""}`;
@@ -61,6 +61,15 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
   // --watch=1 (22 Nov 2026, Fable 17:00Z: inside the look-ahead): each leaf counts the bad card's copies still in the seat's hand
   const WATCHING = process.argv.includes("--watch=1");
   const r = deals === "policy" ? policyPick(brain, s, who) : brain.think(s, who, Number(deals), { ...extraOf(flags), ...(WATCHING ? { watch: p.bad.name } : {}) }), pick = r.best;
+  // with bestreply (Fable 19:08Z item 1): the other seat's first replies to the hold and the spend, share of deals and mean (raw)
+  if (r.list[0]?.replies) {
+    const best = (xs, f) => [...xs].sort((x, y) => f(y) - f(x))[0];
+    for (const [tag, o] of [["hold", best(r.list.filter(o => !isBad(o.move)), o => o.mean)], ["spend", best(r.list.filter(o => isBad(o.move)), o => o.mean)]]) {
+      if (!o?.replies) continue;
+      const tot = o.replies.reduce((a, x) => a + x.n, 0);
+      console.log(`      replies to the ${tag} (${name(o.move)}), mean ${(100 * o.mean).toFixed(1)}: ${o.replies.slice(0, 6).map(x => { const m = JSON.parse(x.r); return `${name(m)} ${(100 * x.n / tot).toFixed(0)}% ${(100 * x.mean).toFixed(1)}`; }).join("; ")}`);
+    }
+  }
   if (WATCHING && r.list[0]?.watch) {
     const root = s.hand[who].filter(id => DECK[id] === p.bad.name).length, best = (xs, f) => [...xs].sort((x, y) => f(y) - f(x))[0];
     const hold = best(r.list.filter(o => !isBad(o.move)), o => o.mean), spend = best(r.list.filter(o => isBad(o.move)), o => o.mean);

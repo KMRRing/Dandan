@@ -15,7 +15,8 @@ import fs from "node:fs";
 
 const [batch, nets, most = "50", part = "0", parts = "1", deals = "1024", flags = "deeper=0.03~deepmax=4"] = process.argv.slice(2);
 const fl = flags.split("~"), num = k => Number(fl.find(x => x.startsWith(`${k}=`))?.split("=")[1]);
-const extra = { prior: 1, deeper: { gap: num("deeper") || 0.03, ...(num("deepmax") ? { max: num("deepmax") } : {}) } };
+const BR = fl.includes("bestreply");
+const extra = { prior: num("prior") || 1, deeper: { gap: num("deeper") || 0.03, ...(num("deepmax") ? { max: num("deepmax") } : {}) } };
 const J = x => JSON.parse(JSON.stringify(x)), real = Math.random, name = m => `${m.t}${m.card != null ? " " + DECK[m.card] : ""}`;
 // a decision in about 1 in 12, chosen by a hash of game and move, so the parts share nothing and a rerun picks the same ones
 const pick = (g, i) => { let h = Math.imul(g.seed ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(i + 1, 0xc2b2ae35); h ^= h >>> 15; h = Math.imul(h, 0x27d4eb2f); return ((h ^ (h >>> 13)) >>> 0) % 12 === 0; };
@@ -36,7 +37,17 @@ outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part)
         Math.random = real;
         if (r.priorK != null) {
           taken++;
-          rows.push({ k: r.priorK, o: r.list.map(o => [o.mean, o.prior, o.groupLift || 0, name(o.move)]) });
+          const row = { k: r.priorK, o: r.list.map(o => [o.mean, o.prior, o.groupLift || 0, name(o.move)]) };
+          // bestreply in the flags (22 Nov 2026, Fable 19:08Z item 3): the same decision searched again with best-reply scoring;
+          // the pick it makes, and what that pick gives up by the plain search's means
+          if (BR) {
+            Math.random = seeded(g.seed + i);
+            const r1 = brain.think(J(s), who, Number(deals), { ...extra, bestReply: true });
+            Math.random = real;
+            const mean0 = mv => r.list.find(o => JSON.stringify(o.move) === JSON.stringify(mv))?.mean;
+            row.br = { pick0: name(r.best), pick1: name(r1.best), same: JSON.stringify(r.best) === JSON.stringify(r1.best), gap: (mean0(r.best) ?? 0) - (mean0(r1.best) ?? mean0(r.best) ?? 0), v: mean0(r.best) };
+          }
+          rows.push(row);
           if (rows.length >= Number(most)) break outer;
         }
       }
@@ -66,6 +77,11 @@ for (const c of [1, 2, 4]) for (const multi of [false, true]) {
   out[tag] = { overridden: d.length, of: rows.length };
   console.log(`  ${tag}: overrides the search's pick in ${d.length} (${pc(d.length, rows.length)}%); gap given up, points: under 0.5 ${pts(0, 0.5)}, 0.5-1 ${pts(0.5, 1)}, 1-2 ${pts(1, 2)}, 2+ ${pts(2, 1e9)}; in standard errors: under 1 ${sez(0, 1)}, 1-2 ${sez(1, 2)}, 2+ ${sez(2, 1e9)}; mean ${d.length ? (100 * d.reduce((a, x) => a + x.gap, 0) / d.length).toFixed(2) : "-"} points`);
   if (c === 4 && !multi) for (const x of d.filter(x => x.gap >= 0.02)) console.log(`    ${x.s} -> ${x.p}: ${(100 * x.gap).toFixed(2)} points at ${(100 * x.mean).toFixed(0)}%`);
+}
+if (BR) {
+  const ch = rows.filter(x => x.br && !x.br.same);
+  console.log(`  best-reply scoring (prior x${num("prior") || 1}): changes the pick in ${ch.length} of ${rows.length} (${pc(ch.length, rows.length)}%); the plain search's means give up: under 0.5 ${ch.filter(x => 100 * x.br.gap < 0.5).length}, 0.5-1 ${ch.filter(x => 100 * x.br.gap >= 0.5 && 100 * x.br.gap < 1).length}, 1-2 ${ch.filter(x => 100 * x.br.gap >= 1 && 100 * x.br.gap < 2).length}, 2+ ${ch.filter(x => 100 * x.br.gap >= 2).length} points`);
+  for (const x of ch) console.log(`    ${x.br.pick0} -> ${x.br.pick1}: ${(100 * x.br.gap).toFixed(2)} points at ${(100 * x.br.v).toFixed(0)}%`);
 }
 console.log(`  mean k ${(rows.reduce((a, x) => a + x.k, 0) / Math.max(1, rows.length)).toFixed(4)}`);
 console.log("JSON " + JSON.stringify({ batch, part, parts, n: rows.length, out, rows }));
