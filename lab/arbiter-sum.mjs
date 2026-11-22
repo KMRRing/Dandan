@@ -16,7 +16,7 @@ for (const n of names) {
     if (!l.startsWith('{"game"')) continue;
     const g = JSON.parse(l), b = g.branch;
     if (!b || b.kind !== "A" || !b.forced) continue;
-    const p = pts.get(b.point) || pts.set(b.point, { band: b.band, search: new Map(), policy: new Map() }).get(b.point);
+    const p = pts.get(b.point) || pts.set(b.point, { band: b.band, v: b.v, search: new Map(), policy: new Map() }).get(b.point);
     p[b.side].set(g.seed, g.winner === b.seat ? 1 : g.winner == null || g.winner < 0 ? 0.5 : 0);
   }
 }
@@ -25,7 +25,7 @@ for (const [k, p] of pts) {
   const both = [...p.search.keys()].filter(s => p.policy.has(s));
   if (!both.length) continue;
   const d = both.map(s => p.search.get(s) - p.policy.get(s));
-  rows.push({ k, band: p.band, n: both.length, diff: d.reduce((a, b) => a + b, 0) / d.length });
+  rows.push({ k, band: p.band, v: p.v, n: both.length, diff: d.reduce((a, b) => a + b, 0) / d.length });
 }
 const say = (tag, rs) => {
   if (!rs.length) return;
@@ -34,5 +34,8 @@ const say = (tag, rs) => {
   console.log(`  ${tag.padEnd(8)} ${String(rs.length).padStart(4)} points, ${String(games).padStart(5)} paired games: search less policy ${(100 * m).toFixed(1)} ± ${(100 * se).toFixed(1)} points; search better at ${rs.filter(r => r.diff > 0).length}, policy at ${rs.filter(r => r.diff < 0).length}, level ${rs.filter(r => r.diff === 0).length}`);
 };
 console.log(`${batch}: the play-out arbiter, the deciding seat's score with the search's top move less with the policy's`);
-for (const b of ["0-20", "20-40", "40-60", "60-80", "80-100"]) say(`${b}%`, rows.filter(r => r.band === b));
+// two groups, not five bands (Fable 22 Nov: 60 calls a band is good to about ±2 points); errors are over calls, so clustered by call
+say("< 90%", rows.filter(r => r.v < 0.9));
+say(">= 90%", rows.filter(r => r.v >= 0.9));
+if (process.env.ARB_BANDS) for (const b of ["0-20", "20-40", "40-60", "60-80", "80-100"]) say(`${b}%`, rows.filter(r => r.band === b));
 say("all", rows);

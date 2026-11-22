@@ -42,6 +42,14 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
   const brain = nets.startsWith("gen:") ? await generalBrain(nets.slice(4)) : zeroBrain(`${nets}-policy`, `${nets}-value`);
   for (let i = 0; i < p.move; i++) { const st = G.state, [who, m] = moves[i]; const r = applyMove(shownRules, G, who, m, g.started); if (r.error) throw new Error(`${p.id}: move ${i}: ${r.error}`); brain.seen(st, who, m, r.G.state); G = r.G; }
   const s = shownRules.restore(JSON.parse(JSON.stringify(G.state))), who = moves[p.move][0];
+  // SUITE_SEEDS=<n> (22 Nov 2026, Fable: a seed freezes one draw of the noise, it doesn't remove it): the search n times with
+  // fresh salts, its verdict read as the mean margin over them with its standard error, and how many of the n pass
+  const SEEDS = deals === "policy" ? 1 : Number(process.env.SUITE_SEEDS || 1), per = [];
+  for (let k = 1; k < SEEDS; k++) {
+    const rk = brain.think(s, who, Number(deals), { ...extraOf(flags), salt: 0x5eed + k }), vk = o => o.score ?? o.first ?? o.mean;
+    const bk = rk.list.find(o => o.move.t === p.bad.t && DECK[o.move.card] === p.bad.name), ok = rk.list.filter(o => o !== bk).sort((x, y) => vk(y) - vk(x))[0];
+    per.push({ bad: rk.best.t === p.bad.t && DECK[rk.best.card] === p.bad.name, margin: bk && ok ? 100 * (vk(ok) - vk(bk)) : null });
+  }
   const r = deals === "policy" ? policyPick(brain, s, who) : brain.think(s, who, Number(deals), extraOf(flags)), pick = r.best;
   const isBad = m => m.t === p.bad.t && DECK[m.card] === p.bad.name, bad = isBad(pick);
   // the margin (Fable 10:50Z): the best other option less the bad move, in points, all at the first look's depth (the deeper
@@ -53,10 +61,17 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
   const nul = isNull(s, who, pick, seeded(7));
   out.push({ id: p.id, pass: !bad, margin, null: nul, pick: name(pick), top: r.list.slice(0, 4).map(o => [name(o.move), Math.round(1000 * o.mean) / 10]) });
   console.log(`${bad ? "FAIL" : "pass"}  ${p.id}: picks ${name(pick)}${nul ? " (a null move)" : ""}, margin ${margin ?? "-"} points; ${r.list.slice(0, 4).map(o => `${name(o.move)} ${(100 * o.mean).toFixed(1)}${o.prior != null ? ` (policy ${(100 * o.prior).toFixed(0)}%)` : ""}`).join(", ")}`);
+  if (SEEDS > 1) {
+    const all = [{ bad, margin }, ...per], ms = all.map(x => x.margin).filter(x => x != null), m = ms.reduce((a, b) => a + b, 0) / Math.max(1, ms.length);
+    const se = ms.length > 1 ? Math.sqrt(ms.reduce((a, x) => a + (x - m) ** 2, 0) / (ms.length - 1) / ms.length) : null;
+    Object.assign(out[out.length - 1], { seeds: all.length, passes: all.filter(x => !x.bad).length, meanMargin: m, marginSe: se });
+    console.log(`      over ${all.length} seeds: passes ${all.filter(x => !x.bad).length}, margin ${m.toFixed(2)} ± ${se?.toFixed(2) ?? "-"} points`);
+  }
   // the group lift (22 Nov 2026, Fable): one card's several ways, measured deal by deal (dandan-think.js groupLifts)
   const lifts = r.list.filter(o => o.groupLift > 0);
   if (lifts.length) console.log(`      group lift: ${[...new Map(lifts.map(o => [`${name(o.move)} x${o.groupN}`, (100 * o.groupLift).toFixed(2)])).entries()].map(([k, v]) => `${k} ${v} points`).join(", ")}`);
 }
-const passed = out.filter(x => x.pass).length, margins = out.map(x => x.margin).filter(x => x != null);
+const passed = out.filter(x => x.pass).length, margins = out.map(x => x.meanMargin ?? x.margin).filter(x => x != null);
+if (out.some(x => x.seeds)) console.log(`suite over seeds: ${out.reduce((a, x) => a + (x.passes ?? 0), 0)} of ${out.reduce((a, x) => a + (x.seeds ?? 0), 0)} searches passed; by position, margin ± se: ${out.map(x => `${x.id} ${x.meanMargin?.toFixed(1)} ± ${x.marginSe?.toFixed(1)}`).join(", ")}`);
 console.log(`suite: ${passed} of ${out.length} passed, mean margin ${(margins.reduce((a, b) => a + b, 0) / Math.max(1, margins.length)).toFixed(1)} points, ${out.filter(x => x.null).length} null picks (nets ${nets}, ${deals === "policy" ? "policy alone, no search; numbers are its chances, margins in points of probability" : `${deals} deals, ${flags || "no flags"}`})`);
 if (asJson) console.log(JSON.stringify({ nets, deals: Number(deals), flags, passed, of: out.length, positions: out }));

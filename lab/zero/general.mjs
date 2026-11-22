@@ -142,7 +142,7 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
     reset: fresh,
     tracker: () => null,
     seen(s, who, m, after) { if (filters) for (const f of filters) f.update(s, who, m, after); if (walls) for (const w of walls) w.seen(s, who, m, after); },
-    root(s, seat) {
+    root(s, seat, salt = 0) {
       if (!filters) return {};
       const mine = filters[seat].belief(s), o = 1 - seat, on = scryg ? x => x : onPool;
       const sd = filters[seat].deal(), wd = walls ? walls[seat].deal() : null;
@@ -153,7 +153,7 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
       let tans = 0;
       // seeded from what the seat sees (22 Nov 2026): with Math.random here the same position got different means on every
       // run (the suite's verdicts and the honesty test's means moved by a point or two); now one position, one search
-      const rw = seeded(mix(seedOf(s, seat), 0x07e5));
+      const rw = seeded(mix(mix(seedOf(s, seat), 0x07e5), salt || 0));   // salt: as think's, a fresh draw (lab/suite.mjs seeds=)
       for (let w = 0; w < OTHER_WORLDS; w++) {
         const world = (walls && walls[seat].sample(rw)) || determinize(s, seat, rw, false, false, (pool, n, rng) => sd(pool, n, rng) || pool);
         const b = filters[o].belief(world), c = on(b.counts), a = on(b.any);
@@ -167,7 +167,7 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
     think(s, seat, deals, extra = {}) {
       const { qtree, prior, multi, ...rest } = extra;
       const r = think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge, focus: player.focus,
-        ...(qtree ? { qfocus: player.qfocus } : {}), ...this.root(s, seat), ...rest });
+        ...(qtree ? { qfocus: player.qfocus } : {}), ...this.root(s, seat, rest.salt), ...rest });
       return (prior && policy) || multi ? withPrior(r, s, seat, prior && policy ? prior : 0, !!multi) : r;
     },
   };

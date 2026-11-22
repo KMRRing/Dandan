@@ -1,4 +1,4 @@
-// The play-out arbiter's decisions (22 Nov 2026, Fable's acceptance test b): close calls the nets made in a stored batch where
+// The play-out arbiter's decisions (the two moves: the search's top and the policy's favourite, whatever the search ranked it) (22 Nov 2026, Fable's acceptance test b): close calls the nets made in a stored batch where
 // the search's top two were within 2 points and the policy's favourite was not the search's. Each becomes a point to play out
 // both ways (lab/zero/zero-play.mjs arb=): the search's top move and the policy's, about 20 games each, so which of the two was
 // right is settled by results rather than by either judge. Read-only: prints the points as one JSON line (ARB ...) for
@@ -16,7 +16,7 @@ const GAP = Number(gapS), J = x => JSON.parse(JSON.stringify(x)), real = Math.ra
 const name = m => `${m.t}${m.card != null ? " " + DECK[m.card] : ""}`;
 export const bandOf = v => (v < 0.2 ? "0-20" : v < 0.4 ? "20-40" : v < 0.6 ? "40-60" : v < 0.8 ? "60-80" : "80-100");
 const local = batch.startsWith("file:"), store = local ? { get: async n => (await import("node:fs")).readFileSync(n, "utf8") } : await (await import("./lib.mjs")).labStore();
-const brain = await generalBrain(nets), points = [], perBand = Math.ceil(Number(most) / 5), inBand = {};
+const brain = await generalBrain(nets), points = [], perBand = Math.ceil(Number(most) / 2), inBand = {}, groupOf = v => (v < 0.9 ? "<90" : ">=90");   // half below 90%, half at 90% and up (Fable 22 Nov: read in those two groups)
 const names = local ? [batch.slice(5)] : (await store.list(`results/${batch}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)).sort();
 outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part))) {
   let text = "";
@@ -30,10 +30,10 @@ outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part)
     if (g.branch) continue;
     const mine = g.vs ? 1 - g.vs.seat : -1;   // against a rival: the nets' own seat; self-play: both
     brain.reset();
-    let G = recordOf(rules, g), taken = 0;   // at most two a game and a fifth of the points a band, so they spread
+    let G = recordOf(rules, g), taken = 0;   // at most two a game and half the points a group, so they spread
     for (let i = 0; i < g.moves.length; i++) {
       const [who, m] = g.moves[i], s = rules.restore(J(G.state)), d = dec.get(`${g.game ?? g.seed}:${i}`) || dec.get(`${g.seed}:${i}`);
-      if (taken < 2 && (mine < 0 || who === mine) && d && !d.qd && (inBand[bandOf(d.v)] || 0) < perBand && d.c?.length >= 2 && d.v != null) {
+      if (taken < 2 && (mine < 0 || who === mine) && d && !d.qd && (inBand[groupOf(d.v)] || 0) < perBand && d.c?.length >= 2 && d.v != null) {
         const val = c => c.d ?? c.q, byVal = [...d.c].sort((a, b) => val(b) - val(a)), gap = val(byVal[0]) - val(byVal[1]);
         if (gap <= GAP) {
           const ms = zeroOptions(s, who);
@@ -43,9 +43,10 @@ outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part)
           if (at.has(key(sTop)) && key(pTop) !== key(sTop)) {
             const pc = d.c.find(c => key(c.mv) === key(pTop));
             points.push({ src: g.seed, at: i, seat: who, v: d.v, band: bandOf(d.v), gap, search: sTop, policy: pTop,
-              pSearch: p[at.get(key(sTop))], pPolicy: p[at.get(key(pTop))], vPolicy: pc ? val(pc) : null, played: key(m) === key(sTop) ? "search" : key(m) === key(pTop) ? "policy" : "other", part: local ? null : n,
+              pSearch: p[at.get(key(sTop))], pPolicy: p[at.get(key(pTop))], vPolicy: pc ? val(pc) : null, vSearch: val(byVal[0]),
+              rank: 1 + byVal.findIndex(c => key(c.mv) === key(pTop)),   // the policy's favourite among the search's values (2: its second; 0: not searched) played: key(m) === key(sTop) ? "search" : key(m) === key(pTop) ? "policy" : "other", part: local ? null : n,
               ...(local ? { moves: g.moves.slice(0, i + 1) } : {}) });   // the source game: its part in the store (zero-play reads it), or its moves
-            taken++; inBand[bandOf(d.v)] = (inBand[bandOf(d.v)] || 0) + 1;
+            taken++; inBand[groupOf(d.v)] = (inBand[groupOf(d.v)] || 0) + 1;
             if (points.length >= Number(most)) break outer;
           }
         }
@@ -61,8 +62,10 @@ outer: for (const n of names.filter((_, k) => k % Number(parts) === Number(part)
 }
 const by = {};
 for (const x of points) by[x.band] = (by[x.band] || 0) + 1;
+console.error(`groups: ${JSON.stringify(inBand)}`);
 console.log(`${points.length} close calls (top two within ${100 * GAP} points, policy's favourite not the search's) from ${batch}, part ${part} of ${parts}, nets ${nets}`);
 console.log(`  by win chance: ${Object.entries(by).sort().map(([b, n]) => `${b}% ${n}`).join(", ")}`);
+console.log(`  the policy's favourite as the search ranked it: ${[2, 3, 4].map(r => `${r === 4 ? "4+" : r}: ${points.filter(x => (r === 4 ? x.rank >= 4 : x.rank === r)).length}`).join(", ")}, not searched ${points.filter(x => !x.rank).length}`);
 console.log(`  as played: ${["search", "policy", "other"].map(k => `${k} ${points.filter(x => x.played === k).length}`).join(", ")}`);
 for (const x of points.slice(0, 15)) console.log(`  ${x.src}:${x.at} at ${(100 * x.v).toFixed(0)}%: search ${name(x.search)} vs policy ${name(x.policy)} (${(100 * x.pPolicy).toFixed(0)}% vs ${(100 * x.pSearch).toFixed(0)}%), gap ${(100 * x.gap).toFixed(2)}`);
 // for lab/arbiter/points.json (zero-play arb=): base64, since the runner's log masks braces
