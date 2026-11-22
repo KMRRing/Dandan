@@ -296,6 +296,14 @@ export async function decide(engine, s, seat, { budget = {}, must = null, load, 
 }
 
 /** Hard's move for an engine, as the live game plays it (thinkMove) but with the engine's judge: what the opponent's worker runs. */
+/**
+ * How far an engine's search gets at a budget on this device (22 Nov 2026, Fable: the deals Deepest reaches in its 120 s on
+ * Korbi's devices; lab/speed.html): { deals, ms, move }, the deals the search ran and the time it took.
+ */
+export async function engineSpeed(engine, s, seat, budget, load, game = null) {
+  const t0 = performance.now(), r = await zeroThink(engine, s, seat, { budget, load, game });
+  return { deals: r.deals ?? null, ms: Math.round(performance.now() - t0), move: r.best };
+}
 export async function engineMove(engine, s, seat, budget, load, game = null) {
   if (engine.kind === "medium") return mediumMove(engine, s, seat);
   if (engine.kind === "zero") return (await zeroThink(engine, s, seat, { budget, load, game })).best;

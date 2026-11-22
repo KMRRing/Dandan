@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monte's speed on this device</title>
+<style>
+  body { font: 16px/1.45 system-ui, sans-serif; margin: 24px auto; max-width: 640px; padding: 0 16px; color: #222; }
+  table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+  th, td { border-bottom: 1px solid #ddd; padding: 6px 8px; text-align: right; }
+  th:first-child, td:first-child { text-align: left; }
+  button { font: inherit; padding: 10px 18px; border-radius: 8px; border: 1px solid #888; background: #f4f4f4; }
+  .note { color: #666; font-size: 14px; }
+  #out { font-weight: 600; margin-top: 16px; }
+</style>
+</head>
+<body>
+<h1>Monte's speed on this device</h1>
+<p>This plays Monte zl23 at <b>Deepest</b> (2,048 deals, stopping at 120 seconds, as in the game) on five positions from one of its games, and shows how many deals it got through in the time. Keep the page open and the screen on until it finishes; it can take up to 10 minutes. Then send a screenshot.</p>
+<button id="go">Start</button>
+<table id="t"><thead><tr><th>Position</th><th>Deals reached</th><th>Seconds</th><th>Stopped by the 120 s limit</th></tr></thead><tbody></tbody></table>
+<div id="out"></div>
+<p class="note" id="dev"></p>
+<script type="module">
+// lab/speed.html (22 Nov 2026, Fable: measure the deals Deepest reaches in 120 s on Korbi's devices): engineSpeed in
+// dandan-engines.js on five positions of a zl23 self-play game (speed-game.json: seed and moves), each from the game's record
+// as the live page passes it, so the dealer follows the game as in play
+import { rules } from "../dandan-rules.js";
+import { applyMove, seeded } from "../seats.js";
+import { recordOf, rngSeedOf } from "./zero/branch-lib.mjs";
+import { engineSpeed, ENGINES } from "../dandan-engines.js";
+import { DEPTH } from "../dandan-think.js";
+
+const AT = [30, 70, 110, 160, 220];
+document.getElementById("dev").textContent = `This device: ${navigator.userAgent}; ${navigator.hardwareConcurrency || "?"} cores.`;
+document.getElementById("go").onclick = async () => {
+  const btn = document.getElementById("go"), body = document.querySelector("#t tbody"), out = document.getElementById("out");
+  btn.disabled = true; body.innerHTML = ""; out.textContent = "Loading Monte's nets…";
+  const g = await (await fetch("./speed-game.json")).json(), eng = ENGINES.find(e => e.id === "zero-zl23"), budget = DEPTH.deepest;
+  let G = recordOf(rules, g), real = Math.random, rows = [];
+  for (let i = 0; i < g.moves.length && rows.length < AT.length; i++) {
+    const [who, m] = g.moves[i];
+    if (AT.includes(i)) {
+      out.textContent = `Thinking on position ${rows.length + 1} of ${AT.length}…`;
+      await new Promise(r => setTimeout(r, 50));
+      const game = { seed: g.seed, seq: 1, options: {}, started: 0, moves: g.moves.slice(0, i) };
+      const r = await engineSpeed(eng, G.state, who, budget, undefined, game);
+      rows.push(r);
+      body.insertAdjacentHTML("beforeend", `<tr><td>Move ${i} (turn ${G.state.turn})</td><td>${r.deals ?? "?"}</td><td>${(r.ms / 1000).toFixed(1)}</td><td>${r.ms >= budget.ms - 2000 ? "yes" : "no"}</td></tr>`);
+    }
+    Math.random = seeded(rngSeedOf(g, i)); G = applyMove(rules, G, who, m, 0).G; Math.random = real;
+  }
+  const capped = rows.filter(r => r.ms >= budget.ms - 2000).length;
+  out.textContent = capped ? `Done: the 120 s limit cut the search short on ${capped} of ${rows.length} positions.` : `Done: Deepest finished every position within its 120 s.`;
+  btn.disabled = false;
+};
+</script>
+</body>
+</html>
