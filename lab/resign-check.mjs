@@ -9,7 +9,8 @@ const [ids] = process.argv.slice(2);
 const local = ids.startsWith("file:"), store = local ? null : await (await import("./lib.mjs")).labStore();
 const parts = local ? [ids.slice(5)] : (await Promise.all(ids.split(",").map(id => store.list(`results/${id}/`)))).flat().filter(n => /\/part-\d+\.jsonl$/.test(n)).sort();
 const T = { games: 0, would: 0, savedBy: 0, rival: 0, early: [] };
-for (const name of parts) for (const line of ((local ? fs.readFileSync(name, "utf8") : await store.get(name)) || "").split("\n")) {
+const text = async name => { try { return (local ? fs.readFileSync(name, "utf8") : await store.get(name)) || ""; } catch { return ""; } };   // a part listed but gone (re-run, retired)
+for (const name of parts) for (const line of (await text(name)).split("\n")) {
   if (!line.startsWith('{"game"')) continue;
   const g = JSON.parse(line);
   if (g.branch || g.winner == null || g.winner < 0) continue;
