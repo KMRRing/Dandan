@@ -58,7 +58,19 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
     const fm = o => o.mean, fbk = top([...badK], fm), fok = top([...okK], fm);
     per.push({ bad: isBad(rk.best), margin: bk && ok ? 100 * (vk(ok) - vk(bk)) : null, raw: rbk && rok ? 100 * (rm(rok) - rm(rbk)) : null, rawFinal: fbk && fok ? 100 * (fm(fok) - fm(fbk)) : null });
   }
-  const r = deals === "policy" ? policyPick(brain, s, who) : brain.think(s, who, Number(deals), extraOf(flags)), pick = r.best;
+  // --watch=1 (22 Nov 2026, Fable 17:00Z: inside the look-ahead): each leaf counts the bad card's copies still in the seat's hand
+  const WATCHING = process.argv.includes("--watch=1");
+  const r = deals === "policy" ? policyPick(brain, s, who) : brain.think(s, who, Number(deals), { ...extraOf(flags), ...(WATCHING ? { watch: p.bad.name } : {}) }), pick = r.best;
+  if (WATCHING && r.list[0]?.watch) {
+    const root = s.hand[who].filter(id => DECK[id] === p.bad.name).length, best = (xs, f) => [...xs].sort((x, y) => f(y) - f(x))[0];
+    const hold = best(r.list.filter(o => !isBad(o.move)), o => o.mean), spend = best(r.list.filter(o => isBad(o.move)), o => o.mean);
+    for (const [tag, o] of [["hold", hold], ["spend", spend]]) {
+      if (!o?.watch) continue;
+      const w = o.watch.filter(x => x[0] != null && x[1] >= 0), kept = w.filter(x => x[0] >= root), gone = w.filter(x => x[0] < root);
+      const mv = xs => (xs.length ? (100 * xs.reduce((a, x) => a + x[1], 0) / xs.length).toFixed(1) : "-");
+      console.log(`      look-ahead, ${tag} (${name(o.move)}): ${w.length} leaves; the ${p.bad.name} still in hand at the horizon in ${kept.length} (${w.length ? (100 * kept.length / w.length).toFixed(0) : "-"}%), leaf value ${mv(kept)}; gone from hand in ${gone.length}, leaf value ${mv(gone)}`);
+    }
+  }
   const bad = isBad(pick);
   // the margin (Fable 10:50Z): the best other option less the bad move, in points, all at the first look's depth (the deeper
   // look reweighs only the best two, so final means mix depths); a pass by a hair says little

@@ -427,11 +427,13 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
 }
 
 /** What the coach can say of where a game was left, for the seat: a Dandân of its own on the table and one of theirs, both lives and hands. */
+// watch (lab, 22 Nov 2026, Fable 17:00Z: inside the look-ahead): a card name whose copies in the seat's hand each leaf counts (wn)
+let WATCH = null;
 function where(c, seat) {
   const opp = other(seat);
   let d = 0, D = 0;
   for (const p of c.bf) if (DECK[p.id] === "Dandân") { if (p.ctl === seat) d = 1; else D = 1; }
-  return { d, D, l: c.life[seat], L: c.life[opp], h: c.hand[seat].length, H: c.hand[opp].length };
+  return { d, D, l: c.life[seat], L: c.life[opp], h: c.hand[seat].length, H: c.hand[opp].length, ...(WATCH ? { wn: c.hand[seat].filter(id => DECK[id] === WATCH).length } : {}) };
 }
 
 /**
@@ -479,12 +481,13 @@ export function think(s, seat, opts = {}) {
   }
   // the last look's values for every option of a class it weighed (by class: a twin of a weighed move takes them too)
   const clsOf = c => c.cls ?? key(c.move), by = new Map(r2.list.map(c => [clsOf(c), c])), isDeep = c => deep.has(clsOf(c));
-  const list = r.list.map(c => (isDeep(c) && by.has(clsOf(c)) ? { ...c, first: c.mean, firstSe: c.se, firstN: c.n, mean: by.get(clsOf(c)).mean, se: by.get(clsOf(c)).se, n: by.get(clsOf(c)).n, gapSe: by.get(clsOf(c)).gapSe ?? null, groupLift: c.groupLift ?? 0, groupN: c.groupN } : c));
+  const list = r.list.map(c => (isDeep(c) && by.has(clsOf(c)) ? { ...c, first: c.mean, firstSe: c.se, firstN: c.n, mean: by.get(clsOf(c)).mean, se: by.get(clsOf(c)).se, n: by.get(clsOf(c)).n, gapSe: by.get(clsOf(c)).gapSe ?? null, groupLift: c.groupLift ?? 0, groupN: c.groupN, ...(c.watch ? { watch: by.get(clsOf(c)).watch ?? c.watch } : {}) } : c));
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && isDeep(c)).sort((a, b) => b.mean - a.mean), ...list.filter(c => !isDeep(c))], deeper: looks };
 }
-function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null, decided = null } = {}) {
+function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null, decided = null, watch = null } = {}) {
   const t0 = Date.now();
+  WATCH = watch;
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
   // read Medium's scores); weigh false: hidden cards dealt without dandan-reads.js's tells (which read Medium's play)
   const cands = (options ? options(s, seat) : candidates(s, seat, { wide, all, rank })).filter(m => !pick || pick.has(key(m)));
@@ -598,6 +601,8 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     return {
       move, mean, se: k ? sd / Math.sqrt(k) : 0, n: k, i, cls: cls[i],
       seen: { d: avg("d"), D: avg("D"), l: avg("l"), L: avg("L"), h: avg("h"), H: avg("H"), a: top?.[0] ?? null, an: top?.[1] ?? 0 },
+      // with watch: each deal's leaf, the watched card's copies still in hand and the leaf's value (lab/hold-check.mjs)
+      ...(WATCH ? { watch: seen[i].map((x, k) => [x.wn ?? null, v[k]]) } : {}),
       // the replies to this move over the deals (a cast only): let it resolve, a spell aimed at it, another play
       ...(cands[i].t === "cast" ? { resp: seen[i].reduce((a, x) => { if (x.r != null) a[x.r]++; return a; }, [0, 0, 0]) } : {}),
     };
