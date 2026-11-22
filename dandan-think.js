@@ -411,6 +411,7 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
       else if (who === opp) seen.r = m.t === "pass" ? 0 : m.t === "cast" && (m.targets || []).some(t => t.k === "s" && t.sid === seen.w) ? 1 : 2;
       else if (m.t !== "pass") seen.w = null;
     }
+    if (seen && WATCH && seen.r != null && seen.r > 0 && seen.rm == null && who === opp) seen.rm = moveName(m, c, seat);   // watch: the reply itself
     // their answer, for the coach: what they do first in their own main phase (their turn's plan), else first at all
     // (a land is no answer)
     if (seen && who === opp && m.t !== "pass" && m.t !== "land" && !seen.main && c.turn < to) {
@@ -602,7 +603,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       move, mean, se: k ? sd / Math.sqrt(k) : 0, n: k, i, cls: cls[i],
       seen: { d: avg("d"), D: avg("D"), l: avg("l"), L: avg("L"), h: avg("h"), H: avg("H"), a: top?.[0] ?? null, an: top?.[1] ?? 0 },
       // with watch: each deal's leaf, the watched card's copies still in hand and the leaf's value (lab/hold-check.mjs)
-      ...(WATCH ? { watch: seen[i].map((x, k) => [x.wn ?? null, v[k], x.r ?? null]) } : {}),   // r: the reply to a cast (0 let it resolve, 1 aimed at it, 2 another play)
+      ...(WATCH ? { watch: seen[i].map((x, k) => [x.wn ?? null, v[k], x.r ?? null, x.rm ?? null]) } : {}),   // r: the reply to a cast (0 let it resolve, 1 aimed at it, 2 another play)
       // the replies to this move over the deals (a cast only): let it resolve, a spell aimed at it, another play
       ...(cands[i].t === "cast" ? { resp: seen[i].reduce((a, x) => { if (x.r != null) a[x.r]++; return a; }, [0, 0, 0]) } : {}),
     };

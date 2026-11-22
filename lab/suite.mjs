@@ -73,6 +73,17 @@ for (const p of suite.positions.filter(p => !only || only.includes(p.id))) {
       if (tag === "spend" && o.move.t === "cast") {
         const by = [0, 1, 2].map(r => w.filter(x => x[2] === r)), none = w.filter(x => x[2] == null);
         console.log(`      replies to the cast: ${["let it resolve", "aimed at it", "another play"].map((t, r) => `${t} ${by[r].length} (${w.length ? (100 * by[r].length / w.length).toFixed(0) : "-"}%), leaf ${mv(by[r])}`).join("; ")}; unknown ${none.length}`);
+        // paired by deal (Fable 18:36Z): the cast's leaf less the hold line's leaf on the same deal, averaged within each reply
+        if (hold?.watch) {
+          const n = Math.min(o.watch.length, hold.watch.length), gain = [];
+          for (let k = 0; k < n; k++) if (o.watch[k][1] >= 0 && hold.watch[k][1] >= 0) gain.push({ r: o.watch[k][2], rm: o.watch[k][3], g: 100 * (o.watch[k][1] - hold.watch[k][1]) });
+          const st = xs => { if (!xs.length) return "-"; const m = xs.reduce((a, x) => a + x.g, 0) / xs.length, sd = Math.sqrt(xs.reduce((a, x) => a + (x.g - m) ** 2, 0) / Math.max(1, xs.length - 1)); return `${m.toFixed(1)} ± ${(sd / Math.sqrt(xs.length)).toFixed(1)} (${xs.length})`; };
+          console.log(`      the cast's gain over the hold line, same deal, points: all ${st(gain)}; ${["let it resolve", "aimed at it", "another play"].map((t, r) => `${t} ${st(gain.filter(x => x.r === r))}`).join("; ")}; unknown ${st(gain.filter(x => x.r == null))}`);
+          const moves = new Map();
+          for (const x of gain) if (x.rm) (moves.get(x.rm) || moves.set(x.rm, []).get(x.rm)).push(x);
+          const top = [...moves].sort((a, b) => b[1].length - a[1].length).slice(0, 5);
+          if (top.length) console.log(`      the replies most often (other than letting it resolve): ${top.map(([m, xs]) => `${m}: ${st(xs)}`).join("; ")}`);
+        }
       }
     }
   }
