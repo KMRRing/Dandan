@@ -13,6 +13,8 @@ import { generalBrain } from "./zero/zero-lib.mjs";
 import { recordOf, rngSeedOf } from "./zero/branch-lib.mjs";
 
 const [SH, SHS, OUT, batch = "zdm001", nets = "zl23", deals = "4096", turns = "4", most = "0"] = process.argv.slice(2);
+// settings after the positional ones as KEY=value (PER, SKIP, COUNT), for the queue and lab-read, which pass no environment
+for (const a of process.argv.slice(10)) { const m = /^([A-Z]+)=(.*)$/.exec(a); if (m) process.env[m[1]] = m[2]; }
 const real = Math.random, J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
 const hash = (seed, i) => { let h = Math.imul(seed ^ 0x5bd1e995, 0x85ebca6b) ^ Math.imul(i + 7, 0xc2b2ae35); h ^= h >>> 15; h = Math.imul(h, 0x27d4eb2f); return (h ^ (h >>> 13)) >>> 0; };
 const store = await (await import("./lib.mjs")).labStore(), brain = await generalBrain(nets);
