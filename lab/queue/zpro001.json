@@ -1,0 +1,8 @@
+{
+  "id": "zpro001",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 400 560000000 gen:zl27 - 0 deeper=0.03 deepmax=4 vs=oppview:1",
+  "shards": 400,
+  "timeoutMin": 720,
+  "purpose": "The opponent's tree choice by its own view, half-day step (Fable 13:10Z, 13:40Z): zl27 deep with oppview (the other seat's tree decisions learn from deals with our hand dealt from its belief) against zl27 deep without, prior off both, 400 games, seats alternated, one a shard, no resigning. Suite at deep: 4 of 10 both (same passes), mean margin 1.2 against 1.9 points. Bar: no worse than 48%. Count doomed casts and null moves per side. LAB ONLY. Not trained on."
+}
