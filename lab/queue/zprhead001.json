@@ -1,0 +1,8 @@
+{
+  "id": "zprhead001",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 400 540000100 gen:zl27 - 0 deeper=0.03 deepmax=4 vs=heavy:1",
+  "shards": 400,
+  "timeoutMin": 720,
+  "purpose": "The mid-game search budget (Fable 13:10Z): zl27 heavy (from turn 5 on, 4,096 deals and the close-call look on every option up to 4 turns) against zl27 deep (1,024 deals, close calls to 4 turns), prior off both, 400 games, seats alternated, one a shard, no resigning. Timing zprhead000: 4 of 5 games done in 31 to 86 min, none near 4 h, so the heavy side keeps 4x. Read: 55% or more for the heavy side means the points are lost in the mid and late game. LAB ONLY. Not trained on."
+}
