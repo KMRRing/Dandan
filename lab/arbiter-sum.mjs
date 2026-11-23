@@ -5,7 +5,8 @@
 // usage: node lab/arbiter-sum.mjs <batch | file:a.jsonl,b.jsonl>
 import fs from "node:fs";
 
-const [batch] = process.argv.slice(2), local = batch.startsWith("file:");
+const [batch] = process.argv.slice(2).filter(a => !a.startsWith("--")), local = batch.startsWith("file:");
+const COMPLETE = Number(process.argv.find(a => a.startsWith("--complete="))?.slice(11) || 0);
 const store = local ? { get: async n => fs.readFileSync(n, "utf8") } : await (await import("./lib.mjs")).labStore();
 const names = local ? batch.slice(5).split(",") : (await store.list(`results/${batch}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n));
 const pts = new Map();   // point -> { band, search: Map(seed -> score), policy: Map(seed -> score) }
@@ -18,21 +19,36 @@ for (const n of names) {
     if (!b || b.kind !== "A" || !b.forced) continue;
     const p = pts.get(b.point) || pts.set(b.point, { band: b.band, v: b.v, gap: b.gap, search: new Map(), policy: new Map() }).get(b.point);
     p[b.side].set(g.seed, g.winner === b.seat ? 1 : g.winner == null || g.winner < 0 ? 0.5 : 0);
+    (p.turns ||= []).push(g.turns - (b.at != null ? 0 : 0));
   }
 }
 const rows = [];
 for (const [k, p] of pts) {
   const both = [...p.search.keys()].filter(s => p.policy.has(s));
   if (!both.length) continue;
+  // --complete=<n> (Fable 23 Nov 00:25Z, the one early read): only calls with all n play-outs on both sides
+  if (COMPLETE && (p.search.size < COMPLETE || p.policy.size < COMPLETE)) continue;
   const d = both.map(s => p.search.get(s) - p.policy.get(s));
-  rows.push({ k, band: p.band, v: p.v, gap: p.gap, n: both.length, diff: d.reduce((a, b) => a + b, 0) / d.length });
+  rows.push({ k, band: p.band, v: p.v, gap: p.gap, turns: p.turns, n: both.length, diff: d.reduce((a, b) => a + b, 0) / d.length });
 }
 const say = (tag, rs) => {
   if (!rs.length) return;
   const m = rs.reduce((a, r) => a + r.diff, 0) / rs.length, v = rs.reduce((a, r) => a + (r.diff - m) ** 2, 0) / Math.max(1, rs.length - 1);
   const se = Math.sqrt(v / rs.length), games = rs.reduce((a, r) => a + r.n, 0);
-  console.log(`  ${tag.padEnd(8)} ${String(rs.length).padStart(4)} points, ${String(games).padStart(5)} paired games: search less policy ${(100 * m).toFixed(1)} ± ${(100 * se).toFixed(1)} points; search better at ${rs.filter(r => r.diff > 0).length}, policy at ${rs.filter(r => r.diff < 0).length}, level ${rs.filter(r => r.diff === 0).length}`);
+  console.log(`  ${tag.padEnd(8)} ${String(rs.length).padStart(4)} points, ${String(games).padStart(5)} paired games: search less policy ${(100 * m).toFixed(1)} ± ${(100 * se).toFixed(1)} points (z ${se ? (m / se).toFixed(2) : "-"}); search better at ${rs.filter(r => r.diff > 0).length}, policy at ${rs.filter(r => r.diff < 0).length}, level ${rs.filter(r => r.diff === 0).length}`);
 };
+const med = xs => { const a = [...xs].sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : "-"; };
+if (COMPLETE) {
+  const pts = JSON.parse(fs.readFileSync(new URL("./arbiter/points.json", import.meta.url), "utf8"));
+  const grp = (v, g) => `${v < 0.9 ? "<90%" : ">=90%"}, gap ${g <= 0.01 ? "<=1" : "1-2"}`, all = new Map(), done = new Map();
+  for (const x of pts) all.set(grp(x.v, x.gap), (all.get(grp(x.v, x.gap)) || 0) + 1);
+  for (const r of rows) done.set(grp(r.v, r.gap), (done.get(grp(r.v, r.gap)) || 0) + 1);
+  console.log(`complete calls (all ${COMPLETE} play-outs on both sides): ${rows.length} of ${pts.length}; ${[...all].sort().map(([k, n]) => `${k}: ${done.get(k) || 0} of ${n}`).join("; ")}`);
+  // the early read's bias (Fable 00:25Z): unfinished shards' games are not in the store yet, so the comparison is by where the
+  // call sits in its source game (its move number), complete against not yet complete
+  const doneK = new Set(rows.map(r => r.k));
+  console.log(`game length of the complete calls' play-outs: median ${med(rows.flatMap(r => r.turns || []))} turns; the call's move in its source game, median: complete ${med(pts.filter((_, k) => doneK.has(k)).map(x => x.at))}, not yet ${med(pts.filter((_, k) => !doneK.has(k)).map(x => x.at))}`);
+}
 console.log(`${batch}: the play-out arbiter, the deciding seat's score with the search's top move less with the policy's`);
 // two groups, not five bands (Fable 22 Nov: 60 calls a band is good to about ±2 points); errors are over calls, so clustered by call
 say("< 90%", rows.filter(r => r.v < 0.9));
