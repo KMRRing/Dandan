@@ -59,6 +59,9 @@ export function determinize(s, seat, rng, weigh = true, open = false, deal = nul
   if (s.pending?.t === "search" && s.pending.seat === seat) for (const id of s.pending.ids) pinned.add(id);
   for (const id of knownIn(s, opp, seat)) pinned.add(id);
   if (open) for (const id of c.hand[opp]) pinned.add(id);
+  // open "all" (lab only, 23 Nov 2026, Fable 09:45Z, the ceiling probe): the true order of the library as well, so the search
+  // weighs the real deal. A measuring stick for what perfect reading could win; nothing in the game passes it (dandan-engines.js)
+  if (open === "all") for (const id of c.lib) pinned.add(id);
   const pool = [], handSlots = [], libSlots = [];
   c.hand[opp].forEach((id, i) => { if (!pinned.has(id)) { pool.push(id); handSlots.push(i); } });
   c.lib.forEach((id, i) => { if (!pinned.has(id)) { pool.push(id); libSlots.push(i); } });

@@ -48,13 +48,17 @@ const DEEPER = {
   ...(flag("bestreply") ? { bestReply: true } : {}),
   // commit=1 (22 Nov 2026, Fable 19:40Z): explore, then commit, at the other seat's first reply (dandan-think.js)
   ...(flag("commit") ? { commit: true } : {}),
+  // cheat=hand|all (LAB ONLY, 23 Nov 2026, Fable 09:45Z, Korbi's yes 11:38 local: the ceiling probe): the nets' search sees the
+  // other hand (hand) or the other hand and the library's order (all). Breaks "Monte never uses what a player can't know": a
+  // measuring stick only, never a candidate; the game's engines (dandan-engines.js) have no way to pass it
+  ...(flag("cheat") ? { open: flag("cheat") === "all" ? "all" : true } : {}),
 };
 const CAP = flag("cap") ? (([share, d]) => ({ share, deals: d || 64 }))(flag("cap").split(":").map(Number)) : null;
 // priorsplit (19 Nov 2026, Fable): the prior on even shards only, so a batch reads with and without it side by side; the game
 // line says which (prior: c, or 0)
 if (DEEPER.prior && flag("priorsplit") && shard % 2 === 1) delete DEEPER.prior;
 const PRIOR = DEEPER.prior || 0;
-const FAST = { ...(DEEPER.decided ? { decided: DEEPER.decided } : {}), ...(PRIOR ? { prior: PRIOR } : {}) };
+const FAST = { ...(DEEPER.decided ? { decided: DEEPER.decided } : {}), ...(PRIOR ? { prior: PRIOR } : {}), ...(DEEPER.open ? { open: DEEPER.open } : {}) };
 // vsresign=<share> (19 Nov 2026, Fable): that share of the rival games resigns for real (the goal's engine, resigning included);
 // the rest play out as before, with `would` keeping count
 const VS_RESIGN = Number(flag("vsresign") || 0);
@@ -179,7 +183,7 @@ for (let g = first; g < first + n && (!ARB || ARBP); g++) {
       // while 3 of its own moves in 4 came from the 128-deal fast search; a reading has to be like for like)
       const full = vsSeat >= 0 || !CAP || seeded(mix(seed, 3300017 + i))() < CAP.share;
       // the prior head-to-head: our side with the prior (the flag's weight, or 1), the rival without
-      const opts = yard ? FULL : full ? DEEPER : FAST, ab = R?.noprior ? (who === vsSeat ? (({ prior, ...o }) => o)(opts) : { ...opts, prior: Number(flag("prior")) || 1 }) : opts;
+      const opts0 = yard ? FULL : full ? DEEPER : FAST, opts = vsSeat >= 0 && who === vsSeat && opts0.open ? (({ open, ...o }) => o)(opts0) : opts0, ab = R?.noprior ? (who === vsSeat ? (({ prior, ...o }) => o)(opts) : { ...opts, prior: Number(flag("prior")) || 1 }) : opts;   // the rival never sees through (cheat)
       // oracle=1 (19 Nov 2026, Korbi: a diagnostic, never self-play): our side's search sees the other hand as it is (determinize
       // open: only the library's order dealt), the upper bound of what a perfect dealer could give it
       const ab2 = flag("oracle") && who !== vsSeat ? { ...ab, open: true } : ab;
