@@ -1386,3 +1386,5 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
 - 2026-11-23 17:19Z ops: ch.vs1.2xlarge-iad still $0.010 → US East 16c regrow step 2: k8s e7f00bce 2→4 (VM a2b0e1bf 6, all 5 new VMs reporting). Drain after worker 3950372b over: 17:08Z 83 machines, 509/606 busy (84%), zdref002 9 + zpro001 138 + zps040 1039 waiting. Other prices unchanged, below bids. Google clean.
 
 - 2026-11-23 21:17Z (ops): ch.vs1.2xlarge-iad at $0.036 (floor $0.035). Stepped US East 16c back: VM a2b0e1bf 6→2, k8s e7f00bce 4→2. Other classes we use below bids. Fleet 21:04Z 85 machines, 638/638 busy; 2,349 unclaimed; reqCostH $0.24.
+
+- 2026-11-23 22:04Z (ops): ch.vs1.2xlarge-iad back to $0.010. Regrew US East 16c: VM a2b0e1bf 2→6, k8s e7f00bce 2→4. Fleet 21:54Z 80 machines, 569/570 busy; 2,470 unclaimed (new zpmar001); reqCostH $0.22.
