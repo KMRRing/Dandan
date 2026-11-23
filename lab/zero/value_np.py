@@ -23,6 +23,10 @@ ap.add_argument("--fut", type=float, default=0.0)
 # KataGo's ownership); squared error, these weights; dropped from the file written
 ap.add_argument("--endw", type=float, default=0.0)
 ap.add_argument("--fate", type=float, default=0.0)
+# the general counts (23 Nov 2026, Fable 11:45Z): gaux.f32, 26 a row (replay-pack2.mjs): both seats' lands, cards in hand,
+# creatures and their power, life and the library 3 turns on and at the end, the turns left and the winner's life; squared error,
+# this weight; dropped from the file written, so play is unchanged
+ap.add_argument("--gaux", type=float, default=0.0)
 # the refinement stage (19 Nov 2026): train and measure on the rows from the REFINE batches alone (rf.u8)
 ap.add_argument("--refine_only", "--refine-only", dest="refine_only", action="store_true")
 # the removal test (18 Nov 2026): inputs from this column on read as zero, so their first-layer weights stay at zero in the file
@@ -69,7 +73,7 @@ def target(name, width, weight):
     return rd(name, np.float32).reshape(R, width), weight
 # the last layer: the value, then the deck-out logit (--aux), then the squared-error groups in this order; all but the value read
 # from this seat's side only, and only the value is written
-REG = [t for t in (target("fut.f32", 3, A.fut), target("end.f32", 4, A.endw), target("fate.f32", int(meta.get("fateN", 52)), A.fate)) if t]
+REG = [t for t in (target("fut.f32", 3, A.fut), target("end.f32", 4, A.endw), target("fate.f32", int(meta.get("fateN", 52)), A.fate), target("gaux.f32", int(meta.get("gauxN", 26)), A.gaux)) if t]
 IA = 1
 OFF = [1 + (AUX is not None)]
 for y, _ in REG: OFF.append(OFF[-1] + y.shape[1])

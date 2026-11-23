@@ -6466,5 +6466,7 @@
     "score": 0.5366876310272537
   },
   "challenger": "zl27",
-  "priorOffFrom": 28
+  "priorOffFrom": 28,
+  "gauxFrom": 29,
+  "gauxArg": "--gaux_0.03"
 }

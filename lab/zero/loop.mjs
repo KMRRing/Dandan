@@ -99,6 +99,9 @@ if (L.phase === "play") {
       if (y?.n) { log(`generation ${L.gen}: ${L.champion} against the leaky ${L.yardVs.split(":")[0]}: ${(100 * y.score).toFixed(1)}% over ${y.n} games`); L.yardReading = { nets: L.champion, against: L.yardVs.split(":")[0], ...y }; }
     }
     L.challenger = `${L.prefix}${L.gen}`;
+    // the general counts on the value net from generation gauxFrom on (23 Nov 2026, Fable 11:45Z): gauxArg added to value_args,
+    // training only (the extra outputs are dropped from the net written); generation 28 left without, to isolate the prior-off change
+    const TA = L.gauxFrom && L.gen >= L.gauxFrom && L.trainArgs ? L.trainArgs.replace(/(value_args=\S+)/, `$1_${L.gauxArg}`) : L.trainArgs;
     // the window: every game since windowFrom, at most maxWindow games (the oldest batches go first); 18 Nov 2026: windowFrom no
     // longer moves at the crown, so the window is the last maxWindow games (about three generations): the policy trained on
     // 8 batches gave up 0.783 points against 0.820 on 4
@@ -118,10 +121,10 @@ if (L.phase === "play") {
       // (the deep ones) trained again alone after the main stage, refineArgs = <epochs>:<policy lr>:<value lr>
       const deepIds = L.refineFrom ? window.filter(id => Number(id.slice(-3)) >= L.refineFrom) : [];
       const refine = deepIds.length ? ` refine=${deepIds.join("+")}:${L.refineArgs || "3:1e-4:3e-5"}` : "";
-      L.trained.next = `general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.challenger} belief=scryg value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}${refine}`;
+      L.trained.next = `general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.challenger} belief=scryg value=${L.value}${TA ? " " + TA : ""}${refine}`;
       for (const d of L.trained.dispatch) say(`DISPATCH ${d}`);
-    } else if (GEN) say(`DISPATCH general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.scry} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
-    else say(`DISPATCH zero-train-ext.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} value=${L.value}${L.trainArgs ? " " + L.trainArgs : ""}`);
+    } else if (GEN) say(`DISPATCH general-train.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} scry=${L.scry} value=${L.value}${TA ? " " + TA : ""}`);
+    else say(`DISPATCH zero-train-ext.yml games=${window.join(",")} name=${L.challenger} init=${L.champion} value=${L.value}${TA ? " " + TA : ""}`);
     L.nextFrom = got.length ? got[got.length - 1].n + 1 : L.genFrom;   // the next generation's first batch
   }
 } else if (L.phase === "train") {
