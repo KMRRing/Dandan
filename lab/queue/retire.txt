@@ -71,3 +71,4 @@ zps038  # 2026-11-23T12:18:40.944Z Zero's loop: made with the nets before zl27
 zps039  # 2026-11-23T12:18:40.944Z Zero's loop: made with the nets before zl27
 zpol001  # 13:28Z (Korbi 15:27 local): stopped early, about 160 games (57 done, 103 running at 13:16Z); first 52: deep 76.9% ± 5.9 against policy-only, past 65% either way
 zqhead000  # 13:55Z: renamed zprhead000; zq sorts after the zps self-play, so it was never claimed
+zpro001  # 18:47Z (Fable 18:30Z): 41.3% ± 3.2 over 242 games, under the 48% bar; the opponent switch (half-day step) is closed
