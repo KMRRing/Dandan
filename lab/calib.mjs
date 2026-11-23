@@ -29,7 +29,7 @@ for (const n of names) {
     let G = recordOf(rules, g), first = null, t4 = null; const seenNet = new Set(), netAt = new Map(), searchAt = new Map();
     for (let i = 0; i < g.moves.length && (t4 == null || (TURNS.length && searchAt.size < TURNS.length && !G.state.over)); i++) {
       const [who, m] = g.moves[i], v = dec.get(`${g.seed}:${i}`);
-      if (who === me && v != null) { if (first == null) first = v; if (G.state.turn >= 4) t4 = v; }
+      if (who === me && v != null) { if (first == null) first = v; if (G.state.turn >= 4 && t4 == null) t4 = v; }
       for (const T of TURNS) {
         if (G.state.turn >= T && !seenNet.has(T)) { seenNet.add(T); netAt.set(T, VN(G.state, me)); }
         if (G.state.turn >= T && who === me && v != null && !searchAt.has(T)) searchAt.set(T, v);
