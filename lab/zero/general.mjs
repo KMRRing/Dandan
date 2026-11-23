@@ -165,7 +165,9 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
       return { deal: wd ? (pool, n, rng) => wd(pool, n, rng) || sd(pool, n, rng) : sd };
     },
     think(s, seat, deals, extra = {}) {
-      const { qtree, prior, multi, ...rest } = extra;
+      const { qtree, prior, multi, policyOnly, ...rest } = extra;
+      // policyOnly (23 Nov 2026, Fable 11:35Z, zpol001): no search; the policy's top move, on the same beliefs the search would use
+      if (policyOnly) { this.root(s, seat, rest.salt); const n = zeroOptions(s, seat).length; return { best: player.rollout(s, seat, Math.random), list: [], only: n <= 1, policyOnly: true }; }
       const r = think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge, focus: player.focus,
         ...(qtree ? { qfocus: player.qfocus } : {}), ...this.root(s, seat, rest.salt), ...rest });
       return (prior && policy) || multi ? withPrior(r, s, seat, prior && policy ? prior : 0, !!multi) : r;

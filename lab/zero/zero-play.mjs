@@ -82,6 +82,8 @@ const RIVALS = await Promise.all((flag("vs") || "").split(",").filter(Boolean).m
   if (nets === "noprior") return { nets, every, at, noprior: true, brain: await brainBy(process.argv[8], process.argv[9]) };
   // "withprior:<every>" (23 Nov 2026, Fable 09:55Z: from generation 28 our side plays without the prior): the same nets as ours,
   // playing with the policy prior (×1) while our side plays without it; the same head-to-head, the other way round
+  // "policyonly:<every>" (23 Nov 2026, Fable 11:35Z, zpol001): the same nets as ours, playing the policy's top move with no search
+  if (nets === "policyonly") return { nets, every, at, policyonly: true, brain: await brainBy(process.argv[8], process.argv[9]) };
   if (nets === "withprior") return { nets, every, at, withprior: true, brain: await brainBy(process.argv[8], process.argv[9]) };
   return { nets, every, at, brain: await brainBy(nets.startsWith("gen:") ? nets : `${nets}-policy`, `${nets}-value`) };
 }));
@@ -186,7 +188,7 @@ for (let g = first; g < first + n && (!ARB || ARBP); g++) {
       // while 3 of its own moves in 4 came from the 128-deal fast search; a reading has to be like for like)
       const full = vsSeat >= 0 || !CAP || seeded(mix(seed, 3300017 + i))() < CAP.share;
       // the prior head-to-head: our side with the prior (the flag's weight, or 1), the rival without
-      const opts0 = yard ? FULL : full ? DEEPER : FAST, opts = vsSeat >= 0 && who === vsSeat && opts0.open ? (({ open, ...o }) => o)(opts0) : opts0, ab = R?.withprior ? (who === vsSeat ? { ...opts, prior: 1 } : opts) : R?.noprior ? (who === vsSeat ? (({ prior, ...o }) => o)(opts) : { ...opts, prior: Number(flag("prior")) || 1 }) : opts;   // the rival never sees through (cheat)
+      const opts0 = yard ? FULL : full ? DEEPER : FAST, opts = vsSeat >= 0 && who === vsSeat && opts0.open ? (({ open, ...o }) => o)(opts0) : opts0, ab = R?.policyonly ? (who === vsSeat ? { policyOnly: true } : opts) : R?.withprior ? (who === vsSeat ? { ...opts, prior: 1 } : opts) : R?.noprior ? (who === vsSeat ? (({ prior, ...o }) => o)(opts) : { ...opts, prior: Number(flag("prior")) || 1 }) : opts;   // the rival never sees through (cheat)
       // oracle=1 (19 Nov 2026, Korbi: a diagnostic, never self-play): our side's search sees the other hand as it is (determinize
       // open: only the library's order dealt), the upper bound of what a perfect dealer could give it
       const ab2 = flag("oracle") && who !== vsSeat ? { ...ab, open: true } : ab;

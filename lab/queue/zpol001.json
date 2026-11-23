@@ -1,0 +1,8 @@
+{
+  "id": "zpol001",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 400 530000000 gen:zl27 - 0 deeper=0.03 deepmax=4 vs=policyonly:1",
+  "shards": 400,
+  "timeoutMin": 720,
+  "purpose": "What the search adds (Fable 11:35Z and 12:35Z): zl27 with the deep search (1,024 deals, close calls up to 4 turns) against zl27 by policy alone (its top move, no search: zero-play vs=policyonly), prior off on both, 400 games, seats alternated, one game a shard, no resigning, no exploration. Read: under 55% the search adds little; 65% or more the plateau lies elsewhere. Tier zpol sorts after zceil001 and zdref001, before the zps self-play. LAB ONLY. Not trained on."
+}
