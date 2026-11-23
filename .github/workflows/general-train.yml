@@ -25,7 +25,7 @@ on:
       futk: { description: "The value net's future outputs (--fut) this many of the seat's own turns ahead (replay-pack2 FUTK)", required: false, default: "1" }
       vtd: { description: "Value targets' search half from the same seat's searched value this many of its turns later (replay-pack2 VTD); 0 off", required: false, default: "0" }
       policy_init: { description: "warm: the policy starts from init too; fresh: only the value does (18 Nov 2026: fresh on 8 batches gave up 0.783 points, warm 0.810)", required: false, default: "warm" }
-      only: { description: "gvalue: train the value net alone; the policy is the init's, copied (23 Nov 2026, a side value net); empty both", required: false, default: "" }
+      only: { description: "gvalue: the value net alone, the policy the init's, copied (23 Nov 2026, a side value net); gpolicy: the policy alone (warm from init or fresh), the value and dealer the scry's nets, copied (the policy sweep); empty both", required: false, default: "" }
       hands: { description: "Scry 1.2's dealt hands a decision in the pack (1,024 in play; 256 packs four times as fast)", required: false, default: "256" }
 permissions:
   contents: write
@@ -78,7 +78,9 @@ jobs:
           rm -rf "$I"
           W="${{ inputs.init }}"; ini() { [ -z "$W" ] || echo "--init lab/zero/nets/$W-$1.json"; }
           set -o pipefail
-          if [ "${{ matrix.net }}" = gvalue ]; then
+          if [ "${{ matrix.net }}" = gvalue ] && [ "${{ inputs.only }}" = gpolicy ]; then
+            cp "lab/zero/nets/${{ inputs.scry }}-gvalue.json" "out/$N-gvalue.json"; echo "the value net is ${{ inputs.scry }}'s, copied (only=gpolicy)" | tee "$RUNNER_TEMP/log.txt"
+          elif [ "${{ matrix.net }}" = gvalue ]; then
             python3 lab/zero/value_np.py "$D/v" "out/$N-gvalue.json" --shape "${{ inputs.value }}" $(ini gvalue) ${{ inputs.value_args }} | tee "$RUNNER_TEMP/log.txt"
           elif [ "${{ inputs.only }}" = gvalue ]; then
             cp "lab/zero/nets/$W-gpolicy.json" "out/$N-gpolicy.json"; echo "the policy is $W's, copied (only=gvalue)" | tee "$RUNNER_TEMP/log.txt"
@@ -88,14 +90,14 @@ jobs:
           # the refinement stage: the same net again on the REFINE batches alone, from the main stage's net (its best epoch kept on
           # those batches' held-out games)
           IFS=: read RB RE RP RV <<< "${{ inputs.refine }}"
-          if [ -n "$RB" ]; then
+          if [ -n "$RB" ] && [ "${{ inputs.only }}" != "${{ matrix.net == 'gvalue' && 'gpolicy' || 'gvalue' }}" ]; then
             echo "refinement on $RB: $RE epochs" | tee -a "$RUNNER_TEMP/log.txt"
             # the main stage's net kept beside the refined one as <name>m (19 Nov 2026, Fable: if the refinement makes the value net
             # worse on the result alone, the main stage's ships)
             for f in out/$N-*.json; do cp "$f" "out/${N}m-${f#out/$N-}"; done
             if [ "${{ matrix.net }}" = gvalue ]; then
               python3 lab/zero/value_np.py "$D/v" "out/$N-gvalue.json" --shape "${{ inputs.value }}" ${{ inputs.value_args }} --init "out/$N-gvalue.json" --epochs "$RE" --lr "$RV" --refine_only | tee -a "$RUNNER_TEMP/log.txt"
-            elif [ "${{ inputs.only }}" != gvalue ]; then
+            else
               python3 lab/policy_np.py "$D/a" "out/$N-gpolicy.json" --form head ${{ inputs.policy_args }} --init "out/$N-gpolicy.json" --epochs "$RE" --lr "$RP" --refine_only | tee -a "$RUNNER_TEMP/log.txt"
             fi
           fi
@@ -120,6 +122,7 @@ jobs:
           [ "$B" = scryg ] || [ "$S" = "lab/zero/nets/$N-$B.json" ] || cp "$S" "lab/zero/nets/$N-$B.json"
           # a side value net (only=gvalue): the dealer is the init's too
           [ "${{ inputs.only }}" != gvalue ] || cp "lab/zero/nets/${{ inputs.init }}-scryg.json" "lab/zero/nets/$N-scryg.json"
+          [ "${{ inputs.only }}" != gpolicy ] || cp "lab/zero/nets/${{ inputs.scry }}-scryg.json" "lab/zero/nets/$N-scryg.json"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add lab/zero/nets/
