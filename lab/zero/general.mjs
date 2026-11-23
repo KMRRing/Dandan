@@ -53,7 +53,7 @@ export function generalPlayer(policy, ctx) {
 }
 
 /** The value net (value_np.py's layer format) over valueView, face up: the chance `me` wins, sigmoid(g(mine) − g(theirs)). */
-export function generalJudge(value) {
+export function generalJudge(value, raw = false) {
   if (!value) return null;
   const net = value.layers.map(L => {
     const [nIn, nOut] = L.n, raw = Uint8Array.from(atob(L.q), c => c.charCodeAt(0)), W = new Float32Array(nIn * nOut), b = new Float32Array(nOut);
@@ -85,6 +85,8 @@ export function generalJudge(value) {
     return a[0];
   };
   const xs = [new Float32Array(N), new Float32Array(N)];
+  // raw (23 Nov 2026, the margin term): one output read from this seat's side alone, as value_np.py trained it (gaux.f32's columns)
+  if (raw) return (s, me) => g(pick(valueView(s, me, POOL, xs[0]), 0), 0);
   return (s, me) => {
     if (s.over) return s.winner < 0 ? 0.5 : s.winner === me ? 1 : 0;
     const a = g(pick(valueView(s, me, POOL, xs[0]), 0), 0), b = g(pick(valueView(s, 1 - me, POOL, xs[1]), 1), 1);
@@ -103,8 +105,21 @@ export const dandanEngine = () => ({ options: zeroOptions, nameOf: id => DECK[id
 // counts are on the pool already. The other player's belief (the policy's input when it plays them in the search) is read in a
 // world dealt from the seat's own belief, never in the real game (where it would read their real hand).
 const OTHER_WORLDS = 4;
-export function makeGeneral({ policy = null, value = null, scry12 = null, scryg = null, wall = null } = {}) {
+export function makeGeneral({ policy = null, value = null, scry12 = null, scryg = null, wall = null, margin = null, speed = null } = {}) {
   const ctx = { counts: [new Float32Array(POOL.V), new Float32Array(POOL.V)], any: [null, null], ans: [null, null] }, player = generalPlayer(policy, ctx), judge = generalJudge(value);
+  // the margin term (23 Nov 2026, Fable 11:45Z item 2 and 12:35Z): a leaf scores p + clip(w × (m − k × (2p − 1) × t), ±cap), m the
+  // predicted margin (the winner's life at the end /20, + if this seat wins), t the predicted turns left (/40): wider wins and,
+  // when ahead, faster ones (when behind, slower) break the ties the win chance can't; at the game's end m and t are as they are.
+  // Capped so it is never worth more than cap (2 points). margin=<w>:<k>[:<cap>] on think; nets <name>-gmargin, -gspeed
+  const M = margin && speed ? [generalJudge(margin, true), generalJudge(speed, true)] : null;
+  const marginJudge = spec => {
+    const [w, k, cap = 0.02] = String(spec).split(":").map(Number);
+    return (s, me) => {
+      const p = judge(s, me);
+      const m = s.over ? (s.winner === me ? 1 : s.winner < 0 ? 0 : -1) * Math.max(0, s.life[s.winner] ?? 0) / 20 : M[0](s, me), t = s.over ? 0 : Math.min(1, Math.max(0, M[1](s, me)));
+      return p + Math.max(-cap, Math.min(cap, w * (m - k * (2 * p - 1) * t)));
+    };
+  };
   const W = wall ? (wall === true ? {} : wall) : null, engine = W ? dandanEngine() : null;
   let filters = null, walls = null;
   const fresh = () => {
@@ -165,10 +180,11 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
       return { deal: wd ? (pool, n, rng) => wd(pool, n, rng) || sd(pool, n, rng) : sd };
     },
     think(s, seat, deals, extra = {}) {
-      const { qtree, prior, multi, policyOnly, ...rest } = extra;
+      const { qtree, prior, multi, policyOnly, margin: mspec, ...rest } = extra;
+      if (mspec && !M) throw new Error("margin=: these nets have no -gmargin and -gspeed");
       // policyOnly (23 Nov 2026, Fable 11:35Z, zpol001): no search; the policy's top move, on the same beliefs the search would use
       if (policyOnly) { this.root(s, seat, rest.salt); const n = zeroOptions(s, seat).length; return { best: player.rollout(s, seat, Math.random), list: [], only: n <= 1, policyOnly: true }; }
-      const r = think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge, focus: player.focus,
+      const r = think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge: mspec ? marginJudge(mspec) : judge, focus: player.focus,
         ...(qtree ? { qfocus: player.qfocus } : {}), ...this.root(s, seat, rest.salt), ...rest });
       return (prior && policy) || multi ? withPrior(r, s, seat, prior && policy ? prior : 0, !!multi) : r;
     },

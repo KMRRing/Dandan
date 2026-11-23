@@ -27,6 +27,9 @@ ap.add_argument("--fate", type=float, default=0.0)
 # creatures and their power, life and the library 3 turns on and at the end, the turns left and the winner's life; squared error,
 # this weight; dropped from the file written, so play is unchanged
 ap.add_argument("--gaux", type=float, default=0.0)
+# the margin term's nets (23 Nov 2026, Fable 12:35Z): <out>:<j>[,<out>:<j>] writes, beside the value net, a one-output net of
+# gaux.f32's column j (24 turns left, 25 the winner's life) on the same hidden layers, read from this seat's side alone
+ap.add_argument("--gaux_out", "--gaux-out", dest="gaux_out", default="")
 # the refinement stage (19 Nov 2026): train and measure on the rows from the REFINE batches alone (rf.u8)
 ap.add_argument("--refine_only", "--refine-only", dest="refine_only", action="store_true")
 # the removal test (18 Nov 2026): inputs from this column on read as zero, so their first-layer weights stay at zero in the file
@@ -145,6 +148,22 @@ for e in range(1, A.epochs + 1):
     if h < best: best, bestW, bestE = h, ([w.copy() for w in W], [b.copy() for b in B]), e
 
 Wb, Bb = bestW
+def write(path, Wl, Bl, note, metrics):
+    layers = []
+    for l, (w, b) in enumerate(zip(Wl, Bl)):
+        sc = np.maximum(np.abs(w).max(0), 1e-8) / 127
+        q = np.clip(np.round(w / sc), -127, 127).astype(np.int8)
+        layers.append(dict(n=[int(w.shape[0]), int(w.shape[1])], q=base64.b64encode(q.tobytes()).decode(), s=[float(round(x, 8)) for x in sc], b=[float(round(x, 6)) for x in b]))
+    json.dump(dict(source="lab/zero/value_np.py", note=note, metrics=metrics, layers=layers, **({"cols": COLS.tolist()} if COLS is not None else {})), open(path, "w"))
+    open(path, "a").write("\n")
+if A.gaux_out:
+    gi = [k for k, (y, _) in enumerate(REG) if y.shape[1] == int(meta.get("gauxN", 26))]
+    if not A.gaux or not gi: sys.exit("--gaux_out needs --gaux and a pack with gaux.f32")
+    for spec in A.gaux_out.split(","):
+        path, j = spec.rsplit(":", 1); c = OFF[gi[-1]] + int(j)
+        # its last layer keeps its bias (a raw output, unlike the value's difference of two sides, needs it)
+        write(path, Wb[:-1] + [Wb[-1][:, c:c + 1]], Bb[:-1] + [Bb[-1][c:c + 1]], f"gaux column {j} of {A.shape}, {R} rows", dict(rows=int(R), epoch=bestE))
+        say(f"wrote {path}: gaux column {j}")
 if OUT > 1:   # the value output alone is kept: the other outputs only shaped the layers below it
     Wb = Wb[:-1] + [Wb[-1][:, :1]]; Bb = Bb[:-1] + [Bb[-1][:1]]
 layers = []

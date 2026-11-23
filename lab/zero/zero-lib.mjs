@@ -84,5 +84,8 @@ export async function generalBrain(name, extra = {}) {
   const { makeGeneral } = await import("./general.mjs");
   // the belief: the general dealer (<name>-scryg) when there is one, else Scry 1.2 (<name>-scry12)
   const g = fs.existsSync(new URL(`./nets/${name}-scryg.json`, import.meta.url)) ? netOf(`${name}-scryg`) : null;
-  return makeGeneral({ policy: netOf(`${name}-gpolicy`), value: netOf(`${name}-gvalue`), ...(g ? { scryg: g } : { scry12: netOf(`${name}-scry12`) }), ...extra });
+  // the margin term's nets (23 Nov 2026, Fable 11:45Z item 2): <name>-gmargin and -gspeed when there are both (value_np.py --gaux_out)
+  const has = k => fs.existsSync(new URL(`./nets/${name}-${k}.json`, import.meta.url));
+  const ms = has("gmargin") && has("gspeed") ? { margin: netOf(`${name}-gmargin`), speed: netOf(`${name}-gspeed`) } : {};
+  return makeGeneral({ policy: netOf(`${name}-gpolicy`), value: netOf(`${name}-gvalue`), ...(g ? { scryg: g } : { scry12: netOf(`${name}-scry12`) }), ...ms, ...extra });
 }
