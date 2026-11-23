@@ -11,6 +11,10 @@ on:
         description: "Also restart every lab pod (rollout restart), so each picks up main's worker"
         type: boolean
         default: false
+      restart_draining:
+        description: "Restart only the lab pods that are draining (their log says a newer worker is on main), except those still running a shard of a job matching this pattern (e.g. zdref001|zceil001); empty: off"
+        required: false
+        default: ""
       logs:
         description: "Pod or node names (comma-separated, any part of the name) whose lab worker's last 40 log lines to show, or 'unready' for every pod not running"
         required: false
@@ -57,6 +61,24 @@ jobs:
             kubectl apply -f "$RUNNER_TEMP/m1.yaml" 2>&1 | sed -E 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g'
             # 13 Nov: workers started before the drain-on-new-version change never restart by themselves
             if [ "${{ inputs.restart }}" = "true" ]; then kubectl rollout restart daemonset/dandan-lab 2>&1; fi
+            # 23 Nov 2026 (Fable 14:45Z): a worker push leaves each machine draining, its slots idle until its longest shard ends;
+            # this restarts the draining pods at once (a stop hands their shards back), sparing any still running a shard of KEEP
+            KEEP="${{ inputs.restart_draining }}"
+            if [ -n "$KEEP" ]; then
+              dr=0; kept=0; gone=""
+              for pod in $(kubectl get pods -l app=dandan-lab --no-headers 2>/dev/null | awk '$3=="Running"{print $1}'); do
+                lg=$(kubectl logs "$pod" --since=8h 2>/dev/null)
+                printf '%s\n' "$lg" | grep -q "a newer worker is on main" || continue
+                dr=$((dr+1))
+                started=$(printf '%s\n' "$lg" | grep -oE "slot [0-9]+: [a-z0-9-]+/[0-9]+ [a-z0-9-]+\.mjs" | grep -E ": ($KEEP)/" | awk '{print $3}' | sort -u)
+                ended=$(printf '%s\n' "$lg" | grep -oE "slot [0-9]+: [a-z0-9-]+/[0-9]+ ended" | awk '{print $3}' | sort -u)
+                live=$(comm -23 <(printf '%s\n' "$started" | sed '/^$/d') <(printf '%s\n' "$ended" | sed '/^$/d') | wc -l)
+                if [ "$live" -gt 0 ]; then kept=$((kept+1)); else gone="$gone $pod"; fi
+              done
+              n_gone=$(echo $gone | wc -w)
+              [ -z "$gone" ] || kubectl delete pod $gone --wait=false >/dev/null 2>&1
+              echo "draining pods: $dr; restarted $n_gone; kept $kept (still running a shard of $KEEP)" | tee -a "$GITHUB_STEP_SUMMARY"
+            fi
             rm -f "$RUNNER_TEMP/m1.yaml"
             sleep 15
             { echo "### Machines: $(kubectl get nodes --no-headers 2>/dev/null | awk '$2=="Ready"' | wc -l) ready of $(kubectl get nodes --no-headers 2>/dev/null | wc -l)"
