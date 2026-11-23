@@ -11,6 +11,7 @@ on:
       most: { description: "Most games a pack shard replays (16 shards)", required: false, default: "750" }
       args: { description: "More scryg_torch.py arguments", required: false, default: "--epochs 4 --d 32 --a 32 --h 128 --bs 128" }
       init: { description: "Warm start: an earlier Scry G (lab/zero/nets/<init>-scryg.json); empty fresh", required: false, default: "" }
+      train_only: { description: "Batches whose games are all training rows, none held out (scryg-pack TRAIN_ONLY)", required: false, default: "" }
       feat: { description: "The dealer's added inputs (lab/zero/scryg.mjs, 23 Nov 2026): a (could-have-acted marks), b (hidden hand's age), ab; empty none", required: false, default: "" }
 permissions:
   contents: write
@@ -31,7 +32,7 @@ jobs:
         run: |
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
           D="$RUNNER_TEMP/r"; P=${{ matrix.part }}
-          for k in 0 1 2 3; do FEAT="${{ inputs.feat }}" LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/scryg-pack.mjs "$D/$k" "${{ inputs.games }}" $((P * 4 + k)) 16 "${{ inputs.most }}" > "$RUNNER_TEMP/t$k.txt" & done; wait
+          for k in 0 1 2 3; do FEAT="${{ inputs.feat }}" TRAIN_ONLY="${{ inputs.train_only }}" LAB_KEY="$RUNNER_TEMP/key.json" node lab/zero/scryg-pack.mjs "$D/$k" "${{ inputs.games }}" $((P * 4 + k)) 16 "${{ inputs.most }}" > "$RUNNER_TEMP/t$k.txt" & done; wait
           rm -f "$RUNNER_TEMP/key.json"
           tail -n 1 "$RUNNER_TEMP"/t?.txt | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4

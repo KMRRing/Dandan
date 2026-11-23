@@ -20,6 +20,10 @@ const [dir, ids] = process.argv.slice(2), SH = Number(process.argv[4] || 0), SHS
 // FEAT (23 Nov 2026, Fable 18:00Z): the dealer's added inputs, "a", "b" or "ab" (lab/zero/scryg.mjs); none by default
 const FEAT = { a: /a/.test(process.env.FEAT || ""), b: /b/.test(process.env.FEAT || "") }, CTX_N = ctxN(POOL, FEAT);
 const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random, P = POOL, X = posSize(P, undefined, FEAT);
+// TRAIN_ONLY (23 Nov 2026, Fable 20:40Z, zd27big): batches whose games are all training rows (none held out), so a bigger pack
+// keeps the same held-out positions as a window's pack and the numbers compare
+const TRAIN_ONLY = new Set((process.env.TRAIN_ONLY || "").split(",").filter(Boolean));
+let trainOnly = false;
 fs.mkdirSync(dir, { recursive: true });
 const files = ["ev_off.i64", "ev_marks.u16", "ev_ctx.u8", "ev_turn.i16", "x_off.i64", "x_idx.u16", "x_val.f16", "u.u8", "nh.u8", "nl.u8", "y_off.i64", "y.u8", "rec.i64", "turn.i16", "hold.u8", "gc.u8"];
 // the groups (19 Nov 2026, Korbi: the dealer's extra outputs, training only): how many of the hidden hand's cards are lands, have
@@ -42,7 +46,7 @@ function replay(game) {
   // a branch game (branch-lib.mjs): the source's moves with its randomness, the hidden cards re-dealt at the branch point; the
   // records follow the whole game (they hold only what each seat saw), positions are taken from the branch point on
   if (game.branch) return;   // the dealer never trains on branch games (Fable, 19 Nov): plenty of ordinary games, and none mixed in
-  const seed = game.seed, B = game.branch || null, hold = (B ? B.src : seed) % 5 === 0;
+  const seed = game.seed, B = game.branch || null, hold = !trainOnly && (B ? B.src : seed) % 5 === 0;
   let G = recordOf(rules, game);
   const R = [new RecordG(0, P, FEAT), new RecordG(1, P, FEAT)], pend = [[], []];
   for (let i = 0; i < game.moves.length; i++) {
@@ -85,6 +89,7 @@ const local = ids.startsWith("file:");
 const store = local ? null : await (await import("../lib.mjs")).labStore();
 const parts = local ? [ids.slice(5)] : (await Promise.all(ids.split(",").map(id => store.list(`results/${id}/`)))).flat().filter(o => /\/part-\d+\.jsonl$/.test(o)).sort().filter((_, k) => k % SHS === SH);
 outer: for (const name of parts) {
+  trainOnly = TRAIN_ONLY.has(name.split("/").at(-2));
   const text = local ? fs.readFileSync(name, "utf8") : (await store.get(name)) || "";
   for (const line of text.split("\n")) if (line.startsWith('{"game"')) { replay(JSON.parse(line)); if (games >= MAX) break outer; }
 }
