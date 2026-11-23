@@ -1,0 +1,8 @@
+{
+  "id": "zdref002",
+  "script": "blunder-ref.mjs",
+  "args": "{shard} {shards} {out} zdm001 zl23 4096 4 0 SKIP=zdref001",
+  "shards": 13,
+  "timeoutMin": 220,
+  "purpose": "The blunder reference's missing positions (Fable 16:55Z and 17:05Z): zdref001's 10 shards cut off at 270 min left 494 of the 1,918 unsearched; the same search on those only (SKIP=zdref001), about 40 a shard at zdref001's fleet mean of 109 s a decision (about 73 min a shard), limit 3x. LAB ONLY. Not trained on."
+}

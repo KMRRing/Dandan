@@ -5,7 +5,7 @@
 // Output, one line a position: { pos, seat, turn, pick, loss, best, n }; loss = the reference's best mean − its mean of the pick
 // (0 when the pick is the reference's best; null when the reference has no mean for it). Summarised by lab/blunder-sum.mjs.
 // usage: node lab/blunder-pick.mjs <shard> <shards> <out> <nets: gen:<name> | <name> for the old line, as g12r-C>
-//          [prior 0|1] [ref zdref001] [batch zdm001] [deals 1024] [margin -|<w>:<k>]
+//          [prior 0|1] [ref zdref001[,zdref002]] [batch zdm001] [deals 1024] [margin -|<w>:<k>]
 import fs from "node:fs";
 import { rules } from "../dandan-rules.js";
 import { applyMove, seeded } from "../seats.js";
@@ -19,7 +19,7 @@ const brain = nets.startsWith("gen:") ? await generalBrain(nets.slice(4)) : zero
 const opts = { deeper: { gap: 0.03, max: 4 }, ...(Number(prior) ? { prior: Number(prior) } : {}), ...(margin !== "-" ? { margin } : {}) };
 // the reference: every position's means, by "<seed>:<move>"
 const R = new Map();
-for (const n of (await store.list(`results/${ref}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)))
+for (const n of (await Promise.all(ref.split(",").map(r => store.list(`results/${r}/`)))).flat().filter(n => /\/part-\d+\.jsonl$/.test(n)))
   for (const l of ((await store.get(n)) || "").split("\n")) if (l.startsWith('{"pos"')) { const o = JSON.parse(l); R.set(o.pos, o); }
 const names = (await store.list(`results/${batch}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)).sort().filter((_, k) => k % Number(SHS) === Number(SH));
 if (OUT && OUT !== "-") fs.writeFileSync(OUT, "");
