@@ -1,0 +1,8 @@
+{
+  "id": "zdpick-zl27g",
+  "script": "blunder-pick.mjs",
+  "args": "{shard} {shards} {out} gen:zl27g 0 zdref001,zdref002 zdm001 1024 -",
+  "shards": 48,
+  "timeoutMin": 270,
+  "purpose": "Blunder rate (Fable 10:57Z, 12:35Z): gen:zl27g (prior 0, margin -), its own deep pick (1,024 deals, close calls to 4 turns) on the 1,918 reference positions (zdref001 + zdref002), scored by the reference's means. LAB ONLY."
+}
