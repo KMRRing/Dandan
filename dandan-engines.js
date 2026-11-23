@@ -113,19 +113,19 @@ export const ENGINES = [
     expect: "Monte's test suite (the no-Island Dandân positions): zl19 passed 5 of 6 at 2,048 deals and 5 of 6 at quick with the prior. zl20's deep reading against live Monte runs on 19 Nov evening.",
   },
   {
-    id: "zero-zl23x2", name: "Monte Zero zl23, prior ×2 + group lift (lab)", short: "zl23 ×2", kind: "zero", general: true, belief: "scryg", nets: "zl23", deeper: 0.03, deepmax: 4, prior: 2, multi: true, available: true,
+    id: "zero-zl23x2", name: "Monte Zero zl23, prior ×2 + group lift (lab)", short: "zl23 ×2", kind: "zero", general: true, belief: "scryg", nets: "zl23", deeper: 0.03, deepmax: 4, prior: 2, multi: true, available: false,   // rejected (Fable 23 Nov 06:45Z: zad004, −3.4 ± 3.4 against ×1, no fewer mistakes)
     tag: "zl23's nets with the search fix of 22 Nov 2026 (Korbi 19:35 local: the latest strongest model in the lab): the policy's prior at twice the weight, and the group lift (one card's several ways, such as Mind Bend's targets, no longer look better by chance). Lab only, not the live game.",
     description: "As zl23, with prior ×2 and the group lift. On the suite's ten blunder positions over five seeds it avoids the bad move in 34 of 50 deep searches (zl23 with prior ×1: fewer) and 39 of 50 quick ones.",
     expect: "Not yet measured against live Monte: zl23 with prior ×1 scored 53.5% over 951 deep games (22 Nov). The fleet test of this setting (zdm003) is waiting.",
   },
   {
-    id: "zero-zl25", name: "Monte Zero zl25 (lab)", short: "zl25", kind: "zero", general: true, belief: "scryg", nets: "zl25", deeper: 0.03, deepmax: 4, prior: 2, multi: true, available: true,
+    id: "zero-zl25", name: "Monte Zero zl25 (lab)", short: "zl25", kind: "zero", general: true, belief: "scryg", nets: "zl25", deeper: 0.03, deepmax: 4, available: true,   // prior off, no lift (23 Nov 2026, Fable 06:45Z and 09:55Z)
     tag: "The clean line's newest generation (zl25, crowned 22 Nov 2026 12:00Z), with prior ×2 and the group lift. Lab only, not the live game.",
     description: "Generation 25's nets (policy fresh, value and dealer warm from zl24), searched as zl23 ×2.",
     expect: "Not measured against live Monte. The loop crowns every generation: zl24 scored 47.4% against zl23 over 477 games, and zl25 has not been played against either yet.",
   },
   {
-    id: "zero-zl23", name: "Monte Zero zl23 (lab)", short: "zl23", kind: "zero", general: true, belief: "scryg", nets: "zl23", deeper: 0.03, deepmax: 4, prior: 1, available: true,
+    id: "zero-zl23", name: "Monte Zero zl23 (lab)", short: "zl23", kind: "zero", general: true, belief: "scryg", nets: "zl23", deeper: 0.03, deepmax: 4, available: true,   // prior off (23 Nov 2026, Fable 09:55Z: with it, 47.9 ± 0.8 over 3,468 deep games against itself without)
     tag: "The clean line's generation 23 (21 Nov 2026), in the lab for Korbi to play: honest end to end (its value net sees both hands, as every value net does; its dealer and policy only what a seat may), with the policy as the search's prior on near-ties. Not the live game's Monte.",
     description: "The general Monte: one view of the game for any card set (3,009 inputs), a dealer (belief net) for the other hand, a policy that scores every legal move, a value net judging positions; the search deals the hidden cards from the dealer, plays look-aheads with the policy and weighs close calls up to four turns ahead; where the search can't tell two moves apart, the policy's view decides (prior).",
     expect: "Against live Monte (g12r-C), both with 1,024 deals and close calls up to four turns: 53.5% over 951 games (22 Nov); at quick (256 deals) 50.0% over 576.",

@@ -138,6 +138,14 @@ if (L.phase === "play") {
     // 1 game in vsEvery against the nets just replaced (Korbi 17 Nov): the next generation's reading, its games training as any
     // vsExtra (19 Nov 2026): further rivals kept across crowns, e.g. "noprior:4" (the prior head-to-head, Korbi)
     if (L.vsEvery) F.args = `${F.args.replace(/ vs=\S+/, "")} vs=${L.prevLine === "old" ? prev : ref(prev)}:${L.vsEvery}${L.yardVs ? "," + L.yardVs : ""}${L.vsExtra ? "," + L.vsExtra : ""}`;
+    // prior off from generation priorOffFrom on (23 Nov 2026, Fable 09:55Z: each net with the prior scored 47.9 ± 0.8 over 3,468
+    // deep games against itself without it): the filler plays without the prior, and the prior head-to-head turns round
+    // (noprior → withprior), so the reading keeps running
+    if (L.priorOffFrom && L.gen + 1 >= L.priorOffFrom) {
+      F.args = F.args.replace(/ (prior|priorsplit)=\S+/g, "").replace(/noprior:/, "withprior:");
+      if (L.vsExtra) L.vsExtra = L.vsExtra.replace(/noprior:/, "withprior:");
+      log(`generation ${L.gen + 1}: the filler plays without the prior; the head-to-head rival plays with it`);
+    }
     L.previous = prev; delete L.prevLine;
     // branch games from generation branchFrom on (19 Nov 2026, Korbi; zero/branch-lib.mjs): branchShare of the self-play games
     // start from branch points of the window's batches, weighted by the ending census (branchWeights, lab/endings.mjs)

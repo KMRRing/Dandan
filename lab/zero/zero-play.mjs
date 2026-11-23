@@ -80,6 +80,9 @@ const RIVALS = await Promise.all((flag("vs") || "").split(",").filter(Boolean).m
   const cut = spec.lastIndexOf(":"), nets = spec.slice(0, cut), every = Number(spec.slice(cut + 1)) || 0;
   const at = k ? (Math.floor(every / 2) + k) % every : 0;
   if (nets === "noprior") return { nets, every, at, noprior: true, brain: await brainBy(process.argv[8], process.argv[9]) };
+  // "withprior:<every>" (23 Nov 2026, Fable 09:55Z: from generation 28 our side plays without the prior): the same nets as ours,
+  // playing with the policy prior (×1) while our side plays without it; the same head-to-head, the other way round
+  if (nets === "withprior") return { nets, every, at, withprior: true, brain: await brainBy(process.argv[8], process.argv[9]) };
   return { nets, every, at, brain: await brainBy(nets.startsWith("gen:") ? nets : `${nets}-policy`, `${nets}-value`) };
 }));
 const rivalOf = g => RIVALS.find(r => r.every && g % r.every === r.at) || null;
@@ -183,7 +186,7 @@ for (let g = first; g < first + n && (!ARB || ARBP); g++) {
       // while 3 of its own moves in 4 came from the 128-deal fast search; a reading has to be like for like)
       const full = vsSeat >= 0 || !CAP || seeded(mix(seed, 3300017 + i))() < CAP.share;
       // the prior head-to-head: our side with the prior (the flag's weight, or 1), the rival without
-      const opts0 = yard ? FULL : full ? DEEPER : FAST, opts = vsSeat >= 0 && who === vsSeat && opts0.open ? (({ open, ...o }) => o)(opts0) : opts0, ab = R?.noprior ? (who === vsSeat ? (({ prior, ...o }) => o)(opts) : { ...opts, prior: Number(flag("prior")) || 1 }) : opts;   // the rival never sees through (cheat)
+      const opts0 = yard ? FULL : full ? DEEPER : FAST, opts = vsSeat >= 0 && who === vsSeat && opts0.open ? (({ open, ...o }) => o)(opts0) : opts0, ab = R?.withprior ? (who === vsSeat ? { ...opts, prior: 1 } : opts) : R?.noprior ? (who === vsSeat ? (({ prior, ...o }) => o)(opts) : { ...opts, prior: Number(flag("prior")) || 1 }) : opts;   // the rival never sees through (cheat)
       // oracle=1 (19 Nov 2026, Korbi: a diagnostic, never self-play): our side's search sees the other hand as it is (determinize
       // open: only the library's order dealt), the upper bound of what a perfect dealer could give it
       const ab2 = flag("oracle") && who !== vsSeat ? { ...ab, open: true } : ab;
