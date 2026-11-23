@@ -148,6 +148,7 @@ for e in range(1, A.epochs + 1):
     if h < best: best, bestW, bestE = h, ([w.copy() for w in W], [b.copy() for b in B]), e
 
 Wb, Bb = bestW
+lastW = ([w.copy() for w in W], [b.copy() for b in B])   # the last epoch's: the margin term's nets (a warm value may keep epoch 0)
 def write(path, Wl, Bl, note, metrics):
     layers = []
     for l, (w, b) in enumerate(zip(Wl, Bl)):
@@ -162,7 +163,10 @@ if A.gaux_out:
     for spec in A.gaux_out.split(","):
         path, j = spec.rsplit(":", 1); c = OFF[gi[-1]] + int(j)
         # its last layer keeps its bias (a raw output, unlike the value's difference of two sides, needs it)
-        write(path, Wb[:-1] + [Wb[-1][:, c:c + 1]], Bb[:-1] + [Bb[-1][c:c + 1]], f"gaux column {j} of {A.shape}, {R} rows", dict(rows=int(R), epoch=bestE))
+        # from the last epoch, not the value's best: warm from a net already trained on these games the value's held-out loss may
+        # never improve (zl27g, 23 Nov: epoch 0 kept), and epoch 0's extra outputs are untrained zeros
+        Wl, Bl = lastW
+        write(path, Wl[:-1] + [Wl[-1][:, c:c + 1]], Bl[:-1] + [Bl[-1][c:c + 1]], f"gaux column {j} of {A.shape}, {R} rows, epoch {A.epochs}", dict(rows=int(R), epoch=A.epochs))
         say(f"wrote {path}: gaux column {j}")
 if OUT > 1:   # the value output alone is kept: the other outputs only shaped the layers below it
     Wb = Wb[:-1] + [Wb[-1][:, :1]]; Bb = Bb[:-1] + [Bb[-1][:1]]
