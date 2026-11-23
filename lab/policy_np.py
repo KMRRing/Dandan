@@ -37,6 +37,9 @@ ap.add_argument("--light", type=float, default=1.0)  # the weight of a decision 
 # soft targets (15 Nov 2026, Korbi 10:45, as AlphaZero): learn the search's whole spread, softmax(q / soft) over the candidates'
 # searched values, not only its top move; 0 = the top move alone
 ap.add_argument("--soft", type=float, default=0.0)
+# --spread (23 Nov 2026, Fable 14:45Z, the policy sweep's round two): each decision weighted by the spread between the search's
+# best and worst option there (max q − min q), scaled to mean 1 over the training decisions: near-ties count for little
+ap.add_argument("--spread", action="store_true")
 # warm start (15 Nov 2026, Korbi: "very significant"): begin from a trained net of the same form and sizes instead of from random,
 # as AlphaGo Zero and AlphaZero never reset theirs; the held-out loss before training is the bar, so it never comes out worse there
 ap.add_argument("--init", default="")
@@ -82,6 +85,11 @@ kind = MARKS[mark[:-1]]                                   # a candidate's first 
 held_mask = (flags & 1) > 0
 WEIGHT = np.where((flags & 2) > 0, 1.0, A.light)
 train_idx, held_idx = np.flatnonzero(~held_mask), np.flatnonzero(held_mask)
+if A.spread:
+    SP = np.maximum.reduceat(Q, cand[:-1]) - np.minimum.reduceat(Q, cand[:-1])
+    SP = np.where(ncand > 1, np.clip(SP, 0, None), 0.0)
+    WEIGHT = WEIGHT * SP / max(1e-9, float((WEIGHT * SP)[train_idx].mean()))
+    say(f"--spread: decision weights from the search's spread, mean 1 over training; median {float(np.median(WEIGHT[train_idx])):.3f}")
 if A.refine_only:
     rf = (flags & 32) > 0
     train_idx, held_idx = train_idx[rf[train_idx]], held_idx[rf[held_idx]]
