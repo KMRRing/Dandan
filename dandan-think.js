@@ -437,7 +437,9 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
   }
   if (seen && seen.w != null && seen.r == null && !c.stack.some(x => x.sid === seen.w)) seen.r = 0;
   const v = judge(c, seat);
-  for (const [k, who] of path) { k.n++; k.w += who === seat ? v : 1 - v; }
+  // oppView (OV not null): the other seat's decisions learn only from the deals dealt from its view (OV true), ours only from the
+  // true-hand deals (OV false)
+  for (const [k, who] of path) { if (OV != null && (OV ? who === seat : who !== seat)) continue; k.n++; k.w += who === seat ? v : 1 - v; }
   if (seen) Object.assign(seen, where(c, seat));
   return v;
 }
@@ -452,6 +454,12 @@ let BEST_REPLY = false;
 // root move and deal; phase 0 (the first quarter of the deals) lets the tree choose that reply as ever and notes it (cr); phase 1
 // plays, of the replies offered there, the one with the best mean for the other seat over that root move's phase-0 deals
 let COMMIT = null;
+// oppView (lab, 23 Nov 2026, Fable 13:10Z and 13:40Z: the opponent's choice inside the tree by its own view, the half-day step):
+// after every second true-hand deal, one more deal with our hand dealt from the other seat's belief (oppView(base, rng), the
+// general line's dealer of theirs); it trains the other seat's decisions in the tree and nothing else, while the true-hand deals
+// train ours and give the root's values. So its replies are chosen on what it could believe we hold, not on our real cards; the
+// fusion over its own hands stays. null off; false a true-hand deal; true one of its view
+let OV = null;
 function forcePick(node, m, c, seat, who, at) {
   node.n++;
   const sig = at + sigOf(m, c, seat, who);
@@ -516,7 +524,7 @@ export function think(s, seat, opts = {}) {
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && isDeep(c)).sort((a, b) => b.mean - a.mean), ...list.filter(c => !isDeep(c))], deeper: looks };
 }
-function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null, decided = null, watch = null, bestReply = false, commit = false } = {}) {
+function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null, decided = null, watch = null, bestReply = false, commit = false, oppView = null } = {}) {
   const t0 = Date.now();
   WATCH = watch; BEST_REPLY = !!bestReply; COMMIT = null;
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
@@ -571,6 +579,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
   let alive = cands.map((_, i) => i).filter(i => repOf[i] === i), d = 0;
   // commit: the first quarter of the deals explores the other seat's first reply; the rest commit to its best so far
   const commitFrom = Math.max(8, Math.floor(deals / 4)), cstats = cands.map(() => new Map());
+  OV = oppView ? false : null;
   while (d < deals && alive.length > 1) {
     const rng = seeded(mix(seed, d + 1));
     const base = determinize(s, seat, rng, weigh, open, deal), runSeed = mix(seed ^ 0x5eed, d + 7);
@@ -585,6 +594,14 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       else vals[i].push(playOne(i, c, r, at, runSeed));
       if (commit) { if (ph === 0 && COMMIT.cr != null && vals[i][vals[i].length - 1] >= 0) { const st = cstats[i].get(COMMIT.cr) || cstats[i].set(COMMIT.cr, { t: 0, n: 0 }).get(COMMIT.cr); st.t += 1 - vals[i][vals[i].length - 1]; st.n++; } COMMIT = null; }
       seen[i].push(at);
+    }
+    if (oppView && d % 2 === 0) {
+      const ob = oppView(base, seeded(mix(seed ^ 0x0b5e, d + 1)));
+      if (ob) {
+        OV = true;
+        for (const i of alive) { const c = fork(ob), r = seeded(mix(runSeed, 0x0b5e)); if (typeof act(c, seat, cands[i], { rng: r, quiet: true }) !== "string") treePlay(c, seat, roots[i], to, r, judge, null, explore, rollout, table, treeRank || rank, focus, options, qfocus, cut); }
+        OV = false;
+      }
     }
     d++;
     // trace (lab): at every power of two, the move leading on its mean over the deals so far and how many are still in the race
@@ -616,6 +633,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     }
     if (Date.now() - t0 > ms) break;
   }
+  OV = null;
   // qall: the question's deals take the answer with the best mean over them; the other deals keep their own values
   qa.forEach((Q, i) => {
     if (!Q || !Q.deals.some(Boolean) || Q.deals.length !== vals[i].length) return;

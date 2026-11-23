@@ -86,6 +86,12 @@ const RIVALS = await Promise.all((flag("vs") || "").split(",").filter(Boolean).m
   // "heavy:<every>" (23 Nov 2026, Fable 13:10Z, zhead001: where the points are lost): the same nets as ours, from turn heavyfrom=
   // (5) on searching heavyx= (4) times the deals with the close-call look on every option up to 4 turns (deeper gap 1, max 4)
   if (nets === "heavy") return { nets, every, at, heavy: { x: Number(flag("heavyx") || 4), from: Number(flag("heavyfrom") || 5) }, brain: await brainBy(process.argv[8], process.argv[9]) };
+  // "oppview:<every>" (23 Nov 2026, Fable 13:40Z): the same nets as ours, with our side searching with the opponent's tree
+  // choices by its own view (dandan-think.js oppView) and the rival without
+  if (nets === "oppview") return { nets, every, at, oppview: true, brain: await brainBy(process.argv[8], process.argv[9]) };
+  // "plain:<every>" (23 Nov 2026, zmar001): the same nets as ours, without margin= (our side's margin term, the nets' -gmargin
+  // and -gspeed); our side plays with it
+  if (nets === "plain") return { nets, every, at, plain: true, brain: await brainBy(process.argv[8], process.argv[9]) };
   if (nets === "policyonly") return { nets, every, at, policyonly: true, brain: await brainBy(process.argv[8], process.argv[9]) };
   if (nets === "withprior") return { nets, every, at, withprior: true, brain: await brainBy(process.argv[8], process.argv[9]) };
   return { nets, every, at, brain: await brainBy(nets.startsWith("gen:") ? nets : `${nets}-policy`, `${nets}-value`) };
@@ -191,7 +197,7 @@ for (let g = first; g < first + n && (!ARB || ARBP); g++) {
       // while 3 of its own moves in 4 came from the 128-deal fast search; a reading has to be like for like)
       const full = vsSeat >= 0 || !CAP || seeded(mix(seed, 3300017 + i))() < CAP.share;
       // the prior head-to-head: our side with the prior (the flag's weight, or 1), the rival without
-      const opts0 = yard ? FULL : full ? DEEPER : FAST, opts = vsSeat >= 0 && who === vsSeat && opts0.open ? (({ open, ...o }) => o)(opts0) : opts0, ab = R?.policyonly ? (who === vsSeat ? { policyOnly: true } : opts) : R?.withprior ? (who === vsSeat ? { ...opts, prior: 1 } : opts) : R?.noprior ? (who === vsSeat ? (({ prior, ...o }) => o)(opts) : { ...opts, prior: Number(flag("prior")) || 1 }) : opts;   // the rival never sees through (cheat)
+      const opts0 = yard ? FULL : full ? DEEPER : FAST, opts = vsSeat >= 0 && who === vsSeat && opts0.open ? (({ open, ...o }) => o)(opts0) : opts0, ab = R?.plain ? (who === vsSeat ? opts : { ...opts, ...(flag("margin") ? { margin: flag("margin") } : {}) }) : R?.oppview ? (who === vsSeat ? opts : { ...opts, oppview: true }) : R?.policyonly ? (who === vsSeat ? { policyOnly: true } : opts) : R?.withprior ? (who === vsSeat ? { ...opts, prior: 1 } : opts) : R?.noprior ? (who === vsSeat ? (({ prior, ...o }) => o)(opts) : { ...opts, prior: Number(flag("prior")) || 1 }) : opts;   // the rival never sees through (cheat)
       // oracle=1 (19 Nov 2026, Korbi: a diagnostic, never self-play): our side's search sees the other hand as it is (determinize
       // open: only the library's order dealt), the upper bound of what a perfect dealer could give it
       const ab2 = flag("oracle") && who !== vsSeat ? { ...ab, open: true } : ab;

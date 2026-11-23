@@ -179,13 +179,21 @@ export function makeGeneral({ policy = null, value = null, scry12 = null, scryg 
       ctx.counts[o] = tc; ctx.any[o] = ta; ctx.ans[o] = scryg ? tans : null;
       return { deal: wd ? (pool, n, rng) => wd(pool, n, rng) || sd(pool, n, rng) : sd };
     },
+    // oppview (23 Nov 2026, Fable 13:40Z): our hand dealt from the other seat's belief about it, on a world of the search (its
+    // hand dealt, the library as we see it), for dandan-think.js oppView; its filter's belief is the one root() last formed, on
+    // one of the opponent-belief worlds; null without filters
+    oppView(seat) {
+      if (!filters) return null;
+      const o = 1 - seat, od = filters[o].deal();
+      return (base, rng) => determinize(base, o, rng, false, false, (pool, n, r) => od(pool, n, r) || pool);
+    },
     think(s, seat, deals, extra = {}) {
-      const { qtree, prior, multi, policyOnly, margin: mspec, ...rest } = extra;
+      const { qtree, prior, multi, policyOnly, margin: mspec, oppview, ...rest } = extra;
       if (mspec && !M) throw new Error("margin=: these nets have no -gmargin and -gspeed");
       // policyOnly (23 Nov 2026, Fable 11:35Z, zpol001): no search; the policy's top move, on the same beliefs the search would use
       if (policyOnly) { this.root(s, seat, rest.salt); const n = zeroOptions(s, seat).length; return { best: player.rollout(s, seat, Math.random), list: [], only: n <= 1, policyOnly: true }; }
       const r = think(s, seat, { deals, ms: 1e9, all: true, options: zeroOptions, weigh: false, rollout: player.rollout, judge: mspec ? marginJudge(mspec) : judge, focus: player.focus,
-        ...(qtree ? { qfocus: player.qfocus } : {}), ...this.root(s, seat, rest.salt), ...rest });
+        ...(qtree ? { qfocus: player.qfocus } : {}), ...this.root(s, seat, rest.salt), ...(oppview ? { oppView: this.oppView(seat) } : {}), ...rest });
       return (prior && policy) || multi ? withPrior(r, s, seat, prior && policy ? prior : 0, !!multi) : r;
     },
   };
