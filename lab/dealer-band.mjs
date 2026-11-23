@@ -33,8 +33,9 @@ outer: for (const n of names) {
   for (const l of ((await store.get(n)) || "").split("\n")) {
     if (!l.startsWith('{"game"')) continue;
     const g = JSON.parse(l);
-    if (g.branch || !g.vs) continue;
-    const me = 1 - g.vs.seat, o = g.vs.seat;
+    if (g.branch) continue;
+    // a match: the nets' seat reads the rival; self-play (no vs): one seat a game, taking turns by seed
+    const me = g.vs ? 1 - g.vs.seat : g.seed % 2, o = 1 - me;
     brain.reset();
     let G = recordOf(rules, g), k = 0;
     for (let i = 0; i < g.moves.length; i++) {
