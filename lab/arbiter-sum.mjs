@@ -29,8 +29,16 @@ for (const [k, p] of pts) {
   // --complete=<n> (Fable 23 Nov 00:25Z, the one early read): only calls with all n play-outs on both sides
   if (COMPLETE && (p.search.size < COMPLETE || p.policy.size < COMPLETE)) continue;
   const d = both.map(s => p.search.get(s) - p.policy.get(s));
-  rows.push({ k, band: p.band, v: p.v, gap: p.gap, turns: p.turns, n: both.length, diff: d.reduce((a, b) => a + b, 0) / d.length });
+  rows.push({ k, band: p.band, v: p.v, gap: p.gap, turns: p.turns, n: both.length, sum: d.reduce((a, b) => a + b, 0), diff: d.reduce((a, b) => a + b, 0) / d.length });
 }
+// each pair weighted equally (Fable 06:45Z), its error clustered by call: the ratio estimator's variance over calls
+const sayPairs = (tag, rs) => {
+  if (!rs.length) return;
+  const N = rs.reduce((a, r) => a + r.n, 0), m = rs.reduce((a, r) => a + r.sum, 0) / N;
+  const v = rs.reduce((a, r) => a + (r.sum - m * r.n) ** 2, 0) * rs.length / Math.max(1, rs.length - 1) / (N * N);
+  const se = Math.sqrt(v);
+  console.log(`  ${tag.padEnd(8)} ${String(rs.length).padStart(4)} calls, ${String(N).padStart(5)} pairs: search less policy ${(100 * m).toFixed(1)} ± ${(100 * se).toFixed(1)} points (z ${se ? (m / se).toFixed(2) : "-"})`);
+};
 const say = (tag, rs) => {
   if (!rs.length) return;
   const m = rs.reduce((a, r) => a + r.diff, 0) / rs.length, v = rs.reduce((a, r) => a + (r.diff - m) ** 2, 0) / Math.max(1, rs.length - 1);
@@ -51,11 +59,15 @@ if (COMPLETE) {
 }
 console.log(`${batch}: the play-out arbiter, the deciding seat's score with the search's top move less with the policy's`);
 // two groups, not five bands (Fable 22 Nov: 60 calls a band is good to about ±2 points); errors are over calls, so clustered by call
+console.log("each call weighted equally:");
 say("< 90%", rows.filter(r => r.v < 0.9));
 say(">= 90%", rows.filter(r => r.v >= 0.9));
 // and by the gap between the two moves at 1,024 deals: x2 can only change the first two groups, so those decide it
 say("gap <= 1", rows.filter(r => r.gap <= 0.01));
 say("gap 1-2", rows.filter(r => r.gap > 0.01 && r.gap <= 0.02));
 say("gap > 2", rows.filter(r => r.gap > 0.02));
-if (process.env.ARB_BANDS) for (const b of ["0-20", "20-40", "40-60", "60-80", "80-100"]) say(`${b}%`, rows.filter(r => r.band === b));
 say("all", rows);
+console.log("each pair weighted equally (error clustered by call):");
+for (const [tag, f] of [["< 90%", r => r.v < 0.9], [">= 90%", r => r.v >= 0.9], ["gap <= 1", r => r.gap <= 0.01], ["gap 1-2", r => r.gap > 0.01 && r.gap <= 0.02], ["all", () => true]]) sayPairs(tag, rows.filter(f));
+{ const ns = rows.map(r => r.n).sort((a, b) => a - b); console.log(`pairs per call: median ${ns[Math.floor(ns.length / 2)]}, fewer than 5 in ${ns.filter(n => n < 5).length} of ${ns.length} calls`); }
+if (process.env.ARB_BANDS) for (const b of ["0-20", "20-40", "40-60", "60-80", "80-100"]) say(`${b}%`, rows.filter(r => r.band === b));
