@@ -67,3 +67,5 @@ zdm003  # 2026-11-22T13:19:55Z exec: queued before Korbi's OK on size; withdrawn
 zdm004  # 2026-11-22T21:32:19Z exec: renamed zad004 to sort ahead of zarb001 (Fable 21:14Z); no shard had started
 zps036  # 2026-11-22T21:45:08.951Z Zero's loop: made with the nets before zl26
 zps037  # 2026-11-22T21:45:08.951Z Zero's loop: made with the nets before zl26
+zps038  # 2026-11-23T12:18:40.944Z Zero's loop: made with the nets before zl27
+zps039  # 2026-11-23T12:18:40.944Z Zero's loop: made with the nets before zl27
