@@ -17,6 +17,7 @@ ap.add_argument("--bs", type=int, default=128); ap.add_argument("--seed", type=i
 # many of the hidden hand's cards fall in each of the packer's rule-defined groups (gc.u8: lands, cycling, answers, instant speed,
 # library effects), squared error on count / 3 at weight w; not exported, so the dealer the search uses is unchanged in shape
 ap.add_argument("--aux_counts", "--aux-counts", dest="aux_counts", type=float, default=0.0)
+ap.add_argument("--decay", type=float, default=1.0)  # the learning rate times this after each epoch (23 Nov 2026, Fable 19:45Z: as the policy's)
 ap.add_argument("--threads", type=int, default=0); ap.add_argument("--all", action="store_true")  # a quick check: train and measure on every row
 A = ap.parse_args()
 torch.manual_seed(A.seed); np.random.seed(A.seed)
@@ -172,6 +173,7 @@ for ep in range(A.epochs):
         opt.zero_grad(); loss.backward(); nn.utils.clip_grad_norm_(net.parameters(), 1.0); opt.step()
         tot += loss.item() * len(yy); cards += len(yy)
     mm = measure(he); mm["epoch"] = ep + 1; mm["train"] = round(tot / max(1, cards), 4); log["epochs"].append(mm)
+    for g in opt.param_groups: g["lr"] *= A.decay
     say(f"epoch {ep + 1}: train {mm['train']}, held-out chain {mm['chain']} each {mm['each']} ({mm['cards']} cards), {time.time() - t0:.0f} s")
 
 # ---------- the export ----------
