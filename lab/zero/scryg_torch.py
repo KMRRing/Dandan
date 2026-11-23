@@ -178,7 +178,7 @@ for ep in range(A.epochs):
 L = lambda t: [round(float(v), 6) for v in t.detach().reshape(-1).tolist()]
 with torch.no_grad():
     We = torch.cat([net.bag.weight.T, net.ctx.weight], 1)   # D × (MARK_N + CTX_N)
-    out = {"scryg": 1, "V": V, "EV": EVN, "X": X, "D": A.d, "A": A.a, "H": A.h, "We": L(We), "be": L(net.ctx.bias), "Wk": L(net.Wk.weight), "wa": L(net.wa),
+    out = {"scryg": 1, "V": V, "EV": EVN, "X": X, **({"feat": meta0["feat"]} if any((meta0.get("feat") or {}).values()) else {}), "D": A.d, "A": A.a, "H": A.h, "We": L(We), "be": L(net.ctx.bias), "Wk": L(net.Wk.weight), "wa": L(net.wa),
            "Wv": L(net.Wv.weight), "Wx": L(net.Wx.weight), "bx": L(net.Wx.bias), "Wq": L(net.Wq.weight), "W1": L(net.W1.weight), "b1": L(net.W1.bias),
            "Wc": L(net.Wc.weight), "W2": L(net.W2.weight), "b2": L(net.W2.bias), "measures": log}
 json.dump(out, open(A.out, "w")); json.dump(log, open(A.out + ".log.json", "w"), indent=1)

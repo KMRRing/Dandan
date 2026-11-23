@@ -7,7 +7,7 @@
 // reader=policy (Fable 17:30Z, item 3): a third reader, the counting dealer's hands weighed by how likely the other seat's own
 // decisions of the last `back` turns were under its policy with that hand (the hand's hidden cards swapped into each past
 // position), as a particle filter's weights; scored as the others, each hand counting by its weight.
-// Read-only. usage: node lab/dealer-band.mjs <batch zdm001> [nets zl23] [games 300] [every 4] [hands 64] [reader=policy] [back=3]
+// Read-only. usage: node lab/dealer-band.mjs <batch zdm001> [nets zl23] [games 300] [every 4] [hands 64] [reader=policy] [back=3] [dealer=<name>]
 import { rules } from "../dandan-rules.js";
 import { applyMove, seeded } from "../seats.js";
 import { DECK } from "../dandan-cards.js";
@@ -20,7 +20,9 @@ const [batch = "zdm001", nets = "zl23", most = "300", every = "4", hands = "64"]
 const opt = Object.fromEntries(process.argv.slice(2).filter(a => a.includes("=")).map(a => a.split("="))), READER = opt.reader === "policy", BACK = Number(opt.back || 3);
 const key = m => JSON.stringify(m);
 const real = Math.random, J = x => JSON.parse(JSON.stringify(x)), nm = id => DECK[id] ?? "Clue";
-const store = await (await import("./lib.mjs")).labStore(), brain = await generalBrain(nets);
+// dealer=<name> (23 Nov 2026, items 2a/2b): another dealer, lab/zero/nets/<name>-scryg.json, with the nets' policy and value
+const { netOf } = await import("./zero/zero-lib.mjs");
+const store = await (await import("./lib.mjs")).labStore(), brain = await generalBrain(nets, opt.dealer ? { scryg: netOf(`${opt.dealer}-scryg`) } : {});
 const BANDS = ["1-3", "4-7", "8-12", "13+"], band = t => (t <= 3 ? 0 : t <= 7 ? 1 : t <= 12 ? 2 : 3);
 const acc = ["dealer", "count", "policy"].map(() => BANDS.map(() => ({ n: 0, card: 0, share: 0, cards: 0 })));
 const tally = (a, truth, dealt, w = 1) => {

@@ -14,10 +14,12 @@ import { rules } from "../../dandan-rules.js";
 import { newRecord, applyMove, seeded, mix } from "../../seats.js";
 import { POOL, answers } from "../../dandan-general.js";
 import { CARDS, HALVES, LIBRARY } from "../../dandan-cards.js";
-import { RecordG, targetsOf, posInput, evSize, posSize, CTX_N } from "./scryg.mjs";
+import { RecordG, targetsOf, posInput, evSize, posSize, ctxN } from "./scryg.mjs";
 
 const [dir, ids] = process.argv.slice(2), SH = Number(process.argv[4] || 0), SHS = Number(process.argv[5] || 1), MAX = Number(process.argv[6] || 1e9), EVERY = 6;
-const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random, P = POOL, X = posSize(P);
+// FEAT (23 Nov 2026, Fable 18:00Z): the dealer's added inputs, "a", "b" or "ab" (lab/zero/scryg.mjs); none by default
+const FEAT = { a: /a/.test(process.env.FEAT || ""), b: /b/.test(process.env.FEAT || "") }, CTX_N = ctxN(POOL, FEAT);
+const J = x => JSON.parse(JSON.stringify(x)), realRandom = Math.random, P = POOL, X = posSize(P, undefined, FEAT);
 fs.mkdirSync(dir, { recursive: true });
 const files = ["ev_off.i64", "ev_marks.u16", "ev_ctx.u8", "ev_turn.i16", "x_off.i64", "x_idx.u16", "x_val.f16", "u.u8", "nh.u8", "nl.u8", "y_off.i64", "y.u8", "rec.i64", "turn.i16", "hold.u8", "gc.u8"];
 // the groups (19 Nov 2026, Korbi: the dealer's extra outputs, training only): how many of the hidden hand's cards are lands, have
@@ -42,14 +44,14 @@ function replay(game) {
   if (game.branch) return;   // the dealer never trains on branch games (Fable, 19 Nov): plenty of ordinary games, and none mixed in
   const seed = game.seed, B = game.branch || null, hold = (B ? B.src : seed) % 5 === 0;
   let G = recordOf(rules, game);
-  const R = [new RecordG(0), new RecordG(1)], pend = [[], []];
+  const R = [new RecordG(0, P, FEAT), new RecordG(1, P, FEAT)], pend = [[], []];
   for (let i = 0; i < game.moves.length; i++) {
     if (B && i === B.at) G = { ...G, state: redeal(rules, G.state, B.seat, seed) };
     const [who, m] = game.moves[i], s = rules.restore(J(G.state));
     if (!(B && i < B.at) && seeded(mix(seed, 41337 + i))() < 1 / EVERY) for (const me of [0, 1]) {
       const t = targetsOf(s, me, P, true);
       if (!t.names.length || t.names.some(y => y == null)) continue;
-      pend[me].push({ x: posInput(s, me, t, P), t, end: R[me].events.length, turn: s.turn || 0 });
+      pend[me].push({ x: posInput(s, me, t, P, new Float32Array(X), R[me]), t, end: R[me].events.length, turn: s.turn || 0 });
     }
     Math.random = seeded(rngSeedOf(game, i));
     const r = applyMove(rules, G, who, m, 0);
@@ -87,5 +89,5 @@ outer: for (const name of parts) {
   for (const line of text.split("\n")) if (line.startsWith('{"game"')) { replay(JSON.parse(line)); if (games >= MAX) break outer; }
 }
 for (const f of Object.values(fd)) fs.closeSync(f);
-fs.writeFileSync(`${dir}/meta.json`, JSON.stringify({ V: P.V, MARK_N: P.MARK_N, CTX_N, EV: evSize(P), X, events: nev, marks: nmarks, rows, xnz: nx, targets: ny, games, broken, groups: GROUPS }));
+fs.writeFileSync(`${dir}/meta.json`, JSON.stringify({ V: P.V, MARK_N: P.MARK_N, CTX_N, EV: evSize(P, FEAT), X, feat: FEAT, events: nev, marks: nmarks, rows, xnz: nx, targets: ny, games, broken, groups: GROUPS }));
 console.log(`scryg-pack: ${games} games (${broken} not the same), ${nev} events, ${rows} positions, ${ny} cards to guess`);

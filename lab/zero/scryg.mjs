@@ -14,7 +14,8 @@
 // card or a rule. Browser-safe (no node modules).
 import { observe, HIDDEN } from "../../dandan-view.js";
 import { generalView, generalMarks, viewSize, answers, POOL } from "../../dandan-general.js";
-import { DECK, TOKEN_AT, CARDS } from "../../dandan-cards.js";
+import { DECK, TOKEN_AT, CARDS, HALVES, parseCost } from "../../dandan-cards.js";
+import { affords } from "../../dandan-core.js";
 
 const other = x => 1 - x;
 const STEPS = ["mull", "upkeep", "draw", "main1", "attackers", "blockers", "damage", "main2", "end", "over"];
@@ -23,8 +24,19 @@ const nameOf = id => (id == null || id < 0 ? null : id >= TOKEN_AT ? TOKEN_NAME 
 /** An event's context numbers: whose, a pass, a draw (how many), the step, whose turn, the stack, lands untapped, hands, library,
  *  turn, lives. */
 export const CTX_N = 3 + STEPS.length + 10;
-export const evSize = (P = POOL) => P.MARK_N + CTX_N;
-export const posSize = (P = POOL, v = 2) => viewSize(P, v) + P.V + 2;
+// the dealer's added inputs (23 Nov 2026, Fable 17:30Z and 18:00Z, items 2a and 2b; a net says which in its "feat"):
+//   a  each event's could-have-acted marks: for each card the seat hasn't seen, whether the one acting (a pass above all) had the
+//      mana open and the timing to cast it then (P.V more context numbers);
+//   b  the hidden hand's age: of the cards the seat can't see in the other hand, how many must have been held 1, 2, 4 and 8 turns
+//      or more (the hand's size less every card that came into it since), ÷7 (AGE_N more position numbers)
+export const AGE_N = 4, AGES = [1, 2, 4, 8];
+export const ctxN = (P = POOL, feat = {}) => CTX_N + (feat.a ? P.V : 0);
+export const evSize = (P = POOL, feat = {}) => P.MARK_N + ctxN(P, feat);
+export const posSize = (P = POOL, v = 2, feat = {}) => viewSize(P, v) + P.V + 2 + (feat.b ? AGE_N : 0);
+const halvesOf = n => HALVES[n] || [n];
+// a card name's castable halves: { cost, instant } (lands and tokens none)
+const CAST = new Map();
+const castOf = n => { if (!CAST.has(n)) CAST.set(n, halvesOf(n).map(h => CARDS[h]).filter(c => c && c.type !== "land" && c.type !== "token").map(c => ({ cost: parseCost(c.cost), instant: c.type === "instant" || !!c.flash }))); return CAST.get(n); };
 const IDK = new Set(["card", "cards", "id", "ids", "src", "att", "blk", "attackers", "blockers", "pairs"]);
 
 const visibleIds = v => {
@@ -41,13 +53,13 @@ const mask = (m, vis) => {
 const untapped = (s, x) => s.bf.reduce((a, p) => a + (p.ctl === x && !p.tapped && CARDS[nameOf(p.id)]?.type === "land" ? 1 : 0), 0);
 
 /** One event as `me` saw it: { marks (indices), ctx (CTX_N), turn }. `s` the position (true; only its observation is read). */
-export function eventG(s, who, m, me, seenAfter = null, P = POOL) {
+export function eventG(s, who, m, me, seenAfter = null, P = POOL, feat = {}) {
   const o = observe(s, me), vis = visibleIds(o);
   if (seenAfter) for (const id of seenAfter) vis.add(id);
   const pass = m.t === "pass", draw = m.t === "draw";
   // legacy marks (a block as its count): the events as every dealer so far was trained on (block pairs: the policy's, 18 Nov)
   const marks = pass || draw ? [] : generalMarks(o, me, mask(m, vis), P, true);
-  const ctx = new Float32Array(CTX_N), st = STEPS.indexOf(o.mull && !(o.mull.done?.[0] && o.mull.done?.[1]) ? "mull" : o.step);
+  const ctx = new Float32Array(ctxN(P, feat)), st = STEPS.indexOf(o.mull && !(o.mull.done?.[0] && o.mull.done?.[1]) ? "mull" : o.step);
   ctx[0] = who === other(me) ? 1 : 0; ctx[1] = pass ? 1 : 0; ctx[2] = draw ? Math.min(4, m.n) / 4 : 0;
   if (st >= 0) ctx[3 + st] = 1;
   let k = 3 + STEPS.length;
@@ -56,16 +68,30 @@ export function eventG(s, who, m, me, seenAfter = null, P = POOL) {
   ctx[k++] = Math.min(6, untapped(o, who)) / 6; ctx[k++] = Math.min(6, untapped(o, other(who))) / 6;
   ctx[k++] = Math.min(10, o.hand[who].length) / 10; ctx[k++] = Math.min(10, o.hand[other(who)].length) / 10;
   ctx[k++] = Math.min(80, o.lib.length) / 80; ctx[k++] = Math.max(0, Math.min(20, o.life?.[who] ?? 20)) / 20; ctx[k++] = Math.max(0, Math.min(20, o.life?.[other(who)] ?? 20)) / 20;
+  if (feat.a) {
+    // could it have cast each card the seat hasn't seen, there and then: the timing (an instant or flash with priority, any other
+    // spell in its own main phase on an empty stack) and the mana open (affords: the lands untapped and the pool)
+    const main = o.active === who && /^main/.test(o.step || "") && !o.stack.length, unseen = new Set((o.unseenIds || []).map(nameOf));
+    P.vocab.forEach((n, j) => { if (unseen.has(n) && castOf(n).some(c => (c.instant || main) && affords(o, who, c.cost))) ctx[CTX_N + j] = 1; });
+  }
   return { marks, ctx, turn: o.turn || 0 };
 }
 
 /** The record as `me` sees it (honest, as Record12: every move but a pass of priority, then every priority point and draw it led to). */
 export class RecordG {
-  constructor(me, P = POOL) { this.me = me; this.P = P; this.events = []; }
+  constructor(me, P = POOL, feat = {}) { this.me = me; this.P = P; this.feat = feat; this.events = []; this.came = []; }
   update(s, who, m, after) {
     const seen = visibleIds(observe(after, this.me));
-    if (m.t !== "pass" || s.pending) this.events.push(eventG(s, who, m, this.me, seen, this.P));
-    for (const p of after.passPoints || []) this.events.push(eventG(p.s, p.seat, p.draw ? { t: "draw", n: p.draw } : { t: "pass" }, this.me, null, this.P));
+    if (m.t !== "pass" || s.pending) this.events.push(eventG(s, who, m, this.me, seen, this.P, this.feat));
+    for (const p of after.passPoints || []) this.events.push(eventG(p.s, p.seat, p.draw ? { t: "draw", n: p.draw } : { t: "pass" }, this.me, null, this.P, this.feat));
+    // the other hand's intake (feat b): the cards that came into it on this move, by turn (a rise in its size; a move that both
+    // plays and draws counts what it drew less what it played, so the ages are lower bounds)
+    if (this.feat.b) { const o = other(this.me), up = after.hand[o].length - s.hand[o].length; if (up > 0) this.came.push([after.turn || 0, up]); }
+  }
+  /** feat b: of the hidden cards in the other hand, how many must have been held AGES turns or more, ÷7 */
+  ages(s, hidden) {
+    const now = s.turn || 0, n = s.hand[other(this.me)].length;
+    return AGES.map(k => { let since = 0; for (const [t, c] of this.came) if (t > now - k) since += c; return Math.max(0, Math.min(hidden, n - since)) / 7; });
   }
 }
 
@@ -84,11 +110,12 @@ export function targetsOf(s, me, P = POOL, truth = true) {
 }
 /** The position's input (posSize): generalView with no belief, the unseen copies (÷4), the cards to guess in the hand and in the
  *  library (÷7). */
-export function posInput(s, me, t, P = POOL, out = new Float32Array(posSize(P))) {
-  const b = out.length - P.V - 2;   // the view as long as the net reads (version 1 or 2)
+export function posInput(s, me, t, P = POOL, out = new Float32Array(posSize(P)), rec = null) {
+  const extra = rec?.feat?.b ? AGE_N : 0, b = out.length - P.V - 2 - extra;   // the view as long as the net reads (version 1 or 2)
   generalView(s, me, new Float32Array(P.V), null, P, out.subarray(0, b));
   for (let i = 0; i < P.V; i++) out[b + i] = t.u[i] / 4;
   out[b + P.V] = t.handN / 7; out[b + P.V + 1] = t.libN / 7;
+  if (extra) rec.ages(s, t.handN).forEach((v, i) => (out[b + P.V + 2 + i] = v));
   return out;
 }
 
@@ -105,20 +132,20 @@ const relu = a => { for (let i = 0; i < a.length; i++) if (a[i] < 0) a[i] = 0; r
 export class ScryG {
   /** me: the seat; net: the export ({ P: sizes, Wx, bx, We, be, Wq, Wk, wa, Wv, W1, b1, Wc, W2, b2, D, A, H }). */
   constructor(me, net, P = POOL) {
-    this.me = me; this.P = P; this.rec = new RecordG(me, P); this.embs = [];
-    const n = net;
-    if (n.V !== P.V || n.EV !== evSize(P) || ![posSize(P, 1), posSize(P, 2)].includes(n.X)) throw new Error("Scry G: the net's sizes differ from the code's");
+    const n = net, feat = n.feat || {};
+    this.me = me; this.P = P; this.feat = feat; this.CN = ctxN(P, feat); this.rec = new RecordG(me, P, feat); this.embs = [];
+    if (n.V !== P.V || n.EV !== evSize(P, feat) || ![posSize(P, 1, feat), posSize(P, 2, feat)].includes(n.X)) throw new Error("Scry G: the net's sizes differ from the code's");
     this.X = n.X;
     Object.assign(this, { D: n.D, A: n.A, H: n.H });
     for (const k of ["Wx", "bx", "We", "be", "Wq", "Wk", "wa", "Wv", "W1", "b1", "Wc", "W2", "b2"]) this[k] = F(n[k]);
   }
   update(s, who, m, after) {
     this.rec.update(s, who, m, after);
-    const EV = evSize(this.P), D = this.D;
+    const EV = evSize(this.P, this.feat), D = this.D;
     for (let j = this.embs.length; j < this.rec.events.length; j++) {
       const ev = this.rec.events[j], e = Float32Array.from(this.be);
       for (const i of ev.marks) for (let o = 0; o < D; o++) e[o] += this.We[o * EV + i];
-      for (let i = 0; i < CTX_N; i++) { const v = ev.ctx[i]; if (v) for (let o = 0; o < D; o++) e[o] += v * this.We[o * EV + this.P.MARK_N + i]; }
+      for (let i = 0; i < this.CN; i++) { const v = ev.ctx[i]; if (v) for (let o = 0; o < D; o++) e[o] += v * this.We[o * EV + this.P.MARK_N + i]; }
       relu(e);
       // its key and value, kept (the age term is added at the query)
       const kk = affine(this.Wk, new Float32Array(this.A), e, D, this.A), vv = affine(this.Wv, new Float32Array(D), e, D, D);
@@ -127,7 +154,7 @@ export class ScryG {
   }
   /** The position's share of the hidden layer: g (H), from the position and the record read by attention. */
   base(s) {
-    const t = targetsOf(s, this.me, this.P, false), x = posInput(s, this.me, t, this.P, new Float32Array(this.X)), X = x.length, { D, A, H } = this;
+    const t = targetsOf(s, this.me, this.P, false), x = posInput(s, this.me, t, this.P, new Float32Array(this.X), this.rec), X = x.length, { D, A, H } = this;
     const h0 = relu(affine(this.Wx, this.bx, x, X, H)), q = affine(this.Wq, new Float32Array(A), h0, H, A), now = s.turn || 0;
     const T = this.embs.length, sc = new Float32Array(T), c = new Float32Array(D), mean = new Float32Array(D);
     let top = -Infinity;
