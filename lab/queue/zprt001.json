@@ -1,0 +1,8 @@
+{
+  "id": "zprt001",
+  "script": "blunder-ref.mjs",
+  "args": "{shard} {shards} {out} zps036,zps037,zps038,zps039 zl23 4096 4 0 PER=8 FULL=1",
+  "shards": 1275,
+  "timeoutMin": 270,
+  "purpose": "zpteach001, the policy teacher pilot (Fable 16:55Z, 17:30Z): decisions with a choice from zps036-zps039, 8 a game (about 45,900; at 6 a game the four batches give 34,398, so 60,000 isn't there), re-searched as the blunder reference (zl23, 4,096 deals, the 4-turn look on every option, no prior) with no option dropped on the way (FULL=1), every option's mean stored. At zdref001's 109 s a decision plus no pruning, about 1,400-1,900 slot-hours; about 36 decisions a shard (about 1.5 h). Then two control-recipe policies on these decisions, stored targets against re-searched, scored on the zdref positions. LAB ONLY."
+}

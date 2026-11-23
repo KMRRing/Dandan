@@ -19,7 +19,8 @@ const real = Math.random, J = x => JSON.parse(JSON.stringify(x)), key = m => JSO
 const hash = (seed, i) => { let h = Math.imul(seed ^ 0x5bd1e995, 0x85ebca6b) ^ Math.imul(i + 7, 0xc2b2ae35); h ^= h >>> 15; h = Math.imul(h, 0x27d4eb2f); return (h ^ (h >>> 13)) >>> 0; };
 const store = await (await import("./lib.mjs")).labStore(), brain = await generalBrain(nets);
 // batch: one or more, comma-separated (23 Nov 2026, zpteach001: zps036-zps039). Settings by environment (Fable 17:05Z and 16:55Z):
-// PER the decisions a game (2); SKIP a batch of this script's results whose positions are not searched again (the requeue of
+// PER the decisions a game (2); FULL=1 no option dropped on the way (prune z off: every option searched to the full count,
+// zpteach001, Fable 17:30Z); SKIP a batch of this script's results whose positions are not searched again (the requeue of
 // zdref001's cut-off shards); COUNT=1 searches nothing and prints the positions wanted, those SKIP holds and its mean ms
 const PER = Number(process.env.PER || 2), COUNT = process.env.COUNT === "1";
 const SKIP = new Map();
@@ -64,7 +65,7 @@ outer: for (const n of names) {
       if (want.has(i)) {
         const t0 = Date.now();
         Math.random = seeded(hash(g.seed, i));
-        const r = brain.think(J(s), who, Number(deals), { deeper: { gap: 1, max: Number(turns) }, turns: Number(turns) });
+        const r = brain.think(J(s), who, Number(deals), { deeper: { gap: 1, max: Number(turns) }, turns: Number(turns), ...(process.env.FULL === "1" ? { z: 1e9 } : {}) });
         Math.random = real;
         const line = { pos: `${g.seed}:${i}`, seat: who, turn: s.turn, deals: r.deals, ms: Date.now() - t0, opts: r.list.map(o => [key(o.move), +(o.mean ?? 0).toFixed(4)]) };
         if (OUT && OUT !== "-") fs.appendFileSync(OUT, JSON.stringify(line) + "\n");
