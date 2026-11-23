@@ -83,6 +83,9 @@ const RIVALS = await Promise.all((flag("vs") || "").split(",").filter(Boolean).m
   // "withprior:<every>" (23 Nov 2026, Fable 09:55Z: from generation 28 our side plays without the prior): the same nets as ours,
   // playing with the policy prior (×1) while our side plays without it; the same head-to-head, the other way round
   // "policyonly:<every>" (23 Nov 2026, Fable 11:35Z, zpol001): the same nets as ours, playing the policy's top move with no search
+  // "heavy:<every>" (23 Nov 2026, Fable 13:10Z, zhead001: where the points are lost): the same nets as ours, from turn heavyfrom=
+  // (5) on searching heavyx= (4) times the deals with the close-call look on every option up to 4 turns (deeper gap 1, max 4)
+  if (nets === "heavy") return { nets, every, at, heavy: { x: Number(flag("heavyx") || 4), from: Number(flag("heavyfrom") || 5) }, brain: await brainBy(process.argv[8], process.argv[9]) };
   if (nets === "policyonly") return { nets, every, at, policyonly: true, brain: await brainBy(process.argv[8], process.argv[9]) };
   if (nets === "withprior") return { nets, every, at, withprior: true, brain: await brainBy(process.argv[8], process.argv[9]) };
   return { nets, every, at, brain: await brainBy(nets.startsWith("gen:") ? nets : `${nets}-policy`, `${nets}-value`) };
@@ -195,7 +198,8 @@ for (let g = first; g < first + n && (!ARB || ARBP); g++) {
       // rdeals=<n> (19 Nov 2026, Fable: which engine gains from depth): the rival searches at n deals with the close-call look one
       // turn deeper only (quick), our side as the flags say (deep): the same nets on both sides make a depth-against-quick match
       const R_DEALS = Number(flag("rdeals") || 0), rq = R_DEALS && who === vsSeat;
-      let res = brainOf(who).think(s, who, rq ? R_DEALS : full ? deals : CAP.deals, rq ? (DEEPER.deeper ? { deeper: { gap: DEEPER.deeper.gap } } : {}) : ab2);
+      const hv = R?.heavy && who === vsSeat && s.turn >= R.heavy.from;
+      let res = brainOf(who).think(s, who, hv ? deals * R.heavy.x : rq ? R_DEALS : full ? deals : CAP.deals, hv ? { ...ab2, deeper: { gap: 1, max: 4 } } : rq ? (DEEPER.deeper ? { deeper: { gap: DEEPER.deeper.gap } } : {}) : ab2);
       move = res.best;
       if (RESIGN && !res.only && !yard) {
         const v = res.list.find(c => key(c.move) === key(res.best))?.mean;
