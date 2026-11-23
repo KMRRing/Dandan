@@ -27,6 +27,11 @@ console.log(`${batch}: ${pc(stat([...A.values()]))}`);
 if (ref) {
   const B = await scores(ref), both = [...A.keys()].filter(s => B.has(s));
   console.log(`${ref} on the same seeds: ${pc(stat(both.map(s => B.get(s))))}; ${batch} on them: ${pc(stat(both.map(s => A.get(s))))}`);
+  // agreement (Fable 08:50Z): how often the two matches end with the same result on the same seed, and the results' correlation
+  const same = both.filter(s => A.get(s) === B.get(s)).length, xa = both.map(s => A.get(s)), xb = both.map(s => B.get(s));
+  const ma = xa.reduce((a, b) => a + b, 0) / both.length, mb = xb.reduce((a, b) => a + b, 0) / both.length;
+  const cov = both.reduce((a, s) => a + (A.get(s) - ma) * (B.get(s) - mb), 0), va = xa.reduce((a, x) => a + (x - ma) ** 2, 0), vb = xb.reduce((a, x) => a + (x - mb) ** 2, 0);
+  console.log(`same result on the same seed: ${same} of ${both.length} (${(100 * same / both.length).toFixed(1)}%); correlation of the results ${(cov / Math.sqrt(va * vb)).toFixed(3)}; agreement if independent ${(100 * (ma * mb + (1 - ma) * (1 - mb))).toFixed(1)}%`);
   console.log(`paired difference (${batch} less ${ref}): ${pc(stat(both.map(s => A.get(s) - B.get(s)))).replace("%", " points")}`);
   if (first && games) {
     const want = [...Array(Number(games))].map((_, k) => Number(first) + k), missing = want.filter(s => !A.has(s));
