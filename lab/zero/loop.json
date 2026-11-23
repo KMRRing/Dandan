@@ -6419,6 +6419,7 @@
   "deepOn": true,
   "refineFrom": 25,
   "priorOffFrom": 28,
+  "pauseAfter": 28,
   "gauxFrom": 29,
   "gauxArg": "--gaux_0.03"
 }

@@ -91,6 +91,10 @@ if (L.phase === "play") {
   const pace = (L.progress?.gen === L.gen ? L.progress.pace || [] : []).concat([[now, total]]).slice(-24);
   L.progress = { gen: L.gen, games: total, of: L.games, at: now, nets: L.champion, pace };
   if (total >= L.games) {
+    // self-play paused once generation pauseAfter's games are in (23 Nov 2026, Korbi 14:54 local: "after 28 is done self playing,
+    // let's put a pause on self playing", for research before a last pivot): the filler stops making batches (filler.json off;
+    // the batches open finish), training and the crown go on, and the next generation's first batch is not queued
+    if (L.pauseAfter && L.gen >= L.pauseAfter && !F.off) { F.off = true; if (!dry) fs.writeFileSync(FILLER, JSON.stringify(F, null, 2) + "\n"); log(`generation ${L.gen}: its games are in: self-play paused (pauseAfter ${L.pauseAfter}; filler off)`); }
     // the reading: the nets that played this generation against the ones before them
     if (L.vsEvery || L.yardVs) {
       const all = await vsScores(L.genFrom), prevKey = ref(L.previous || ""), v = all[prevKey] || all[L.previous] || null;
@@ -201,9 +205,10 @@ if (L.phase === "play") {
     // games for hours, as the workers' refill makes a filler batch only when the whole queue runs dry, and other jobs were open);
     // the queue push and the refill both leave a batch already in the bucket alone
     const first = batch(L.genFrom);
-    if (!dry) fs.writeFileSync(`${QUEUE}${first}.json`, JSON.stringify({ id: first, script: F.script, args: F.args.replace("{seed}", String(F.seedBase + F.games * (L.genFrom - 1))), shards: F.shards, timeoutMin: F.timeoutMin,
+    if (F.off) log(`generation ${L.gen + 1}: self-play paused: its first batch ${first} not queued`);
+    else if (!dry) fs.writeFileSync(`${QUEUE}${first}.json`, JSON.stringify({ id: first, script: F.script, args: F.args.replace("{seed}", String(F.seedBase + F.games * (L.genFrom - 1))), shards: F.shards, timeoutMin: F.timeoutMin,
       purpose: `${F.purpose} Queued by Zero's loop at the crown of ${L.champion}.` }, null, 2) + "\n");
-    say(`QUEUE ${first}`);
+    if (!F.off) say(`QUEUE ${first}`);
     if (L.refinePending) { L.refineFrom = L.genFrom; delete L.refinePending; }
     L.gen++; L.phase = "play"; delete L.challenger; delete L.genSince; delete L.reading; delete L.yardReading;
   } else if (Date.now() - Date.parse(L.trained.at) > 12 * 3600e3) log(`generation ${L.gen}: no nets for ${L.challenger} 12 hours after training began: look at zero-train-ext.yml's runs`);

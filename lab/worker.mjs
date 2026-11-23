@@ -112,6 +112,8 @@ async function fillerSpec() {
 /** The queue run dry, with LAB_FILL: the next batch of self-play, once the last one is finished or all taken. True when it queued one. */
 async function refill() {
   const F = await fillerSpec(), batch = n => `${F.prefix}${String(n).padStart(3, "0")}`, re = new RegExp(`^${F.prefix}\\d+$`);
+  // the filler paused (23 Nov 2026, Korbi 14:54 local: self-play paused after generation 28 for research): filler.json "off": true
+  if (F.off) return false;
   const ids = (await store.list("jobs/")).map(o => path.basename(o.name, ".json"));
   // retired batches count too (17 Nov 2026, 19:10Z): with only jobs/ listed, retiring the newest batch made the next refill
   // make a batch of the same name again (zps005 and zps006 came back after each retirement, on the same seeds)
