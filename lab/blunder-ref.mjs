@@ -16,7 +16,15 @@ const [SH, SHS, OUT, batch = "zdm001", nets = "zl23", deals = "4096", turns = "4
 const real = Math.random, J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
 const hash = (seed, i) => { let h = Math.imul(seed ^ 0x5bd1e995, 0x85ebca6b) ^ Math.imul(i + 7, 0xc2b2ae35); h ^= h >>> 15; h = Math.imul(h, 0x27d4eb2f); return (h ^ (h >>> 13)) >>> 0; };
 const store = await (await import("./lib.mjs")).labStore(), brain = await generalBrain(nets);
-const names = (await store.list(`results/${batch}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)).sort().filter((_, k) => k % Number(SHS) === Number(SH));
+// batch: one or more, comma-separated (23 Nov 2026, zpteach001: zps036-zps039). Settings by environment (Fable 17:05Z and 16:55Z):
+// PER the decisions a game (2); SKIP a batch of this script's results whose positions are not searched again (the requeue of
+// zdref001's cut-off shards); COUNT=1 searches nothing and prints the positions wanted, those SKIP holds and its mean ms
+const PER = Number(process.env.PER || 2), COUNT = process.env.COUNT === "1";
+const SKIP = new Map();
+if (process.env.SKIP) for (const n of (await store.list(`results/${process.env.SKIP}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)))
+  for (const l of ((await store.get(n)) || "").split("\n")) if (l.startsWith('{"pos"')) { const o = JSON.parse(l); SKIP.set(o.pos, o.ms); }
+let wanted = 0, held = 0;
+const names = (await Promise.all(batch.split(",").map(b => store.list(`results/${b}/`)))).flat().filter(n => /\/part-\d+\.jsonl$/.test(n)).sort().filter((_, k) => COUNT || k % Number(SHS) === Number(SH));
 if (OUT && OUT !== "-") fs.writeFileSync(OUT, "");
 let done = 0;
 // replays a game to its end, calling at(i, s, who) before each move with the brain caught up
@@ -44,7 +52,10 @@ outer: for (const n of names) {
     // the decisions with a choice (no question pending, past the mulligans), then the two with the lowest hash
     const ok = [];
     { let G = recordOf(rules, g); for (let i = 0; i < g.moves.length; i++) { const [who, m] = g.moves[i], s = G.state; if (i > 4 && !s.pending && !s.over && zeroOptions(s, who).length > 1) ok.push(i); Math.random = seeded(rngSeedOf(g, i)); const r = applyMove(rules, G, who, m, 0); Math.random = real; if (r.error) break; G = r.G; } }
-    const want = new Set(ok.sort((a, b) => hash(g.seed, a) - hash(g.seed, b)).slice(0, 2));
+    const pick = ok.sort((a, b) => hash(g.seed, a) - hash(g.seed, b)).slice(0, PER);
+    wanted += pick.length; held += pick.filter(i => SKIP.has(`${g.seed}:${i}`)).length;
+    if (COUNT) continue;
+    const want = new Set(pick.filter(i => !SKIP.has(`${g.seed}:${i}`)));
     if (!want.size) continue;
     const last = Math.max(...want);
     replay(g, (i, s, who) => {
@@ -63,4 +74,5 @@ outer: for (const n of names) {
     if (Number(most) && done >= Number(most)) break outer;
   }
 }
+if (COUNT) { const ms = [...SKIP.values()]; console.log(`COUNT: ${wanted} positions wanted, ${held} already in ${process.env.SKIP || "-"}, ${wanted - held} missing; ${ms.length} stored, mean ${ms.length ? Math.round(ms.reduce((a, b) => a + b, 0) / ms.length) : 0} ms a decision`); }
 console.log(`${done} decisions, shard ${SH} of ${SHS}`);
