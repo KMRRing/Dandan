@@ -1,0 +1,8 @@
+{
+  "id": "zppol-e24",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 2000 574000000 gen:zp27e24 - 0 bothpolicy=1 vs=gen:zp27c:1",
+  "shards": 20,
+  "timeoutMin": 240,
+  "purpose": "Policy sweep measure 2 (Fable 13:40Z): zp27e24's policy alone against the control zp27c's policy alone, 2,000 games, seats alternated. LAB ONLY. Not trained on."
+}
