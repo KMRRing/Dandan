@@ -20,8 +20,8 @@ const [nets = "g9x-C", deals = "256", flags = "deeper=0.03"] = args;
 const suite = JSON.parse(fs.readFileSync(new URL("./suite.json", import.meta.url), "utf8"));
 const extraOf = f => {
   // as lab/hard-match.mjs reads a side's flags: deeper=<gap>, turns=<n>, and the switches (twins, qtree, qall, keepFirst…)
-  const fl = f.split("~").filter(Boolean), d = fl.find(x => x.startsWith("deeper=")), t = fl.find(x => x.startsWith("turns=")), dm = fl.find(x => x.startsWith("deepmax=")), pr = fl.find(x => x.startsWith("prior="));
-  return { ...(fl.includes("bestreply") ? { bestReply: true } : {}), ...(pr ? { prior: Number(pr.slice(6)) } : {}), ...(d ? { deeper: { gap: Number(d.slice(7)), ...(dm ? { max: Number(dm.slice(8)) } : {}) } } : {}), ...(t ? { turns: Number(t.slice(6)) } : {}), ...Object.fromEntries(fl.filter(x => !x.includes("=")).map(x => [x === "keepfirst" ? "keepFirst" : x, true])) };
+  const fl = f.split("~").filter(Boolean), d = fl.find(x => x.startsWith("deeper=")), t = fl.find(x => x.startsWith("turns=")), dm = fl.find(x => x.startsWith("deepmax=")), pr = fl.find(x => x.startsWith("prior=")), mg = fl.find(x => x.startsWith("margin="));
+  return { ...(mg ? { margin: mg.slice(7) } : {}), ...(fl.includes("bestreply") ? { bestReply: true } : {}), ...(pr ? { prior: Number(pr.slice(6)) } : {}), ...(d ? { deeper: { gap: Number(d.slice(7)), ...(dm ? { max: Number(dm.slice(8)) } : {}) } } : {}), ...(t ? { turns: Number(t.slice(6)) } : {}), ...Object.fromEntries(fl.filter(x => !x.includes("=")).map(x => [x === "keepfirst" ? "keepFirst" : x, true])) };
 };
 execSync("git fetch -q origin game-records", { stdio: "ignore" });
 const name = m => `${m.t}${m.card != null ? " " + DECK[m.card] : ""}`;
