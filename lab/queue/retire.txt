@@ -70,3 +70,4 @@ zps037  # 2026-11-22T21:45:08.951Z Zero's loop: made with the nets before zl26
 zps038  # 2026-11-23T12:18:40.944Z Zero's loop: made with the nets before zl27
 zps039  # 2026-11-23T12:18:40.944Z Zero's loop: made with the nets before zl27
 zpol001  # 13:28Z (Korbi 15:27 local): stopped early, about 160 games (57 done, 103 running at 13:16Z); first 52: deep 76.9% ± 5.9 against policy-only, past 65% either way
+zqhead000  # 13:55Z: renamed zprhead000; zq sorts after the zps self-play, so it was never claimed
