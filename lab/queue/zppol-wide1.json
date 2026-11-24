@@ -1,0 +1,8 @@
+{
+  "id": "zppol-wide1",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 2000 574000000 gen:zp27wide1 - 0 bothpolicy=1 vs=gen:zp27e24:1",
+  "shards": 20,
+  "timeoutMin": 240,
+  "purpose": "Policy sweep, width (Fable 01:55Z): zp27wide1's policy (h 256/128/128) alone against zp27e24's policy alone, 2,000 games, seats alternated, zppol-e24's seeds. LAB ONLY. Not trained on."
+}
