@@ -1,0 +1,8 @@
+{
+  "id": "ska-self-r",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 only=37,158,174,263,358,381,392,400,440,505,617,623,723,768,860,924,940,988,1148,1152,1194,1286,1314,1332,1356,1371,1385,1607,1620,1659,1663,1790,1878,1892,1935",
+  "shards": 35,
+  "timeoutMin": 60,
+  "purpose": "Re-run of ska-self's 35 failed shards (30 dealer found no world by rejection, 5 git-fetch worker errors), each on its original shard's deals and seeds (only=), with the replay-checked walk where rejection finds nothing (Fable 21:48Z). Training data with ska-self."
+}
