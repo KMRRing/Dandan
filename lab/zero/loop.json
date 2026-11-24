@@ -12,12 +12,9 @@
   "trainArgs": "keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8",
   "genFrom": 40,
   "windowFrom": 21,
-  "nextFrom": 40,
-  "phase": "play",
+  "nextFrom": 42,
+  "phase": "train",
   "log": [
-    "2026-11-20T06:05:23.020Z generation 21: zl20 against zl19: 45.4% over 304 games",
-    "2026-11-20T06:05:23.020Z generation 21: training zl21 (policy fresh, value and dealer warm from zl20) on zps021,zps022,zps023,zps024,zps025",
-    "2026-11-20T06:21:07.307Z generation 21: zl21's dealer is in: its policy and value nets asked for",
     "2026-11-20T08:27:00Z value targets from the searched value 3 own turns later (vtd=3) from generation 22 (Korbi 10:23 local: zv10 best on the scorecard, clearest with 10 or fewer cards left); generation 21's zl21 was already training without it, so zl21t (warm from zl20, vtd=3) and zl21s (from scratch, vtd=3) train beside it on the same window: the scratch-vs-warm test; the best value net plays, swapped in by hand",
     "2026-11-20T08:40:00Z deep games only from generation 22 (Korbi 10:26/10:28 local): the window from zps025 plus zps018 (the 18 Nov deep batch with every move fully searched; zps007-016 were deep with a playout cap, 3 moves in 4 from a 128-deal search, so left out); self-play never resigns (the would-resign point noted) and no decided-game shortcut, as g12r-C's games",
     "2026-11-20T08:56:57.166Z generation 21: zl21's nets are late: training asked for again (1)",
@@ -55,7 +52,10 @@
     "2026-11-23T10:27:39.662Z generation 27: zl27's dealer is in: its policy and value nets asked for",
     "2026-11-23T12:18:40.944Z generation 28: the filler plays without the prior; the head-to-head rival plays with it",
     "2026-11-23T12:18:40.944Z generation 28: 20% branch games from zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039",
-    "2026-11-23T12:18:40.944Z generation 27: zl27 (warm from zl26) plays from the filler's next batch"
+    "2026-11-23T12:18:40.944Z generation 27: zl27 (warm from zl26) plays from the filler's next batch",
+    "2026-11-24T09:34:08.243Z generation 28: its games are in: self-play paused (pauseAfter 28; filler off)",
+    "2026-11-24T09:34:08.243Z generation 28: zl27 against zl26: 46.8% over 472 games",
+    "2026-11-24T09:34:08.243Z generation 28: training zl28 (policy fresh, value and dealer warm from zl27) on zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039,zps040,zps041"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -490,15 +490,11 @@
   ],
   "progress": {
     "gen": 28,
-    "games": 2394,
+    "games": 2468,
     "of": 2400,
-    "at": "2026-11-24T09:24:06.202Z",
+    "at": "2026-11-24T09:34:08.243Z",
     "nets": "zl27",
     "pace": [
-      [
-        "2026-11-24T06:11:37.383Z",
-        968
-      ],
       [
         "2026-11-24T06:14:01.856Z",
         984
@@ -590,5872 +586,5899 @@
       [
         "2026-11-24T09:24:06.202Z",
         2394
+      ],
+      [
+        "2026-11-24T09:34:08.243Z",
+        2468
       ]
     ]
   },
   "belief": "scryg",
   "beliefArgs": "args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
   "vsParts": {
-    "results/zps038/part-0.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-0.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-1.jsonl": {
-      "noprior": [
+    "results/zps040/part-1.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-10.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-10.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-100.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-100.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1001.jsonl": {
-      "noprior": [
+    "results/zps040/part-1000.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-1002.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1001.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1003.jsonl": {
-      "noprior": [
+    "results/zps040/part-1003.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1004.jsonl": {},
-    "results/zps038/part-1005.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1004.jsonl": {},
+    "results/zps040/part-1005.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1006.jsonl": {},
-    "results/zps038/part-1007.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1007.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1008.jsonl": {},
-    "results/zps038/part-1009.jsonl": {
-      "noprior": [
+    "results/zps040/part-1008.jsonl": {},
+    "results/zps040/part-1009.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-101.jsonl": {
-      "noprior": [
+    "results/zps040/part-101.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1010.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1010.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1011.jsonl": {
-      "noprior": [
+    "results/zps040/part-1012.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1013.jsonl": {
-      "noprior": [
+    "results/zps040/part-1013.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1014.jsonl": {},
-    "results/zps038/part-1016.jsonl": {},
-    "results/zps038/part-1017.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1014.jsonl": {},
+    "results/zps040/part-1015.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-1018.jsonl": {},
-    "results/zps038/part-102.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1016.jsonl": {},
+    "results/zps040/part-1017.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-1020.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1018.jsonl": {},
+    "results/zps040/part-102.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1023.jsonl": {
-      "noprior": [
+    "results/zps040/part-1023.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1024.jsonl": {},
-    "results/zps038/part-1025.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1025.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1027.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1027.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1028.jsonl": {},
-    "results/zps038/part-1029.jsonl": {
-      "noprior": [
+    "results/zps040/part-1028.jsonl": {},
+    "results/zps040/part-103.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-103.jsonl": {
-      "noprior": [
+    "results/zps040/part-1030.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1031.jsonl": {
-      "noprior": [
+    "results/zps040/part-1031.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1032.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1032.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1033.jsonl": {
-      "noprior": [
+    "results/zps040/part-1036.jsonl": {},
+    "results/zps040/part-1037.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-1036.jsonl": {},
-    "results/zps038/part-1037.jsonl": {
-      "gen:zl25": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-1038.jsonl": {},
-    "results/zps038/part-1040.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1038.jsonl": {},
+    "results/zps040/part-1039.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1041.jsonl": {
-      "noprior": [
+    "results/zps040/part-104.jsonl": {},
+    "results/zps040/part-1040.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-1042.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1041.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1043.jsonl": {
-      "noprior": [
+    "results/zps040/part-1042.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1044.jsonl": {},
-    "results/zps038/part-1046.jsonl": {},
-    "results/zps038/part-1047.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1043.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1049.jsonl": {
-      "noprior": [
+    "results/zps040/part-1045.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-1050.jsonl": {
-      "gen:zl25": [
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1051.jsonl": {
-      "noprior": [
+    "results/zps040/part-1046.jsonl": {},
+    "results/zps040/part-1047.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1054.jsonl": {},
-    "results/zps038/part-1055.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1048.jsonl": {},
+    "results/zps040/part-105.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1056.jsonl": {},
-    "results/zps038/part-1057.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1050.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-1058.jsonl": {},
-    "results/zps038/part-1059.jsonl": {
-      "noprior": [
+    "results/zps040/part-1051.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-106.jsonl": {},
-    "results/zps038/part-1060.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1052.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1061.jsonl": {
-      "noprior": [
+    "results/zps040/part-1053.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1062.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1056.jsonl": {},
+    "results/zps040/part-1057.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1066.jsonl": {},
-    "results/zps038/part-1068.jsonl": {},
-    "results/zps038/part-1069.jsonl": {
-      "noprior": [
+    "results/zps040/part-1058.jsonl": {},
+    "results/zps040/part-1059.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-107.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-106.jsonl": {},
+    "results/zps040/part-1060.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1070.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1061.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-1071.jsonl": {
-      "noprior": [
+    "results/zps040/part-1063.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-1072.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1064.jsonl": {},
+    "results/zps040/part-1066.jsonl": {},
+    "results/zps040/part-1067.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1073.jsonl": {
-      "noprior": [
+    "results/zps040/part-1068.jsonl": {},
+    "results/zps040/part-1069.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1074.jsonl": {},
-    "results/zps038/part-1075.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-107.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ],
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-1076.jsonl": {},
-    "results/zps038/part-1077.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1070.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1078.jsonl": {},
-    "results/zps038/part-1079.jsonl": {
-      "noprior": [
+    "results/zps040/part-1071.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-108.jsonl": {},
-    "results/zps038/part-1080.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1072.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1081.jsonl": {
-      "noprior": [
+    "results/zps040/part-1073.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1082.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1074.jsonl": {},
+    "results/zps040/part-1076.jsonl": {},
+    "results/zps040/part-1077.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1083.jsonl": {
-      "noprior": [
+    "results/zps040/part-1078.jsonl": {},
+    "results/zps040/part-1079.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-1085.jsonl": {
-      "gen:zl25": [
-        1,
-        0
-      ],
-      "noprior": [
+    "results/zps040/part-108.jsonl": {},
+    "results/zps040/part-1080.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1086.jsonl": {},
-    "results/zps038/part-1088.jsonl": {},
-    "results/zps038/part-109.jsonl": {
-      "noprior": [
+    "results/zps040/part-1081.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1092.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1082.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1096.jsonl": {},
-    "results/zps038/part-1098.jsonl": {},
-    "results/zps038/part-11.jsonl": {
-      "noprior": [
+    "results/zps040/part-1083.jsonl": {
+      "withprior": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-110.jsonl": {
-      "gen:zl25": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-1102.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1084.jsonl": {},
+    "results/zps040/part-1087.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-1104.jsonl": {},
-    "results/zps038/part-1108.jsonl": {},
-    "results/zps038/part-1109.jsonl": {
-      "noprior": [
+    "results/zps040/part-1089.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-111.jsonl": {
-      "noprior": [
+    "results/zps040/part-109.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1113.jsonl": {
-      "noprior": [
+    "results/zps040/part-1090.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1114.jsonl": {},
-    "results/zps038/part-1115.jsonl": {
-      "gen:zl25": [
-        1,
-        0
-      ],
-      "noprior": [
+    "results/zps040/part-1091.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1116.jsonl": {},
-    "results/zps038/part-1117.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1096.jsonl": {},
+    "results/zps040/part-1097.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1118.jsonl": {},
-    "results/zps038/part-112.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1098.jsonl": {},
+    "results/zps040/part-1099.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1120.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-11.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1121.jsonl": {
-      "noprior": [
+    "results/zps040/part-110.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1122.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1100.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1123.jsonl": {
-      "noprior": [
+    "results/zps040/part-1101.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-1124.jsonl": {},
-    "results/zps038/part-1125.jsonl": {
-      "gen:zl25": [
-        1,
-        0
-      ],
-      "noprior": [
+    "results/zps040/part-1102.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1126.jsonl": {},
-    "results/zps038/part-1127.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1104.jsonl": {},
+    "results/zps040/part-1105.jsonl": {
+      "gen:zl26": [
         1,
+        0
+      ],
+      "withprior": [
+        1,
         1
       ]
     },
-    "results/zps038/part-1129.jsonl": {
-      "noprior": [
+    "results/zps040/part-1106.jsonl": {},
+    "results/zps040/part-1107.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1131.jsonl": {
-      "noprior": [
+    "results/zps040/part-1108.jsonl": {},
+    "results/zps040/part-1109.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1132.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-111.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1136.jsonl": {},
-    "results/zps038/part-1137.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1110.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1139.jsonl": {
-      "noprior": [
+    "results/zps040/part-1111.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-114.jsonl": {},
-    "results/zps038/part-1141.jsonl": {
-      "noprior": [
+    "results/zps040/part-1112.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1142.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1113.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1144.jsonl": {},
-    "results/zps038/part-1145.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1114.jsonl": {},
+    "results/zps040/part-1115.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1146.jsonl": {},
-    "results/zps038/part-1147.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1116.jsonl": {},
+    "results/zps040/part-1117.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-1149.jsonl": {
-      "noprior": [
+    "results/zps040/part-1118.jsonl": {},
+    "results/zps040/part-1119.jsonl": {
+      "withprior": [
         1,
         0
+      ]
+    },
+    "results/zps040/part-1121.jsonl": {
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-115.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1123.jsonl": {
+      "withprior": [
         1,
         1
+      ]
+    },
+    "results/zps040/part-1125.jsonl": {
+      "gen:zl26": [
+        1,
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1150.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1127.jsonl": {
+      "gen:zl26": [
         1,
         0
+      ]
+    },
+    "results/zps040/part-1129.jsonl": {
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-1152.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-113.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1153.jsonl": {
-      "noprior": [
+    "results/zps040/part-1130.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1154.jsonl": {},
-    "results/zps038/part-1156.jsonl": {},
-    "results/zps038/part-1157.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1132.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1158.jsonl": {},
-    "results/zps038/part-1159.jsonl": {
-      "noprior": [
+    "results/zps040/part-1134.jsonl": {},
+    "results/zps040/part-1136.jsonl": {},
+    "results/zps040/part-1137.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-116.jsonl": {},
-    "results/zps038/part-1161.jsonl": {
-      "noprior": [
+    "results/zps040/part-1138.jsonl": {},
+    "results/zps040/part-1139.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1163.jsonl": {
-      "noprior": [
+    "results/zps040/part-114.jsonl": {},
+    "results/zps040/part-1142.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1165.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1144.jsonl": {},
+    "results/zps040/part-1145.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1166.jsonl": {},
-    "results/zps038/part-1169.jsonl": {
-      "noprior": [
+    "results/zps040/part-1147.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-117.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1148.jsonl": {},
+    "results/zps040/part-1149.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1171.jsonl": {
-      "noprior": [
+    "results/zps040/part-115.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-1172.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1150.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1173.jsonl": {
-      "noprior": [
+    "results/zps040/part-1151.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-1174.jsonl": {},
-    "results/zps038/part-1176.jsonl": {},
-    "results/zps038/part-1178.jsonl": {},
-    "results/zps038/part-118.jsonl": {},
-    "results/zps038/part-1181.jsonl": {
-      "noprior": [
+    "results/zps040/part-1152.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1182.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1154.jsonl": {},
+    "results/zps040/part-1155.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-1185.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1156.jsonl": {},
+    "results/zps040/part-1157.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps040/part-1159.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1187.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-116.jsonl": {},
+    "results/zps040/part-1162.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1188.jsonl": {},
-    "results/zps038/part-1189.jsonl": {
-      "noprior": [
+    "results/zps040/part-1163.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-119.jsonl": {
-      "noprior": [
+    "results/zps040/part-1166.jsonl": {},
+    "results/zps040/part-1167.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-1190.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1168.jsonl": {},
+    "results/zps040/part-1169.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1191.jsonl": {
-      "noprior": [
+    "results/zps040/part-117.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-1192.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1170.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-1193.jsonl": {
-      "noprior": [
+    "results/zps040/part-1171.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-1194.jsonl": {},
-    "results/zps038/part-1195.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1173.jsonl": {
+      "withprior": [
         1,
         0
-      ],
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-1196.jsonl": {},
-    "results/zps038/part-1197.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1174.jsonl": {},
+    "results/zps040/part-1178.jsonl": {},
+    "results/zps040/part-1179.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-12.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-118.jsonl": {},
+    "results/zps040/part-1180.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-120.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1181.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-121.jsonl": {
-      "noprior": [
+    "results/zps040/part-1182.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-122.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1183.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-123.jsonl": {
-      "noprior": [
+    "results/zps040/part-1184.jsonl": {},
+    "results/zps040/part-1186.jsonl": {},
+    "results/zps040/part-1187.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-124.jsonl": {},
-    "results/zps038/part-125.jsonl": {
-      "gen:zl25": [
-        1,
-        1
-      ],
-      "noprior": [
+    "results/zps040/part-1188.jsonl": {},
+    "results/zps040/part-119.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-126.jsonl": {},
-    "results/zps038/part-127.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1190.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-128.jsonl": {},
-    "results/zps038/part-129.jsonl": {
-      "noprior": [
+    "results/zps040/part-1195.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-13.jsonl": {
-      "noprior": [
+      ],
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-130.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-1196.jsonl": {},
+    "results/zps040/part-1197.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-131.jsonl": {
-      "noprior": [
+    "results/zps040/part-1198.jsonl": {},
+    "results/zps040/part-12.jsonl": {},
+    "results/zps040/part-120.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-132.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-121.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-133.jsonl": {
-      "noprior": [
+    "results/zps040/part-122.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-135.jsonl": {
-      "gen:zl25": [
-        1,
-        1
-      ],
-      "noprior": [
+    "results/zps040/part-123.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-136.jsonl": {},
-    "results/zps038/part-137.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-124.jsonl": {},
+    "results/zps040/part-125.jsonl": {
+      "gen:zl26": [
+        1,
+        0
+      ],
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-138.jsonl": {},
-    "results/zps038/part-139.jsonl": {
-      "noprior": [
+    "results/zps040/part-126.jsonl": {},
+    "results/zps040/part-127.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-14.jsonl": {},
-    "results/zps038/part-140.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-128.jsonl": {},
+    "results/zps040/part-129.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-141.jsonl": {
-      "noprior": [
+    "results/zps040/part-13.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-142.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-130.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-143.jsonl": {
-      "noprior": [
+    "results/zps040/part-131.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-144.jsonl": {},
-    "results/zps038/part-145.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-133.jsonl": {
+      "withprior": [
         1,
         1
+      ]
+    },
+    "results/zps040/part-134.jsonl": {},
+    "results/zps040/part-135.jsonl": {
+      "gen:zl26": [
+        1,
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-146.jsonl": {},
-    "results/zps038/part-147.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-136.jsonl": {},
+    "results/zps040/part-137.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-148.jsonl": {},
-    "results/zps038/part-149.jsonl": {
-      "noprior": [
+    "results/zps040/part-138.jsonl": {},
+    "results/zps040/part-139.jsonl": {},
+    "results/zps040/part-14.jsonl": {},
+    "results/zps040/part-140.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-15.jsonl": {
-      "gen:zl25": [
-        1,
-        0
-      ],
-      "noprior": [
+    "results/zps040/part-141.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-150.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-142.jsonl": {},
+    "results/zps040/part-143.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-151.jsonl": {
-      "noprior": [
+    "results/zps040/part-144.jsonl": {},
+    "results/zps040/part-145.jsonl": {
+      "gen:zl26": [
+        1,
+        0
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-152.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-146.jsonl": {},
+    "results/zps040/part-147.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-153.jsonl": {
-      "noprior": [
+    "results/zps040/part-148.jsonl": {},
+    "results/zps040/part-149.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-154.jsonl": {},
-    "results/zps038/part-155.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-15.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-156.jsonl": {},
-    "results/zps038/part-158.jsonl": {},
-    "results/zps038/part-159.jsonl": {
-      "noprior": [
+    "results/zps040/part-150.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-16.jsonl": {},
-    "results/zps038/part-160.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-151.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-161.jsonl": {
-      "noprior": [
+    "results/zps040/part-152.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-162.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-153.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-163.jsonl": {
-      "noprior": [
+    "results/zps040/part-154.jsonl": {},
+    "results/zps040/part-155.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-164.jsonl": {},
-    "results/zps038/part-165.jsonl": {
-      "gen:zl25": [
-        1,
-        1
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-166.jsonl": {},
-    "results/zps038/part-167.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-156.jsonl": {},
+    "results/zps040/part-157.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-168.jsonl": {},
-    "results/zps038/part-169.jsonl": {
-      "noprior": [
+    "results/zps040/part-158.jsonl": {},
+    "results/zps040/part-159.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-17.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-16.jsonl": {},
+    "results/zps040/part-160.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-170.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-161.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-171.jsonl": {
-      "noprior": [
+    "results/zps040/part-162.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-172.jsonl": {},
-    "results/zps038/part-173.jsonl": {
-      "noprior": [
+    "results/zps040/part-163.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-174.jsonl": {},
-    "results/zps038/part-175.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-164.jsonl": {},
+    "results/zps040/part-165.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-176.jsonl": {},
-    "results/zps038/part-177.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-166.jsonl": {},
+    "results/zps040/part-167.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-178.jsonl": {},
-    "results/zps038/part-179.jsonl": {
-      "noprior": [
+    "results/zps040/part-168.jsonl": {},
+    "results/zps040/part-169.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-18.jsonl": {},
-    "results/zps038/part-180.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-17.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-181.jsonl": {
-      "noprior": [
+    "results/zps040/part-170.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-182.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-171.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-183.jsonl": {
-      "noprior": [
+    "results/zps040/part-172.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-184.jsonl": {},
-    "results/zps038/part-185.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-173.jsonl": {
+      "withprior": [
         1,
-        0
+        1
+      ]
+    },
+    "results/zps040/part-174.jsonl": {},
+    "results/zps040/part-175.jsonl": {
+      "gen:zl26": [
+        1,
+        1
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-186.jsonl": {},
-    "results/zps038/part-187.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-176.jsonl": {},
+    "results/zps040/part-177.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-188.jsonl": {},
-    "results/zps038/part-189.jsonl": {
-      "noprior": [
+    "results/zps040/part-178.jsonl": {},
+    "results/zps040/part-179.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-19.jsonl": {
-      "noprior": [
+    "results/zps040/part-18.jsonl": {},
+    "results/zps040/part-180.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-190.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-181.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-191.jsonl": {
-      "noprior": [
+    "results/zps040/part-182.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-192.jsonl": {},
-    "results/zps038/part-193.jsonl": {
-      "noprior": [
+    "results/zps040/part-183.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-194.jsonl": {},
-    "results/zps038/part-195.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-184.jsonl": {},
+    "results/zps040/part-185.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-196.jsonl": {},
-    "results/zps038/part-197.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-186.jsonl": {},
+    "results/zps040/part-187.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-198.jsonl": {},
-    "results/zps038/part-199.jsonl": {
-      "noprior": [
+    "results/zps040/part-188.jsonl": {},
+    "results/zps040/part-189.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-2.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-19.jsonl": {
+      "withprior": [
         1,
         1
-      ]
-    },
-    "results/zps038/part-20.jsonl": {
-      "gen:zl25": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-200.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-190.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-201.jsonl": {
-      "noprior": [
+    "results/zps040/part-191.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-202.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-192.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-203.jsonl": {
-      "noprior": [
+    "results/zps040/part-193.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-204.jsonl": {},
-    "results/zps038/part-205.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-194.jsonl": {},
+    "results/zps040/part-195.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-206.jsonl": {},
-    "results/zps038/part-207.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-196.jsonl": {},
+    "results/zps040/part-197.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-208.jsonl": {},
-    "results/zps038/part-209.jsonl": {
-      "noprior": [
+    "results/zps040/part-198.jsonl": {},
+    "results/zps040/part-199.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-21.jsonl": {
-      "noprior": [
+    "results/zps040/part-2.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-210.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-20.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-211.jsonl": {
-      "noprior": [
+    "results/zps040/part-200.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-212.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-201.jsonl": {
+      "withprior": [
         1,
         1
+      ]
+    },
+    "results/zps040/part-202.jsonl": {
+      "gen:zl26": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-213.jsonl": {
-      "noprior": [
+    "results/zps040/part-203.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-214.jsonl": {},
-    "results/zps038/part-215.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-204.jsonl": {},
+    "results/zps040/part-205.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-216.jsonl": {},
-    "results/zps038/part-217.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-206.jsonl": {},
+    "results/zps040/part-207.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-218.jsonl": {},
-    "results/zps038/part-219.jsonl": {},
-    "results/zps038/part-22.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-208.jsonl": {},
+    "results/zps040/part-209.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-220.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-21.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-221.jsonl": {
-      "noprior": [
+    "results/zps040/part-211.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-222.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-212.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-223.jsonl": {
-      "noprior": [
+    "results/zps040/part-213.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-224.jsonl": {},
-    "results/zps038/part-225.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-214.jsonl": {},
+    "results/zps040/part-215.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-226.jsonl": {},
-    "results/zps038/part-227.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-216.jsonl": {},
+    "results/zps040/part-217.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-228.jsonl": {},
-    "results/zps038/part-229.jsonl": {
-      "noprior": [
+    "results/zps040/part-218.jsonl": {},
+    "results/zps040/part-219.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-23.jsonl": {
-      "noprior": [
+    "results/zps040/part-22.jsonl": {},
+    "results/zps040/part-220.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-230.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-221.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-231.jsonl": {
-      "noprior": [
+    "results/zps040/part-222.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-233.jsonl": {
-      "noprior": [
+    "results/zps040/part-223.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-234.jsonl": {},
-    "results/zps038/part-235.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-224.jsonl": {},
+    "results/zps040/part-225.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-236.jsonl": {},
-    "results/zps038/part-237.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-226.jsonl": {},
+    "results/zps040/part-227.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-238.jsonl": {},
-    "results/zps038/part-239.jsonl": {
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-24.jsonl": {},
-    "results/zps038/part-241.jsonl": {
-      "noprior": [
+    "results/zps040/part-228.jsonl": {},
+    "results/zps040/part-229.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-242.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-23.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-243.jsonl": {
-      "noprior": [
+    "results/zps040/part-230.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-244.jsonl": {},
-    "results/zps038/part-245.jsonl": {
-      "gen:zl25": [
-        1,
-        1
-      ],
-      "noprior": [
+    "results/zps040/part-231.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-246.jsonl": {},
-    "results/zps038/part-247.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-232.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-248.jsonl": {},
-    "results/zps038/part-249.jsonl": {
-      "noprior": [
+    "results/zps040/part-233.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-25.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-234.jsonl": {},
+    "results/zps040/part-235.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-250.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-236.jsonl": {},
+    "results/zps040/part-237.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-251.jsonl": {
-      "noprior": [
+    "results/zps040/part-238.jsonl": {},
+    "results/zps040/part-239.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-253.jsonl": {
-      "noprior": [
+    "results/zps040/part-24.jsonl": {},
+    "results/zps040/part-240.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-254.jsonl": {},
-    "results/zps038/part-255.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-241.jsonl": {
+      "withprior": [
         1,
         0
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps040/part-242.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-256.jsonl": {},
-    "results/zps038/part-257.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-243.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-258.jsonl": {},
-    "results/zps038/part-259.jsonl": {
-      "noprior": [
+    "results/zps040/part-245.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-26.jsonl": {},
-    "results/zps038/part-260.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-246.jsonl": {},
+    "results/zps040/part-247.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-261.jsonl": {
-      "noprior": [
+    "results/zps040/part-248.jsonl": {},
+    "results/zps040/part-249.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-263.jsonl": {
-      "noprior": [
+    "results/zps040/part-25.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ]
-    },
-    "results/zps038/part-264.jsonl": {},
-    "results/zps038/part-265.jsonl": {
-      "gen:zl25": [
+      ],
+      "withprior": [
         1,
         0
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps040/part-250.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-266.jsonl": {},
-    "results/zps038/part-267.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-251.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-268.jsonl": {},
-    "results/zps038/part-269.jsonl": {
-      "noprior": [
+    "results/zps040/part-252.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-27.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-253.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-270.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-254.jsonl": {},
+    "results/zps040/part-255.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-271.jsonl": {
-      "noprior": [
+      ],
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-272.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-256.jsonl": {},
+    "results/zps040/part-257.jsonl": {},
+    "results/zps040/part-259.jsonl": {},
+    "results/zps040/part-26.jsonl": {},
+    "results/zps040/part-260.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-273.jsonl": {
-      "noprior": [
+    "results/zps040/part-261.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-274.jsonl": {},
-    "results/zps038/part-275.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-262.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps040/part-263.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-276.jsonl": {},
-    "results/zps038/part-277.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-264.jsonl": {},
+    "results/zps040/part-265.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-278.jsonl": {},
-    "results/zps038/part-279.jsonl": {
-      "noprior": [
+    "results/zps040/part-266.jsonl": {},
+    "results/zps040/part-268.jsonl": {},
+    "results/zps040/part-269.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-28.jsonl": {},
-    "results/zps038/part-280.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-27.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-281.jsonl": {
-      "noprior": [
+    "results/zps040/part-270.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-282.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-271.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-283.jsonl": {
-      "noprior": [
+    "results/zps040/part-272.jsonl": {},
+    "results/zps040/part-273.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-284.jsonl": {},
-    "results/zps038/part-285.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-274.jsonl": {},
+    "results/zps040/part-275.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-286.jsonl": {},
-    "results/zps038/part-287.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-277.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-288.jsonl": {},
-    "results/zps038/part-289.jsonl": {
-      "noprior": [
+    "results/zps040/part-278.jsonl": {},
+    "results/zps040/part-279.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-29.jsonl": {
-      "noprior": [
+    "results/zps040/part-28.jsonl": {},
+    "results/zps040/part-280.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-290.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-281.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-291.jsonl": {
-      "noprior": [
+    "results/zps040/part-282.jsonl": {},
+    "results/zps040/part-283.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-293.jsonl": {
-      "noprior": [
+    "results/zps040/part-284.jsonl": {},
+    "results/zps040/part-285.jsonl": {
+      "gen:zl26": [
         1,
         0
+      ],
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-294.jsonl": {},
-    "results/zps038/part-295.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-286.jsonl": {},
+    "results/zps040/part-287.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps040/part-288.jsonl": {},
+    "results/zps040/part-289.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-296.jsonl": {},
-    "results/zps038/part-299.jsonl": {
-      "noprior": [
+    "results/zps040/part-29.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-3.jsonl": {},
-    "results/zps038/part-30.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-290.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-300.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-291.jsonl": {},
+    "results/zps040/part-292.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-301.jsonl": {
-      "noprior": [
+    "results/zps040/part-293.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-302.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-294.jsonl": {},
+    "results/zps040/part-295.jsonl": {
+      "gen:zl26": [
         1,
         0
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-303.jsonl": {
-      "noprior": [
+    "results/zps040/part-296.jsonl": {},
+    "results/zps040/part-297.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-304.jsonl": {},
-    "results/zps038/part-306.jsonl": {},
-    "results/zps038/part-307.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-298.jsonl": {},
+    "results/zps040/part-299.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-309.jsonl": {
-      "noprior": [
+    "results/zps040/part-3.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-31.jsonl": {
-      "noprior": [
+    "results/zps040/part-30.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-310.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-300.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-311.jsonl": {
-      "noprior": [
+    "results/zps040/part-301.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-313.jsonl": {
-      "noprior": [
+    "results/zps040/part-302.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-315.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-303.jsonl": {},
+    "results/zps040/part-304.jsonl": {},
+    "results/zps040/part-305.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-316.jsonl": {},
-    "results/zps038/part-317.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-306.jsonl": {},
+    "results/zps040/part-308.jsonl": {},
+    "results/zps040/part-309.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-318.jsonl": {},
-    "results/zps038/part-319.jsonl": {
-      "noprior": [
+    "results/zps040/part-31.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-32.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-310.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-320.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-311.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-321.jsonl": {
-      "noprior": [
+    "results/zps040/part-312.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-322.jsonl": {},
-    "results/zps038/part-323.jsonl": {
-      "noprior": [
+    "results/zps040/part-313.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-325.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-314.jsonl": {},
+    "results/zps040/part-315.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        1
+        0
+      ]
+    },
+    "results/zps040/part-317.jsonl": {
+      "gen:zl26": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-326.jsonl": {},
-    "results/zps038/part-327.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-318.jsonl": {},
+    "results/zps040/part-319.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-328.jsonl": {},
-    "results/zps038/part-33.jsonl": {
-      "noprior": [
+    "results/zps040/part-32.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-331.jsonl": {
-      "noprior": [
+    "results/zps040/part-320.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-332.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-321.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-333.jsonl": {
-      "noprior": [
+    "results/zps040/part-322.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-334.jsonl": {},
-    "results/zps038/part-335.jsonl": {
-      "gen:zl25": [
-        1,
-        1
-      ],
-      "noprior": [
+    "results/zps040/part-323.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-336.jsonl": {},
-    "results/zps038/part-337.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-325.jsonl": {
+      "gen:zl26": [
+        1,
+        1
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-338.jsonl": {},
-    "results/zps038/part-339.jsonl": {
-      "noprior": [
+    "results/zps040/part-326.jsonl": {},
+    "results/zps040/part-327.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-340.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-328.jsonl": {},
+    "results/zps040/part-329.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-341.jsonl": {
-      "noprior": [
+    "results/zps040/part-33.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-342.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-330.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-343.jsonl": {
-      "noprior": [
+    "results/zps040/part-331.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-344.jsonl": {},
-    "results/zps038/part-345.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-332.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ],
-      "noprior": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-347.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-333.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-348.jsonl": {},
-    "results/zps038/part-349.jsonl": {
-      "noprior": [
+    "results/zps040/part-334.jsonl": {},
+    "results/zps040/part-335.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-35.jsonl": {
-      "gen:zl25": [
-        1,
-        1
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-350.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-336.jsonl": {},
+    "results/zps040/part-337.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-351.jsonl": {
-      "noprior": [
+    "results/zps040/part-338.jsonl": {},
+    "results/zps040/part-339.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-352.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-34.jsonl": {},
+    "results/zps040/part-340.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-353.jsonl": {},
-    "results/zps038/part-354.jsonl": {},
-    "results/zps038/part-355.jsonl": {
-      "gen:zl25": [
-        1,
-        1
-      ],
-      "noprior": [
+    "results/zps040/part-341.jsonl": {},
+    "results/zps040/part-342.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-356.jsonl": {},
-    "results/zps038/part-357.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-343.jsonl": {},
+    "results/zps040/part-344.jsonl": {},
+    "results/zps040/part-345.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ]
-    },
-    "results/zps038/part-358.jsonl": {},
-    "results/zps038/part-359.jsonl": {
-      "noprior": [
+      ],
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-36.jsonl": {},
-    "results/zps038/part-360.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-346.jsonl": {},
+    "results/zps040/part-347.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-361.jsonl": {
-      "noprior": [
+    "results/zps040/part-348.jsonl": {},
+    "results/zps040/part-349.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-362.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-35.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ]
-    },
-    "results/zps038/part-363.jsonl": {
-      "noprior": [
+      ],
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-364.jsonl": {},
-    "results/zps038/part-365.jsonl": {
-      "gen:zl25": [
-        1,
-        1
-      ],
-      "noprior": [
+    "results/zps040/part-350.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-366.jsonl": {},
-    "results/zps038/part-367.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-351.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-368.jsonl": {},
-    "results/zps038/part-369.jsonl": {
-      "noprior": [
+    "results/zps040/part-352.jsonl": {},
+    "results/zps040/part-353.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-37.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-354.jsonl": {},
+    "results/zps040/part-355.jsonl": {
+      "gen:zl26": [
+        1,
+        0
+      ],
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-370.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-356.jsonl": {},
+    "results/zps040/part-357.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-371.jsonl": {
-      "noprior": [
+    "results/zps040/part-358.jsonl": {},
+    "results/zps040/part-359.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-372.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-36.jsonl": {},
+    "results/zps040/part-361.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-373.jsonl": {
-      "noprior": [
+    "results/zps040/part-362.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-374.jsonl": {},
-    "results/zps038/part-375.jsonl": {},
-    "results/zps038/part-376.jsonl": {},
-    "results/zps038/part-377.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-363.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-378.jsonl": {},
-    "results/zps038/part-379.jsonl": {
-      "noprior": [
+    "results/zps040/part-364.jsonl": {},
+    "results/zps040/part-365.jsonl": {
+      "gen:zl26": [
+        1,
+        0
+      ],
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-38.jsonl": {},
-    "results/zps038/part-380.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-366.jsonl": {},
+    "results/zps040/part-367.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-381.jsonl": {
-      "noprior": [
+    "results/zps040/part-368.jsonl": {},
+    "results/zps040/part-369.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-382.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-37.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-383.jsonl": {
-      "noprior": [
+    "results/zps040/part-370.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-384.jsonl": {},
-    "results/zps038/part-385.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-371.jsonl": {
+      "withprior": [
         1,
-        0
-      ],
-      "noprior": [
+        1
+      ]
+    },
+    "results/zps040/part-372.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-386.jsonl": {},
-    "results/zps038/part-387.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-373.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-388.jsonl": {},
-    "results/zps038/part-389.jsonl": {
-      "noprior": [
+    "results/zps040/part-374.jsonl": {},
+    "results/zps040/part-375.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-39.jsonl": {
-      "noprior": [
+    "results/zps040/part-376.jsonl": {},
+    "results/zps040/part-377.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-390.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-379.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-391.jsonl": {
-      "noprior": [
+    "results/zps040/part-38.jsonl": {},
+    "results/zps040/part-380.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-392.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-381.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-393.jsonl": {
-      "noprior": [
+    "results/zps040/part-382.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-394.jsonl": {},
-    "results/zps038/part-395.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-383.jsonl": {
+      "withprior": [
         1,
         0
-      ],
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-396.jsonl": {},
-    "results/zps038/part-397.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-384.jsonl": {},
+    "results/zps040/part-385.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-398.jsonl": {},
-    "results/zps038/part-399.jsonl": {
-      "noprior": [
+      ],
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-4.jsonl": {},
-    "results/zps038/part-40.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-386.jsonl": {},
+    "results/zps040/part-387.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-400.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-388.jsonl": {},
+    "results/zps040/part-389.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-401.jsonl": {
-      "noprior": [
+    "results/zps040/part-39.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-402.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-390.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-403.jsonl": {},
-    "results/zps038/part-404.jsonl": {},
-    "results/zps038/part-405.jsonl": {
-      "gen:zl25": [
-        1,
-        1
-      ],
-      "noprior": [
+    "results/zps040/part-391.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-406.jsonl": {},
-    "results/zps038/part-407.jsonl": {},
-    "results/zps038/part-408.jsonl": {},
-    "results/zps038/part-409.jsonl": {
-      "noprior": [
+    "results/zps040/part-392.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-410.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-393.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-411.jsonl": {},
-    "results/zps038/part-412.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-394.jsonl": {},
+    "results/zps040/part-395.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
+      ],
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-413.jsonl": {
-      "noprior": [
+    "results/zps040/part-396.jsonl": {},
+    "results/zps040/part-397.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-414.jsonl": {},
-    "results/zps038/part-415.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-398.jsonl": {},
+    "results/zps040/part-399.jsonl": {
+      "withprior": [
         1,
         0
-      ],
-      "noprior": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-416.jsonl": {},
-    "results/zps038/part-417.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-4.jsonl": {},
+    "results/zps040/part-40.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-418.jsonl": {},
-    "results/zps038/part-419.jsonl": {
-      "noprior": [
+    "results/zps040/part-400.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-42.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-401.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-420.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-402.jsonl": {},
+    "results/zps040/part-403.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-421.jsonl": {
-      "noprior": [
+    "results/zps040/part-404.jsonl": {},
+    "results/zps040/part-405.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-422.jsonl": {
-      "gen:zl25": [
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-423.jsonl": {
-      "noprior": [
+    "results/zps040/part-406.jsonl": {},
+    "results/zps040/part-407.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-424.jsonl": {},
-    "results/zps038/part-425.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-408.jsonl": {},
+    "results/zps040/part-409.jsonl": {
+      "withprior": [
         1,
         1
-      ],
-      "noprior": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-426.jsonl": {},
-    "results/zps038/part-427.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-41.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-428.jsonl": {},
-    "results/zps038/part-429.jsonl": {
-      "noprior": [
+    "results/zps040/part-410.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-43.jsonl": {
-      "noprior": [
+    "results/zps040/part-411.jsonl": {
+      "withprior": [
         1,
         1
+      ]
+    },
+    "results/zps040/part-412.jsonl": {
+      "gen:zl26": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-430.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-413.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-431.jsonl": {
-      "noprior": [
+    "results/zps040/part-414.jsonl": {},
+    "results/zps040/part-415.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
+      ],
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-432.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-416.jsonl": {},
+    "results/zps040/part-417.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-434.jsonl": {},
-    "results/zps038/part-435.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-418.jsonl": {},
+    "results/zps040/part-419.jsonl": {
+      "withprior": [
         1,
         1
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps040/part-42.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-436.jsonl": {},
-    "results/zps038/part-438.jsonl": {},
-    "results/zps038/part-439.jsonl": {
-      "noprior": [
+    "results/zps040/part-420.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-44.jsonl": {},
-    "results/zps038/part-440.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-421.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-441.jsonl": {
-      "noprior": [
+    "results/zps040/part-422.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-442.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-423.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-443.jsonl": {
-      "noprior": [
+    "results/zps040/part-424.jsonl": {},
+    "results/zps040/part-425.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-444.jsonl": {},
-    "results/zps038/part-446.jsonl": {},
-    "results/zps038/part-447.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-427.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-448.jsonl": {},
-    "results/zps038/part-449.jsonl": {
-      "noprior": [
+    "results/zps040/part-428.jsonl": {},
+    "results/zps040/part-429.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-45.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-43.jsonl": {},
+    "results/zps040/part-430.jsonl": {
+      "gen:zl26": [
         1,
-        1
-      ],
-      "noprior": [
-        1,
-        1
+        0
       ]
     },
-    "results/zps038/part-450.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-431.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-451.jsonl": {
-      "noprior": [
+    "results/zps040/part-432.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-452.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-433.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-453.jsonl": {
-      "noprior": [
+    "results/zps040/part-434.jsonl": {},
+    "results/zps040/part-435.jsonl": {
+      "gen:zl26": [
         1,
         0
+      ],
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-454.jsonl": {},
-    "results/zps038/part-455.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-436.jsonl": {},
+    "results/zps040/part-437.jsonl": {
+      "gen:zl26": [
         1,
-        0
-      ],
-      "noprior": [
+        1
+      ]
+    },
+    "results/zps040/part-438.jsonl": {},
+    "results/zps040/part-439.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-456.jsonl": {},
-    "results/zps038/part-458.jsonl": {},
-    "results/zps038/part-459.jsonl": {
-      "noprior": [
+    "results/zps040/part-44.jsonl": {},
+    "results/zps040/part-440.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-46.jsonl": {},
-    "results/zps038/part-460.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-442.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-461.jsonl": {
-      "noprior": [
+    "results/zps040/part-443.jsonl": {
+      "withprior": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-463.jsonl": {
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-464.jsonl": {},
-    "results/zps038/part-465.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-444.jsonl": {},
+    "results/zps040/part-445.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-466.jsonl": {},
-    "results/zps038/part-467.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-446.jsonl": {},
+    "results/zps040/part-447.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-468.jsonl": {},
-    "results/zps038/part-469.jsonl": {
-      "noprior": [
+    "results/zps040/part-448.jsonl": {},
+    "results/zps040/part-449.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-47.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-45.jsonl": {
+      "gen:zl26": [
         1,
         0
+      ],
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-470.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-450.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-472.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-451.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-473.jsonl": {
-      "noprior": [
+    "results/zps040/part-453.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-474.jsonl": {},
-    "results/zps038/part-475.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-454.jsonl": {},
+    "results/zps040/part-455.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-476.jsonl": {},
-    "results/zps038/part-477.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-456.jsonl": {},
+    "results/zps040/part-457.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-478.jsonl": {},
-    "results/zps038/part-479.jsonl": {
-      "noprior": [
+    "results/zps040/part-458.jsonl": {},
+    "results/zps040/part-459.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-48.jsonl": {},
-    "results/zps038/part-480.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-46.jsonl": {},
+    "results/zps040/part-460.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-481.jsonl": {
-      "noprior": [
+    "results/zps040/part-461.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-482.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-462.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-483.jsonl": {
-      "noprior": [
+    "results/zps040/part-463.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-484.jsonl": {},
-    "results/zps038/part-485.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-464.jsonl": {},
+    "results/zps040/part-465.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-486.jsonl": {},
-    "results/zps038/part-487.jsonl": {},
-    "results/zps038/part-488.jsonl": {},
-    "results/zps038/part-489.jsonl": {
-      "noprior": [
+    "results/zps040/part-466.jsonl": {},
+    "results/zps040/part-467.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ]
-    },
-    "results/zps038/part-49.jsonl": {
-      "noprior": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-490.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-468.jsonl": {},
+    "results/zps040/part-469.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-491.jsonl": {
-      "noprior": [
+    "results/zps040/part-47.jsonl": {
+      "gen:zl26": [
         1,
-        0
-      ]
-    },
-    "results/zps038/part-492.jsonl": {
-      "gen:zl25": [
-        1,
         1
       ]
     },
-    "results/zps038/part-493.jsonl": {
-      "noprior": [
+    "results/zps040/part-470.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-494.jsonl": {},
-    "results/zps038/part-495.jsonl": {
-      "gen:zl25": [
-        1,
-        1
-      ],
-      "noprior": [
+    "results/zps040/part-471.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-496.jsonl": {},
-    "results/zps038/part-497.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-472.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-498.jsonl": {},
-    "results/zps038/part-499.jsonl": {
-      "noprior": [
+    "results/zps040/part-473.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-5.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-474.jsonl": {},
+    "results/zps040/part-475.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
+      ]
+    },
+    "results/zps040/part-476.jsonl": {},
+    "results/zps040/part-477.jsonl": {
+      "gen:zl26": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-500.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-478.jsonl": {},
+    "results/zps040/part-48.jsonl": {},
+    "results/zps040/part-480.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-501.jsonl": {
-      "noprior": [
+    "results/zps040/part-481.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-502.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-482.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-503.jsonl": {
-      "noprior": [
+    "results/zps040/part-483.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-504.jsonl": {},
-    "results/zps038/part-505.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-484.jsonl": {},
+    "results/zps040/part-485.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-506.jsonl": {},
-    "results/zps038/part-507.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-486.jsonl": {},
+    "results/zps040/part-487.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-508.jsonl": {},
-    "results/zps038/part-509.jsonl": {
-      "noprior": [
+    "results/zps040/part-488.jsonl": {},
+    "results/zps040/part-489.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-51.jsonl": {
-      "noprior": [
+    "results/zps040/part-49.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-510.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-490.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-511.jsonl": {
-      "noprior": [
+    "results/zps040/part-491.jsonl": {},
+    "results/zps040/part-492.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-512.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-493.jsonl": {
+      "withprior": [
         1,
         1
-      ]
-    },
-    "results/zps038/part-513.jsonl": {
-      "noprior": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-514.jsonl": {},
-    "results/zps038/part-515.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-494.jsonl": {},
+    "results/zps040/part-495.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-516.jsonl": {},
-    "results/zps038/part-517.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-496.jsonl": {},
+    "results/zps040/part-497.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-518.jsonl": {},
-    "results/zps038/part-519.jsonl": {
-      "noprior": [
+    "results/zps040/part-498.jsonl": {},
+    "results/zps040/part-499.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-52.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-5.jsonl": {
+      "gen:zl26": [
+        1,
+        0
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-520.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-50.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-521.jsonl": {
-      "noprior": [
+    "results/zps040/part-500.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-522.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-501.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-523.jsonl": {
-      "noprior": [
+    "results/zps040/part-502.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-524.jsonl": {},
-    "results/zps038/part-525.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-503.jsonl": {},
+    "results/zps040/part-504.jsonl": {},
+    "results/zps040/part-505.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-526.jsonl": {},
-    "results/zps038/part-527.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-506.jsonl": {},
+    "results/zps040/part-507.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-528.jsonl": {},
-    "results/zps038/part-529.jsonl": {
-      "noprior": [
+    "results/zps040/part-508.jsonl": {},
+    "results/zps040/part-509.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-53.jsonl": {
-      "noprior": [
+    "results/zps040/part-51.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-530.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-510.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-531.jsonl": {
-      "noprior": [
+    "results/zps040/part-511.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-532.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-512.jsonl": {},
+    "results/zps040/part-513.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-533.jsonl": {
-      "noprior": [
+    "results/zps040/part-514.jsonl": {},
+    "results/zps040/part-515.jsonl": {
+      "gen:zl26": [
         1,
         0
+      ],
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-534.jsonl": {},
-    "results/zps038/part-535.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-516.jsonl": {},
+    "results/zps040/part-517.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps040/part-518.jsonl": {},
+    "results/zps040/part-519.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-536.jsonl": {},
-    "results/zps038/part-537.jsonl": {},
-    "results/zps038/part-538.jsonl": {},
-    "results/zps038/part-539.jsonl": {
-      "noprior": [
+    "results/zps040/part-52.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-54.jsonl": {},
-    "results/zps038/part-540.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-520.jsonl": {
+      "gen:zl26": [
         1,
         0
+      ]
+    },
+    "results/zps040/part-521.jsonl": {
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-541.jsonl": {},
-    "results/zps038/part-542.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-522.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-543.jsonl": {
-      "noprior": [
+    "results/zps040/part-523.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-544.jsonl": {},
-    "results/zps038/part-546.jsonl": {},
-    "results/zps038/part-547.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-524.jsonl": {},
+    "results/zps040/part-525.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-548.jsonl": {},
-    "results/zps038/part-549.jsonl": {
-      "noprior": [
+    "results/zps040/part-526.jsonl": {},
+    "results/zps040/part-527.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-55.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-528.jsonl": {},
+    "results/zps040/part-529.jsonl": {
+      "withprior": [
         1,
-        1
-      ],
-      "noprior": [
+        0
+      ]
+    },
+    "results/zps040/part-53.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-550.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-530.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-551.jsonl": {
-      "noprior": [
+    "results/zps040/part-531.jsonl": {
+      "withprior": [
         1,
-        1
+        0
+      ]
+    },
+    "results/zps040/part-532.jsonl": {
+      "gen:zl26": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-552.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-533.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-554.jsonl": {},
-    "results/zps038/part-555.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-534.jsonl": {},
+    "results/zps040/part-535.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-556.jsonl": {},
-    "results/zps038/part-557.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-536.jsonl": {},
+    "results/zps040/part-537.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-558.jsonl": {},
-    "results/zps038/part-559.jsonl": {
-      "noprior": [
+    "results/zps040/part-538.jsonl": {},
+    "results/zps040/part-539.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-56.jsonl": {},
-    "results/zps038/part-560.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-54.jsonl": {},
+    "results/zps040/part-540.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-561.jsonl": {
-      "noprior": [
+    "results/zps040/part-541.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-562.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-542.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-563.jsonl": {
-      "noprior": [
+    "results/zps040/part-543.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-564.jsonl": {},
-    "results/zps038/part-565.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-544.jsonl": {},
+    "results/zps040/part-545.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-566.jsonl": {},
-    "results/zps038/part-567.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-546.jsonl": {},
+    "results/zps040/part-547.jsonl": {},
+    "results/zps040/part-548.jsonl": {},
+    "results/zps040/part-549.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-568.jsonl": {},
-    "results/zps038/part-569.jsonl": {
-      "noprior": [
+    "results/zps040/part-55.jsonl": {
+      "gen:zl26": [
+        1,
+        1
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-57.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-550.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-570.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-551.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-571.jsonl": {
-      "noprior": [
+    "results/zps040/part-552.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-572.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-553.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-573.jsonl": {},
-    "results/zps038/part-574.jsonl": {},
-    "results/zps038/part-575.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-554.jsonl": {},
+    "results/zps040/part-555.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-576.jsonl": {},
-    "results/zps038/part-577.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-556.jsonl": {},
+    "results/zps040/part-557.jsonl": {},
+    "results/zps040/part-558.jsonl": {},
+    "results/zps040/part-559.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-578.jsonl": {},
-    "results/zps038/part-579.jsonl": {
-      "noprior": [
+    "results/zps040/part-56.jsonl": {},
+    "results/zps040/part-560.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-58.jsonl": {},
-    "results/zps038/part-580.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-561.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-581.jsonl": {
-      "noprior": [
+    "results/zps040/part-562.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-582.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-563.jsonl": {},
+    "results/zps040/part-564.jsonl": {},
+    "results/zps040/part-565.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-583.jsonl": {
-      "noprior": [
+    "results/zps040/part-566.jsonl": {},
+    "results/zps040/part-567.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-584.jsonl": {},
-    "results/zps038/part-585.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-568.jsonl": {},
+    "results/zps040/part-569.jsonl": {
+      "withprior": [
         1,
         0
-      ],
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-586.jsonl": {},
-    "results/zps038/part-587.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-57.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-588.jsonl": {},
-    "results/zps038/part-589.jsonl": {},
-    "results/zps038/part-59.jsonl": {
-      "noprior": [
+    "results/zps040/part-570.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-590.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-571.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-591.jsonl": {
-      "noprior": [
+    "results/zps040/part-572.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-592.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-573.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-593.jsonl": {
-      "noprior": [
+    "results/zps040/part-574.jsonl": {},
+    "results/zps040/part-575.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-594.jsonl": {},
-    "results/zps038/part-595.jsonl": {
-      "gen:zl25": [
+      ],
+      "withprior": [
         1,
         0
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps040/part-576.jsonl": {},
+    "results/zps040/part-577.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-596.jsonl": {},
-    "results/zps038/part-597.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-578.jsonl": {},
+    "results/zps040/part-579.jsonl": {
+      "withprior": [
         1,
         1
+      ]
+    },
+    "results/zps040/part-58.jsonl": {},
+    "results/zps040/part-580.jsonl": {},
+    "results/zps040/part-581.jsonl": {
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-598.jsonl": {},
-    "results/zps038/part-6.jsonl": {},
-    "results/zps038/part-60.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-582.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-600.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-583.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-601.jsonl": {
-      "noprior": [
+    "results/zps040/part-584.jsonl": {},
+    "results/zps040/part-585.jsonl": {},
+    "results/zps040/part-586.jsonl": {},
+    "results/zps040/part-587.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-602.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-588.jsonl": {},
+    "results/zps040/part-589.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-603.jsonl": {
-      "noprior": [
+    "results/zps040/part-59.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-604.jsonl": {},
-    "results/zps038/part-605.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-590.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps040/part-591.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-606.jsonl": {},
-    "results/zps038/part-607.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-592.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-608.jsonl": {},
-    "results/zps038/part-609.jsonl": {
-      "noprior": [
+    "results/zps040/part-593.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-61.jsonl": {
-      "noprior": [
+    "results/zps040/part-594.jsonl": {},
+    "results/zps040/part-595.jsonl": {
+      "gen:zl26": [
+        1,
+        0
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-610.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-596.jsonl": {},
+    "results/zps040/part-597.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-611.jsonl": {
-      "noprior": [
+    "results/zps040/part-598.jsonl": {},
+    "results/zps040/part-599.jsonl": {
+      "withprior": [
         1,
         1
+      ]
+    },
+    "results/zps040/part-6.jsonl": {},
+    "results/zps040/part-60.jsonl": {
+      "gen:zl26": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-612.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-600.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-613.jsonl": {
-      "noprior": [
+    "results/zps040/part-601.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-614.jsonl": {},
-    "results/zps038/part-615.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-603.jsonl": {
+      "withprior": [
         1,
         1
-      ],
-      "noprior": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-616.jsonl": {},
-    "results/zps038/part-617.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-604.jsonl": {},
+    "results/zps040/part-605.jsonl": {
+      "gen:zl26": [
+        1,
+        1
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-618.jsonl": {},
-    "results/zps038/part-619.jsonl": {
-      "noprior": [
+    "results/zps040/part-606.jsonl": {},
+    "results/zps040/part-607.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-62.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-608.jsonl": {},
+    "results/zps040/part-609.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-620.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-61.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-621.jsonl": {
-      "noprior": [
+    "results/zps040/part-610.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-622.jsonl": {},
-    "results/zps038/part-623.jsonl": {
-      "noprior": [
+    "results/zps040/part-611.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-624.jsonl": {},
-    "results/zps038/part-625.jsonl": {
-      "gen:zl25": [
-        1,
-        1
-      ],
-      "noprior": [
+    "results/zps040/part-612.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-626.jsonl": {},
-    "results/zps038/part-627.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-613.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-628.jsonl": {},
-    "results/zps038/part-629.jsonl": {
-      "noprior": [
+    "results/zps040/part-614.jsonl": {},
+    "results/zps040/part-615.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-63.jsonl": {
-      "noprior": [
+    "results/zps040/part-616.jsonl": {},
+    "results/zps040/part-617.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-630.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-618.jsonl": {},
+    "results/zps040/part-619.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-631.jsonl": {
-      "noprior": [
+    "results/zps040/part-62.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-632.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-620.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-633.jsonl": {
-      "noprior": [
+    "results/zps040/part-621.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-634.jsonl": {},
-    "results/zps038/part-635.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-622.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ],
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-636.jsonl": {},
-    "results/zps038/part-637.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-623.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-638.jsonl": {},
-    "results/zps038/part-639.jsonl": {
-      "noprior": [
+    "results/zps040/part-624.jsonl": {},
+    "results/zps040/part-625.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-64.jsonl": {},
-    "results/zps038/part-640.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-626.jsonl": {},
+    "results/zps040/part-627.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-641.jsonl": {},
-    "results/zps038/part-642.jsonl": {},
-    "results/zps038/part-643.jsonl": {
-      "noprior": [
+    "results/zps040/part-628.jsonl": {},
+    "results/zps040/part-629.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-644.jsonl": {},
-    "results/zps038/part-645.jsonl": {
-      "gen:zl25": [
-        1,
-        0
-      ],
-      "noprior": [
+    "results/zps040/part-63.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-646.jsonl": {},
-    "results/zps038/part-647.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-630.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ]
+    },
+    "results/zps040/part-631.jsonl": {
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-648.jsonl": {},
-    "results/zps038/part-649.jsonl": {
-      "noprior": [
+    "results/zps040/part-632.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-65.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-633.jsonl": {
+      "withprior": [
         1,
         1
+      ]
+    },
+    "results/zps040/part-634.jsonl": {},
+    "results/zps040/part-635.jsonl": {
+      "gen:zl26": [
+        1,
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-650.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-636.jsonl": {},
+    "results/zps040/part-637.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-651.jsonl": {
-      "noprior": [
+    "results/zps040/part-638.jsonl": {},
+    "results/zps040/part-639.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-652.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-64.jsonl": {},
+    "results/zps040/part-641.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-653.jsonl": {
-      "noprior": [
+    "results/zps040/part-642.jsonl": {},
+    "results/zps040/part-643.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-654.jsonl": {},
-    "results/zps038/part-655.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-644.jsonl": {},
+    "results/zps040/part-645.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-656.jsonl": {},
-    "results/zps038/part-657.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-646.jsonl": {},
+    "results/zps040/part-647.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-658.jsonl": {},
-    "results/zps038/part-659.jsonl": {
-      "noprior": [
+    "results/zps040/part-648.jsonl": {},
+    "results/zps040/part-65.jsonl": {
+      "gen:zl26": [
         1,
-        1
-      ]
-    },
-    "results/zps038/part-66.jsonl": {},
-    "results/zps038/part-660.jsonl": {
-      "gen:zl25": [
+        0
+      ],
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-661.jsonl": {
-      "noprior": [
+    "results/zps040/part-650.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-662.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-651.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-663.jsonl": {
-      "noprior": [
+    "results/zps040/part-652.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-664.jsonl": {},
-    "results/zps038/part-665.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-653.jsonl": {
+      "withprior": [
         1,
         1
+      ]
+    },
+    "results/zps040/part-655.jsonl": {
+      "gen:zl26": [
+        1,
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-666.jsonl": {},
-    "results/zps038/part-667.jsonl": {},
-    "results/zps038/part-668.jsonl": {},
-    "results/zps038/part-669.jsonl": {
-      "noprior": [
+    "results/zps040/part-656.jsonl": {},
+    "results/zps040/part-657.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-67.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-658.jsonl": {},
+    "results/zps040/part-659.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-670.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-66.jsonl": {},
+    "results/zps040/part-660.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-671.jsonl": {
-      "noprior": [
+    "results/zps040/part-661.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-672.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-662.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-673.jsonl": {
-      "noprior": [
+    "results/zps040/part-663.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-674.jsonl": {},
-    "results/zps038/part-675.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-664.jsonl": {},
+    "results/zps040/part-665.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-676.jsonl": {},
-    "results/zps038/part-677.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-666.jsonl": {},
+    "results/zps040/part-667.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-678.jsonl": {},
-    "results/zps038/part-679.jsonl": {
-      "noprior": [
+    "results/zps040/part-668.jsonl": {},
+    "results/zps040/part-669.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-68.jsonl": {},
-    "results/zps038/part-680.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-67.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-681.jsonl": {
-      "noprior": [
+    "results/zps040/part-670.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-682.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-671.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-683.jsonl": {
-      "noprior": [
+    "results/zps040/part-673.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-684.jsonl": {},
-    "results/zps038/part-685.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-675.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-686.jsonl": {},
-    "results/zps038/part-687.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-677.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-688.jsonl": {},
-    "results/zps038/part-689.jsonl": {
-      "noprior": [
+    "results/zps040/part-678.jsonl": {},
+    "results/zps040/part-679.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-69.jsonl": {
-      "noprior": [
+    "results/zps040/part-68.jsonl": {},
+    "results/zps040/part-680.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-690.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-681.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-691.jsonl": {
-      "noprior": [
+    "results/zps040/part-682.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-692.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-683.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-693.jsonl": {
-      "noprior": [
+    "results/zps040/part-684.jsonl": {},
+    "results/zps040/part-685.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-694.jsonl": {},
-    "results/zps038/part-695.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-686.jsonl": {},
+    "results/zps040/part-687.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ],
-      "noprior": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-696.jsonl": {},
-    "results/zps038/part-697.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-688.jsonl": {},
+    "results/zps040/part-689.jsonl": {
+      "withprior": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-698.jsonl": {},
-    "results/zps038/part-699.jsonl": {
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-7.jsonl": {},
-    "results/zps038/part-70.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-69.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-700.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-690.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-701.jsonl": {
-      "noprior": [
+    "results/zps040/part-691.jsonl": {
+      "withprior": [
         1,
         1
-      ]
-    },
-    "results/zps038/part-702.jsonl": {
-      "gen:zl25": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-703.jsonl": {
-      "noprior": [
+    "results/zps040/part-693.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-704.jsonl": {},
-    "results/zps038/part-705.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-694.jsonl": {},
+    "results/zps040/part-695.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-706.jsonl": {},
-    "results/zps038/part-707.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-696.jsonl": {},
+    "results/zps040/part-697.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-708.jsonl": {},
-    "results/zps038/part-709.jsonl": {
-      "noprior": [
+    "results/zps040/part-698.jsonl": {},
+    "results/zps040/part-699.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-71.jsonl": {
-      "noprior": [
+    "results/zps040/part-7.jsonl": {},
+    "results/zps040/part-70.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-710.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-700.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-711.jsonl": {
-      "noprior": [
+    "results/zps040/part-701.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-712.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-702.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-713.jsonl": {
-      "noprior": [
+    "results/zps040/part-703.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-714.jsonl": {},
-    "results/zps038/part-715.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-704.jsonl": {},
+    "results/zps040/part-705.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-716.jsonl": {},
-    "results/zps038/part-717.jsonl": {},
-    "results/zps038/part-718.jsonl": {},
-    "results/zps038/part-719.jsonl": {
-      "noprior": [
+    "results/zps040/part-706.jsonl": {},
+    "results/zps040/part-708.jsonl": {},
+    "results/zps040/part-709.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-72.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-71.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-720.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-711.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-721.jsonl": {
-      "noprior": [
+    "results/zps040/part-712.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-722.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-713.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-723.jsonl": {
-      "noprior": [
+    "results/zps040/part-714.jsonl": {},
+    "results/zps040/part-715.jsonl": {
+      "gen:zl26": [
         1,
         0
+      ],
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-724.jsonl": {},
-    "results/zps038/part-725.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-716.jsonl": {},
+    "results/zps040/part-717.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps040/part-718.jsonl": {},
+    "results/zps040/part-719.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-726.jsonl": {},
-    "results/zps038/part-727.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-72.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-728.jsonl": {},
-    "results/zps038/part-729.jsonl": {
-      "noprior": [
+    "results/zps040/part-720.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-73.jsonl": {
-      "noprior": [
+    "results/zps040/part-721.jsonl": {},
+    "results/zps040/part-722.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-730.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-723.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-731.jsonl": {
-      "noprior": [
+    "results/zps040/part-724.jsonl": {},
+    "results/zps040/part-725.jsonl": {
+      "gen:zl26": [
+        1,
+        1
+      ],
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-732.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-726.jsonl": {},
+    "results/zps040/part-727.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-733.jsonl": {
-      "noprior": [
+    "results/zps040/part-728.jsonl": {},
+    "results/zps040/part-729.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-735.jsonl": {
-      "gen:zl25": [
-        1,
-        0
-      ],
-      "noprior": [
+    "results/zps040/part-73.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-736.jsonl": {},
-    "results/zps038/part-737.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-730.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-738.jsonl": {},
-    "results/zps038/part-739.jsonl": {
-      "noprior": [
+    "results/zps040/part-731.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-74.jsonl": {},
-    "results/zps038/part-740.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-732.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-741.jsonl": {
-      "noprior": [
+    "results/zps040/part-733.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-742.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-734.jsonl": {},
+    "results/zps040/part-735.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-743.jsonl": {
-      "noprior": [
+      ],
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-744.jsonl": {},
-    "results/zps038/part-745.jsonl": {
-      "gen:zl25": [
-        1,
-        0
-      ],
-      "noprior": [
+    "results/zps040/part-736.jsonl": {},
+    "results/zps040/part-737.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-746.jsonl": {},
-    "results/zps038/part-747.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-738.jsonl": {},
+    "results/zps040/part-739.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-748.jsonl": {},
-    "results/zps038/part-749.jsonl": {
-      "noprior": [
+    "results/zps040/part-74.jsonl": {},
+    "results/zps040/part-740.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-75.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-741.jsonl": {
+      "withprior": [
         1,
         0
-      ],
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-750.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-742.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-751.jsonl": {
-      "noprior": [
+    "results/zps040/part-743.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-752.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-744.jsonl": {},
+    "results/zps040/part-745.jsonl": {
+      "gen:zl26": [
         1,
         0
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-753.jsonl": {
-      "noprior": [
+    "results/zps040/part-746.jsonl": {},
+    "results/zps040/part-747.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-754.jsonl": {},
-    "results/zps038/part-755.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-748.jsonl": {},
+    "results/zps040/part-75.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-756.jsonl": {},
-    "results/zps038/part-757.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-750.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-758.jsonl": {},
-    "results/zps038/part-759.jsonl": {
-      "noprior": [
+    "results/zps040/part-751.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-76.jsonl": {},
-    "results/zps038/part-760.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-752.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-762.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-753.jsonl": {
+      "withprior": [
         1,
         1
-      ]
-    },
-    "results/zps038/part-763.jsonl": {
-      "noprior": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-764.jsonl": {},
-    "results/zps038/part-765.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-754.jsonl": {},
+    "results/zps040/part-755.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-766.jsonl": {},
-    "results/zps038/part-767.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-756.jsonl": {},
+    "results/zps040/part-758.jsonl": {},
+    "results/zps040/part-759.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-768.jsonl": {},
-    "results/zps038/part-77.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-76.jsonl": {},
+    "results/zps040/part-760.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-770.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-761.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-771.jsonl": {
-      "noprior": [
+    "results/zps040/part-762.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-772.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-763.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-773.jsonl": {
-      "noprior": [
+    "results/zps040/part-764.jsonl": {},
+    "results/zps040/part-765.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-774.jsonl": {},
-    "results/zps038/part-775.jsonl": {
-      "gen:zl25": [
-        1,
-        1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-776.jsonl": {},
-    "results/zps038/part-777.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-766.jsonl": {},
+    "results/zps040/part-767.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-778.jsonl": {},
-    "results/zps038/part-779.jsonl": {
-      "noprior": [
+    "results/zps040/part-768.jsonl": {},
+    "results/zps040/part-769.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-78.jsonl": {},
-    "results/zps038/part-780.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-77.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-781.jsonl": {
-      "noprior": [
+    "results/zps040/part-771.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-782.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-772.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-783.jsonl": {
-      "noprior": [
+    "results/zps040/part-773.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-784.jsonl": {},
-    "results/zps038/part-785.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-774.jsonl": {},
+    "results/zps040/part-775.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-786.jsonl": {},
-    "results/zps038/part-787.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-778.jsonl": {},
+    "results/zps040/part-779.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-788.jsonl": {},
-    "results/zps038/part-789.jsonl": {
-      "noprior": [
+    "results/zps040/part-78.jsonl": {},
+    "results/zps040/part-780.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-79.jsonl": {
-      "noprior": [
+    "results/zps040/part-781.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-790.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-782.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-791.jsonl": {
-      "noprior": [
+    "results/zps040/part-783.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-792.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-786.jsonl": {},
+    "results/zps040/part-787.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-793.jsonl": {
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-794.jsonl": {},
-    "results/zps038/part-796.jsonl": {},
-    "results/zps038/part-797.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-788.jsonl": {},
+    "results/zps040/part-789.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-798.jsonl": {},
-    "results/zps038/part-799.jsonl": {
-      "noprior": [
+    "results/zps040/part-79.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-8.jsonl": {},
-    "results/zps038/part-80.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-790.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-801.jsonl": {
-      "noprior": [
+    "results/zps040/part-791.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-802.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-792.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-803.jsonl": {
-      "noprior": [
+    "results/zps040/part-793.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-804.jsonl": {},
-    "results/zps038/part-805.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-795.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-806.jsonl": {},
-    "results/zps038/part-807.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-796.jsonl": {},
+    "results/zps040/part-797.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-808.jsonl": {},
-    "results/zps038/part-809.jsonl": {
-      "noprior": [
+    "results/zps040/part-798.jsonl": {},
+    "results/zps040/part-799.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-81.jsonl": {
-      "noprior": [
+    "results/zps040/part-8.jsonl": {},
+    "results/zps040/part-80.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-810.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-800.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-811.jsonl": {
-      "noprior": [
+    "results/zps040/part-801.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-812.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-802.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-814.jsonl": {},
-    "results/zps038/part-815.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-803.jsonl": {
+      "withprior": [
         1,
         1
-      ],
-      "noprior": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-816.jsonl": {},
-    "results/zps038/part-817.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-804.jsonl": {},
+    "results/zps040/part-805.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps038/part-818.jsonl": {},
-    "results/zps038/part-819.jsonl": {
-      "noprior": [
+    "results/zps040/part-807.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-82.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-808.jsonl": {},
+    "results/zps040/part-81.jsonl": {},
+    "results/zps040/part-811.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-820.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-812.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-821.jsonl": {
-      "noprior": [
+    "results/zps040/part-813.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-822.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-814.jsonl": {},
+    "results/zps040/part-817.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-823.jsonl": {
-      "noprior": [
+    "results/zps040/part-818.jsonl": {},
+    "results/zps040/part-82.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-824.jsonl": {},
-    "results/zps038/part-825.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-820.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps040/part-821.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-826.jsonl": {},
-    "results/zps038/part-827.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-822.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-828.jsonl": {},
-    "results/zps038/part-829.jsonl": {
-      "noprior": [
+    "results/zps040/part-823.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-83.jsonl": {
-      "noprior": [
+    "results/zps040/part-824.jsonl": {},
+    "results/zps040/part-825.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-830.jsonl": {
-      "gen:zl25": [
+      ],
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-831.jsonl": {
-      "noprior": [
+    "results/zps040/part-827.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-832.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-828.jsonl": {},
+    "results/zps040/part-829.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-833.jsonl": {
-      "noprior": [
+    "results/zps040/part-83.jsonl": {},
+    "results/zps040/part-830.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-834.jsonl": {},
-    "results/zps038/part-835.jsonl": {
-      "gen:zl25": [
-        1,
-        1
-      ],
-      "noprior": [
+    "results/zps040/part-831.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-836.jsonl": {},
-    "results/zps038/part-837.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-834.jsonl": {},
+    "results/zps040/part-835.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-839.jsonl": {
-      "noprior": [
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-84.jsonl": {},
-    "results/zps038/part-840.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-836.jsonl": {},
+    "results/zps040/part-838.jsonl": {},
+    "results/zps040/part-839.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-841.jsonl": {
-      "noprior": [
+    "results/zps040/part-84.jsonl": {},
+    "results/zps040/part-840.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-842.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-841.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-843.jsonl": {
-      "noprior": [
+    "results/zps040/part-842.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-844.jsonl": {},
-    "results/zps038/part-845.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-843.jsonl": {
+      "withprior": [
         1,
-        1
-      ],
-      "noprior": [
+        0
+      ]
+    },
+    "results/zps040/part-844.jsonl": {},
+    "results/zps040/part-846.jsonl": {},
+    "results/zps040/part-847.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-846.jsonl": {},
-    "results/zps038/part-848.jsonl": {},
-    "results/zps038/part-849.jsonl": {
-      "noprior": [
+    "results/zps040/part-848.jsonl": {},
+    "results/zps040/part-849.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-85.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-85.jsonl": {
+      "gen:zl26": [
         1,
         0
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-850.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-850.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-851.jsonl": {
-      "noprior": [
+    "results/zps040/part-851.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-852.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-852.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-853.jsonl": {
-      "noprior": [
+    "results/zps040/part-853.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-854.jsonl": {},
-    "results/zps038/part-855.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-854.jsonl": {},
+    "results/zps040/part-855.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-856.jsonl": {},
-    "results/zps038/part-857.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-856.jsonl": {},
+    "results/zps040/part-857.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-858.jsonl": {},
-    "results/zps038/part-859.jsonl": {
-      "noprior": [
+    "results/zps040/part-86.jsonl": {},
+    "results/zps040/part-860.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-86.jsonl": {},
-    "results/zps038/part-860.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-861.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-861.jsonl": {
-      "noprior": [
+    "results/zps040/part-862.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-862.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-864.jsonl": {},
+    "results/zps040/part-865.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ]
-    },
-    "results/zps038/part-863.jsonl": {
-      "noprior": [
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-865.jsonl": {
-      "gen:zl25": [
-        1,
-        0
-      ],
-      "noprior": [
+    "results/zps040/part-866.jsonl": {},
+    "results/zps040/part-867.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-867.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-868.jsonl": {},
+    "results/zps040/part-869.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-868.jsonl": {},
-    "results/zps038/part-869.jsonl": {
-      "noprior": [
+    "results/zps040/part-87.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-87.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-871.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-870.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-872.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-871.jsonl": {
-      "noprior": [
+    "results/zps040/part-873.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-872.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-874.jsonl": {},
+    "results/zps040/part-875.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-874.jsonl": {},
-    "results/zps038/part-875.jsonl": {
-      "gen:zl25": [
-        1,
-        1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-876.jsonl": {},
-    "results/zps038/part-877.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-877.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-878.jsonl": {},
-    "results/zps038/part-88.jsonl": {},
-    "results/zps038/part-880.jsonl": {
-      "gen:zl25": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-882.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-878.jsonl": {},
+    "results/zps040/part-879.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-883.jsonl": {
-      "noprior": [
+    "results/zps040/part-88.jsonl": {},
+    "results/zps040/part-880.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-887.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-881.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-889.jsonl": {
-      "noprior": [
+    "results/zps040/part-882.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-89.jsonl": {
-      "noprior": [
+    "results/zps040/part-883.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-890.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-884.jsonl": {},
+    "results/zps040/part-885.jsonl": {
+      "gen:zl26": [
         1,
-        0
-      ]
-    },
-    "results/zps038/part-891.jsonl": {
-      "noprior": [
+        1
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-892.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-886.jsonl": {},
+    "results/zps040/part-887.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-893.jsonl": {
-      "noprior": [
+    "results/zps040/part-888.jsonl": {},
+    "results/zps040/part-889.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-894.jsonl": {},
-    "results/zps038/part-895.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-89.jsonl": {
+      "withprior": [
         1,
-        0
-      ],
-      "noprior": [
-        1,
         1
       ]
     },
-    "results/zps038/part-896.jsonl": {},
-    "results/zps038/part-897.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-890.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-899.jsonl": {
-      "noprior": [
+    "results/zps040/part-891.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-9.jsonl": {
-      "noprior": [
+    "results/zps040/part-892.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-90.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-893.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-900.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-894.jsonl": {},
+    "results/zps040/part-897.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-901.jsonl": {
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-902.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-898.jsonl": {},
+    "results/zps040/part-9.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-904.jsonl": {},
-    "results/zps038/part-906.jsonl": {},
-    "results/zps038/part-908.jsonl": {},
-    "results/zps038/part-909.jsonl": {
-      "noprior": [
+    "results/zps040/part-90.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-91.jsonl": {
-      "noprior": [
+    "results/zps040/part-900.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-910.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-901.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-912.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-902.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-913.jsonl": {
-      "noprior": [
+    "results/zps040/part-903.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-914.jsonl": {},
-    "results/zps038/part-915.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-905.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ],
-      "noprior": [
+      "withprior": [
+        1,
+        0
+      ]
+    },
+    "results/zps040/part-906.jsonl": {},
+    "results/zps040/part-907.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-917.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-909.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-918.jsonl": {},
-    "results/zps038/part-919.jsonl": {
-      "noprior": [
+    "results/zps040/part-91.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-92.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-910.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-920.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-911.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-922.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-914.jsonl": {},
+    "results/zps040/part-915.jsonl": {
+      "gen:zl26": [
         1,
+        1
+      ],
+      "withprior": [
+        1,
         0
       ]
     },
-    "results/zps038/part-923.jsonl": {
-      "noprior": [
+    "results/zps040/part-916.jsonl": {},
+    "results/zps040/part-917.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-924.jsonl": {},
-    "results/zps038/part-925.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-918.jsonl": {},
+    "results/zps040/part-919.jsonl": {
+      "withprior": [
         1,
-        0
-      ],
-      "noprior": [
+        1
+      ]
+    },
+    "results/zps040/part-92.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-926.jsonl": {},
-    "results/zps038/part-927.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-920.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-928.jsonl": {},
-    "results/zps038/part-929.jsonl": {
-      "noprior": [
+    "results/zps040/part-921.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-93.jsonl": {
-      "noprior": [
+    "results/zps040/part-922.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-930.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-923.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-931.jsonl": {
-      "noprior": [
+    "results/zps040/part-924.jsonl": {},
+    "results/zps040/part-926.jsonl": {},
+    "results/zps040/part-928.jsonl": {},
+    "results/zps040/part-93.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-932.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-930.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-933.jsonl": {
-      "noprior": [
+    "results/zps040/part-933.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-934.jsonl": {},
-    "results/zps038/part-936.jsonl": {},
-    "results/zps038/part-937.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-934.jsonl": {},
+    "results/zps040/part-935.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-94.jsonl": {},
-    "results/zps038/part-940.jsonl": {
-      "gen:zl25": [
+      ],
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-941.jsonl": {
-      "noprior": [
+    "results/zps040/part-936.jsonl": {},
+    "results/zps040/part-938.jsonl": {},
+    "results/zps040/part-939.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-942.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-94.jsonl": {},
+    "results/zps040/part-940.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-947.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-941.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-948.jsonl": {},
-    "results/zps038/part-949.jsonl": {
-      "noprior": [
+    "results/zps040/part-942.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps038/part-95.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-943.jsonl": {
+      "withprior": [
         1,
         0
-      ],
-      "noprior": [
-        1,
-        1
       ]
     },
-    "results/zps038/part-950.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-944.jsonl": {},
+    "results/zps040/part-946.jsonl": {},
+    "results/zps040/part-947.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-952.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-948.jsonl": {},
+    "results/zps040/part-949.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-953.jsonl": {
-      "noprior": [
+    "results/zps040/part-95.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-954.jsonl": {},
-    "results/zps038/part-957.jsonl": {
-      "gen:zl25": [
+      ],
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-958.jsonl": {},
-    "results/zps038/part-96.jsonl": {},
-    "results/zps038/part-960.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-950.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-961.jsonl": {
-      "noprior": [
+    "results/zps040/part-951.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-962.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-952.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps038/part-963.jsonl": {
-      "noprior": [
+    "results/zps040/part-953.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-964.jsonl": {},
-    "results/zps038/part-966.jsonl": {},
-    "results/zps038/part-968.jsonl": {},
-    "results/zps038/part-97.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-954.jsonl": {},
+    "results/zps040/part-956.jsonl": {},
+    "results/zps040/part-957.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-970.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-959.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-971.jsonl": {
-      "noprior": [
+    "results/zps040/part-96.jsonl": {},
+    "results/zps040/part-961.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps038/part-973.jsonl": {
-      "noprior": [
+    "results/zps040/part-962.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
+      ]
+    },
+    "results/zps040/part-963.jsonl": {
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps038/part-974.jsonl": {},
-    "results/zps038/part-975.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-964.jsonl": {},
+    "results/zps040/part-965.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-976.jsonl": {},
-    "results/zps038/part-978.jsonl": {},
-    "results/zps038/part-979.jsonl": {
-      "noprior": [
+    "results/zps040/part-966.jsonl": {},
+    "results/zps040/part-967.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-980.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-968.jsonl": {},
+    "results/zps040/part-969.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps038/part-981.jsonl": {
-      "noprior": [
+    "results/zps040/part-97.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ]
-    },
-    "results/zps038/part-982.jsonl": {
-      "gen:zl25": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-983.jsonl": {
-      "noprior": [
+    "results/zps040/part-971.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-984.jsonl": {},
-    "results/zps038/part-985.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-972.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ],
-      "noprior": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-987.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-973.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-988.jsonl": {},
-    "results/zps038/part-99.jsonl": {
-      "noprior": [
+    "results/zps040/part-974.jsonl": {},
+    "results/zps040/part-975.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps038/part-991.jsonl": {
-      "noprior": [
+      ],
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-993.jsonl": {
-      "noprior": [
+    "results/zps040/part-976.jsonl": {},
+    "results/zps040/part-977.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps038/part-994.jsonl": {},
-    "results/zps038/part-995.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-978.jsonl": {},
+    "results/zps040/part-98.jsonl": {},
+    "results/zps040/part-980.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ],
-      "noprior": [
-        1,
-        0
       ]
     },
-    "results/zps038/part-996.jsonl": {},
-    "results/zps038/part-997.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-981.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps038/part-998.jsonl": {},
-    "results/zps038/part-999.jsonl": {
-      "noprior": [
+    "results/zps040/part-982.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ]
+    },
+    "results/zps040/part-986.jsonl": {},
+    "results/zps040/part-987.jsonl": {
+      "gen:zl26": [
+        1,
+        0
       ]
     },
-    "results/zps039/part-0.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-988.jsonl": {},
+    "results/zps040/part-989.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-1.jsonl": {
-      "noprior": [
+    "results/zps040/part-99.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-10.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-991.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-100.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-992.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-102.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-993.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-105.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-994.jsonl": {},
+    "results/zps040/part-995.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-107.jsonl": {
-      "gen:zl25": [
+    "results/zps040/part-997.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-108.jsonl": {},
-    "results/zps039/part-109.jsonl": {
-      "noprior": [
+    "results/zps040/part-998.jsonl": {},
+    "results/zps040/part-999.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-113.jsonl": {
-      "noprior": [
+    "results/zps041/part-0.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-115.jsonl": {
-      "gen:zl25": [
-        1,
-        1
-      ],
-      "noprior": [
+    "results/zps041/part-1.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-116.jsonl": {},
-    "results/zps039/part-120.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-10.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-122.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-100.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-124.jsonl": {},
-    "results/zps039/part-127.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-102.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-129.jsonl": {
-      "noprior": [
+    "results/zps041/part-103.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-132.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-104.jsonl": {},
+    "results/zps041/part-11.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-133.jsonl": {
-      "noprior": [
+    "results/zps041/part-113.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-136.jsonl": {},
-    "results/zps039/part-139.jsonl": {
-      "noprior": [
+    "results/zps041/part-115.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ]
-    },
-    "results/zps039/part-14.jsonl": {},
-    "results/zps039/part-140.jsonl": {
-      "gen:zl25": [
+      ],
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-141.jsonl": {
-      "noprior": [
+    "results/zps041/part-118.jsonl": {},
+    "results/zps041/part-119.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-143.jsonl": {
-      "noprior": [
+    "results/zps041/part-120.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-144.jsonl": {},
-    "results/zps039/part-147.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-123.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-148.jsonl": {},
-    "results/zps039/part-15.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-124.jsonl": {},
+    "results/zps041/part-125.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-150.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-126.jsonl": {},
+    "results/zps041/part-127.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-154.jsonl": {},
-    "results/zps039/part-160.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-128.jsonl": {},
+    "results/zps041/part-133.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-163.jsonl": {
-      "noprior": [
+    "results/zps041/part-134.jsonl": {},
+    "results/zps041/part-135.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
+      ],
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps039/part-164.jsonl": {},
-    "results/zps039/part-169.jsonl": {
-      "noprior": [
+    "results/zps041/part-137.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-17.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-138.jsonl": {},
+    "results/zps041/part-139.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-172.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-140.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-175.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-141.jsonl": {
+      "withprior": [
         1,
-        1
-      ],
-      "noprior": [
+        0
+      ]
+    },
+    "results/zps041/part-143.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-176.jsonl": {},
-    "results/zps039/part-177.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-145.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ],
+      "withprior": [
+        1,
+        0
       ]
     },
-    "results/zps039/part-178.jsonl": {},
-    "results/zps039/part-179.jsonl": {
-      "noprior": [
+    "results/zps041/part-146.jsonl": {},
+    "results/zps041/part-148.jsonl": {},
+    "results/zps041/part-149.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-180.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-150.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-192.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-151.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-195.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-152.jsonl": {
+      "gen:zl26": [
         1,
         0
+      ]
+    },
+    "results/zps041/part-154.jsonl": {},
+    "results/zps041/part-155.jsonl": {
+      "gen:zl26": [
+        1,
+        1
       ],
-      "noprior": [
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-196.jsonl": {},
-    "results/zps039/part-197.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-157.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-2.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-158.jsonl": {},
+    "results/zps041/part-159.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-200.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-160.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-204.jsonl": {},
-    "results/zps039/part-207.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-164.jsonl": {},
+    "results/zps041/part-165.jsonl": {
+      "gen:zl26": [
+        1,
+        1
+      ],
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-21.jsonl": {
-      "noprior": [
+    "results/zps041/part-166.jsonl": {},
+    "results/zps041/part-17.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-210.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-170.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-212.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-173.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-213.jsonl": {
-      "noprior": [
+    "results/zps041/part-175.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ]
-    },
-    "results/zps039/part-217.jsonl": {
-      "gen:zl25": [
+      ],
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-218.jsonl": {},
-    "results/zps039/part-22.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-176.jsonl": {},
+    "results/zps041/part-177.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-220.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-18.jsonl": {},
+    "results/zps041/part-180.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-222.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-181.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-224.jsonl": {},
-    "results/zps039/part-228.jsonl": {},
-    "results/zps039/part-23.jsonl": {
-      "noprior": [
+    "results/zps041/part-183.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-235.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-184.jsonl": {},
+    "results/zps041/part-185.jsonl": {
+      "gen:zl26": [
         1,
         1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-236.jsonl": {},
-    "results/zps039/part-239.jsonl": {
-      "noprior": [
+    "results/zps041/part-186.jsonl": {},
+    "results/zps041/part-188.jsonl": {},
+    "results/zps041/part-190.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-24.jsonl": {},
-    "results/zps039/part-242.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-191.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-243.jsonl": {
-      "noprior": [
+    "results/zps041/part-193.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-244.jsonl": {},
-    "results/zps039/part-25.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-195.jsonl": {
+      "gen:zl26": [
         1,
-        1
+        0
       ],
-      "noprior": [
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-253.jsonl": {
-      "noprior": [
+    "results/zps041/part-196.jsonl": {},
+    "results/zps041/part-2.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-255.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-20.jsonl": {
+      "gen:zl26": [
         1,
         1
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps041/part-200.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-256.jsonl": {},
-    "results/zps039/part-26.jsonl": {},
-    "results/zps039/part-261.jsonl": {
-      "noprior": [
+    "results/zps041/part-201.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-264.jsonl": {},
-    "results/zps039/part-267.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-204.jsonl": {},
+    "results/zps041/part-206.jsonl": {},
+    "results/zps041/part-209.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-27.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-213.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-274.jsonl": {},
-    "results/zps039/part-279.jsonl": {
-      "noprior": [
+    "results/zps041/part-214.jsonl": {},
+    "results/zps041/part-218.jsonl": {},
+    "results/zps041/part-221.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-28.jsonl": {},
-    "results/zps039/part-283.jsonl": {
-      "noprior": [
+    "results/zps041/part-224.jsonl": {},
+    "results/zps041/part-226.jsonl": {},
+    "results/zps041/part-229.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-289.jsonl": {
-      "noprior": [
+    "results/zps041/part-230.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-29.jsonl": {
-      "noprior": [
+    "results/zps041/part-234.jsonl": {},
+    "results/zps041/part-236.jsonl": {},
+    "results/zps041/part-24.jsonl": {},
+    "results/zps041/part-240.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-291.jsonl": {
-      "noprior": [
+    "results/zps041/part-241.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-3.jsonl": {
-      "noprior": [
+    "results/zps041/part-242.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-30.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-246.jsonl": {},
+    "results/zps041/part-247.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-311.jsonl": {
-      "noprior": [
+    "results/zps041/part-249.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-32.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-251.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-321.jsonl": {
-      "noprior": [
+    "results/zps041/part-253.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-324.jsonl": {},
-    "results/zps039/part-325.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-255.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ],
-      "noprior": [
+      "withprior": [
         1,
-        0
+        1
+      ]
+    },
+    "results/zps041/part-259.jsonl": {
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps039/part-328.jsonl": {},
-    "results/zps039/part-33.jsonl": {
-      "noprior": [
+    "results/zps041/part-262.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-337.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-269.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-339.jsonl": {
-      "noprior": [
+    "results/zps041/part-27.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-34.jsonl": {},
-    "results/zps039/part-35.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-270.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps041/part-273.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-351.jsonl": {
-      "noprior": [
+    "results/zps041/part-274.jsonl": {},
+    "results/zps041/part-276.jsonl": {},
+    "results/zps041/part-279.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-352.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-280.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-354.jsonl": {},
-    "results/zps039/part-363.jsonl": {
-      "noprior": [
+    "results/zps041/part-282.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-364.jsonl": {},
-    "results/zps039/part-368.jsonl": {},
-    "results/zps039/part-369.jsonl": {
-      "noprior": [
+    "results/zps041/part-285.jsonl": {
+      "gen:zl26": [
+        1,
+        0
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-37.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-289.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-377.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-292.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-379.jsonl": {
-      "noprior": [
+    "results/zps041/part-296.jsonl": {},
+    "results/zps041/part-3.jsonl": {
+      "withprior": [
         1,
         1
-      ]
-    },
-    "results/zps039/part-38.jsonl": {},
-    "results/zps039/part-380.jsonl": {
-      "gen:zl25": [
-        1,
-        0
       ]
     },
-    "results/zps039/part-383.jsonl": {
-      "noprior": [
+    "results/zps041/part-303.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-39.jsonl": {
-      "noprior": [
+    "results/zps041/part-306.jsonl": {},
+    "results/zps041/part-308.jsonl": {},
+    "results/zps041/part-31.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-4.jsonl": {},
-    "results/zps039/part-40.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-314.jsonl": {},
+    "results/zps041/part-321.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-403.jsonl": {
-      "noprior": [
+    "results/zps041/part-325.jsonl": {
+      "gen:zl26": [
+        1,
+        0
+      ],
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-406.jsonl": {},
-    "results/zps039/part-415.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-329.jsonl": {
+      "withprior": [
         1,
         1
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps041/part-33.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-42.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-330.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-426.jsonl": {},
-    "results/zps039/part-427.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-341.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-43.jsonl": {
-      "noprior": [
+    "results/zps041/part-347.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-435.jsonl": {
-      "gen:zl25": [
-        1,
-        0
-      ],
-      "noprior": [
+    "results/zps041/part-354.jsonl": {},
+    "results/zps041/part-356.jsonl": {},
+    "results/zps041/part-358.jsonl": {},
+    "results/zps041/part-360.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-44.jsonl": {},
-    "results/zps039/part-448.jsonl": {},
-    "results/zps039/part-451.jsonl": {
-      "noprior": [
+    "results/zps041/part-366.jsonl": {},
+    "results/zps041/part-367.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-46.jsonl": {},
-    "results/zps039/part-463.jsonl": {
-      "noprior": [
+    "results/zps041/part-368.jsonl": {},
+    "results/zps041/part-369.jsonl": {
+      "withprior": [
         1,
         0
-      ]
-    },
-    "results/zps039/part-467.jsonl": {
-      "gen:zl25": [
-        1,
-        1
       ]
     },
-    "results/zps039/part-47.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-37.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-48.jsonl": {},
-    "results/zps039/part-49.jsonl": {
-      "noprior": [
+    "results/zps041/part-381.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-499.jsonl": {
-      "noprior": [
+    "results/zps041/part-387.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-5.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-389.jsonl": {
+      "withprior": [
         1,
         1
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps041/part-397.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-50.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-403.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-507.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-41.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-523.jsonl": {
-      "noprior": [
+    "results/zps041/part-414.jsonl": {},
+    "results/zps041/part-416.jsonl": {},
+    "results/zps041/part-42.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-53.jsonl": {
-      "noprior": [
+    "results/zps041/part-436.jsonl": {},
+    "results/zps041/part-44.jsonl": {},
+    "results/zps041/part-458.jsonl": {},
+    "results/zps041/part-46.jsonl": {},
+    "results/zps041/part-460.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-54.jsonl": {},
-    "results/zps039/part-56.jsonl": {},
-    "results/zps039/part-57.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-464.jsonl": {},
+    "results/zps041/part-469.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-58.jsonl": {},
-    "results/zps039/part-6.jsonl": {},
-    "results/zps039/part-60.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-477.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-605.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-478.jsonl": {},
+    "results/zps041/part-479.jsonl": {
+      "withprior": [
         1,
-        0
-      ],
-      "noprior": [
+        1
+      ]
+    },
+    "results/zps041/part-49.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-626.jsonl": {},
-    "results/zps039/part-629.jsonl": {
-      "noprior": [
+    "results/zps041/part-500.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-63.jsonl": {
-      "noprior": [
+    "results/zps041/part-510.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-645.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-517.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps041/part-56.jsonl": {},
+    "results/zps041/part-58.jsonl": {},
+    "results/zps041/part-587.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-66.jsonl": {},
-    "results/zps039/part-68.jsonl": {},
-    "results/zps039/part-7.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-59.jsonl": {
+      "withprior": [
         1,
-        1
+        0
       ]
     },
-    "results/zps039/part-70.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-63.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-71.jsonl": {
-      "noprior": [
+    "results/zps041/part-65.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ],
+      "withprior": [
+        1,
+        1
       ]
     },
-    "results/zps039/part-72.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-67.jsonl": {
+      "gen:zl26": [
         1,
         1
       ]
     },
-    "results/zps039/part-74.jsonl": {},
-    "results/zps039/part-76.jsonl": {},
-    "results/zps039/part-77.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-69.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-80.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-7.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-84.jsonl": {},
-    "results/zps039/part-85.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-72.jsonl": {
+      "gen:zl26": [
         1,
         0
-      ],
-      "noprior": [
+      ]
+    },
+    "results/zps041/part-74.jsonl": {},
+    "results/zps041/part-79.jsonl": {
+      "withprior": [
         1,
         1
       ]
     },
-    "results/zps039/part-87.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-81.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-9.jsonl": {
-      "noprior": [
+    "results/zps041/part-82.jsonl": {
+      "gen:zl26": [
         1,
         0
       ]
     },
-    "results/zps039/part-92.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-83.jsonl": {
+      "withprior": [
         1,
         0
       ]
     },
-    "results/zps039/part-93.jsonl": {
-      "noprior": [
+    "results/zps041/part-86.jsonl": {},
+    "results/zps041/part-87.jsonl": {
+      "gen:zl26": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-96.jsonl": {},
-    "results/zps039/part-97.jsonl": {
-      "gen:zl25": [
+    "results/zps041/part-88.jsonl": {},
+    "results/zps041/part-91.jsonl": {
+      "withprior": [
         1,
-        0
+        1
       ]
     },
-    "results/zps039/part-98.jsonl": {},
-    "results/zps039/part-99.jsonl": {
-      "noprior": [
+    "results/zps041/part-92.jsonl": {
+      "gen:zl26": [
         1,
         1
+      ]
+    },
+    "results/zps041/part-96.jsonl": {},
+    "results/zps041/part-97.jsonl": {
+      "gen:zl26": [
+        1,
+        0
       ]
     }
   },
@@ -6477,15 +6500,15 @@
       "zps036",
       "zps037",
       "zps038",
-      "zps039"
+      "zps039",
+      "zps040",
+      "zps041"
     ],
-    "at": "2026-11-23T10:11:06.774Z",
+    "at": "2026-11-24T09:34:08.243Z",
     "dispatch": [
-      "scryg-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039 name=zl27 init=zl26 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
-      "general-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039 name=zl27 init=zl26 scry=zl27 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 refine=zps025+zps026+zps027+zps028+zps029+zps030+zps031+zps032+zps033+zps034+zps035+zps036+zps037+zps038+zps039:3:1e-4:3e-5"
+      "scryg-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039,zps040,zps041 name=zl28 init=zl27 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128"
     ],
-    "asked": "2026-11-23T10:27:39.842Z",
-    "retries": 0
+    "next": "general-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039,zps040,zps041 name=zl28 init=zl27 scry=zl28 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 refine=zps025+zps026+zps027+zps028+zps029+zps030+zps031+zps032+zps033+zps034+zps035+zps036+zps037+zps038+zps039+zps040+zps041:3:1e-4:3e-5"
   },
   "deepFrom": 21,
   "deepDeals": 1024,
@@ -6501,5 +6524,12 @@
   "priorOffFrom": 28,
   "pauseAfter": 28,
   "gauxFrom": 29,
-  "gauxArg": "--gaux_0.03"
+  "gauxArg": "--gaux_0.03",
+  "reading": {
+    "nets": "zl27",
+    "against": "zl26",
+    "n": 472,
+    "score": 0.4682203389830508
+  },
+  "challenger": "zl28"
 }
