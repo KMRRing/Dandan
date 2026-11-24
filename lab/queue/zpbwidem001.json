@@ -1,0 +1,8 @@
+{
+  "id": "zpbwidem001",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 400 520000000 gen:zp27wide - 100 deeper=0.03 deepmax=4 vs=g12r-C:1",
+  "shards": 400,
+  "timeoutMin": 600,
+  "purpose": "zpbwidem001 (Fable 12:35Z): zl27's value and dealer with zp27wide's policy, prior off, deep, against live Monte g12r-C, in match A's design (zdm001: seeds 520000000 + 0-399, the same seats and g12r-C settings), one game a shard, clock logged. Read paired by seed against match A (zl23, prior x1) and zl23 prior off (zceil001-p + zprtceil002p). A paired gain of 4 points or more over zl23 is material; inside +-3 it is not. LAB ONLY. Not trained on."
+}

@@ -101,7 +101,10 @@ const RIVALS = await Promise.all((flag("vs") || "").split(",").filter(Boolean).m
 const rivalOf = g => RIVALS.find(r => r.every && g % r.every === r.at) || null;
 const random = !brain.judge;   // generation 0: no value net, no search
 const J = x => JSON.parse(JSON.stringify(x)), key = m => JSON.stringify(m);
-const base = Math.floor(games / shards), extra = games % shards, first = shard * base + Math.min(shard, extra), n = base + (shard < extra ? 1 : 0);
+// only=<g,g,...> (24 Nov 2026, Fable 05:05Z: lost shards re-run on their own seeds): shard s plays game only[s] alone, the same seed
+// (seed0 + g) and seats (vsSeat from g) as in the match it repairs; the job's shards are the list's length
+const ONLY = (process.argv.slice(11).find(f => f.startsWith("only=")) || "").slice(5).split(",").filter(Boolean).map(Number);
+const base = Math.floor(games / shards), extra = games % shards, first = ONLY.length ? ONLY[shard] : shard * base + Math.min(shard, extra), n = ONLY.length ? (ONLY[shard] != null ? 1 : 0) : base + (shard < extra ? 1 : 0);
 const realRandom = Math.random;
 // branch=<share> bsrc=<batches> [bw=<weights, URI-encoded JSON>] [bparts=6] (19 Nov 2026, Korbi; lab/zero/branch-lib.mjs): that
 // share of the self-play games start from a branch point of a stored game of those batches (a rare ending, an even position, or
