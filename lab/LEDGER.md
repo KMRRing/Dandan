@@ -1388,3 +1388,5 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
 - 2026-11-23 21:17Z (ops): ch.vs1.2xlarge-iad at $0.036 (floor $0.035). Stepped US East 16c back: VM a2b0e1bf 6→2, k8s e7f00bce 4→2. Other classes we use below bids. Fleet 21:04Z 85 machines, 638/638 busy; 2,349 unclaimed; reqCostH $0.24.
 
 - 2026-11-23 22:04Z (ops): ch.vs1.2xlarge-iad back to $0.010. Regrew US East 16c: VM a2b0e1bf 2→6, k8s e7f00bce 2→4. Fleet 21:54Z 80 machines, 569/570 busy; 2,470 unclaimed (new zpmar001); reqCostH $0.22.
+
+- 2026-11-24 10:33Z (ops): self-play paused. Filler zps041 gone from open and finished (was 208/1200 at 09:37Z), no new filler; 0 unclaimed. Running: zpawided001 104/400 (296 running), zps040 1162/1200 (38), zprtceil002p 398/400, zppol-prtr3. Fleet 10:27Z 84 machines, 620/630 busy; reqCostH $0.24. Pools unchanged; awaiting Korbi on idle sizing.
