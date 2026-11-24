@@ -1,8 +1,0 @@
-{
-  "id": "ska-close-r",
-  "script": "sk-match.mjs",
-  "args": "{shard} {shards} {out} 256 10 20261124 close=0.03:4 sd=6.73 only=37,45,91,100,124,144,157,158,212,343,396,417,454,562,603,640,710,759,801,803,839,860,878,924,971,986,988,1045,1209,1225,1286,1318,1326,1355,1385,1419,1482,1484,1511,1592,1620,1622,1631,1635,1647,1648,1770,1804,1827,1997",
-  "shards": 50,
-  "timeoutMin": 90,
-  "purpose": "Re-run of ska-close's 50 failed shards (dealer found no world by rejection, or git-fetch worker errors), each on its original shard's deals and seeds (only=), the walk where rejection finds nothing (Fable 21:48Z). Measurement only, read with ska-close against ska-base."
-}

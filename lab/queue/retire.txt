@@ -76,3 +76,4 @@ zprhead001  # 20:36Z (Fable 18:30Z stop rule): 48.0% ± 3.0 over 275 games, 48.0
 zps041  # 2026-11-24T10:27Z (Fable 10:25Z): made by the refill before generation 28 reached 2,400; self-play paused (pauseAfter 28); running shards finish and are kept
 zps040  # 2026-11-24T12:10:24.957Z Zero's loop: made with the nets before zl28
 zps041  # 2026-11-24T12:10:24.957Z Zero's loop: made with the nets before zl28
+ska-close-r
