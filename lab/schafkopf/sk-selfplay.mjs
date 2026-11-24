@@ -1,7 +1,7 @@
 // Schafkopf self-play, generation 0 (Fable, 24 Nov 2026 20:38Z, job 3): the bare search (sk-monte.js) in all four seats, the deal
 // seeds as sk-match.mjs makes them (so job 1's deals), every seat's searched decisions kept (each option's mean and deals) with the
 // payoff per seat: the training data. No Codex player sits here, so these rows may train (Codex's games train nothing).
-// usage: node lab/schafkopf/sk-selfplay.mjs <shard> <shards> <out> <deals per decision> <deals per shard> <first seed> [close=<gap>:<mult>] [only=<shard,...>]
+// usage: node lab/schafkopf/sk-selfplay.mjs <shard> <shards> <out> <deals per decision> <deals per shard> <first seed> [close=<gap>:<mult>] [only=<shard,...>] [sd=<tariffs>]
 import fs from "node:fs";
 import { schafkopf as G, dealsLine } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
@@ -11,6 +11,8 @@ const [shard0, , out, deals, per, seed0] = process.argv.slice(2).map((x, i) => (
 // only=<n,...> (a re-run of failed shards): shard k plays the original shard ONLY[k], its deals and seeds exactly
 const ONLY = (process.argv.find(a => a.startsWith("only=")) || "").slice(5).split(",").filter(Boolean).map(Number), shard = ONLY.length ? ONLY[shard0] : shard0;
 const cl = (process.argv.find(a => a.startsWith("close=")) || "").slice(6).split(":").map(Number), close = cl[0] ? { gap: cl[0], mult: cl[1] || 4 } : null;
+// sd=<tariffs> (the value unit; default sk-monte.js SD): a re-run keeps its parent job's unit, so its deals are searched alike
+const sdArg = Number((process.argv.find(a => a.startsWith("sd=")) || "").slice(3)) || undefined;
 const key = m => JSON.stringify(m), lines = [];
 for (let j = 0; j < per; j++) {
   const seed = mix(seed0, shard * per + j), s = G.deal({ rng: seeded(seed) }), dec = [], clock = [0, 0, 0, 0];
@@ -18,7 +20,7 @@ for (let j = 0; j < per; j++) {
     const w = G.toMove(s), ops = G.options(s, w), t0 = Date.now();
     let m = ops[0];
     if (ops.length > 1) {
-      const r = bareThink(s, w, { deals, close });
+      const r = bareThink(s, w, { deals, close, sd: sdArg });
       m = r.best;
       dec.push({ i, seat: w, opts: r.list.map(c => [key(c.move), Number.isNaN(c.mean) ? null : +c.mean.toFixed(5), c.n]), ...(r.deeper ? { close: 1 } : {}) });
     }

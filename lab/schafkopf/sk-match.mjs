@@ -4,7 +4,7 @@
 // from the deal, the seat and the move's number, so until our seat plays otherwise than Hard did, the two tables are the same
 // deal played the same way. Every game's decisions are kept (ours with the search's means), for the first auxiliary reading.
 // usage: node lab/schafkopf/sk-match.mjs <shard> <shards> <out> <deals per decision> <paired deals per shard> <first seed> [ref=hard]
-//   [close=<gap>:<mult>] [only=<shard,...>] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
+//   [close=<gap>:<mult>] [only=<shard,...>] [sd=<tariffs>] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
 import fs from "node:fs";
 import { schafkopf as G, codexMove, dealsLine } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
@@ -15,6 +15,8 @@ const [shard0, , out, deals, per, seed0] = process.argv.slice(2).map((x, i) => (
 const ONLY = (process.argv.find(a => a.startsWith("only=")) || "").slice(5).split(",").filter(Boolean).map(Number), shard = ONLY.length ? ONLY[shard0] : shard0;
 const ref = (process.argv.find(a => a.startsWith("ref=")) || "ref=hard").slice(4);
 const cl = (process.argv.find(a => a.startsWith("close=")) || "").slice(6).split(":").map(Number), close = cl[0] ? { gap: cl[0], mult: cl[1] || 4 } : null;
+// sd=<tariffs> (the value unit; default sk-monte.js SD): a re-run keeps its parent job's unit, so its deals are searched alike
+const sdArg = Number((process.argv.find(a => a.startsWith("sd=")) || "").slice(3)) || undefined;
 const key = m => JSON.stringify(m);
 
 function roleOf(s, seat) {
@@ -31,7 +33,7 @@ function play(seed, me) {
     if (w === me) {
       const ops = G.options(s, w);
       if (ops.length > 1) {
-        const r = bareThink(s, w, { deals, close });
+        const r = bareThink(s, w, { deals, close, sd: sdArg });
         m = r.best;
         dec.push({ i, opts: r.list.map(c => [key(c.move), Number.isNaN(c.mean) ? null : +c.mean.toFixed(5), c.n]), ...(r.deeper ? { close: 1 } : {}) });
       } else m = ops[0];
