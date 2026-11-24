@@ -2,10 +2,11 @@
 // in tariffs: mean ± SE per seat-deal, by our role, the share of exact zeros (played as Hard did), our bidding against Hard's in the
 // same seat on the same deal by contract, and the per-deal payoff's SD at the four-Hard tables (the value unit). With a second
 // batch of the same deals (job 2), that batch less this one, paired by deal and seat. Read-only.
-// usage: node lab/sk-sum.mjs <batch[+re-run]> [paired batch[+re-run]] [--dir <local folder of part-*.jsonl, for a test>]
+// usage: node lab/sk-sum.mjs <batch[+re-run]> [paired batch[+re-run]] [--ref <batch whose four-Hard tables to use>] [--dir <local folder of part-*.jsonl, for a test>]
 import fs from "node:fs";
 
-const args = process.argv.slice(2), at = args.indexOf("--dir"), dir = at >= 0 ? args.splice(at, 2)[1] : null, [batch, other] = args;
+const args = process.argv.slice(2), at = args.indexOf("--dir"), dir = at >= 0 ? args.splice(at, 2)[1] : null;
+const rat = args.indexOf("--ref"), refBatch = rat >= 0 ? args.splice(rat, 2)[1] : null, [batch, other] = args;
 // a batch may be several jobs joined by "+" (a job and its re-run): each deal counted once, the later job's copy kept (a failed
 // shard may have written some of its deals before it stopped)
 async function linesOf(ids) {
@@ -25,7 +26,12 @@ const stat = xs => { const n = xs.length, m = xs.reduce((a, b) => a + b, 0) / Ma
 const f = (s, d = 3) => `${s.m >= 0 ? "+" : ""}${s.m.toFixed(d)} ± ${s.se.toFixed(d)} (${s.n})`;
 const said = (c, seat) => (!c || c.declarer !== seat ? "none" : c.type);
 
-const A = await linesOf(batch);
+let A = await linesOf(batch);
+// --ref <batch> (a match played with noref=1): each deal's four-Hard table, and so each seat's difference, from that batch
+if (refBatch) {
+  const refs = new Map((await linesOf(refBatch)).map(l => [l.seed, l.ref]));
+  A = A.filter(l => refs.has(l.seed)).map(l => { const ref = refs.get(l.seed); return { ...l, ref, seats: l.seats.map(s => ({ ...s, diff: +(s.payoff - ref.payoff[s.me]).toFixed(4) })) }; });
+}
 const diffs = A.flatMap(l => l.seats.map(s => s.diff)), all = stat(diffs);
 console.log(`${batch}: ${A.length} paired deals, ${diffs.length} seat-deals`);
 console.log(`our seat less Codex Hard's, tariffs a deal: ${f(all)}; SD ${all.sd.toFixed(2)}; exact zeros ${(100 * diffs.filter(x => x === 0).length / Math.max(1, diffs.length)).toFixed(1)}%`);
