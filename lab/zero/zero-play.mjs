@@ -146,6 +146,8 @@ for (let g = first; g < first + n && (!ARB || ARBP); g++) {
   // the true one, and `would` shows what resigning there would have cost)
   const realVs = vsSeat >= 0 && VS_RESIGN > 0 && seeded(mix(seed, 777003))() < VS_RESIGN;
   const noResign = !RESIGN || (vsSeat >= 0 ? !realVs : seeded(mix(seed, 777001))() < RESIGN.keep), streak = [0, 0];
+  // each seat's searching time (24 Nov 2026, Fable 08:50Z: equal deals, time measured): seconds and searched decisions, in the game line
+  const clock = [[0, 0], [0, 0]];
   let resigned = null, would = null;
   const rescued = [];
   // a branch game: the source's moves replayed up to the branch point with its randomness, then the hidden cards re-dealt from
@@ -207,8 +209,10 @@ for (let g = first; g < first + n && (!ARB || ARBP); g++) {
       // turn deeper only (quick), our side as the flags say (deep): the same nets on both sides make a depth-against-quick match
       const R_DEALS = Number(flag("rdeals") || 0), rq = R_DEALS && who === vsSeat;
       const hv = R?.heavy && who === vsSeat && s.turn >= R.heavy.from;
+      const t0 = Date.now();
       let res = brainOf(who).think(s, who, hv ? deals * R.heavy.x : rq ? R_DEALS : full ? deals : CAP.deals, hv ? { ...ab2, deeper: { gap: 1, max: 4 } } : rq ? (DEEPER.deeper ? { deeper: { gap: DEEPER.deeper.gap } } : {}) : ab2);
       move = res.best;
+      clock[who][0] += (Date.now() - t0) / 1000; clock[who][1]++;
       if (RESIGN && !res.only && !yard) {
         const v = res.list.find(c => key(c.move) === key(res.best))?.mean;
         streak[who] = v != null && v < RESIGN.t ? streak[who] + 1 : 0;
@@ -243,7 +247,7 @@ for (let g = first; g < first + n && (!ARB || ARBP); g++) {
   if (explored3) for (const d of lines) d.x3 = Math.sign(d.i - explored3.i);
   const text = [...lines.map(d => JSON.stringify(d)),
     ...rows.map(r => JSON.stringify({ v: 1, g: seed, seat: r.seat, turn: r.turn, f: r.f, won: won(r.seat), ...(holdSeed % 5 === 0 ? { hold: 1 } : {}), ...(explored3 ? { x3: Math.sign(r.i - explored3.i) } : {}) })),
-    JSON.stringify({ game: g, seed, winner: st.winner, why: st.why, turns: st.turn, moves: G.moves ?? [], ...(branch ? { branch } : {}), ...(explored3 ? { explore3: explored3 } : {}), ...(vsSeat >= 0 ? { vs: { nets: VS_NETS, seat: vsSeat, ...(realVs ? { resign: true } : {}) } } : {}), ...(PRIOR ? { prior: PRIOR } : flag("priorsplit") ? { prior: 0 } : {}), ...(resigned ? { resign: resigned } : {}), ...(would ? { would } : {}), ...(rescued.length ? { rescued } : {}) })];
+    JSON.stringify({ game: g, seed, winner: st.winner, why: st.why, turns: st.turn, moves: G.moves ?? [], clock: clock.map(([t, n]) => [+t.toFixed(1), n]), ...(branch ? { branch } : {}), ...(explored3 ? { explore3: explored3 } : {}), ...(vsSeat >= 0 ? { vs: { nets: VS_NETS, seat: vsSeat, ...(realVs ? { resign: true } : {}) } } : {}), ...(PRIOR ? { prior: PRIOR } : flag("priorsplit") ? { prior: 0 } : {}), ...(resigned ? { resign: resigned } : {}), ...(would ? { would } : {}), ...(rescued.length ? { rescued } : {}) })];
   fs.appendFileSync(out, text.join("\n") + "\n");
   if (WALL && brain.walls?.()) for (const w of brain.walls()) console.error(`wall ${w.me} game ${g}: ${JSON.stringify(w.stats)} worlds ${w.parts.filter(p => p.alive).length} ess ${w.ess().toFixed(1)}`);
 }
