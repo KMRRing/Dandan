@@ -125,6 +125,12 @@ export const ENGINES = [
     expect: "Not measured against live Monte. The loop crowns every generation: zl24 scored 47.4% against zl23 over 477 games, and zl25 has not been played against either yet.",
   },
   {
+    id: "zero-wide", name: "Monte Zero wide (lab)", short: "Wide", kind: "zero", general: true, belief: "scryg", nets: "zp27wide", deeper: 0.03, deepmax: 4, available: true,   // prior off (24 Nov 2026, Korbi 16:45 local: the potentially best engine in the lab as an optional opponent)
+    tag: "The potentially strongest engine tested so far (24 Nov 2026): generation 27's value net and dealer (zl27) with the wide policy (zp27wide: 256/128/128, 24 epochs), the prior off. Lab only, not the live game.",
+    description: "The general Monte as zl23, with zl27's value net and dealer and a policy twice as wide, trained 24 epochs: it agrees with the search's own pick on 68.5% of held-out decisions (the 8-epoch control: 67%). The search deals the hidden cards from the dealer, plays look-aheads with the policy and weighs close calls up to four turns ahead. It thinks no longer than the narrower nets (search time per decision within 2%).",
+    expect: "Against the same engine with the 24-epoch policy, deep: about 54% over 385 games (24 Nov, still running); policy alone against the 24-epoch policy alone: 58.5% over 2,000. Against live Monte (g12r-C) at deep: running (24 Nov), level with zl23 so far.",
+  },
+  {
     id: "zero-zl23", name: "Monte Zero zl23 (lab)", short: "zl23", kind: "zero", general: true, belief: "scryg", nets: "zl23", deeper: 0.03, deepmax: 4, available: true,   // prior off (23 Nov 2026, Fable 09:55Z: with it, 47.9 ± 0.8 over 3,468 deep games against itself without)
     tag: "The clean line's generation 23 (21 Nov 2026), in the lab for Korbi to play: honest end to end (its value net sees both hands, as every value net does; its dealer and policy only what a seat may), with the policy as the search's prior on near-ties. Not the live game's Monte.",
     description: "The general Monte: one view of the game for any card set (3,009 inputs), a dealer (belief net) for the other hand, a policy that scores every legal move, a value net judging positions; the search deals the hidden cards from the dealer, plays look-aheads with the policy and weighs close calls up to four turns ahead; where the search can't tell two moves apart, the policy's view decides (prior).",
