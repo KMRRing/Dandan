@@ -89,6 +89,19 @@ else if (process.env.REAN) {
       for (const l of ((await st.get(n)) || "").split("\n")) if (l) { const o = JSON.parse(l); REAN.set(`${o.g}:${o.i}`, o); }
   console.error(`reanalysed positions read: ${REAN.size}`);
 }
+// TEACH=<job ids> (24 Nov 2026, Fable 04:35Z, the policy teacher pilot zprt001): the reference search's option means for the
+// decisions it re-searched (lab/blunder-ref.mjs lines: pos "<seed>:<i>", opts [[move key, mean]]). TEACH_ONLY=1 packs only those
+// decisions; TEACH_USE=1 puts the reference's means in their q targets and its best option as the pick (the A/B: the same rows with
+// TEACH_USE=1 and 0). A decision whose options the reference does not all cover is left out of both arms.
+const TEACH = new Map(), TEACH_USE = process.env.TEACH_USE === "1", TEACH_ONLY = process.env.TEACH_ONLY === "1";
+let teachMiss = 0, teachDiff = 0, teachN = 0;
+if (process.env.TEACH) {
+  const st = await (await import("../lib.mjs")).labStore();
+  for (const id of process.env.TEACH.split(","))
+    for (const n of (await st.list(`results/${id}/`)).filter(n => /\/part-\d+\.jsonl$/.test(n)))
+      for (const l of ((await st.get(n)) || "").split("\n")) if (l) { const o = JSON.parse(l); if (o.pos && o.opts) TEACH.set(o.pos, new Map(o.opts)); }
+  console.error(`re-searched positions read: ${TEACH.size}`);
+}
 // REFINE=<batch ids> (19 Nov 2026, Korbi: deep games as a refinement after the main training): decisions from those batches carry
 // flag 32, value rows rf.u8 = 1, so the trainers' --refine_only stage learns from them alone
 const REFINE = new Set((process.env.REFINE || "").split(",").filter(Boolean));
@@ -223,12 +236,22 @@ function replay(game, decisions) {
     const ks = [];
     for (const d of ds) {
       if (d.seat !== who || !(d.qd || d.every)) continue;
+      const tv = TEACH.size ? TEACH.get(`${seed}:${i}`) : null;
+      if (TEACH_ONLY && !tv) continue;
       const o = options(s, d, m, x3 === i);
       if (!o) { unmatched++; continue; }
       if (o.groups) old++;
       if (KEEP < 1 && seeded(mix(seed, 6161 + i))() >= KEEP) continue;   // not kept (KEEP): matched and counted, not packed
+      let dd = d, p = pickOf(d, o.ms, m, x3 === i);
+      if (tv) {
+        const tq = o.ms.map(mv => tv.get(key(mv)));
+        if (tq.some(v => v == null)) { teachMiss++; continue; }
+        const best = tq.reduce((bj, v, j) => (v > tq[bj] ? j : bj), 0);
+        teachN++; if (best !== p) teachDiff++;
+        if (TEACH_USE) { dd = { ...d, c: d.c.map((c, j) => ({ ...c, q: tq[j] })) }; p = best; }
+      }
       const b = F[who].belief(s);
-      putDecision(s, d, o, inputOf(s, who, b.counts, b.any, b.ans), pickOf(d, o.ms, m, x3 === i));
+      putDecision(s, dd, o, inputOf(s, who, b.counts, b.any, b.ans), p);
       ks.push(gameDec.length); gameDec.push({ who, resp: -1 });
     }
     Math.random = seeded(rngSeedOf(game, i));
@@ -305,3 +328,4 @@ A.put("cand.i32", Int32Array.of(PC.C)); A.put("mark.i32", Int32Array.of(PC.K)); 
 fs.writeFileSync(`${dir}/a/meta.json`, JSON.stringify({ XN, decisions: PC.D, candidates: PC.C, marks: PC.K, markN: MN, ...(GEN ? { enc: "general" } : {}), questions: PC.Q, exports: ids, every: true }));
 fs.writeFileSync(`${dir}/v/meta.json`, JSON.stringify({ N: VN, rows: nv, ...(GEN ? { enc: "general" } : {}), skipped, ids, aux: true, fateN: 2 * POOL.V, gauxN: 4 * GAUX + 2 }));
 console.log(`replay-pack2: ${games} games (${broken} not the same); decisions ${PC.D} (questions ${PC.Q}, ${unmatched} unmatched, ${old} from before moves were stored (learnt as hard picks), ${pickOff} picks not among the options, ${moved} where the move played was not the line's pick, ${twins} options in twin groups); value rows ${nv} (${skipped} before a random move skipped)`);
+if (TEACH.size) console.log(`replay-pack2 teach: ${teachN} re-searched decisions packed (${TEACH_USE ? "re-searched" : "stored"} targets), ${teachMiss} left out (an option the reference lacks); the reference's best differs from the stored pick at ${teachDiff} (${(100 * teachDiff / Math.max(1, teachN)).toFixed(1)}%)`);
