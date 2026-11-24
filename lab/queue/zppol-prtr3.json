@@ -1,0 +1,8 @@
+{
+  "id": "zppol-prtr3",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 100 574000300 gen:zprt-rs - 0 bothpolicy=1 vs=gen:zprt-st:1",
+  "shards": 1,
+  "timeoutMin": 240,
+  "purpose": "zppol-prt's shard 3 again (lost on dandan-lab-vcp78-8566; Fable 05:05Z: re-run a lost shard where the call could turn on a few games): its 100 games on the same seeds (574000300 + 0-99 = zppol-prt's games 300-399). LAB ONLY. Not trained on."
+}
