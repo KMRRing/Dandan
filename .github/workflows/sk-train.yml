@@ -1,12 +1,17 @@
 # Schafkopf's first auxiliary reading (Fable, 24 Nov 2026 20:38Z, pre-authorised): the self-play rows of the given jobs packed
 # (lab/schafkopf/sk-pack.mjs) and the four value and policy arms and the two dealers trained on them (lab/schafkopf/sk_train.py),
-# a held-out tenth by deal; the held-out losses in the summary, the nets as the run's artifact. Commits nothing.
+# a held-out tenth by deal; the held-out losses in the summary, the nets as the run's artifact. With `name`, the nets matching `keep`
+# are committed as lab/schafkopf/nets/<name>-<net>.json (the fleet's jobs read them from the repo).
 name: Schafkopf train
 on:
   workflow_dispatch:
     inputs:
+      name: { description: "Commit the kept nets as lab/schafkopf/nets/<name>-*.json; empty commits nothing", required: false, default: "" }
+      keep: { description: "Which nets to commit (a regular expression on their file names)", required: false, default: "^policy-.*-none\\.json$" }
       jobs: { description: "Self-play jobs, comma-separated", required: true, default: "ska-self,ska-self-r" }
       args: { description: "More sk_train.py arguments", required: false, default: "--epochs 6 --h 256,128" }
+permissions:
+  contents: write
 jobs:
   train:
     runs-on: ubuntu-latest
@@ -34,3 +39,14 @@ jobs:
           { echo '```'; cat "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with: { name: sk-nets, path: "${{ runner.temp }}/nets" }
+      - name: Commit the kept nets
+        if: inputs.name != ''
+        run: |
+          mkdir -p lab/schafkopf/nets
+          for f in "$RUNNER_TEMP"/nets/*.json; do b=$(basename "$f"); if echo "$b" | grep -Eq "${{ inputs.keep }}"; then cp "$f" "lab/schafkopf/nets/${{ inputs.name }}-$b"; fi; done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lab/schafkopf/nets
+          git commit -q -m "Schafkopf nets trained on GitHub: ${{ inputs.name }} (${{ inputs.jobs }})" || exit 0
+          for i in 1 2 3 4 5 6 7 8; do if git pull -q --rebase origin main && git push -q origin HEAD:main; then exit 0; fi; git rebase --abort 2>/dev/null || true; sleep $((5 + RANDOM % 20)); done
+          exit 1

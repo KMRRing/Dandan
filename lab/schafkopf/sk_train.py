@@ -129,6 +129,11 @@ def run(kind, inputs, outputs):
         with torch.no_grad():
             y, _ = net(batch(ix, n_in)); y = (y - y.mean(1, keepdim=True))[:, 0].numpy() * meta["maxPayoff"]
         real = V[ix, 0] * meta["maxPayoff"]
+        # held-out RMSE by tricks played, against the zero predictor's (Fable 23:28Z: the net sees the seat's view, not the deal)
+        with torch.no_grad():
+            yy, _ = net(batch(te, n_in)); yy = (yy - yy.mean(1, keepdim=True)).numpy()
+        err = ((yy - V[te]) ** 2).mean(1); zero = (V[te] ** 2).mean(1)
+        res["by_trick"] = [[t, round(float(np.sqrt(err[T[te] == t].mean()) * meta["maxPayoff"]), 2), round(float(np.sqrt(zero[T[te] == t].mean()) * meta["maxPayoff"]), 2)] for t in range(9) if (T[te] == t).any()]
         res["after_bid"] = {t: [int((ctype[ix] == j).sum()), round(float(y[ctype[ix] == j].mean()), 2), round(float(real[ctype[ix] == j].mean()), 2)]
                             for j, t in enumerate(["sau", "wenz", "solo"]) if (ctype[ix] == j).any()}   # [deals, predicted, real] for the declarer
     if kind == "policy": res["ce"] = out["main"] / k; res["agree"] = out["agree"] / k
