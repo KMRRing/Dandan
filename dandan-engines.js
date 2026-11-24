@@ -31,12 +31,14 @@ export const JUDGES = {
   "avg-jt130-s4d": ["./judges/jt130.json", "./judges/s4d.json"],
 };
 /** The engine Monte plays in the live game (dandan-worker.js, a request with no engine), and the judge of the live game's coach
- *  and its end-of-game review. Generation 12's nets (g12r-C) since 17 November 2026, 10:30Z (Korbi: "put the new one live";
+ *  and its end-of-game review. The wide engine since 24 November 2026 (Korbi 18:40 local: "this should be crowned", make it
+ *  live): the general Monte with zl27's value net and dealer and the wide policy zp27wide, prior off; against the previous live
+ *  Monte (g12r-C), both deep: 58.3% ± 2.5 over 386 games (lab job zpbwidem001). Before it, generation 12's nets (g12r-C) since 17 November 2026, 10:30Z (Korbi: "put the new one live";
  *  no gates: the latest nets play; Monte's test suite, lab/suite.json, 4 of 5 against g9x-C's 0). Monte Scry Zero since 15 November 2026, 16:48Z (Korbi: "replace Monte in the standard app",
  *  after playing it in the lab; its Deep match against the benchmark 62.2%, 99% range 55.6 to 68.7, over 181 of 200 pairs, no
  *  crown test yet). Before it, Hard with S5 + the keep net from 13 November (its Deep gate against S4 d with Medium's keep,
  *  54.3% ± 2.5 over 1,195 of 1,200 pairs), S4 d from 12 November, v14 before that. The coach and the review stay Hard with S5. */
-export const LIVE_ENGINE = "zero-g12r";
+export const LIVE_ENGINE = "zero-wide";
 export const LIVE_JUDGE = "s5";
 
 export const ENGINES = [
@@ -102,7 +104,7 @@ export const ENGINES = [
     expect: "Against the live Hard (Medium in the look-aheads), Quick, 2,000 pairs: 49.1% (99%: 47.3 to 51.0), its side thinking 1.08 times as long: the swap bar (49% and at most 1.2 times) is met. Alone against Medium, no search: 49.2% over 20,000 pairs.",
   },
   {
-    id: "zero-g12r", name: "Monte Scry Zero: live", short: "Zero", kind: "zero", tag: "What the live game plays since 17 November 2026: Monte Scry Zero with generation 12's nets (g12r-C), trained from scratch on that generation's games; the latest nets play, no gate (Korbi). Monte's test suite: 4 of 5 (g9x-C 0 of 5).", nets: "g12r-C", deeper: 0.03, available: true,
+    id: "zero-g12r", name: "Monte Scry Zero (g12r-C)", short: "Zero", kind: "zero", tag: "The live game's Monte from 17 to 24 November 2026: Monte Scry Zero with generation 12's nets (g12r-C), trained from scratch on that generation's games; the latest nets play, no gate (Korbi). Monte's test suite: 4 of 5 (g9x-C 0 of 5).", nets: "g12r-C", deeper: 0.03, available: true,
     description: "The from-scratch line (lab, 14–15 November 2026): nothing of Medium inside. Its options are every legal move and passing; its look-aheads are played by its own policy net (g12r-C, 654 inputs: the position as its seat sees it and Scry's estimate of the other hand) and its questions by its own question head; the hidden cards are dealt by Scry, a net that follows the other player's play and gives each unseen card in their hand its own chance of every name; positions are judged by its own value net (both hands face up). Close calls (the best two within 3 points) are weighed again three turns ahead instead of two (Korbi's variable look-ahead). Its nets (about 2 MB) ship with the app and are kept offline.",
     expect: "Monte's test suite (lab/suite.json, the no-Island Dandân positions from Korbi's games) at 256 deals: 4 of 5 passed, against 0 of 5 for g9x-C. Each warm generation has measured 2 to 3 points ahead of the one before at Quick.",
   },
@@ -125,8 +127,8 @@ export const ENGINES = [
     expect: "Not measured against live Monte. The loop crowns every generation: zl24 scored 47.4% against zl23 over 477 games, and zl25 has not been played against either yet.",
   },
   {
-    id: "zero-wide", name: "Monte Zero wide (lab)", short: "Wide", kind: "zero", general: true, belief: "scryg", nets: "zp27wide", deeper: 0.03, deepmax: 4, available: true,   // prior off (24 Nov 2026, Korbi 16:45 local: the potentially best engine in the lab as an optional opponent)
-    tag: "The potentially strongest engine tested so far (24 Nov 2026): generation 27's value net and dealer (zl27) with the wide policy (zp27wide: 256/128/128, 24 epochs), the prior off. Lab only, not the live game.",
+    id: "zero-wide", name: "Monte Zero wide: live", short: "Wide", kind: "zero", general: true, belief: "scryg", nets: "zp27wide", deeper: 0.03, deepmax: 4, available: true,   // prior off (24 Nov 2026, Korbi 16:45 local: the potentially best engine in the lab as an optional opponent)
+    tag: "What the live game plays since 24 November 2026 (Korbi): generation 27's value net and dealer (zl27) with the wide policy (zp27wide: 256/128/128, 24 epochs), the prior off; 58.3% against the previous live Monte (g12r-C) at deep.",
     description: "The general Monte as zl23, with zl27's value net and dealer and a policy twice as wide, trained 24 epochs: it agrees with the search's own pick on 68.5% of held-out decisions (the 8-epoch control: 67%). The search deals the hidden cards from the dealer, plays look-aheads with the policy and weighs close calls up to four turns ahead. It thinks no longer than the narrower nets (search time per decision within 2%).",
     expect: "Against the same engine with the 24-epoch policy, deep: about 54% over 385 games (24 Nov, still running); policy alone against the 24-epoch policy alone: 58.5% over 2,000. Against live Monte (g12r-C) at deep: running (24 Nov), level with zl23 so far.",
   },
@@ -211,13 +213,11 @@ const zeroP = new Map();
 async function zeroOf(engine, load = fetchJson) {
   if (!zeroP.has(engine.id)) zeroP.set(engine.id, (async () => {
     // the general Monte (engine.general, 17 Nov 2026: stage 3 step 3): its nets judges/general-<nets>-gpolicy, -gvalue, -scry12.
-    // Its code is still the lab's (lab/zero/general.mjs, not kept offline): no engine in the list is general yet; at the live swap
-    // its files move beside this one and are kept (the path is built here so the offline list doesn't ask for them before then)
+    // Its code is kept offline beside this file since the live swap (24 Nov 2026: dandan-monte.js, moved from lab/zero/general.mjs)
     if (engine.general) {
-      const lab = ["lab", "zero", "general.mjs"].join("/");
       // the belief: the general dealer (engine.belief "scryg", 19 Nov 2026: zl20 on) or Scry 1.2 (scry12)
       const belief = engine.belief || "scry12";
-      const [{ makeGeneral }, [policy, value, b]] = await Promise.all([import(`./${lab}`),
+      const [{ makeGeneral }, [policy, value, b]] = await Promise.all([import("./dandan-monte.js"),
         Promise.all(["gpolicy", "gvalue", belief].map(k => load(new URL(`./judges/general-${engine.nets}-${k}.json`, import.meta.url).href)))]);
       return { brain: makeGeneral({ policy, value, [belief]: b }), game: null, G: null, at: 0 };
     }
