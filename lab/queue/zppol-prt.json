@@ -1,0 +1,8 @@
+{
+  "id": "zppol-prt",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 2000 574000000 gen:zprt-rs - 0 bothpolicy=1 vs=gen:zprt-st:1",
+  "shards": 20,
+  "timeoutMin": 240,
+  "purpose": "Policy teacher pilot (Fable 16:55Z, 04:35Z): zprt-rs (24 epochs on zprt001's 44,358 decisions with the re-searched targets) alone against zprt-st (the same decisions, stored targets), 2,000 games, seats alternated, zppol-e24's seeds. LAB ONLY. Not trained on."
+}
