@@ -1,0 +1,8 @@
+{
+  "id": "zprtceil002pr",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 20 520000200 gen:zl23 - 100 deeper=0.03 deepmax=4 only=0,16,25,40,55,70,136,180,191,200,208,243,255,275,285,324,340,343,354,383 vs=g12r-C:1",
+  "shards": 20,
+  "timeoutMin": 600,
+  "purpose": "zprtceil002p's 20 games lost on dandan-lab-vcp78-8566 (git fetch), re-run on their own seeds and seats (Fable 05:05Z): only=<games>, shard s plays game only[s] (seed 520000200 + g, rival seat g % 2). LAB ONLY. Not trained on."
+}
