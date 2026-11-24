@@ -30,6 +30,19 @@ test = (D % 10) == 0
 tr, te = np.where(~test)[0], np.where(test)[0]
 print(f"sk_train: {N} rows from {meta['deals']} deals; train {len(tr)}, held out {len(te)} (every tenth deal)")
 
+# the raw view's parts, in sk-view.js's order: where the contract's type, the declarer and the phase sit
+OFF = {}; _o = 0
+for k, n in [("hand", 32), ("history", 32 * 12), ("trick", 128), ("leader", 4), ("toAct", 4), ("bids", 40), ("type", 3), ("trump", 4), ("ace", 3), ("declarer", 4), ("dealer", 4), ("phase", 2)]:
+    OFF[k] = _o; _o += n
+assert _o == R, (_o, R)
+# the declarer's first decision after the bid, per held-out deal (Fable 22:52Z: the value net's verdict on the contract it took)
+playing = X[:, OFF["phase"] + 1] > 0
+decl_me = X[:, OFF["declarer"]] > 0
+first = np.zeros(N, bool); seen_d = set()
+for i in np.where(test & playing & decl_me)[0]:
+    if D[i] not in seen_d: seen_d.add(D[i]); first[i] = True
+ctype = X[:, OFF["type"]:OFF["type"] + 3].argmax(1)
+print(f"sk_train: held-out payoff SD per seat (the zero predictor's RMSE): {np.sqrt((V[te] ** 2).mean()) * meta['maxPayoff']:.3f} tariffs")
 # hand sizes per relative seat at each row, for the dealer's baseline: 8 less the cards each has played (raw history's seat bits)
 hist = X[:, C:C + C * 12].reshape(N, C, 12)
 played = (hist[:, :, 8:12] > 0).sum(1)
@@ -110,7 +123,14 @@ def run(kind, inputs, outputs):
                     right[t] += (guess[sel] == h[sel]).sum(); base[t] += (bl[sel] == h[sel]).sum(); cnt[t] += sel.sum()
     k = out["n"]
     res = {"kind": kind, "inputs": "raw+aux" if inputs else "raw", "outputs": "aux" if outputs else "-", "seconds": round(time.time() - t0)}
-    if kind == "value": res["rmse_tariffs"] = float(np.sqrt(out["main"] / k) * meta["maxPayoff"])
+    if kind == "value":
+        res["rmse_tariffs"] = float(np.sqrt(out["main"] / k) * meta["maxPayoff"])
+        ix = np.where(first)[0]
+        with torch.no_grad():
+            y, _ = net(batch(ix, n_in)); y = (y - y.mean(1, keepdim=True))[:, 0].numpy() * meta["maxPayoff"]
+        real = V[ix, 0] * meta["maxPayoff"]
+        res["after_bid"] = {t: [int((ctype[ix] == j).sum()), round(float(y[ctype[ix] == j].mean()), 2), round(float(real[ctype[ix] == j].mean()), 2)]
+                            for j, t in enumerate(["sau", "wenz", "solo"]) if (ctype[ix] == j).any()}   # [deals, predicted, real] for the declarer
     if kind == "policy": res["ce"] = out["main"] / k; res["agree"] = out["agree"] / k
     if kind == "dealer":
         res["ce"] = out["main"] / k
@@ -121,6 +141,10 @@ def run(kind, inputs, outputs):
     if a.out:
         os.makedirs(a.out, exist_ok=True)
         torch.save(net.state_dict(), os.path.join(a.out, f"{kind}-{res['inputs']}-{res['outputs'].replace('-', 'none')}.pt"))
+        lin = [m for m in net.body if isinstance(m, nn.Linear)] + [net.main]
+        js = {"kind": kind, "inputs": res["inputs"], "outputs": res["outputs"], "n_in": n_in, "maxPayoff": meta["maxPayoff"],
+              "layers": [{"w": m.weight.detach().numpy().round(6).tolist(), "b": m.bias.detach().numpy().round(6).tolist()} for m in lin]}
+        json.dump(js, open(os.path.join(a.out, f"{kind}-{res['inputs']}-{res['outputs'].replace('-', 'none')}.json"), "w"))
     return res
 
 results = []
