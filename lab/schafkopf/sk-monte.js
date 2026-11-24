@@ -9,9 +9,9 @@
 import { think } from "../../dandan-think.js";
 import { schafkopf as G } from "./sk-rules.js";
 
-/** The per-deal payoff's standard deviation, in tariffs: 6.73 at a table of four Codex Medium (lab/schafkopf/sk-sd.mjs, 400
- *  deals), until the baseline's own games measure it. */
-export const SD = 6.73;
+/** The per-deal payoff's standard deviation, in tariffs: 5.50 at ska-base's four-Codex-Hard tables (78,944 seat-deals, 24 Nov
+ *  2026; Fable 20:38Z: fixed from job 1). Jobs ska-base, ska-close and ska-self ran with the provisional 6.73 (four Codex Medium). */
+export const SD = 5.5;
 export const judgeOf = (sd = SD) => c => G.payoff(c).map(p => 0.5 + 0.5 * p / sd);
 export const uniform = (c, who, rng) => { const ms = G.options(c, who); return ms[Math.floor(rng() * ms.length)]; };
 
