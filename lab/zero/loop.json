@@ -15,7 +15,6 @@
   "nextFrom": 42,
   "phase": "train",
   "log": [
-    "2026-11-20T08:27:00Z value targets from the searched value 3 own turns later (vtd=3) from generation 22 (Korbi 10:23 local: zv10 best on the scorecard, clearest with 10 or fewer cards left); generation 21's zl21 was already training without it, so zl21t (warm from zl20, vtd=3) and zl21s (from scratch, vtd=3) train beside it on the same window: the scratch-vs-warm test; the best value net plays, swapped in by hand",
     "2026-11-20T08:40:00Z deep games only from generation 22 (Korbi 10:26/10:28 local): the window from zps025 plus zps018 (the 18 Nov deep batch with every move fully searched; zps007-016 were deep with a playout cap, 3 moves in 4 from a 128-deal search, so left out); self-play never resigns (the would-resign point noted) and no decided-game shortcut, as g12r-C's games",
     "2026-11-20T08:56:57.166Z generation 21: zl21's nets are late: training asked for again (1)",
     "2026-11-20T09:11:55.434Z generation 22: 20% branch games from zps021,zps022,zps023,zps024,zps025",
@@ -55,7 +54,8 @@
     "2026-11-23T12:18:40.944Z generation 27: zl27 (warm from zl26) plays from the filler's next batch",
     "2026-11-24T09:34:08.243Z generation 28: its games are in: self-play paused (pauseAfter 28; filler off)",
     "2026-11-24T09:34:08.243Z generation 28: zl27 against zl26: 46.8% over 472 games",
-    "2026-11-24T09:34:08.243Z generation 28: training zl28 (policy fresh, value and dealer warm from zl27) on zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039,zps040,zps041"
+    "2026-11-24T09:34:08.243Z generation 28: training zl28 (policy fresh, value and dealer warm from zl27) on zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039,zps040,zps041",
+    "2026-11-24T09:54:46.342Z generation 28: zl28's dealer is in: its policy and value nets asked for"
   ],
   "yard": "g9x-C",
   "yardEvery": 0,
@@ -6506,9 +6506,11 @@
     ],
     "at": "2026-11-24T09:34:08.243Z",
     "dispatch": [
-      "scryg-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039,zps040,zps041 name=zl28 init=zl27 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128"
+      "scryg-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039,zps040,zps041 name=zl28 init=zl27 args=--epochs_2_--d_32_--a_32_--h_128_--bs_128",
+      "general-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039,zps040,zps041 name=zl28 init=zl27 scry=zl28 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 refine=zps025+zps026+zps027+zps028+zps029+zps030+zps031+zps032+zps033+zps034+zps035+zps036+zps037+zps038+zps039+zps040+zps041:3:1e-4:3e-5"
     ],
-    "next": "general-train.yml games=zps024,zps025,zps026,zps027,zps028,zps029,zps030,zps031,zps032,zps033,zps034,zps035,zps036,zps037,zps038,zps039,zps040,zps041 name=zl28 init=zl27 scry=zl28 belief=scryg value=128x64 keep=0.5 policy_init=fresh vkeep=0.5 policy_args=--form_head2_--h1_128_--h2_64_--h3_64_--epochs_8_--lr_3e-4_--decay_0.9_--soft_0.02_--aux-res_0.5_--aux-resp_0.5 value_args=--lr_1e-4_--wd_0_--aux_0.1_--epochs_8 refine=zps025+zps026+zps027+zps028+zps029+zps030+zps031+zps032+zps033+zps034+zps035+zps036+zps037+zps038+zps039+zps040+zps041:3:1e-4:3e-5"
+    "asked": "2026-11-24T09:54:46.530Z",
+    "retries": 0
   },
   "deepFrom": 21,
   "deepDeals": 1024,
