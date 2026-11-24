@@ -3,7 +3,7 @@
 // payoff per seat: the training data. No Codex player sits here, so these rows may train (Codex's games train nothing).
 // usage: node lab/schafkopf/sk-selfplay.mjs <shard> <shards> <out> <deals per decision> <deals per shard> <first seed> [close=<gap>:<mult>] [only=<shard,...>]
 import fs from "node:fs";
-import { schafkopf as G, DEALS } from "./sk-rules.js";
+import { schafkopf as G, dealsLine } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
 import { mix, seeded } from "../../seats.js";
 
@@ -28,4 +28,4 @@ for (let j = 0; j < per; j++) {
   lines.push({ seed, dealer: s.dealer, payoff: G.payoff(s), contract: s.contract ? { type: s.contract.type, declarer: s.contract.declarer, ...(s.contract.type === "sau" ? { partner: s.contract.partner } : {}) } : null, thrown: !!s.thrown, log: s.log, dec, clock });
   fs.writeFileSync(out, lines.map(l => JSON.stringify(l)).join("\n") + "\n");
 }
-console.log(`sk-selfplay: ${lines.length} deals; worlds ${DEALS.worlds}, ${(DEALS.tries / Math.max(1, DEALS.worlds)).toFixed(1)} deals a world, ${DEALS.failed} failed`);
+console.log(`sk-selfplay: ${lines.length} deals; ${dealsLine()}`);

@@ -6,7 +6,7 @@
 // usage: node lab/schafkopf/sk-match.mjs <shard> <shards> <out> <deals per decision> <paired deals per shard> <first seed> [ref=hard]
 //   [close=<gap>:<mult>] [only=<shard,...>] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
 import fs from "node:fs";
-import { schafkopf as G, codexMove, DEALS } from "./sk-rules.js";
+import { schafkopf as G, codexMove, dealsLine } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
 import { seeded, mix } from "../../seats.js";
 
@@ -53,4 +53,4 @@ for (let j = 0; j < per; j++) {
   lines.push({ seed, dealer: r0.s.dealer, ref: { payoff: p0, role: [0, 1, 2, 3].map(p => roleOf(r0.s, p)), contract: r0.s.contract ? { type: r0.s.contract.type, declarer: r0.s.contract.declarer } : null, log: r0.s.log, clock: r0.clock[1] }, seats });
   fs.writeFileSync(out, lines.map(l => JSON.stringify(l)).join("\n") + "\n");
 }
-console.log(`sk-match: ${lines.length} paired deals; worlds ${DEALS.worlds}, ${(DEALS.tries / Math.max(1, DEALS.worlds)).toFixed(1)} deals a world, ${DEALS.failed} failed`);
+console.log(`sk-match: ${lines.length} paired deals; ${dealsLine()}`);

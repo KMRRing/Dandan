@@ -104,7 +104,9 @@ function seenStart(s, seat) {
  * it is legal under the rules; never patched): the cards it hasn't seen dealt at random to the others, as many as each holds,
  * kept only if the deal replays. Plain rejection; `tries` and how many it took are counted for the lab (DEALS).
  */
-export const DEALS = { worlds: 0, tries: 0, failed: 0, walks: 0 };
+export const DEALS = { worlds: 0, tries: 0, failed: 0, walks: 0, walkTried: 0, walkKept: 0 };
+/** The dealer's counts in a line, for each shard's output (Fable 21:48Z: how many positions needed the walk, its acceptance). */
+export const dealsLine = () => `worlds ${DEALS.worlds}, ${(DEALS.tries / Math.max(1, DEALS.worlds - DEALS.walks)).toFixed(1)} deals a world; walk: ${DEALS.failed} positions, ${DEALS.walks} worlds, acceptance ${DEALS.walkTried ? (100 * DEALS.walkKept / DEALS.walkTried).toFixed(1) : "-"}%`;
 // the positions where plain rejection found no world, by state, seat and decision (a state is played on in place, so the
 // decision count tells its positions apart): the rest of their deals come from the walk below
 const WALKS = new WeakMap(), walkKey = (s, seat) => `${seat}:${(s.log || []).length}`;
@@ -152,12 +154,17 @@ function swapIn(need, rng) {
 function walkStep(s, w, need, handsOf, rng) {
   const [i, j] = swapIn(need, rng), c = w.cards;
   [c[i], c[j]] = [c[j], c[i]];
-  if (!replay(s, handsOf(c))) [c[i], c[j]] = [c[j], c[i]];
+  DEALS.walkTried++;
+  if (replay(s, handsOf(c))) { DEALS.walkKept++; return true; }
+  [c[i], c[j]] = [c[j], c[i]];
+  return false;
 }
-const WALK_STEPS = 20;
+/** The walk's next world: taken only after as many kept swaps as there are unseen cards (Fable 21:48Z: successive worlds of one
+ *  walk are correlated), or after 200 tries a kept swap, whichever first (a walk that hardly moves is reported, not hidden). */
 function walkOn(s, w, need, handsOf, rng) {
   DEALS.walks++;
-  for (let k = 0; k < WALK_STEPS; k++) walkStep(s, w, need, handsOf, rng);
+  const n = w.cards.length;
+  for (let kept = 0, t = 0; kept < n && t < 200 * n; t++) if (walkStep(s, w, need, handsOf, rng)) kept++;
   return replay(s, handsOf(w.cards));
 }
 /** A seed from what the seat can see: one position, one search. */
