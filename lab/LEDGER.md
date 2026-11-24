@@ -1390,3 +1390,5 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
 - 2026-11-23 22:04Z (ops): ch.vs1.2xlarge-iad back to $0.010. Regrew US East 16c: VM a2b0e1bf 2→6, k8s e7f00bce 2→4. Fleet 21:54Z 80 machines, 569/570 busy; 2,470 unclaimed (new zpmar001); reqCostH $0.22.
 
 - 2026-11-24 10:33Z (ops): self-play paused. Filler zps041 gone from open and finished (was 208/1200 at 09:37Z), no new filler; 0 unclaimed. Running: zpawided001 104/400 (296 running), zps040 1162/1200 (38), zprtceil002p 398/400, zppol-prtr3. Fleet 10:27Z 84 machines, 620/630 busy; reqCostH $0.24. Pools unchanged; awaiting Korbi on idle sizing.
+
+- 2026-11-24 14:02Z (ops): Korbi 15:59 local: "Remove all that are not ridiculously cheap as in under our bid." Checked all 23 spot pools + VMs at 14:01Z: every class we hold is priced below its bid (closest: ch.xlarge-ord/dfw $0.015 vs bid $0.02). Nothing qualifies, nothing removed. Standing rule from now: a pool whose class reaches its bid is taken to 0 (replaces cut-to-1).
