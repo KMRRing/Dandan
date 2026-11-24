@@ -1,0 +1,8 @@
+{
+  "id": "skb-match-i",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/g0-policy-raw+aux-none.json",
+  "shards": 500,
+  "timeoutMin": 60,
+  "purpose": "Schafkopf generation 1 line I against three Codex Hard (Fable 23:28Z): as skb-match-r with the raw + aux inputs policy. Measurement only. About 70 core-hours."
+}

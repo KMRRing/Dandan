@@ -1,0 +1,8 @@
+{
+  "id": "skb-self-i",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261125 rollout=lab/schafkopf/nets/g0-policy-raw+aux-none.json",
+  "shards": 2000,
+  "timeoutMin": 60,
+  "purpose": "Schafkopf generation 1, line I (Fable 23:28Z): as skb-self-r with the raw + aux inputs policy (g0-policy-raw+aux-none) in the play-outs, the same 20,000 deals. Training data. About 170 core-hours."
+}

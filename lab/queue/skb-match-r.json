@@ -1,0 +1,8 @@
+{
+  "id": "skb-match-r",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/g0-policy-raw-none.json",
+  "shards": 500,
+  "timeoutMin": 60,
+  "purpose": "Schafkopf generation 1 line R against three Codex Hard (Fable 23:28Z): ska-base's first 5,000 paired deals (shards 0-499), our seat in each seat in turn with g0's raw policy in the play-outs; the four-Hard tables not replayed but read from ska-base (sk-sum.mjs --ref ska-base+ska-base-r). Measurement only. About 70 core-hours."
+}

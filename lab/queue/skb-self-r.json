@@ -1,0 +1,8 @@
+{
+  "id": "skb-self-r",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261125 rollout=lab/schafkopf/nets/g0-policy-raw-none.json",
+  "shards": 2000,
+  "timeoutMin": 60,
+  "purpose": "Schafkopf generation 1, line R (Fable 23:28Z): self-play, four seats, play-outs drawn from generation 0's raw policy (g0-policy-raw-none), 256 deals a decision, no close-call rule, dealer uniform over replay-legal worlds, no value net in the search. 20,000 new deals (seed 20261125). Training data. About 170 core-hours."
+}
