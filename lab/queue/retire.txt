@@ -74,3 +74,5 @@ zqhead000  # 13:55Z: renamed zprhead000; zq sorts after the zps self-play, so it
 zpro001  # 18:47Z (Fable 18:30Z): 41.3% ± 3.2 over 242 games, under the 48% bar; the opponent switch (half-day step) is closed
 zprhead001  # 20:36Z (Fable 18:30Z stop rule): 48.0% ± 3.0 over 275 games, 48.0 + 6.0 = 54.0 < 55; 4x search from turn 5 buys nothing
 zps041  # 2026-11-24T10:27Z (Fable 10:25Z): made by the refill before generation 28 reached 2,400; self-play paused (pauseAfter 28); running shards finish and are kept
+zps040  # 2026-11-24T12:10:24.957Z Zero's loop: made with the nets before zl28
+zps041  # 2026-11-24T12:10:24.957Z Zero's loop: made with the nets before zl28
