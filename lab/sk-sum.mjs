@@ -2,11 +2,18 @@
 // in tariffs: mean ± SE per seat-deal, by our role, the share of exact zeros (played as Hard did), our bidding against Hard's in the
 // same seat on the same deal by contract, and the per-deal payoff's SD at the four-Hard tables (the value unit). With a second
 // batch of the same deals (job 2), that batch less this one, paired by deal and seat. Read-only.
-// usage: node lab/sk-sum.mjs <batch> [paired batch] [--dir <local folder of part-*.jsonl, for a test>]
+// usage: node lab/sk-sum.mjs <batch[+re-run]> [paired batch[+re-run]] [--dir <local folder of part-*.jsonl, for a test>]
 import fs from "node:fs";
 
 const args = process.argv.slice(2), at = args.indexOf("--dir"), dir = at >= 0 ? args.splice(at, 2)[1] : null, [batch, other] = args;
-async function linesOf(id) {
+// a batch may be several jobs joined by "+" (a job and its re-run): each deal counted once, the later job's copy kept (a failed
+// shard may have written some of its deals before it stopped)
+async function linesOf(ids) {
+  const by = new Map();
+  for (const id of ids.split("+")) for (const l of await linesOfOne(id)) by.set(l.seed, l);
+  return [...by.values()];
+}
+async function linesOfOne(id) {
   const out = [];
   const read = t => { for (const l of t.split("\n")) if (l.startsWith("{")) out.push(JSON.parse(l)); };
   if (dir) { for (const f of fs.readdirSync(dir).filter(f => f.endsWith(".jsonl"))) read(fs.readFileSync(`${dir}/${f}`, "utf8")); return out; }
