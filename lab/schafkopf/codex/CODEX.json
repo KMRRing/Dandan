@@ -1,0 +1,16 @@
+{
+ "from": "KMRRing/Crates",
+ "commit": "afdf77106d0a7f7c2a1a1970982f05a43ce440b4",
+ "copied": "2026-11-24",
+ "files": {
+  "trumps-rules.js": "d7c53374dabf7f47a6085803f7aeae71fb9ac39c",
+  "trumps-games.js": "064e07ec9446446f1ff855dab68868ca4074bcb2",
+  "trumps-bot.js": "5923e518af156d7493965a050665a5a72c65d35b",
+  "trumps-think.js": "3f81888d2fcdc281e04179a58ca9783c578c1a52",
+  "trumps-cards.js": "f30ad4d716c0b5fbcb3f1744d37ce7f1e56b3e4f",
+  "trumps-art.js": "43cd4c3e211a76105bf1708737066175597dd420",
+  "trumps-deals.js": "52537f4c69962c04f6d5b83e407d2eb55120d849",
+  "trumps-dd.js": "78d0a774693d7b6b7f12f1f41e94512aac0701da",
+  "trumps-bids.js": "7da55df88df72fa8bb905a3947b2e3c71eb76e3a"
+ }
+}

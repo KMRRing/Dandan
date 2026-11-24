@@ -316,7 +316,7 @@ function twinKey(m, c, seat) {
 }
 const newNode = () => ({ n: 0, kids: new Map() });
 /** The child to follow at a node: unvisited ones in Medium's order, then by UCB over the deals each was there; returns { k, m }. */
-function choose(node, ms, c, seat, who, at, explore = EXPLORE, open = false) {
+function choose(node, ms, c, seat, who, at, explore = EXPLORE, open = false, unvisited = 2) {
   node.n++;
   // open (Fable No. 17's focus arm): every option open from the first visit, unvisited ones tried in the given order
   const allow = open ? ms.length : Math.min(ms.length, 1 + Math.floor(Math.sqrt(node.n - 1)));
@@ -326,7 +326,7 @@ function choose(node, ms, c, seat, who, at, explore = EXPLORE, open = false) {
     let k = node.kids.get(sig);
     if (!k) { k = { n: 0, w: 0, avail: 0, node: null }; node.kids.set(sig, k); }
     k.avail++;
-    const v = k.n ? k.w / k.n + explore * Math.sqrt(Math.log(k.avail) / k.n) : 2 - i / 100;
+    const v = k.n ? k.w / k.n + explore * Math.sqrt(Math.log(k.avail) / k.n) : unvisited - i / 100;
     if (v > top) { top = v; best = k; m = ms[i]; }
   }
   return { k: best, m };
@@ -372,15 +372,15 @@ function tableFor(s, seat) {
  * the deals'. seen: where it was left, and the other player's first choice on the way (their answer, for the coach's
  * words).
  */
-export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null, focus = null, options = null, qfocus = null, cut = Infinity) {
+export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null, explore = EXPLORE, rollout = null, table = null, rank = null, focus = null, options = null, qfocus = null, cut = Infinity, game = null) {
   const opp = other(seat), path = [];
   let node = root, growing = true, played = 0, firstReply = !!COMMIT;
-  for (let i = 0; i < 4000 && !c.over; i++) {
-    if (c.turn >= to && !c.stack.length) break;
-    const who = toMove(c);
+  for (let i = 0; i < 4000 && !(game ? game.over(c) : c.over); i++) {
+    if (!game && c.turn >= to && !c.stack.length) break;
+    const who = game ? game.toMove(c) : toMove(c);
     if (who == null) break;
     let m = null;
-    if (growing && c.turn < to) {
+    if (growing && (game || c.turn < to)) {
       // focus (lab, 14 Nov 2026, Fable No. 17): with priority, the options are the picker's fewest top moves holding 90% of its
       // probability (1 to 6), all open from the first visit; the questions as before. qfocus (17 Nov, Fable 09:40Z): a question
       // the same way, its answers by the question head, the fewest top answers holding 90%, open from the first visit, for
@@ -393,7 +393,7 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
         if (table) { const k = posKey(c, seat, table.reads); node = table.get(k); if (!node) { node = newNode(); table.set(k, node); fresh = true; } }
         // a decision's children are keyed by who decides and where, as well as by the move: in other deals the same
         // line can reach another seat's decision first (a hand with nothing to do there is passed over)
-        const at0 = `${who}${c.step}${c.stack.length}${c.pending?.t ?? ""}:`;
+        const at0 = game ? `${who}${c.step}:` : `${who}${c.step}${c.stack.length}${c.pending?.t ?? ""}:`;
         let pick = null;
         if (firstReply && who === opp) {
           firstReply = false;
@@ -403,7 +403,7 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
             if (bm) pick = forcePick(node, bm, c, seat, who, at0);
           }
         }
-        if (!pick) pick = choose(node, ms, c, seat, who, at0, explore, !!open);
+        if (!pick) pick = choose(node, ms, c, seat, who, at0, explore, !!open, game ? UNVISITED_N : 2);
         if (COMMIT && COMMIT.phase === 0 && who === opp && COMMIT.cr == null) COMMIT.cr = key(pick.m);
         m = pick.m;
         path.push([pick.k, who]);
@@ -433,7 +433,14 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
       const main = c.active === opp && /^main/.test(c.step) && !c.stack.length;
       if (main || seen.a == null) { seen.a = moveName(m, c, seat); seen.main = main; }
     }
-    if (typeof act(c, who, m, { rng, quiet: true }) === "string") break;
+    if (typeof (game ? game.act(c, who, m, rng) : act(c, who, m, { rng, quiet: true })) === "string") break;
+  }
+  if (game) {
+    // N seats (24 Nov 2026, Fable 18:50Z): the judge gives every seat its value, and each decision on the path is credited
+    // with its own mover's; two seats with [v, 1 − v] is the arithmetic below exactly
+    const vs = judge(c, seat);
+    for (const [k, who] of path) { k.n++; k.w += vs[who]; }
+    return vs[seat];
   }
   if (seen && seen.w != null && seen.r == null && !c.stack.some(x => x.sid === seen.w)) seen.r = 0;
   const v = judge(c, seat);
@@ -443,6 +450,8 @@ export function treePlay(c, seat, root, to, rng, judge = winChance, seen = null,
   if (seen) Object.assign(seen, where(c, seat));
   return v;
 }
+// an unvisited option's score in a game's tree: first, whatever the visited ones' values (Dandan's 2 assumes values within 0..1)
+const UNVISITED_N = 1e9;
 
 /** What the coach can say of where a game was left, for the seat: a Dandân of its own on the table and one of theirs, both lives and hands. */
 // watch (lab, 22 Nov 2026, Fable 17:00Z: inside the look-ahead): a card name whose copies in the seat's hand each leaf counts (wn)
@@ -524,7 +533,10 @@ export function think(s, seat, opts = {}) {
   const best = list.find(c => key(c.move) === key(r2.best));
   return { ...r, best: r2.best, list: [best, ...list.filter(c => c !== best && isDeep(c)).sort((a, b) => b.mean - a.mean), ...list.filter(c => !isDeep(c))], deeper: looks };
 }
-function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null, decided = null, watch = null, bestReply = false, commit = false, oppView = null } = {}) {
+function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EARLY : LOOK_FROM, turns = 2, wide = 7, must = null, ms = 4000, judge = winChance, explore = EXPLORE, open = false, hold = first < LOOK_FROM, z = 3, rollout = null, rank = null, treeRank = null, focus = null, options = null, keepFirst = false, weigh = true, deal = null, merge = false, reuse = false, steady = deals === 256 ? 2 : 0, all = deals >= 1024, margin = null, offCheck = false, salt = 0, qfocus = null, qall = false, twins = false, cut = Infinity, trace = null, early = null, decided = null, watch = null, bestReply = false, commit = false, oppView = null, game = null } = {}) {
+  // game (24 Nov 2026, Fable 18:50Z: the general Monte for any number of seats): the rules engine's own { toMove, act(c, who, m,
+  // rng), over, fork, determinize(s, seat, rng), seedOf(s, seat) }, with `options`, `rollout` and a judge giving every seat its
+  // value; the deal is searched to its end. Without it, Dandan as ever
   const t0 = Date.now();
   WATCH = watch; BEST_REPLY = !!bestReply; COMMIT = null;
   // options (lab, 14 Nov 2026, Zero: Fable No. 12): the moves weighed at the root and in the tree, in place of candidates (which
@@ -536,7 +548,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
   const cls = cands.map(m => (twins ? twinKey(m, s, seat) : key(m))), repOf = cls.map(k => cls.indexOf(k));
   const n = cands.length;
   if (n === 1 || repOf.every(r => r === 0)) return { best: cands[0], list: cands.map(m => ({ move: m, mean: NaN, se: 0, n: 0, cls: cls[0] })), deals: 0, only: true };
-  const to = s.turn + Math.max(turns, endOfLibrary(s)), seed = salt ? mix(seedOf(s, seat), salt) : seedOf(s, seat);   // salt: the lab's play-outs, the same position searched afresh
+  const to = game ? Infinity : s.turn + Math.max(turns, endOfLibrary(s)), seed0 = game ? game.seedOf(s, seat) : seedOf(s, seat), seed = salt ? mix(seed0, salt) : seed0;   // salt: the lab's play-outs, the same position searched afresh
   const vals = cands.map(() => []), seen = cands.map(() => []), roots = cands.map(newNode);
   // qall (17 Nov 2026, Fable 09:40Z, Korbi's game): where the first decision with more than one option after a root move is the
   // searcher's own question, asked with the same answers on every deal, every answer is weighed on every deal (a tree each)
@@ -571,7 +583,7 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
       }
       Q.deals.push(null);   // a deal where the question doesn't come first (or comes with other answers): down the tree
     }
-    return treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank, focus, options, qfocus, cut);
+    return treePlay(c, seat, roots[i], to, r, judge, at, explore, rollout, table, treeRank || rank, focus, options, qfocus, cut, game);
   };
   const table = reuse ? tableFor(s, seat) : merge ? new Map() : null;
   if (table) table.reads = merge === "reads";
@@ -582,10 +594,10 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
   OV = oppView ? false : null;
   while (d < deals && alive.length > 1) {
     const rng = seeded(mix(seed, d + 1));
-    const base = determinize(s, seat, rng, weigh, open, deal), runSeed = mix(seed ^ 0x5eed, d + 7);
+    const base = game ? game.determinize(s, seat, rng) : determinize(s, seat, rng, weigh, open, deal), runSeed = mix(seed ^ 0x5eed, d + 7);
     for (const i of alive) {
-      const c = fork(base), r = seeded(runSeed);
-      const res = act(c, seat, cands[i], { rng: r, quiet: true });
+      const c = (game ? game.fork : fork)(base), r = seeded(runSeed);
+      const res = game ? game.act(c, seat, cands[i], r) : act(c, seat, cands[i], { rng: r, quiet: true });
       const at = {};
       if (cands[i].t === "cast" && typeof res !== "string") { const top = c.stack[c.stack.length - 1]; if (top && top.ctl === seat) at.w = top.sid; }
       const ph = commit ? (d < commitFrom ? 0 : 1) : null;
@@ -738,7 +750,8 @@ function thinkOnce(s, seat, { pick = null, deals = 48, first = deals <= 256 ? EA
     const gm = k ? sg / k : 0, gapSe = k > 1 ? Math.sqrt(Math.max(0, (sg2 - k * gm * gm) / (k - 1)) / k) : null;
     Object.assign(c, { vs: k, better, worse, gapSe });
   }
-  groupLifts(list, vals);
+  if (game) for (const c of list) c.groupLift = 0;   // a Schafkopf card is one card: no copies to group (groupLifts reads Dandan's names)
+  else groupLifts(list, vals);
   return { best: best.move, list: [best, ...ranked.filter(c => c !== best)], deals: d, only: false, off, shortPick };
 }
 // the expected best of n standard normals, for groupLifts: E max = ∫ x · n φ(x) Φ(x)^(n-1) dx, summed on a grid, kept by n
