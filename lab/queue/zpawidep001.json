@@ -1,0 +1,8 @@
+{
+  "id": "zpawidep001",
+  "script": "zero-play.mjs",
+  "args": "{shard} {shards} {out} 1024 400 580000000 gen:zp27wide - 0 deeper=0.03 deepmax=4 prior=1 vs=gen:zp27e24:1",
+  "shards": 400,
+  "timeoutMin": 600,
+  "purpose": "zpawidep001 (Fable 11:30Z): zpawided001 in every respect (zp27wide's policy against zp27e24's, zl27's value and dealer, 1,024 deals, deeper=0.03 deepmax=4, 400 games, the same seeds and seats, one game a shard, clock logged) except the prior x1 on both sides; read paired with zpawided001. LAB ONLY. Not trained on."
+}
