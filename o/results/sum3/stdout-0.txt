@@ -1,0 +1,19 @@
+candidates 87, pairs per candidate 512; base pass 0: 0.5000
+cand  name                                   mean   se     vs base  z
+ 32 cast:Mystic Retrieval +0.5           0.5195 0.0088 +0.0195 2.22
+ 13 cast:Mind Bend -0.5                  0.5127 0.0062 +0.0127 2.04
+  5 cast:Commit -0.5                     0.5127 0.0065 +0.0127 1.94
+ 53 land:Remote Isle -0.5                0.5117 0.0072 +0.0117 1.64
+ 29 cast:Gone Missing -0.5               0.5098 0.0062 +0.0098 1.58
+ 31 cast:Lórien Revealed -0.5            0.5068 0.0053 +0.0068 1.30
+ 54 land:Thundering Falls +0.5           0.5059 0.0046 +0.0059 1.28
+ 76 tune:cycleLorien +0.5                0.5059 0.0055 +0.0059 1.06
+ 73 tune:counter -0.5                    0.5098 0.0105 +0.0098 0.93
+ 11 cast:Metamorphose -0.5               0.5078 0.0087 +0.0078 0.89
+ 36 cast:Dandân +0.5                     0.5059 0.0072 +0.0059 0.82
+ 80 tuneCast:Dandân +0.5                 0.5059 0.0072 +0.0059 0.82
+  8 cast:Memory Lapse +0.5               0.5068 0.0103 +0.0068 0.66
+ 40 land:Flood Plain +0.5                0.5049 0.0075 +0.0049 0.65
+ 82 tuneLand:Flood Plain +0.5            0.5049 0.0075 +0.0049 0.65
+ 47 land:Izzet Boilerworks -0.5          0.5049 0.0076 +0.0049 0.64
+all candidates: mean z -0.59, share with z>2: 2 of 86; worst z -10.08

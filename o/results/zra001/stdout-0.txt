@@ -1,0 +1,1 @@
+reanalyse: 4 parts, 25 games, 269 positions searched at 1024 deals (deeper=0.03~deepmax=4) with gen:zl19 in 7490 s

@@ -1,0 +1,1 @@
+{"id": "aa-b3-p05", "script": "selfplay.mjs", "args": "{shard} {shards} {out} 128 120 500480 paths ag-v14.json", "shards": 24, "timeoutMin": 180, "purpose": "overnight plan stage 3: four-path Hard (128 deals, judge v14) against itself, batch 5 of 120 games", "ref": "0dfc9115f9f419a9853129db3e07a4ce84778556", "repo": "https://github.com/KMRRing/Dandan.git", "made": "2026-11-11"}

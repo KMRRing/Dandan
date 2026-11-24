@@ -1,0 +1,29 @@
+node:internal/deps/undici/undici:13392
+      Error.captureStackTrace(err);
+            ^
+
+TypeError: fetch failed
+    at node:internal/deps/undici/undici:13392:13
+    at async labStore (file:///tmp/lab-work/slot0/repo/lab/lib.mjs:20:35)
+    at async readParts (file:///tmp/lab-work/slot0/repo/lab/lib.mjs:38:17)
+    at async file:///tmp/lab-work/slot0/repo/lab/judge-train.mjs:64:53 {
+  [cause]: SocketError: other side closed
+      at Socket.<anonymous> (node:internal/deps/undici/undici:6238:28)
+      at Socket.emit (node:events:530:35)
+      at endReadableNT (node:internal/streams/readable:1698:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'UND_ERR_SOCKET',
+    socket: {
+      localAddress: '10.128.0.15',
+      localPort: 52016,
+      remoteAddress: undefined,
+      remotePort: undefined,
+      remoteFamily: undefined,
+      timeout: undefined,
+      bytesWritten: 524,
+      bytesRead: 1300
+    }
+  }
+}
+
+Node.js v22.11.0

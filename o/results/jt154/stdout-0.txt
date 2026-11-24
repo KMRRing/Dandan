@@ -1,0 +1,1 @@
+games 18225, positions 1628143 (1304393 to learn from, 323750 held out), blend 0.5

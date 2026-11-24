@@ -1,0 +1,9 @@
+games 2005, positions 179588 (145519 to learn from, 34069 held out), blend 0.5
+judge now    all n34069 vs search 0.0113 vs result 0.1675 | lib 41-80 n22193 vs search 0.0116 vs result 0.1915 | lib 21-40 n9819 vs search 0.0084 vs result 0.1206 | lib 9-20 n1616 vs search 0.0079 vs result 0.1201 | lib 0-8 n441 vs search 0.0740 vs result 0.1785
+epoch 10: held-out loss 0.5298 (learnt 0.5052)
+epoch 20: held-out loss 0.5361 (learnt 0.4984)
+epoch 30: held-out loss 0.5402 (learnt 0.4947)
+epoch 40: held-out loss 0.5429 (learnt 0.4923)
+best epoch 1, held-out loss 0.5180
+judge new    all n34069 vs search 0.0093 vs result 0.1626 | lib 41-80 n22193 vs search 0.0092 vs result 0.1877 | lib 21-40 n9819 vs search 0.0073 vs result 0.1143 | lib 9-20 n1616 vs search 0.0084 vs result 0.1113 | lib 0-8 n441 vs search 0.0596 vs result 0.1626
+as rounded   all n34069 vs search 0.0093 vs result 0.1626 | lib 41-80 n22193 vs search 0.0092 vs result 0.1877 | lib 21-40 n9819 vs search 0.0073 vs result 0.1144 | lib 9-20 n1616 vs search 0.0083 vs result 0.1112 | lib 0-8 n441 vs search 0.0596 vs result 0.1628

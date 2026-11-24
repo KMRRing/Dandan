@@ -1,0 +1,1 @@
+{"id": "aa-b1-mss", "script": "selfplay.mjs", "args": "{shard} {shards} {out} 0 8000 400000 medium:squeeze:squeeze", "shards": 80, "timeoutMin": 60, "purpose": "overnight plan stage 1: squeeze Medium against itself, 8,000 games, data for a squeeze judge", "ref": "019b349815c0879b818c66feb6f6a4f4743a7e54", "repo": "https://github.com/KMRRing/Dandan.git", "made": "2026-11-11"}

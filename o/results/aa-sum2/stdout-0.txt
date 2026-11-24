@@ -1,0 +1,25 @@
+{"job":"ab-hva64","rows":"all","decisions":1490,"same":0.9879,"differ":18,"lostPerDecision":-0.00004,"worstGaps":[0.0451,0.0431,0.0124,0.0078,0.0074],"over2points":2,"workSaved":0.277}
+{"job":"ab-hva64","rows":"2-2 candidates","decisions":655,"same":0.9908,"differ":6,"lostPerDecision":-0.00005,"worstGaps":[0.0451,-0.0018,-0.0143,-0.0144,-0.0177],"over2points":1,"workSaved":0.172}
+{"job":"ab-hva64","rows":"3-4 candidates","decisions":498,"same":0.9859,"differ":7,"lostPerDecision":0,"worstGaps":[0.0431,0.0124,-0.0056,-0.0094,-0.0137],"over2points":1,"workSaved":0.211}
+{"job":"ab-hva64","rows":"5-7 candidates","decisions":214,"same":0.9907,"differ":2,"lostPerDecision":-0.00015,"worstGaps":[-0.0113,-0.0198],"over2points":0,"workSaved":0.292}
+{"job":"ab-hva64","rows":"8-99 candidates","decisions":123,"same":0.9756,"differ":3,"lostPerDecision":0.00007,"worstGaps":[0.0078,0.0074,-0.0072],"over2points":0,"workSaved":0.442}
+{"job":"ab-hva64","seed":7396,"i":1,"step":"mull","stack":0,"n":2,"full":"take the free mulligan","half":"keep this hand","gap":0.0451}
+{"job":"ab-hva64","seed":7366,"i":39,"step":"main1","stack":0,"n":4,"full":"cast Quicken","half":"play Flood Plain","gap":0.0431}
+{"job":"ab-hva64","seed":7466,"i":207,"step":"main2","stack":1,"n":3,"full":"cast Memory Lapse on their Gone Missing","half":"cast Predict","gap":0.0124}
+{"job":"ab-hva64","seed":7466,"i":315,"step":"main1","stack":0,"n":10,"full":"cast Deem Inferior on their Dandân","half":"cast Piracy Charm for a discard on yourself","gap":0.0078}
+{"job":"ab-hva64","seed":7402,"i":193,"step":"main1","stack":1,"n":12,"full":"put back Izzet Boilerworks on top and Island under it","half":"put back Thundering Falls on top and Izzet Boilerworks under it","gap":0.0074}
+{"job":"ab-hva64","seed":7479,"i":93,"step":"main1","stack":1,"n":2,"full":"put Thundering Falls onto the battlefield","half":"put nothing in","gap":-0.0018}
+{"job":"ab-hva64","seed":7389,"i":318,"step":"main1","stack":2,"n":4,"full":"cast Memory Lapse on their Memory Lapse","half":"let it resolve","gap":-0.0056}
+{"job":"ab-hva64","seed":7440,"i":183,"step":"main1","stack":1,"n":12,"full":"cast Memory Lapse on their Chart a Course","half":"let it resolve","gap":-0.0072}
+{"job":"ab-hva256","rows":"all","decisions":487,"same":0.9856,"differ":7,"lostPerDecision":0.00002,"worstGaps":[0.0222,0.0094,0.0057,-0.0029,-0.006],"over2points":1,"workSaved":0.241}
+{"job":"ab-hva256","rows":"2-2 candidates","decisions":206,"same":0.9951,"differ":1,"lostPerDecision":-0.00004,"worstGaps":[-0.0088],"over2points":0,"workSaved":0.157}
+{"job":"ab-hva256","rows":"3-4 candidates","decisions":171,"same":0.9883,"differ":2,"lostPerDecision":0.00016,"worstGaps":[0.0222,0.0057],"over2points":1,"workSaved":0.137}
+{"job":"ab-hva256","rows":"5-7 candidates","decisions":77,"same":0.9481,"differ":4,"lostPerDecision":-0.00011,"worstGaps":[0.0094,-0.0029,-0.006,-0.0092],"over2points":0,"workSaved":0.261}
+{"job":"ab-hva256","rows":"8-99 candidates","decisions":33,"same":1,"differ":0,"lostPerDecision":0,"worstGaps":[],"over2points":0,"workSaved":0.537}
+{"job":"ab-hva256","seed":7499,"i":121,"step":"main1","stack":0,"n":4,"full":"play Island","half":"pass","gap":0.0222}
+{"job":"ab-hva256","seed":7581,"i":113,"step":"main1","stack":1,"n":6,"full":"put them Mind Bend, Memory Lapse, Mystic Retrieval, the first on top","half":"put them Mind Bend, Mystic Retrieval, Memory Lapse, the first on top","gap":0.0094}
+{"job":"ab-hva256","seed":7516,"i":55,"step":"end","stack":0,"n":3,"full":"cast Piracy Charm for +2/−1 on their Dandân","half":"pass","gap":0.0057}
+{"job":"ab-hva256","seed":7581,"i":77,"step":"main1","stack":3,"n":5,"full":"cast Memory Lapse on their Memory Lapse","half":"cast Memory Lapse on their Gone Missing","gap":-0.0029}
+{"job":"ab-hva256","seed":7519,"i":134,"step":"main1","stack":0,"n":5,"full":"cast Dandân","half":"play Izzet Boilerworks","gap":-0.006}
+{"job":"ab-hva256","seed":7521,"i":87,"step":"upkeep","stack":0,"n":2,"full":"cast Predict","half":"pass","gap":-0.0088}
+{"job":"ab-hva256","seed":7488,"i":42,"step":"main2","stack":0,"n":5,"full":"cast Gone Missing on their Thundering Falls","half":"pass","gap":-0.0092}

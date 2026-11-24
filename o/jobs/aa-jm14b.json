@@ -1,0 +1,1 @@
+{"id":"aa-jm14b","script":"judge-match.mjs","args":"{shard} {shards} {out} ag-jv1:14 64 400 130200","shards":100,"ref":"351ad6d7ad67181d52f328e534e11f2d9a772bd4","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":90,"purpose":"more deals for judge v14 (aa-jm14 gave 53.0% +- 4.6 on 200): 400 fresh deals both ways, same code","made":"2026-11-11"}

@@ -1,0 +1,12 @@
+{"job":"hv64","rows":"all","decisions":1490,"same":0.9993,"differ":1,"lostPerDecision":-0.00001,"worstGaps":[-0.0195],"over2points":0,"workSaved":0.169}
+{"job":"hv64","rows":"2-2 candidates","decisions":639,"same":1,"differ":0,"lostPerDecision":0,"worstGaps":[],"over2points":0,"workSaved":0.092}
+{"job":"hv64","rows":"3-4 candidates","decisions":477,"same":0.9979,"differ":1,"lostPerDecision":-0.00004,"worstGaps":[-0.0195],"over2points":0,"workSaved":0.11}
+{"job":"hv64","rows":"5-7 candidates","decisions":245,"same":1,"differ":0,"lostPerDecision":0,"worstGaps":[],"over2points":0,"workSaved":0.155}
+{"job":"hv64","rows":"8-99 candidates","decisions":129,"same":1,"differ":0,"lostPerDecision":0,"worstGaps":[],"over2points":0,"workSaved":0.318}
+{"job":"hv64","seed":7448,"i":94,"step":"main1","stack":0,"n":4,"full":"cast Memory from the graveyard","half":"cast Mystic Retrieval for Memory Lapse","gap":-0.0195}
+{"job":"hv256","rows":"all","decisions":487,"same":0.9979,"differ":1,"lostPerDecision":0.00002,"worstGaps":[0.0094],"over2points":0,"workSaved":0.118}
+{"job":"hv256","rows":"2-2 candidates","decisions":201,"same":1,"differ":0,"lostPerDecision":0,"worstGaps":[],"over2points":0,"workSaved":0.058}
+{"job":"hv256","rows":"3-4 candidates","decisions":166,"same":1,"differ":0,"lostPerDecision":0,"worstGaps":[],"over2points":0,"workSaved":0.047}
+{"job":"hv256","rows":"5-7 candidates","decisions":87,"same":0.9885,"differ":1,"lostPerDecision":0.00011,"worstGaps":[0.0094],"over2points":0,"workSaved":0.116}
+{"job":"hv256","rows":"8-99 candidates","decisions":33,"same":1,"differ":0,"lostPerDecision":0,"worstGaps":[],"over2points":0,"workSaved":0.336}
+{"job":"hv256","seed":7581,"i":113,"step":"main1","stack":1,"n":6,"full":"put them Mind Bend, Memory Lapse, Mystic Retrieval, the first on top","half":"put them Mind Bend, Mystic Retrieval, Memory Lapse, the first on top","gap":0.0094}

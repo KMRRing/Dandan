@@ -1,0 +1,12 @@
+[12:52:54] read 709 games: 75521 positions (memory 271 MB)
+[12:53:03] epoch 1/10: held-out loss 0.4807 (memory 300 MB)
+[12:53:11] epoch 2/10: held-out loss 0.4967 (memory 300 MB)
+[12:53:19] epoch 3/10: held-out loss 0.5062 (memory 301 MB)
+[12:53:26] epoch 4/10: held-out loss 0.5120 (memory 300 MB)
+[12:53:33] epoch 5/10: held-out loss 0.5157 (memory 301 MB)
+[12:53:40] epoch 6/10: held-out loss 0.5198 (memory 298 MB)
+[12:53:47] epoch 7/10: held-out loss 0.5250 (memory 299 MB)
+[12:53:56] epoch 8/10: held-out loss 0.5280 (memory 300 MB)
+[12:54:05] epoch 9/10: held-out loss 0.5285 (memory 301 MB)
+[12:54:11] epoch 10/10: held-out loss 0.5293 (memory 298 MB)
+{"variant":18,"from":"today","spec":{"plus":true,"shape":"64x32","blend":0.5,"floor":0},"games":709,"positions":75521,"epoch":1,"metrics":{"all":0.1602,"slow":0.197,"late":0.0934,"flaws":0.0309},"today":{"all":0.167,"slow":0.2056,"late":0.1094,"flaws":0.0374}}

@@ -1,0 +1,1 @@
+[13:02:17] spb01: 120 games, 3489 positions from the cache (memory 93 MB)

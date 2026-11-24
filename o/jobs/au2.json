@@ -1,0 +1,1 @@
+{"id":"au2","script":"audit.mjs","args":"{shard} {shards} {out} 1024","shards":36,"ref":"main","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":240,"purpose":"self-audit again with Hard's own chances kept (its move and the human's) and the judge quiet-to-quiet: per tendency, judge vs Hard vs actual result (lab/audit-sum.mjs)"}

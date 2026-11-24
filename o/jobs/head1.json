@@ -1,0 +1,1 @@
+{"id":"head1","script":"headroom.mjs","args":"{shard} {shards} {out} 256 240","shards":24,"ref":"main","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":150,"purpose":"headroom: how much stronger Hard 256 is than Medium","outcome":"Hard 86.9% +-1.5 over 480 games (82/91/87% by length up to 20/21-30/over 30 turns); 8 games ended by the library"}

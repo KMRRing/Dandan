@@ -1,0 +1,4 @@
+{"variant":"16","decisions":1555,"same":0.8199,"lostPerDecision":0.00421,"over2points":135,"over5points":32,"workShare":0.069}
+{"variant":"32","decisions":1555,"same":0.8322,"lostPerDecision":0.00337,"over2points":113,"over5points":24,"workShare":0.124}
+{"variant":"64","decisions":1555,"same":0.8701,"lostPerDecision":0.00188,"over2points":71,"over5points":7,"workShare":0.225}
+{"variant":"128","decisions":1555,"same":0.928,"lostPerDecision":0.00059,"over2points":21,"over5points":1,"workShare":0.409}

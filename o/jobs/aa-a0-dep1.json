@@ -1,0 +1,1 @@
+{"id":"aa-a0-dep1","script":"departures-sum.mjs","args":"aa-i2d","shards":1,"ref":"a11e3252d795d7507dd0c336b339baa44046018c","repo":"https://github.com/KMRRing/Dandan.git","timeoutMin":15,"purpose":"summary (Fable 23:55Z): aa-i2d's departure cases at half, by source, estimated gain (<2, 2-5, 5-10, >10 points), library (>20, <=20) and kind","made":"2026-11-13"}
