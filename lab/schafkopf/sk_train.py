@@ -19,6 +19,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("pack"); ap.add_argument("--epochs", type=int, default=6); ap.add_argument("--h", default="256,128")
 ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--wd", type=float, default=1e-4); ap.add_argument("--auxw", type=float, default=0.1)
 ap.add_argument("--bs", type=int, default=512); ap.add_argument("--out", default=""); ap.add_argument("--seed", type=int, default=1)
+ap.add_argument("--sweep", action="store_true", help="Fable 23:28Z: the value net alone, raw and both arms, epochs 1-3 x wd 1e-4/1e-3 x lr as given and a third")
 a = ap.parse_args()
 torch.manual_seed(a.seed); np.random.seed(a.seed); torch.set_num_threads(os.cpu_count() or 2)
 meta = json.load(open(os.path.join(a.pack, "meta.json")))
@@ -153,6 +154,16 @@ def run(kind, inputs, outputs):
     return res
 
 results = []
+if a.sweep:
+    lr0 = a.lr
+    for inputs, outputs in ((False, False), (True, True)):
+        for ep in (1, 2, 3):
+            for wd in (1e-4, 1e-3):
+                for lr in (lr0, lr0 / 3):
+                    a.epochs, a.wd, a.lr = ep, wd, lr
+                    r = run("value", inputs, outputs)
+                    print(json.dumps({"sweep": True, "inputs": r["inputs"], "outputs": r["outputs"], "epochs": ep, "wd": wd, "lr": lr, "rmse": round(r["rmse_tariffs"], 3), "late": r["by_trick"][-1]}), flush=True)
+    print("sk_train: done"); raise SystemExit
 for kind in ("value", "policy"):
     for inputs in (False, True):
         for outputs in (False, True):
