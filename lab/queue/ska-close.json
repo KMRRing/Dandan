@@ -1,0 +1,8 @@
+{
+  "id": "ska-close",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 close=0.03:4",
+  "shards": 2000,
+  "timeoutMin": 90,
+  "purpose": "Schafkopf job 2 (Fable 20:38Z): ska-base's deals and design, with a decision whose top two means are within 0.03 value units searched again at 4x the deals (1,024). Paired against ska-base by deal and seat. Measurement only. Close calls are most decisions, so about 180 core-hours."
+}

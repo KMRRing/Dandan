@@ -514,6 +514,13 @@ const EARLY = 16;
 export function think(s, seat, opts = {}) {
   const r = thinkOnce(s, seat, opts), dp = opts.deeper;
   if (!dp || r.only) return r;
+  // a game searched to its end (24 Nov 2026, Fable 20:38Z: the close-call rule's general meaning): looking a turn further adds
+  // nothing, so a decision whose top two means are within the gap is searched again at `mult` times the deals, and that look decides
+  if (opts.game) {
+    const v = r.list.filter(c => !c.out).map(c => c.mean).sort((a, b) => b - a);
+    if (v.length < 2 || v[0] - v[1] >= dp.gap) return r;
+    return { ...thinkOnce(s, seat, { ...opts, deals: (opts.deals ?? 48) * (dp.mult ?? 4) }), deeper: 1, first: r.list };
+  }
   // one of each class (twins: a class's options share its values; without, every option is its own class)
   const classes = new Set();
   let top = r.list.filter(c => !c.out && !classes.has(c.cls ?? key(c.move)) && classes.add(c.cls ?? key(c.move))).sort((a, b) => b.mean - a.mean).slice(0, dp.k || 2);

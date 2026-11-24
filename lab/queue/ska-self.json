@@ -1,0 +1,8 @@
+{
+  "id": "ska-self",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124",
+  "shards": 2000,
+  "timeoutMin": 60,
+  "purpose": "Schafkopf job 3 (Fable 20:38Z): generation 0 of self-play. Our bare search in all four seats, ska-base's 20,000 deal seeds, every seat's searched decisions (means, deals) and the payoff per seat kept: the training data for the four auxiliary arms and the dealer. About 30 core-hours."
+}

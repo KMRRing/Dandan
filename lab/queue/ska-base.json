@@ -1,0 +1,8 @@
+{
+  "id": "ska-base",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124",
+  "shards": 2000,
+  "timeoutMin": 60,
+  "purpose": "Schafkopf job 1 (Fable 20:38Z): baseline. 20,000 paired deals (deal seeds mix(20261124, shard*10+j)): a table of four Codex Hard, then our bare search (256 deals a decision, uniform play-outs, no nets, no close-call rule) in each seat in turn against three Codex Hard. Score = our seat's payoff less Hard's in that seat, tariffs per deal. Measurement only: no row trains or enters a loss comparison. About 110 core-hours."
+}

@@ -3,7 +3,9 @@
 // for Dandan): no nets yet, so the play-outs past the tree are uniform over the legal moves and the deal is played to its
 // end, where the payoff is exact. A seat's value is 0.5 + 0.5 × payoff ÷ SD: with two seats and payoff ±1 that is Dandan's
 // win chance exactly, so the search's constants (the exploration, the pruning spread, the close-call gap) read in standard
-// deviations of the per-deal payoff for every game (Fable 18:50Z: one framework constant, no per-game tuning).
+// deviations of the per-deal payoff for every game (Fable 18:50Z: one framework constant, no per-game tuning). The unit leaves
+// 0..1 on big deals (a solo with Laufende is several SDs) and nothing clips it: the means, the pruning and the tree's choices
+// take it as it is (Fable 20:38Z: clipping would make a big solo worth no more than a small one).
 import { think } from "../../dandan-think.js";
 import { schafkopf as G } from "./sk-rules.js";
 
@@ -14,6 +16,7 @@ export const judgeOf = (sd = SD) => c => G.payoff(c).map(p => 0.5 + 0.5 * p / sd
 export const uniform = (c, who, rng) => { const ms = G.options(c, who); return ms[Math.floor(rng() * ms.length)]; };
 
 /** The bare search's decision for the seat to move: { best, list } as dandan-think.js think gives it. */
-export function bareThink(s, seat, { deals = 256, sd = SD, rollout = uniform } = {}) {
-  return think(s, seat, { deals, ms: 1e9, all: true, options: G.options, rollout, judge: judgeOf(sd), game: G, hold: false });
+/** close: { gap, mult }, a decision whose top two means are within gap (value units) searched again at mult times the deals. */
+export function bareThink(s, seat, { deals = 256, sd = SD, rollout = uniform, close = null } = {}) {
+  return think(s, seat, { deals, ms: 1e9, all: true, options: G.options, rollout, judge: judgeOf(sd), game: G, hold: false, ...(close ? { deeper: close } : {}) });
 }

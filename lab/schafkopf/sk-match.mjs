@@ -4,6 +4,7 @@
 // from the deal, the seat and the move's number, so until our seat plays otherwise than Hard did, the two tables are the same
 // deal played the same way. Every game's decisions are kept (ours with the search's means), for the first auxiliary reading.
 // usage: node lab/schafkopf/sk-match.mjs <shard> <shards> <out> <deals per decision> <paired deals per shard> <first seed> [ref=hard]
+//   [close=<gap>:<mult>] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
 import fs from "node:fs";
 import { schafkopf as G, codexMove, DEALS } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
@@ -11,6 +12,7 @@ import { seeded, mix } from "../../seats.js";
 
 const [shard, , out, deals, per, seed0] = process.argv.slice(2).map((x, i) => (i === 2 ? x : Number(x)));
 const ref = (process.argv.find(a => a.startsWith("ref=")) || "ref=hard").slice(4);
+const cl = (process.argv.find(a => a.startsWith("close=")) || "").slice(6).split(":").map(Number), close = cl[0] ? { gap: cl[0], mult: cl[1] || 4 } : null;
 const key = m => JSON.stringify(m);
 
 function roleOf(s, seat) {
@@ -27,9 +29,9 @@ function play(seed, me) {
     if (w === me) {
       const ops = G.options(s, w);
       if (ops.length > 1) {
-        const r = bareThink(s, w, { deals });
+        const r = bareThink(s, w, { deals, close });
         m = r.best;
-        dec.push({ i, opts: r.list.map(c => [key(c.move), Number.isNaN(c.mean) ? null : +c.mean.toFixed(5), c.n]) });
+        dec.push({ i, opts: r.list.map(c => [key(c.move), Number.isNaN(c.mean) ? null : +c.mean.toFixed(5), c.n]), ...(r.deeper ? { close: 1 } : {}) });
       } else m = ops[0];
     } else m = codexMove(s, w, ref, seeded(mix(mix(seed, w + 1), i + 1)));
     clock[w === me ? 0 : 1] += Date.now() - t0;
