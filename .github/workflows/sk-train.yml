@@ -1,0 +1,36 @@
+# Schafkopf's first auxiliary reading (Fable, 24 Nov 2026 20:38Z, pre-authorised): the self-play rows of the given jobs packed
+# (lab/schafkopf/sk-pack.mjs) and the four value and policy arms and the two dealers trained on them (lab/schafkopf/sk_train.py),
+# a held-out tenth by deal; the held-out losses in the summary, the nets as the run's artifact. Commits nothing.
+name: Schafkopf train
+on:
+  workflow_dispatch:
+    inputs:
+      jobs: { description: "Self-play jobs, comma-separated", required: true, default: "ska-self,ska-self-r" }
+      args: { description: "More sk_train.py arguments", required: false, default: "--epochs 6 --h 256,128" }
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Fetch and pack
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          LAB_KEY="$RUNNER_TEMP/key.json" node lab/schafkopf/sk-fetch.mjs "$RUNNER_TEMP/res" "${{ inputs.jobs }}"
+          rm -f "$RUNNER_TEMP/key.json"
+          node --max-old-space-size=6000 lab/schafkopf/sk-pack.mjs "$RUNNER_TEMP/pack" "$RUNNER_TEMP/res" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Train
+        run: |
+          pip install -q numpy torch --index-url https://download.pytorch.org/whl/cpu
+          set -o pipefail
+          python3 lab/schafkopf/sk_train.py "$RUNNER_TEMP/pack" ${{ inputs.args }} --out "$RUNNER_TEMP/nets" | tee "$RUNNER_TEMP/log.txt"
+          { echo '```'; cat "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with: { name: sk-nets, path: "${{ runner.temp }}/nets" }

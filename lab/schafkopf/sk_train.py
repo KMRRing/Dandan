@@ -1,0 +1,133 @@
+"""Schafkopf's first auxiliary reading (Fable, 24 Nov 2026 20:38Z): on ska-self's rows (lab/schafkopf/sk-pack.mjs), a held-out
+tenth by deal, train
+  value and policy, four arms each: raw | raw + aux inputs | raw + aux outputs | both
+  the dealer (who holds each unseen card), raw | raw + aux inputs
+and print the held-out losses: value in tariffs (RMSE of the payoff per seat), policy as cross-entropy against the search's
+targets and agreement with the search's pick, the aux heads' own losses, and the dealer's share of unseen cards placed with the
+right holder by trick, against the count-only baseline (each card to a seat in proportion to the cards it has left).
+The value head gives the payoff per relative seat ÷ MAX_PAYOFF, linear, centred to sum to zero (zero-sum; no sigmoid, so a big
+solo is worth what it pays). Aux outputs (e) side points, (f) holder of each unseen card, (g) the open trick's winner, weight AUXW.
+usage: python3 lab/schafkopf/sk_train.py <pack dir> [--epochs 6] [--h 256,128] [--lr 1e-3] [--auxw 0.1] [--out <dir for nets>]
+"""
+import argparse, json, os, time
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+ap = argparse.ArgumentParser()
+ap.add_argument("pack"); ap.add_argument("--epochs", type=int, default=6); ap.add_argument("--h", default="256,128")
+ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--wd", type=float, default=1e-4); ap.add_argument("--auxw", type=float, default=0.1)
+ap.add_argument("--bs", type=int, default=512); ap.add_argument("--out", default=""); ap.add_argument("--seed", type=int, default=1)
+a = ap.parse_args()
+torch.manual_seed(a.seed); np.random.seed(a.seed); torch.set_num_threads(os.cpu_count() or 2)
+meta = json.load(open(os.path.join(a.pack, "meta.json")))
+N, R, A, ACT, C = meta["rows"], meta["raw"], meta["aux"], meta["actions"], meta["cards"]
+rd = lambda k, t, w=1: np.fromfile(os.path.join(a.pack, k), dtype=t).reshape(N, w) if w > 1 else np.fromfile(os.path.join(a.pack, k), dtype=t)
+X = rd("X", np.uint8, R + A); M = rd("M", np.uint8, ACT); P = rd("P", np.float32, ACT); V = rd("V", np.float32, 4)
+E = rd("E", np.float32); H = rd("H", np.int8, C); W = rd("W", np.int8); T = rd("T", np.uint8); D = rd("D", np.uint32)
+test = (D % 10) == 0
+tr, te = np.where(~test)[0], np.where(test)[0]
+print(f"sk_train: {N} rows from {meta['deals']} deals; train {len(tr)}, held out {len(te)} (every tenth deal)")
+
+# hand sizes per relative seat at each row, for the dealer's baseline: 8 less the cards each has played (raw history's seat bits)
+hist = X[:, C:C + C * 12].reshape(N, C, 12)
+played = (hist[:, :, 8:12] > 0).sum(1)
+left = np.clip(8 - played, 0, 8).astype(np.float32)          # (N, 4): seat 0 is the viewer itself
+
+def body(n_in, hs):
+    layers, k = [], n_in
+    for h in hs: layers += [nn.Linear(k, h), nn.ReLU()]; k = h
+    return nn.Sequential(*layers), k
+
+class Net(nn.Module):
+    def __init__(self, n_in, main, aux_out):
+        super().__init__()
+        self.body, k = body(n_in, [int(h) for h in a.h.split(",")])
+        self.main = nn.Linear(k, main)
+        self.aux = nn.ModuleDict({"e": nn.Linear(k, 1), "f": nn.Linear(k, C * 4), "g": nn.Linear(k, 4)}) if aux_out else None
+    def forward(self, x):
+        z = self.body(x)
+        return self.main(z), ({n: m(z) for n, m in self.aux.items()} if self.aux is not None else None)
+
+def batch(ix, n_in):
+    x = torch.from_numpy(X[ix, :n_in].astype(np.float32) / 255)
+    return x
+
+def aux_loss(o, ix):
+    """(e) MSE, (f) cross-entropy over the four seats where the card is unseen, (g) cross-entropy where a trick is open."""
+    e = F.mse_loss(o["e"].squeeze(1), torch.from_numpy(E[ix]))
+    h = torch.from_numpy(H[ix].astype(np.int64)); fm = h >= 0
+    f = F.cross_entropy(o["f"].view(-1, C, 4)[fm], h[fm]) if fm.any() else torch.tensor(0.)
+    w = torch.from_numpy(W[ix].astype(np.int64)); gm = w >= 0
+    g = F.cross_entropy(o["g"][gm], w[gm]) if gm.any() else torch.tensor(0.)
+    return e, f, g
+
+def masked_logp(logits, ix):
+    m = torch.from_numpy(M[ix].astype(bool))
+    return F.log_softmax(logits.masked_fill(~m, -1e9), 1)
+
+def run(kind, inputs, outputs):
+    n_in = R + (A if inputs else 0)
+    main = {"value": 4, "policy": ACT, "dealer": C * 4}[kind]
+    net = Net(n_in, main, outputs)
+    opt = torch.optim.AdamW(net.parameters(), lr=a.lr, weight_decay=a.wd)
+    t0 = time.time()
+    def loss_of(ix, train=True):
+        x = batch(ix, n_in); y, o = net(x)
+        if kind == "value":
+            y = y - y.mean(1, keepdim=True)
+            l = F.mse_loss(y, torch.from_numpy(V[ix]))
+        elif kind == "policy":
+            l = -(torch.from_numpy(P[ix]) * masked_logp(y, ix)).sum(1).mean()
+        else:
+            h = torch.from_numpy(H[ix].astype(np.int64)); fm = h >= 0
+            l = F.cross_entropy(y.view(-1, C, 4)[fm], h[fm])
+        if o is not None and train:
+            e, f, g = aux_loss(o, ix); l = l + a.auxw * (e + f + g)
+        return l, y, o
+    for ep in range(a.epochs):
+        net.train(); perm = np.random.permutation(tr)
+        for b in range(0, len(perm), a.bs):
+            l, _, _ = loss_of(perm[b:b + a.bs]); opt.zero_grad(); l.backward(); opt.step()
+    net.eval()
+    with torch.no_grad():
+        out = {"main": 0., "agree": 0., "e": 0., "f": 0., "g": 0., "n": 0}
+        right = np.zeros(9); base = np.zeros(9); cnt = np.zeros(9)
+        for b in range(0, len(te), 4096):
+            ix = te[b:b + 4096]; l, y, o = loss_of(ix, train=False); n = len(ix)
+            out["main"] += l.item() * n; out["n"] += n
+            if kind == "policy":
+                out["agree"] += (y.masked_fill(~torch.from_numpy(M[ix].astype(bool)), -1e9).argmax(1).numpy() == P[ix].argmax(1)).sum()
+            if o is not None:
+                e, f, g = aux_loss(o, ix); out["e"] += e.item() * n; out["f"] += f.item() * n; out["g"] += g.item() * n
+            if kind == "dealer":
+                pr = y.view(-1, C, 4).numpy(); pr[:, :, 0] = -1e9           # never the viewer itself
+                h = H[ix]; fm = h >= 0; guess = pr.argmax(2)
+                bl = np.broadcast_to(left[ix][:, None, 1:], (n, C, 3)).argmax(2) + 1   # the count baseline: the seat with most cards left
+                for t in range(9):
+                    sel = fm & (T[ix][:, None] == t)
+                    right[t] += (guess[sel] == h[sel]).sum(); base[t] += (bl[sel] == h[sel]).sum(); cnt[t] += sel.sum()
+    k = out["n"]
+    res = {"kind": kind, "inputs": "raw+aux" if inputs else "raw", "outputs": "aux" if outputs else "-", "seconds": round(time.time() - t0)}
+    if kind == "value": res["rmse_tariffs"] = float(np.sqrt(out["main"] / k) * meta["maxPayoff"])
+    if kind == "policy": res["ce"] = out["main"] / k; res["agree"] = out["agree"] / k
+    if kind == "dealer":
+        res["ce"] = out["main"] / k
+        res["right"] = float(right.sum() / max(1, cnt.sum())); res["baseline"] = float(base.sum() / max(1, cnt.sum()))
+        res["by_trick"] = [[t, round(right[t] / cnt[t], 3), round(base[t] / cnt[t], 3)] for t in range(9) if cnt[t]]
+    if outputs: res.update({"aux_e_mse": out["e"] / k, "aux_f_ce": out["f"] / k, "aux_g_ce": out["g"] / k})
+    print(json.dumps(res), flush=True)
+    if a.out:
+        os.makedirs(a.out, exist_ok=True)
+        torch.save(net.state_dict(), os.path.join(a.out, f"{kind}-{res['inputs']}-{res['outputs'].replace('-', 'none')}.pt"))
+    return res
+
+results = []
+for kind in ("value", "policy"):
+    for inputs in (False, True):
+        for outputs in (False, True):
+            results.append(run(kind, inputs, outputs))
+for inputs in (False, True):
+    results.append(run("dealer", inputs, False))
+print("sk_train: done")
