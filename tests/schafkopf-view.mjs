@@ -46,15 +46,17 @@ for (let k = 0; k < 300; k++) {
   }
 }
 // 3. the dealer: worlds from every seat's view along whole deals
-let worlds = 0;
+let worlds = 0, walked = 0;
 for (let k = 0; k < 25; k++) {
   const rng = seeded(700 + k), s = G.deal({ rng });
   while (!G.over(s)) {
     const w = G.toMove(s);
     if (!G.replay(s, s.dealt)) fail(`deal ${k}: the real deal doesn't replay`);
     for (const p of [0, 1, 2, 3]) { const x = G.determinize(s, p, rng); worlds++; if (!same(G.view(x, p), G.view(s, p)) || !G.replay(s, x.dealt)) fail(`deal ${k}: a world seat ${p} could tell from the real deal`); }
+    // the walk (for positions rejection can't deal): forced with no rejection tries, on a copy so its cache is the copy's
+    if (k < 5) { const c = G.fork(s); for (let n = 0; n < 3; n++) { const x = G.determinize(c, w, rng, 0); walked++; if (!same(G.view(x, w), G.view(c, w)) || !G.replay(c, x.dealt)) fail(`deal ${k}: the walk dealt a world seat ${w} could tell from the real deal`); } }
     G.act(s, w, codexMove(s, w, "easy", rng), rng);
   }
 }
 if (hidPartner < 20) fail(`only ${hidPartner} steps with the partner hidden: the test doesn't reach it`);
-console.log(`schafkopf-view: 200 deals zero-sum (${Object.entries(types).map(([t, n]) => `${t} ${n}`).join(", ")}); ${steps} view steps alike, ${hidPartner} with the partner hidden; ${worlds} worlds dealt, ${(DEALS.tries / DEALS.worlds).toFixed(1)} tries a world; ${Date.now() - t0} ms`);
+console.log(`schafkopf-view: 200 deals zero-sum (${Object.entries(types).map(([t, n]) => `${t} ${n}`).join(", ")}); ${steps} view steps alike, ${hidPartner} with the partner hidden; ${worlds} worlds dealt (${walked} by the walk), ${(DEALS.tries / DEALS.worlds).toFixed(1)} tries a world; ${Date.now() - t0} ms`);

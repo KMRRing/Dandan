@@ -85,12 +85,14 @@ function startOf(s, hands) {
   w.hands = hands.map(h => h.slice()); w.dealt = hands.map(h => h.slice());
   return w;
 }
-/** The deal replayed from these starting hands, or null if any decision made so far is illegal in it. */
-export function replay(s, hands) {
-  const w = startOf(s, hands);
-  for (const [who, m] of s.log || []) if (toMove(w) !== who || typeof act(w, who, m, () => 0) === "string") return null;
-  return w;
+/** How many of the deal's decisions so far replay legally from these starting hands, and the replayed deal when all do. */
+function replayed(s, hands) {
+  const w = startOf(s, hands), log = s.log || [];
+  for (let k = 0; k < log.length; k++) { const [who, m] = log[k]; if (toMove(w) !== who || typeof act(w, who, m, () => 0) === "string") return { depth: k, w: null }; }
+  return { depth: log.length, w };
 }
+/** The deal replayed from these starting hands, or null if any decision made so far is illegal in it. */
+export const replay = (s, hands) => replayed(s, hands).w;
 /** The cards each seat started with that the seat can see: its own, and every card played. */
 function seenStart(s, seat) {
   const known = [0, 1, 2, 3].map(p => (p === seat ? s.dealt[seat].slice() : []));
@@ -102,21 +104,61 @@ function seenStart(s, seat) {
  * it is legal under the rules; never patched): the cards it hasn't seen dealt at random to the others, as many as each holds,
  * kept only if the deal replays. Plain rejection; `tries` and how many it took are counted for the lab (DEALS).
  */
-export const DEALS = { worlds: 0, tries: 0, failed: 0 };
+export const DEALS = { worlds: 0, tries: 0, failed: 0, walks: 0 };
+// the positions where plain rejection found no world, by state, seat and decision (a state is played on in place, so the
+// decision count tells its positions apart): the rest of their deals come from the walk below
+const WALKS = new WeakMap(), walkKey = (s, seat) => `${seat}:${(s.log || []).length}`;
 export function determinize(s, seat, rng, tries = 20000) {
   const known = seenStart(s, seat), mine = new Set(known.flat());
   const pool = s.dealt.flat().filter(id => !mine.has(id)), need = [0, 1, 2, 3].map(p => (p === seat ? 0 : s.hands[p].length));
+  const handsOf = cards => { let at = 0; return known.map((h, p) => h.concat(cards.slice(at, (at += need[p])))); };
   DEALS.worlds++;
+  const walk = WALKS.get(s)?.get(walkKey(s, seat));
+  if (walk) return walkOn(s, walk, need, handsOf, rng);
   for (let t = 0; t < tries; t++) {
     DEALS.tries++;
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-    let at = 0;
-    const hands = known.map((h, p) => h.concat(pool.slice(at, (at += need[p]))));
-    const w = replay(s, hands);
+    const w = replay(s, handsOf(pool));
     if (w) return w;
   }
+  // a position that tightly constrained (27 Nov 2026, ska-self: about 1 shard in 100 met one, Fable 18:50Z: a faster sampler
+  // is fine if every world it emits passes the replay check): a random walk over the possible worlds. A step swaps two unseen
+  // cards between two other seats and is kept only if the deal still replays: the proposal is symmetric and the target flat, so
+  // the walk visits every world it can reach equally often, as rejection would. Its start is searched for from a random deal
+  // (swaps kept while they replay at least as far), never taken from the real deal; then it walks a while before its first world
   DEALS.failed++;
-  throw new Error(`schafkopf: no world found in ${tries} deals (the real one would leak what the seat can't see)`);
+  const cards = pool.slice();
+  let depth = replayed(s, handsOf(cards)).depth;
+  const full = (s.log || []).length;
+  for (let t = 0; depth < full; t++) {
+    if (t > 400000) throw new Error(`schafkopf: no world found by rejection or the walk (the real one would leak what the seat can't see)`);
+    const [i, j] = swapIn(need, rng);
+    [cards[i], cards[j]] = [cards[j], cards[i]];
+    const d = replayed(s, handsOf(cards)).depth;
+    if (d >= depth) depth = d; else [cards[i], cards[j]] = [cards[j], cards[i]];
+  }
+  const w = { cards };
+  (WALKS.get(s) || WALKS.set(s, new Map()).get(s)).set(walkKey(s, seat), w);
+  for (let k = 0; k < 200; k++) walkStep(s, w, need, handsOf, rng);
+  return walkOn(s, w, need, handsOf, rng);
+}
+/** Two places in the unseen cards that belong to different seats, or null-like [0, 0] when no two do. */
+function swapIn(need, rng) {
+  const n = need.reduce((a, b) => a + b, 0), seatAt = [];
+  need.forEach((k, p) => { for (let x = 0; x < k; x++) seatAt.push(p); });
+  for (let t = 0; t < 50; t++) { const i = Math.floor(rng() * n), j = Math.floor(rng() * n); if (seatAt[i] !== seatAt[j]) return [i, j]; }
+  return [0, 0];
+}
+function walkStep(s, w, need, handsOf, rng) {
+  const [i, j] = swapIn(need, rng), c = w.cards;
+  [c[i], c[j]] = [c[j], c[i]];
+  if (!replay(s, handsOf(c))) [c[i], c[j]] = [c[j], c[i]];
+}
+const WALK_STEPS = 20;
+function walkOn(s, w, need, handsOf, rng) {
+  DEALS.walks++;
+  for (let k = 0; k < WALK_STEPS; k++) walkStep(s, w, need, handsOf, rng);
+  return replay(s, handsOf(w.cards));
 }
 /** A seed from what the seat can see: one position, one search. */
 export function seedOf(s, seat) {

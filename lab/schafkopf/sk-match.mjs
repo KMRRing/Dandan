@@ -4,13 +4,15 @@
 // from the deal, the seat and the move's number, so until our seat plays otherwise than Hard did, the two tables are the same
 // deal played the same way. Every game's decisions are kept (ours with the search's means), for the first auxiliary reading.
 // usage: node lab/schafkopf/sk-match.mjs <shard> <shards> <out> <deals per decision> <paired deals per shard> <first seed> [ref=hard]
-//   [close=<gap>:<mult>] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
+//   [close=<gap>:<mult>] [only=<shard,...>] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
 import fs from "node:fs";
 import { schafkopf as G, codexMove, DEALS } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
 import { seeded, mix } from "../../seats.js";
 
-const [shard, , out, deals, per, seed0] = process.argv.slice(2).map((x, i) => (i === 2 ? x : Number(x)));
+const [shard0, , out, deals, per, seed0] = process.argv.slice(2).map((x, i) => (i === 2 ? x : Number(x)));
+// only=<n,...> (a re-run of failed shards): shard k plays the original shard ONLY[k], its deals and seeds exactly
+const ONLY = (process.argv.find(a => a.startsWith("only=")) || "").slice(5).split(",").filter(Boolean).map(Number), shard = ONLY.length ? ONLY[shard0] : shard0;
 const ref = (process.argv.find(a => a.startsWith("ref=")) || "ref=hard").slice(4);
 const cl = (process.argv.find(a => a.startsWith("close=")) || "").slice(6).split(":").map(Number), close = cl[0] ? { gap: cl[0], mult: cl[1] || 4 } : null;
 const key = m => JSON.stringify(m);
