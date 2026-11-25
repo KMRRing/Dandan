@@ -4,6 +4,7 @@
 // seat exactly what it sees in the real deal.
 import { schafkopf as G, codexMove, DEALS } from "../lab/schafkopf/sk-rules.js";
 import { seeded } from "../seats.js";
+import { partnerView, aceHolderOf } from "../lab/schafkopf/sk-view.js";
 
 const fail = m => { console.error(`schafkopf-view: ${m}`); process.exit(1); };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -58,5 +59,23 @@ for (let k = 0; k < 25; k++) {
     G.act(s, w, codexMove(s, w, "easy", rng), rng);
   }
 }
+// 4. the partner facts (Fable 25 Nov 16:20Z): the masks never rule out the real holder of the called ace, and one seat is left
+// in the own mask whenever the view knows the partner
+let masks = 0, narrowed = 0;
+for (let k = 0; k < 60; k++) {
+  const rng = seeded(900 + k), s = G.deal({ rng });
+  while (!G.over(s)) {
+    const w = G.toMove(s);
+    if (s.step === "play" && s.contract.type === "sau") for (const p of [0, 1, 2, 3]) {
+      const v = G.view(s, p), x = partnerView(v), h = aceHolderOf(v, s), own = x.slice(4, 8).reduce((a, b) => a + b, 0);
+      masks++; if (x.slice(0, 4).reduce((a, b) => a + b, 0) < 3) narrowed++;
+      if (!x[h] || !x[4 + h]) fail(`deal ${k}: seat ${p}'s partner masks rule out the real partner`);
+      if (v.contract.partner != null && own !== 1) fail(`deal ${k}: seat ${p} knows the partner but its own mask holds ${own}`);
+    }
+    G.act(s, w, codexMove(s, w, "easy", rng), rng);
+  }
+}
+if (narrowed < 50) fail(`only ${narrowed} public masks narrowed: the test doesn't reach it`);
+console.log(`schafkopf-view: ${masks} partner masks hold the real partner (${narrowed} narrowed by the public record)`);
 if (hidPartner < 20) fail(`only ${hidPartner} steps with the partner hidden: the test doesn't reach it`);
 console.log(`schafkopf-view: 200 deals zero-sum (${Object.entries(types).map(([t, n]) => `${t} ${n}`).join(", ")}); ${steps} view steps alike, ${hidPartner} with the partner hidden; ${worlds} worlds dealt (${walked} by the walk), ${(DEALS.tries / DEALS.worlds).toFixed(1)} tries a world; ${Date.now() - t0} ms`);

@@ -7,7 +7,8 @@
 //    known yet, and who.
 //  aux targets (the output bundle, (e)-(g)), from the deal's end: (e) the acting seat's side's card points; (f) who held each card
 //    the seat can't see (the dealer's target too); (g) who wins the trick on the table.
-import { sFollow } from "./codex/trumps-games.js";
+import { sFollow, GAMES } from "./codex/trumps-games.js";
+import { cid } from "./codex/trumps-cards.js";
 
 const C = 32;
 const BIDS = ["pass", "sau0", "sau2", "sau3", "wenz", "solo0", "solo1", "solo2", "solo3"];
@@ -94,4 +95,62 @@ export function auxTargets(v, end) {
   let winner = -1;
   if (v.trick.length) { const t = end.tricks[v.tricks.length]; if (t) winner = rel(t.winner); }
   return { points: pts / 120, holder, winner };
+}
+
+// ---------------------------------------------------------------- the partner (Fable 25 Nov 2026 16:20Z, step 1; Korbi 16:01 local:
+// "your view of who the partner is and your knowledge of what your opponents know is integral"). Exact facts, derived by the rules:
+// each card a seat played is replayed through Codex's legal() as if that seat had also held the called ace; a play that would
+// then have been illegal shows the seat never held it. Relative seats as everywhere here.
+//   public mask (4): who can still be the partner on the public record alone (what any seat, or an onlooker, can know)
+//   own mask (4): the same from the seat's own view (its hand settles whether it is the partner itself)
+//   public (1): the partner is known to every seat (the ace fell, or one seat is left)
+//   declarer after me (1), declarer last (1): where the seat sits in the open trick relative to the declarer
+export const PART_SIZE = 11;
+const SK = GAMES.schafkopf;
+
+/** Which absolute seats can be the partner on the public record of `v` (the declarer never), and who, once the ace has fallen. */
+export function publicPartner(v) {
+  const c = ruleC(v.contract);
+  if (!c || c.type !== "sau") return null;
+  const ace = cid(c.ace, "A"), can = [0, 1, 2, 3].map(p => p !== c.declarer), all = played(v).flat();
+  const ofCalled = id => id !== ace && followOf(c, id) === c.ace;
+  for (const t of played(v)) {
+    for (let i = 0; i < t.length; i++) {
+      const { seat: p, card: x } = t[i];
+      if (x === ace) return { can: can.map((_, q) => q === p), fell: true };
+      if (!can[p]) continue;
+      const trick = t.slice(0, i), ok = hand => { const hands = []; hands[p] = hand; return SK.legal({ contract: c, hands, trick }, p).includes(x); };
+      // a lead from the called suit is the partner's only when it holds four of it (running away): give it up to two more of the
+      // called suit that it may have held then (not played before this, nor by another seat)
+      const spare = () => {
+        const before = new Set(all.slice(0, all.findIndex(k => k.card === x)).map(k => k.card));
+        return [...Array(C).keys()].map(idOf).filter(id => ofCalled(id) && id !== x && !before.has(id) && !all.some(k => k.card === id && k.seat !== p)).slice(0, 2);
+      };
+      if (!ok([x, ace]) && !(ofCalled(x) && !trick.length && ok([x, ace, ...spare()]))) can[p] = false;
+    }
+  }
+  return { can, fell: false };
+}
+
+export function partnerView(v, x = new Float32Array(PART_SIZE)) {
+  const rel = p => (p - v.seat + 4) % 4, c = v.contract;
+  if (!c || v.step === "bid") return x;
+  const pub = publicPartner(v);
+  if (pub) {
+    const own = pub.fell ? pub.can : v.hand.includes(cid(c.ace, "A")) ? [0, 1, 2, 3].map(p => p === v.seat) : pub.can.map((k, p) => k && p !== v.seat);
+    pub.can.forEach((k, p) => { if (k) x[rel(p)] = 1; });
+    own.forEach((k, p) => { if (k) x[4 + rel(p)] = 1; });
+    x[8] = pub.can.filter(Boolean).length === 1 ? 1 : 0;
+  }
+  const d = rel(c.declarer), after = 3 - v.trick.length;
+  if (d >= 1 && d <= after) x[9] = 1;
+  if (d >= 1 && d === after) x[10] = 1;
+  return x;
+}
+/** The called ace's holder (relative seat) for the belief nets' target, from the deal's end; -1 outside a Sauspiel. */
+export function aceHolderOf(v, end) {
+  const c = end.contract;
+  if (!c || c.type !== "sau" || v.step === "bid") return -1;
+  const ace = cid(c.ace, "A");
+  return (end.dealt.findIndex(h => h.includes(ace)) - v.seat + 4) % 4;
 }

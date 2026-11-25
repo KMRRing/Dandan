@@ -5,6 +5,8 @@
 //   V.f32   the deal's payoff per relative seat ÷ MAX_PAYOFF (zero-sum)
 //   E.f32   (e) the seat's side's card points ÷ 120    H.i8  (f) each card's holder (relative seat), -1 where it sees the card
 //   W.i8    (g) who wins the trick on the table, -1 when none is open    T.u8  tricks played    D.u32  the deal's number (the split)
+//   Q.u8    the partner facts (sk-view.js partnerView, 11) × 255    A.i8  who held the called ace (relative seat), -1 outside a
+//           Sauspiel's play: the belief nets' target (Fable 25 Nov 16:20Z)
 //   XW.u8   with SK_WORLD=1 (Fable 23:58Z, the world-view value net): the four seats' raw views of the position, in relative order
 //           from the seat to move (the dealt world and the public history), each number × 255. Training only: at play time the
 //           net is given the search's dealt worlds, never the real one.
@@ -12,7 +14,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { schafkopf as G } from "./sk-rules.js";
-import { rawView, auxView, auxTargets, RAW_SIZE, AUX_SIZE, ACTIONS, actionOf } from "./sk-view.js";
+import { rawView, auxView, auxTargets, partnerView, aceHolderOf, RAW_SIZE, AUX_SIZE, PART_SIZE, ACTIONS, actionOf } from "./sk-view.js";
 import { seeded, mix } from "../../seats.js";
 
 /** The policy target's temperature, in value units (1 unit = 2 SD of the payoff): options 0.02 apart differ by e in weight. */
@@ -21,7 +23,7 @@ const [out, ...srcs] = process.argv.slice(2);
 const files = srcs.flatMap(p => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).filter(f => f.endsWith(".jsonl")).map(f => path.join(p, f)) : [p]));
 fs.mkdirSync(out, { recursive: true });
 const WORLD = process.env.SK_WORLD === "1";
-const W = Object.fromEntries(["X", "M", "P", "V", "E", "H", "W", "T", "D", ...(WORLD ? ["XW"] : [])].map(k => [k, fs.openSync(path.join(out, `${k}`), "w")]));
+const W = Object.fromEntries(["X", "M", "P", "V", "E", "H", "W", "T", "D", "Q", "A", ...(WORLD ? ["XW"] : [])].map(k => [k, fs.openSync(path.join(out, `${k}`), "w")]));
 const put = (k, a) => fs.writeSync(W[k], Buffer.from(a.buffer, a.byteOffset, a.byteLength));
 const F = RAW_SIZE + AUX_SIZE, xr = new Float32Array(RAW_SIZE), xa = new Float32Array(AUX_SIZE);
 let rows = 0, deals = 0, seen = new Set();
@@ -56,9 +58,10 @@ for (const f of files) for (const l of fs.readFileSync(f, "utf8").split("\n")) {
     const t = auxTargets(v, s), rel = r => pay[(v.seat + r) % 4] / G.MAX_PAYOFF;
     put("X", x); put("M", mask); put("P", p); put("V", Float32Array.of(rel(0), rel(1), rel(2), rel(3)));
     put("E", Float32Array.of(t.points)); put("H", t.holder); put("W", Int8Array.of(t.winner)); put("T", Uint8Array.of(v.tricks.length)); put("D", Uint32Array.of(deals));
+    put("Q", Uint8Array.from(partnerView(v), q => Math.round(255 * q))); put("A", Int8Array.of(aceHolderOf(v, s)));
     rows++;
   }
   deals++;
 }
-fs.writeFileSync(path.join(out, "meta.json"), JSON.stringify({ rows, deals, world: WORLD, raw: RAW_SIZE, aux: AUX_SIZE, actions: ACTIONS, cards: 32, tau: TAU, maxPayoff: G.MAX_PAYOFF }) + "\n");
+fs.writeFileSync(path.join(out, "meta.json"), JSON.stringify({ rows, deals, world: WORLD, raw: RAW_SIZE, aux: AUX_SIZE, part: PART_SIZE, actions: ACTIONS, cards: 32, tau: TAU, maxPayoff: G.MAX_PAYOFF }) + "\n");
 console.log(`sk-pack: ${deals} deals, ${rows} rows (${RAW_SIZE} raw + ${AUX_SIZE} aux inputs)`);

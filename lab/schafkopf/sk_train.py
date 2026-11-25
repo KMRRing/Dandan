@@ -24,6 +24,9 @@ ap.add_argument("--value-only", dest="value_only", action="store_true", help="Fa
 ap.add_argument("--policy-sweep", dest="policy_sweep", action="store_true", help="Fable 03:12Z: the raw policy at epochs E and 4E x width 256,128 and 512,256, each exported as policy-e<ep>-w<width>.json")
 ap.add_argument("--world-aux", dest="world_aux", action="store_true", help="also the world view with the seat's aux inputs")
 ap.add_argument("--world", action="store_true", help="Fable 23:58Z: the world-view value net (XW) beside the seat-view raw net, at the given settings")
+ap.add_argument("--bh", default="64", help="M1: the belief nets' hidden widths (small: they run at every play-out move)")
+ap.add_argument("--m1-value", dest="m1_value", action="store_true", help="M1: the value nets too")
+ap.add_argument("--m1", action="store_true", help="Fable 25 Nov 16:20Z, step 1: the two partner-belief nets (own view; public record), frozen, then the policy and value on raw + partner facts + both beliefs (engine M1)")
 ap.add_argument("--sweep", action="store_true", help="Fable 23:28Z: the value net alone, raw and both arms, epochs 1-3 x wd 1e-4/1e-3 x lr as given and a third")
 a = ap.parse_args()
 torch.manual_seed(a.seed); np.random.seed(a.seed); torch.set_num_threads(os.cpu_count() or 2)
@@ -33,6 +36,9 @@ rd = lambda k, t, w=1: np.fromfile(os.path.join(a.pack, k), dtype=t).reshape(N, 
 X = rd("X", np.uint8, R + A); M = rd("M", np.uint8, ACT); P = rd("P", np.float32, ACT); V = rd("V", np.float32, 4)
 E = rd("E", np.float32); H = rd("H", np.int8, C); W = rd("W", np.int8); T = rd("T", np.uint8); D = rd("D", np.uint32)
 test = (D % 10) == 0
+PART = meta.get("part", 0)
+Q = rd("Q", np.uint8, PART) if PART and os.path.exists(os.path.join(a.pack, "Q")) else None
+AH = rd("A", np.int8) if Q is not None else None
 tr, te = np.where(~test)[0], np.where(test)[0]
 print(f"sk_train: {N} rows from {meta['deals']} deals; train {len(tr)}, held out {len(te)} (every tenth deal)")
 
@@ -60,9 +66,9 @@ def body(n_in, hs):
     return nn.Sequential(*layers), k
 
 class Net(nn.Module):
-    def __init__(self, n_in, main, aux_out):
+    def __init__(self, n_in, main, aux_out, hs=None):
         super().__init__()
-        self.body, k = body(n_in, [int(h) for h in a.h.split(",")])
+        self.body, k = body(n_in, [int(h) for h in (hs or a.h).split(",")])
         self.main = nn.Linear(k, main)
         self.aux = nn.ModuleDict({"e": nn.Linear(k, 1), "f": nn.Linear(k, C * 4), "g": nn.Linear(k, 4)}) if aux_out else None
     def forward(self, x):
@@ -170,6 +176,98 @@ def run(kind, inputs, outputs, world=False):
         name = getattr(a, "tag", None) or f"{kind}-{res['inputs']}-{res['outputs'].replace('-', 'none')}"
         json.dump(js, open(os.path.join(a.out, f"{name}.json"), "w"))
     return res
+
+# ---------------------------------------------------------------- M1 (Fable 25 Nov 2026 16:20Z, step 1; Korbi: inputs and outputs only)
+# Two belief nets over who holds the called ace (relative seat), each a softmax over the four seats masked by what is exact:
+#   own: the seat's view (raw) and the partner facts, masked by the own mask (Q 4..7)
+#   public: the raw view with the hand blanked and the own mask zeroed, masked by the public mask (Q 0..3): an onlooker's belief,
+#     what the other side can know
+# Trained on Sauspiel play rows (A >= 0), then frozen; their eight outputs join raw + the partner facts as the policy's and the
+# value's inputs. Outside a Sauspiel's play both masks are empty and the beliefs zero.
+def belief_inputs(ix, public):
+    x = np.concatenate([X[ix, :R], Q[ix]], 1).astype(np.float32) / 255
+    if public: x[:, :32] = 0; x[:, R + 4:R + 8] = 0
+    return torch.from_numpy(x)
+def masked_soft(logits, mask):
+    m = mask > 0
+    p = F.softmax(logits.masked_fill(~m, -1e9), 1)
+    return p * m.any(1, keepdim=True)
+def bel_mask(ix, public): return torch.from_numpy(Q[ix][:, 0:4] if public else Q[ix][:, 4:8])
+
+def train_belief(public):
+    rows = np.where(AH >= 0)[0]; btr = np.intersect1d(rows, tr); bte = np.intersect1d(rows, te)
+    net = Net(R + PART, 4, False, a.bh); opt = torch.optim.AdamW(net.parameters(), lr=a.lr, weight_decay=a.wd); t0 = time.time()
+    def lossb(ix):
+        y, _ = net(belief_inputs(ix, public)); m = bel_mask(ix, public) > 0
+        return F.cross_entropy(y.masked_fill(~m, -1e9), torch.from_numpy(AH[ix].astype(np.int64))), y, m
+    for ep in range(a.epochs):
+        net.train(); perm = np.random.permutation(btr)
+        for b in range(0, len(perm), a.bs):
+            l, _, _ = lossb(perm[b:b + a.bs]); opt.zero_grad(); l.backward(); opt.step()
+    net.eval(); ce = n = right = base_ce = 0.; by = {}
+    with torch.no_grad():
+        for b in range(0, len(bte), 4096):
+            ix = bte[b:b + 4096]; l, y, m = lossb(ix); k = len(ix); ce += l.item() * k; n += k
+            guess = y.masked_fill(~m, -1e9).argmax(1).numpy(); right += (guess == AH[ix]).sum()
+            cnt = m.sum(1).float().numpy(); base_ce += np.log(cnt).sum()               # uniform over the exact mask
+            open_ = cnt > 1
+            for t in range(8):
+                sel = open_ & (T[ix] == t)
+                if sel.any():
+                    d = by.setdefault(t, [0, 0, 0.]); d[0] += int(sel.sum()); d[1] += int((guess[sel] == AH[ix][sel]).sum()); d[2] += float(np.log(cnt[sel]).sum())
+    res = {"kind": "belief", "view": "public" if public else "own", "rows": int(len(btr)), "ce": round(float(ce / n), 4), "uniform_ce": round(float(base_ce / n), 4), "right": round(float(right / n), 4),
+           "open_by_trick": {t: [d[0], round(d[1] / d[0], 3)] for t, d in sorted(by.items())}, "seconds": round(time.time() - t0)}
+    print(json.dumps(res), flush=True)
+    return net
+
+def net_json(net, kind, inputs, n_in, extra=None):
+    lin = [m for m in net.body if isinstance(m, nn.Linear)] + [net.main]
+    j = {"kind": kind, "inputs": inputs, "outputs": "-", "n_in": n_in, "maxPayoff": meta["maxPayoff"],
+         "layers": [{"w": m.weight.detach().numpy().round(6).tolist(), "b": m.bias.detach().numpy().round(6).tolist()} for m in lin]}
+    if extra: j.update(extra)
+    return j
+
+if a.m1:
+    assert Q is not None, "pack without the partner facts (Q, A): repack with the current sk-pack.mjs"
+    b_own, b_pub = train_belief(False), train_belief(True)
+    for b in (b_own, b_pub):
+        for q in b.parameters(): q.requires_grad_(False)
+    def m1_inputs(ix):
+        with torch.no_grad():
+            po = masked_soft(b_own(belief_inputs(ix, False))[0], bel_mask(ix, False))
+            pp = masked_soft(b_pub(belief_inputs(ix, True))[0], bel_mask(ix, True))
+        return torch.cat([torch.from_numpy(np.concatenate([X[ix, :R], Q[ix]], 1).astype(np.float32) / 255), po, pp], 1)
+    n_in = R + PART + 8
+    beliefs = {"own": net_json(b_own, "belief", "raw+part", R + PART, {"mask": "own"}), "public": net_json(b_pub, "belief", "public+part", R + PART, {"mask": "public"})}
+    # the policy both ways on the same rows (the raw arm the comparison); the value net only with --m1-value (Monte zero uses none)
+    for kind in ("policy", "value") if a.m1_value else ("policy",):
+        for inputs in ("raw", "m1"):
+            k_in = R if inputs == "raw" else n_in
+            net = Net(k_in, ACT if kind == "policy" else 4, False); opt = torch.optim.AdamW(net.parameters(), lr=a.lr, weight_decay=a.wd); t0 = time.time()
+            xin = (lambda ix: torch.from_numpy(X[ix, :R].astype(np.float32) / 255)) if inputs == "raw" else m1_inputs
+            def lossm(ix):
+                y, _ = net(xin(ix))
+                if kind == "value": y = y - y.mean(1, keepdim=True); return F.mse_loss(y, torch.from_numpy(V[ix])), y
+                return -(torch.from_numpy(P[ix]) * masked_logp(y, ix)).sum(1).mean(), y
+            for ep in range(a.epochs):
+                net.train(); perm = np.random.permutation(tr)
+                for b in range(0, len(perm), a.bs):
+                    l, _ = lossm(perm[b:b + a.bs]); opt.zero_grad(); l.backward(); opt.step()
+            net.eval(); tot = n = agree = 0.; rg = []
+            with torch.no_grad():
+                for b in range(0, len(te), 4096):
+                    ix = te[b:b + 4096]; l, y = lossm(ix); tot += l.item() * len(ix); n += len(ix)
+                    if kind == "policy":
+                        top = y.masked_fill(~torch.from_numpy(M[ix].astype(bool)), -1e9).argmax(1).numpy(); agree += (top == P[ix].argmax(1)).sum()
+                        pt = P[ix][np.arange(len(ix)), top]; rg.append(-meta["tau"] * np.log(np.maximum(pt, 1e-30) / P[ix].max(1)) * 2 * 5.5)
+            res = {"kind": kind, "inputs": inputs, "seconds": round(time.time() - t0)}
+            if kind == "policy": res.update({"ce": round(tot / n, 4), "agree": round(float(agree / n), 4), "regret_tariffs": round(float(np.concatenate(rg).mean()), 4)})
+            else: res["rmse_tariffs"] = round(float(np.sqrt(tot / n) * meta["maxPayoff"]), 3)
+            print(json.dumps(res), flush=True)
+            if a.out and inputs == "m1":
+                os.makedirs(a.out, exist_ok=True)
+                json.dump(net_json(net, kind, "raw+part", n_in, {"beliefs": beliefs}), open(os.path.join(a.out, f"{kind}-m1.json"), "w"))
+    print("sk_train: done"); raise SystemExit
 
 results = []
 if a.policy_only:
