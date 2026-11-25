@@ -1,0 +1,8 @@
+{
+  "id": "skc-match",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/g1-policy-raw-none.json greedy=1",
+  "shards": 500,
+  "timeoutMin": 60,
+  "purpose": "Schafkopf generation 2 against three Codex Hard (Fable 02:10Z order 3): g1's raw policy, greedy play-outs, ska-base's first 5,000 paired deals; read with --ref ska-base+ska-base-r, paired against skb-match-r and skb-match-r-greedy. Measurement only."
+}
