@@ -36,11 +36,13 @@ export function policyProbs(net, s, seat, ms = G.options(s, seat)) {
   const p = lg.map(x => Math.exp(x - top)), t = p.reduce((a, b) => a + b, 0);
   return { ms, p: p.map(x => x / t) };
 }
-/** A play-out move drawn from the policy (the search's `rollout`). */
-export const policyRollout = net => (c, who, rng) => {
+/** A play-out move drawn from the policy (the search's `rollout`), at temperature 1 (the net's logits as they are); greedy
+ *  (Fable 01:36Z): the policy's top move instead, so the four seats play the net's choice and no part of a random one. */
+export const policyRollout = (net, greedy = false) => (c, who, rng) => {
   const ms = G.options(c, who);
   if (ms.length === 1) return ms[0];
   const { p } = policyProbs(net, c, who, ms);
+  if (greedy) return ms[p.indexOf(Math.max(...p))];
   let r = rng(), k = 0;
   for (; k < p.length - 1; k++) { r -= p[k]; if (r <= 0) break; }
   return ms[k];

@@ -4,7 +4,7 @@
 // from the deal, the seat and the move's number, so until our seat plays otherwise than Hard did, the two tables are the same
 // deal played the same way. Every game's decisions are kept (ours with the search's means), for the first auxiliary reading.
 // usage: node lab/schafkopf/sk-match.mjs <shard> <shards> <out> <deals per decision> <paired deals per shard> <first seed> [ref=hard]
-//   [close=<gap>:<mult>] [only=<shard,...>] [sd=<tariffs>] [rollout=<net file from the repo root>] [noref=1] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
+//   [close=<gap>:<mult>] [only=<shard,...>] [sd=<tariffs>] [rollout=<net file from the repo root>] [greedy=1] [noref=1] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
 import fs from "node:fs";
 import { schafkopf as G, codexMove, dealsLine } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
@@ -20,7 +20,7 @@ const cl = (process.argv.find(a => a.startsWith("close=")) || "").slice(6).split
 // sd=<tariffs> (the value unit; default sk-monte.js SD): a re-run keeps its parent job's unit, so its deals are searched alike
 const sdArg = Number((process.argv.find(a => a.startsWith("sd=")) || "").slice(3)) || undefined;
 // rollout=<net file> (Fable 22:52Z/23:28Z, generation 1): the play-outs drawn from that policy net (lab/schafkopf/nets/), not uniform
-const roArg = (process.argv.find(a => a.startsWith("rollout=")) || "").slice(8), rollout = roArg ? policyRollout(loadNet(new URL(`../../${roArg}`, import.meta.url))) : undefined;
+const roArg = (process.argv.find(a => a.startsWith("rollout=")) || "").slice(8), rollout = roArg ? policyRollout(loadNet(new URL(`../../${roArg}`, import.meta.url)), process.argv.includes("greedy=1")) : undefined;
 const key = m => JSON.stringify(m);
 
 function roleOf(s, seat) {

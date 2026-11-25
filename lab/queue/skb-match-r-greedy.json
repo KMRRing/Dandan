@@ -1,0 +1,8 @@
+{
+  "id": "skb-match-r-greedy",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/g0-policy-raw-none.json greedy=1",
+  "shards": 100,
+  "timeoutMin": 60,
+  "purpose": "Fable 01:36Z: line R with greedy play-outs (the policy's top move, not a draw from its softmax at temperature 1), on ska-base's first 1,000 paired deals; paired against skb-match-r on those deals. Score and the Solo-where-Hard-passes share. Measurement only."
+}
