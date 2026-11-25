@@ -1,0 +1,8 @@
+{
+  "id": "skm-self-m1",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261130 rollout=lab/schafkopf/nets/m1-policy-m1.json greedy=1 biddeals=1024",
+  "shards": 2000,
+  "timeoutMin": 150,
+  "purpose": "Fable 19:00Z step 3, started on Korbi's word (22:04 local: 'we shouldn't have used Hard as the yardstick, just train it on itself'): one generation of self-play on M1, 20,000 deals, bids at 1,024, greedy; the beliefs and policy are retrained on it with generations 4-5. Training data."
+}
