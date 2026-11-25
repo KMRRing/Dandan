@@ -4,7 +4,9 @@
 //    the search's mean for the Solo at the bid (value units → tariffs at that job's SD) against the payoff it got at the Hard table;
 //    and where Hard called a Sauspiel and our seat passed, the search's best Sauspiel mean and its pass mean against what Hard's
 //    Sauspiel paid in that seat. The gap is the search's over- (or under-) estimate, in tariffs.
-// usage: node lab/sk-diag.mjs decl <batch[+re-run]> | over <batch[+re-run]> <reference batch[+re-run]> <sd>
+//  defend <match batch> <reference batch> (Fable 02:10Z, order 2): deals where a Codex Hard seat declares the same Solo or Wenz at
+//    both tables (ours and the four-Hard reference) and our seat defends: our payoff against Hard's in that seat, by contract
+// usage: node lab/sk-diag.mjs decl <batch[+re-run]> | over <batch[+re-run]> <reference batch[+re-run]> <sd> | defend <batch> <reference>
 import { labStore } from "./lib.mjs";
 
 const [mode, batch, refBatch, sdArg] = process.argv.slice(2), store = await labStore();
@@ -45,4 +47,16 @@ if (mode === "decl") {
   }
   console.log(`${batch}: our Solo where Hard declared nothing in the seat: the search's mean at the bid ${f(stat(est))}, the payoff got ${f(stat(real))}, over-estimate ${f(stat(gap))}`);
   console.log(`  Hard's Sauspiel that we passed: the search's best Sauspiel mean ${f(stat(sEst))}, its pass mean ${f(stat(pEst))}; Hard's Sauspiel paid ${f(stat(sReal))} in the seat; our pass got ${f(stat(ourPass))}`);
+}
+else if (mode === "defend") {
+  const A = await linesOf(batch), refs = new Map((await linesOf(refBatch)).map(l => [l.seed, l.ref])), by = {};
+  for (const l of A) {
+    const ref = refs.get(l.seed); if (!ref?.contract || ref.contract.type === "sau") continue;
+    for (const s of l.seats) {
+      const c = s.contract;
+      if (!c || c.type !== ref.contract.type || c.declarer !== ref.contract.declarer || c.declarer === s.me) continue;
+      (by[c.type] ||= []).push(s.payoff - ref.payoff[s.me]);
+    }
+  }
+  console.log(`${batch}: our seat defending Hard's own ${Object.keys(by).join(" / ")} (same declarer and game at both tables), our payoff less Hard's in the seat: ${Object.entries(by).map(([t, v]) => `${t} ${f(stat(v))}`).join("; ")}`);
 }
