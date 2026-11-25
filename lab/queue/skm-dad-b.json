@@ -1,0 +1,8 @@
+{
+  "id": "skm-dad-b",
+  "script": "sk-dad.mjs",
+  "args": "{shard} {shards} {out} B 4 20261125 deals=256 rollout=lab/schafkopf/nets/g2-policy-raw-none.json greedy=1",
+  "shards": 200,
+  "timeoutMin": 120,
+  "purpose": "Fable 16:20Z step 0: Korbi's father's point B valued among our own players: positions from four-Codex-Hard deals, each finished twice (the questioned lead, the best other) by Monte zero in every seat; 800 positions. Measurement only."
+}
