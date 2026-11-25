@@ -1,0 +1,8 @@
+{
+  "id": "skc-match-v",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/g1-policy-raw-none.json greedy=1 value=lab/schafkopf/nets/v1-value-raw-none.json:0.5",
+  "shards": 500,
+  "timeoutMin": 60,
+  "purpose": "Fable 04:12Z: generation 2 exactly as skc-match (g1 policy, greedy play-outs) plus the even value mix at the bid with v1 (raw seat-view value net on 60,000 deals); ska-base's first 5,000 paired deals, paired against skc-match. Measurement only."
+}
