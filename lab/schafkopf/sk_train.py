@@ -19,6 +19,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("pack"); ap.add_argument("--epochs", type=int, default=6); ap.add_argument("--h", default="256,128")
 ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--wd", type=float, default=1e-4); ap.add_argument("--auxw", type=float, default=0.1)
 ap.add_argument("--bs", type=int, default=512); ap.add_argument("--out", default=""); ap.add_argument("--seed", type=int, default=1)
+ap.add_argument("--world", action="store_true", help="Fable 23:58Z: the world-view value net (XW) beside the seat-view raw net, at the given settings")
 ap.add_argument("--sweep", action="store_true", help="Fable 23:28Z: the value net alone, raw and both arms, epochs 1-3 x wd 1e-4/1e-3 x lr as given and a third")
 a = ap.parse_args()
 torch.manual_seed(a.seed); np.random.seed(a.seed); torch.set_num_threads(os.cpu_count() or 2)
@@ -64,9 +65,10 @@ class Net(nn.Module):
         z = self.body(x)
         return self.main(z), ({n: m(z) for n, m in self.aux.items()} if self.aux is not None else None)
 
+XW = np.fromfile(os.path.join(a.pack, "XW"), dtype=np.uint8).reshape(N, 4 * R) if a.world else None
 def batch(ix, n_in):
-    x = torch.from_numpy(X[ix, :n_in].astype(np.float32) / 255)
-    return x
+    if n_in == 4 * R: return torch.from_numpy(XW[ix].astype(np.float32) / 255)
+    return torch.from_numpy(X[ix, :n_in].astype(np.float32) / 255)
 
 def aux_loss(o, ix):
     """(e) MSE, (f) cross-entropy over the four seats where the card is unseen, (g) cross-entropy where a trick is open."""
@@ -81,8 +83,8 @@ def masked_logp(logits, ix):
     m = torch.from_numpy(M[ix].astype(bool))
     return F.log_softmax(logits.masked_fill(~m, -1e9), 1)
 
-def run(kind, inputs, outputs):
-    n_in = R + (A if inputs else 0)
+def run(kind, inputs, outputs, world=False):
+    n_in = 4 * R if world else R + (A if inputs else 0)
     main = {"value": 4, "policy": ACT, "dealer": C * 4}[kind]
     net = Net(n_in, main, outputs)
     opt = torch.optim.AdamW(net.parameters(), lr=a.lr, weight_decay=a.wd)
@@ -123,7 +125,7 @@ def run(kind, inputs, outputs):
                     sel = fm & (T[ix][:, None] == t)
                     right[t] += (guess[sel] == h[sel]).sum(); base[t] += (bl[sel] == h[sel]).sum(); cnt[t] += sel.sum()
     k = out["n"]
-    res = {"kind": kind, "inputs": "raw+aux" if inputs else "raw", "outputs": "aux" if outputs else "-", "seconds": round(time.time() - t0)}
+    res = {"kind": kind, "inputs": "world" if world else "raw+aux" if inputs else "raw", "outputs": "aux" if outputs else "-", "seconds": round(time.time() - t0)}
     if kind == "value":
         res["rmse_tariffs"] = float(np.sqrt(out["main"] / k) * meta["maxPayoff"])
         ix = np.where(first)[0]
@@ -154,6 +156,9 @@ def run(kind, inputs, outputs):
     return res
 
 results = []
+if a.world:
+    run("value", False, False); run("value", False, False, world=True)
+    print("sk_train: done"); raise SystemExit
 if a.sweep:
     lr0 = a.lr
     for inputs, outputs in ((False, False), (True, True)):

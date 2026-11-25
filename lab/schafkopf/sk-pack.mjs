@@ -5,6 +5,9 @@
 //   V.f32   the deal's payoff per relative seat ÷ MAX_PAYOFF (zero-sum)
 //   E.f32   (e) the seat's side's card points ÷ 120    H.i8  (f) each card's holder (relative seat), -1 where it sees the card
 //   W.i8    (g) who wins the trick on the table, -1 when none is open    T.u8  tricks played    D.u32  the deal's number (the split)
+//   XW.u8   with SK_WORLD=1 (Fable 23:58Z, the world-view value net): the four seats' raw views of the position, in relative order
+//           from the seat to move (the dealt world and the public history), each number × 255. Training only: at play time the
+//           net is given the search's dealt worlds, never the real one.
 // usage: node lab/schafkopf/sk-pack.mjs <out dir> <part-*.jsonl files or folders...>
 import fs from "node:fs";
 import path from "node:path";
@@ -17,7 +20,8 @@ export const TAU = 0.02;
 const [out, ...srcs] = process.argv.slice(2);
 const files = srcs.flatMap(p => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).filter(f => f.endsWith(".jsonl")).map(f => path.join(p, f)) : [p]));
 fs.mkdirSync(out, { recursive: true });
-const W = Object.fromEntries(["X", "M", "P", "V", "E", "H", "W", "T", "D"].map(k => [k, fs.openSync(path.join(out, `${k}`), "w")]));
+const WORLD = process.env.SK_WORLD === "1";
+const W = Object.fromEntries(["X", "M", "P", "V", "E", "H", "W", "T", "D", ...(WORLD ? ["XW"] : [])].map(k => [k, fs.openSync(path.join(out, `${k}`), "w")]));
 const put = (k, a) => fs.writeSync(W[k], Buffer.from(a.buffer, a.byteOffset, a.byteLength));
 const F = RAW_SIZE + AUX_SIZE, xr = new Float32Array(RAW_SIZE), xa = new Float32Array(AUX_SIZE);
 let rows = 0, deals = 0, seen = new Set();
@@ -29,12 +33,13 @@ for (const f of files) for (const l of fs.readFileSync(f, "utf8").split("\n")) {
   const s = G.deal({ rng: seeded(g.seed) }), byI = new Map(g.dec.map(d => [d.i, d])), states = [];
   for (let i = 0; i < g.log.length; i++) {
     const [w, m] = g.log[i], d = byI.get(i);
-    if (d) states.push({ v: G.view(s, w), d });
+    if (d) states.push({ v: G.view(s, w), d, ...(WORLD ? { vs: [0, 1, 2, 3].map(r => G.view(s, (w + r) % 4)) } : {}) });
     if (typeof G.act(s, w, m, seeded(mix(g.seed, 0x51))) === "string") throw new Error(`deal ${g.seed}: move ${i} refused on replay`);
   }
   if (JSON.stringify(G.payoff(s)) !== JSON.stringify(g.payoff)) throw new Error(`deal ${g.seed}: the replay pays otherwise than the record`);
   const pay = G.payoff(s);
-  for (const { v, d } of states) {
+  for (const { v, d, vs } of states) {
+    if (vs) { const xw = new Uint8Array(4 * RAW_SIZE); vs.forEach((u, r) => { xr.fill(0); rawView(u, xr); for (let k = 0; k < RAW_SIZE; k++) xw[r * RAW_SIZE + k] = Math.round(255 * xr[k]); }); put("XW", xw); }
     xr.fill(0); xa.fill(0); rawView(v, xr); auxView(v, xa);
     const x = new Uint8Array(F);
     for (let k = 0; k < RAW_SIZE; k++) x[k] = Math.round(255 * xr[k]);
@@ -51,5 +56,5 @@ for (const f of files) for (const l of fs.readFileSync(f, "utf8").split("\n")) {
   }
   deals++;
 }
-fs.writeFileSync(path.join(out, "meta.json"), JSON.stringify({ rows, deals, raw: RAW_SIZE, aux: AUX_SIZE, actions: ACTIONS, cards: 32, tau: TAU, maxPayoff: G.MAX_PAYOFF }) + "\n");
+fs.writeFileSync(path.join(out, "meta.json"), JSON.stringify({ rows, deals, world: WORLD, raw: RAW_SIZE, aux: AUX_SIZE, actions: ACTIONS, cards: 32, tau: TAU, maxPayoff: G.MAX_PAYOFF }) + "\n");
 console.log(`sk-pack: ${deals} deals, ${rows} rows (${RAW_SIZE} raw + ${AUX_SIZE} aux inputs)`);

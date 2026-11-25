@@ -10,6 +10,7 @@ on:
       keep: { description: "Which nets to commit (a regular expression on their file names)", required: false, default: "^policy-.*-none\\.json$" }
       jobs: { description: "Self-play jobs, comma-separated", required: true, default: "ska-self,ska-self-r" }
       args: { description: "More sk_train.py arguments", required: false, default: "--epochs 6 --h 256,128" }
+      world: { description: "Pack the world views too (SK_WORLD, for --world)", required: false, default: "0" }
 permissions:
   contents: write
 jobs:
@@ -30,7 +31,7 @@ jobs:
           printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
           LAB_KEY="$RUNNER_TEMP/key.json" node lab/schafkopf/sk-fetch.mjs "$RUNNER_TEMP/res" "${{ inputs.jobs }}"
           rm -f "$RUNNER_TEMP/key.json"
-          node --max-old-space-size=6000 lab/schafkopf/sk-pack.mjs "$RUNNER_TEMP/pack" "$RUNNER_TEMP/res" | tee -a "$GITHUB_STEP_SUMMARY"
+          SK_WORLD="${{ inputs.world }}" node --max-old-space-size=6000 lab/schafkopf/sk-pack.mjs "$RUNNER_TEMP/pack" "$RUNNER_TEMP/res" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Train
         run: |
           pip install -q numpy torch --index-url https://download.pytorch.org/whl/cpu
