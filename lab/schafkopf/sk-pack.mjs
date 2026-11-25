@@ -25,11 +25,15 @@ const W = Object.fromEntries(["X", "M", "P", "V", "E", "H", "W", "T", "D", ...(W
 const put = (k, a) => fs.writeSync(W[k], Buffer.from(a.buffer, a.byteOffset, a.byteLength));
 const F = RAW_SIZE + AUX_SIZE, xr = new Float32Array(RAW_SIZE), xa = new Float32Array(AUX_SIZE);
 let rows = 0, deals = 0, seen = new Set();
+// a deal is counted once per line: a job and its re-runs (<id>-rr, <id>-r) are one line (sk-fetch.mjs names each file <job>-part-n),
+// while two lines played on the same deal seeds (skb-self-r and skb-self-i) are both kept
+const jobOf = f => path.basename(f).replace(/-part-\d+\.jsonl$/, ""), jobs = new Set(files.map(jobOf));
+const lineOf = f => { const j = jobOf(f); if (j.endsWith("-rr")) return j.slice(0, -3); const b = j.replace(/-r\d*$/, ""); return b !== j && jobs.has(b) ? b : j; };
 for (const f of files) for (const l of fs.readFileSync(f, "utf8").split("\n")) {
   if (!l.startsWith("{")) continue;
-  const g = JSON.parse(l);
-  if (seen.has(g.seed)) continue;   // a re-run shard's deal counted once
-  seen.add(g.seed);
+  const g = JSON.parse(l), k = `${lineOf(f)}:${g.seed}`;
+  if (seen.has(k)) continue;
+  seen.add(k);
   const s = G.deal({ rng: seeded(g.seed) }), byI = new Map(g.dec.map(d => [d.i, d])), states = [];
   for (let i = 0; i < g.log.length; i++) {
     const [w, m] = g.log[i], d = byI.get(i);
