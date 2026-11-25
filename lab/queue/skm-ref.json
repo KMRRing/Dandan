@@ -1,0 +1,8 @@
+{
+  "id": "skm-ref",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 opp=lab/schafkopf/nets/g2-policy-raw-none.json oppgreedy=1 oppbid=1024 refonly=1",
+  "shards": 500,
+  "timeoutMin": 240,
+  "purpose": "Fable 25 Nov 16:20Z, the new yardstick: the reference tables of four Monte zero (g2 policy, greedy, bids at 1,024, cards at 256) on ska-base's first 5,000 deals; mixed-table matches read against it with sk-sum --ref skm-ref. Measurement only."
+}
