@@ -19,6 +19,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("pack"); ap.add_argument("--epochs", type=int, default=6); ap.add_argument("--h", default="256,128")
 ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--wd", type=float, default=1e-4); ap.add_argument("--auxw", type=float, default=0.1)
 ap.add_argument("--bs", type=int, default=512); ap.add_argument("--out", default=""); ap.add_argument("--seed", type=int, default=1)
+ap.add_argument("--value-only", dest="value_only", action="store_true", help="Fable 03:12Z: the raw seat-view value net alone, at the given settings (for the bid's value mix)")
 ap.add_argument("--policy-sweep", dest="policy_sweep", action="store_true", help="Fable 03:12Z: the raw policy at epochs E and 4E x width 256,128 and 512,256, each exported as policy-e<ep>-w<width>.json")
 ap.add_argument("--world-aux", dest="world_aux", action="store_true", help="also the world view with the seat's aux inputs")
 ap.add_argument("--world", action="store_true", help="Fable 23:58Z: the world-view value net (XW) beside the seat-view raw net, at the given settings")
@@ -160,6 +161,8 @@ def run(kind, inputs, outputs, world=False):
     return res
 
 results = []
+if a.value_only:
+    run("value", False, False); print("sk_train: done"); raise SystemExit
 if a.policy_sweep:
     e0 = a.epochs
     for ep in (e0, 4 * e0):
