@@ -1,0 +1,8 @@
+{
+  "id": "skb-match-i-rr",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/g0-policy-raw+aux-none.json only=12,263,292,364,420",
+  "shards": 5,
+  "timeoutMin": 60,
+  "purpose": "Re-run of skb-match-i's 5 shards lost to worker errors, on their own deals (only=). Measurement only, read with skb-match-i."
+}
