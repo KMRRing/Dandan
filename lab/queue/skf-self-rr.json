@@ -1,0 +1,8 @@
+{
+  "id": "skf-self-rr",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261129 rollout=lab/schafkopf/nets/g4-policy-raw-none.json greedy=1 biddeals=1024 only=1048,1056,1271,1273,1439,1549",
+  "shards": 6,
+  "timeoutMin": 90,
+  "purpose": "Re-run of skf-self's 6 shards lost to one machine's git fetch (dandan-lab-vcp78-8566). Self-play data only, packed with skf-self."
+}
