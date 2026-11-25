@@ -48,3 +48,8 @@ export const policyRollout = (net, greedy = false) => (c, who, rng) => {
   return ms[k];
 };
 export { ACTIONS };
+/** A value net's predicted payoff for the seat, in tariffs, from its own view (the net's four relative seats, centred, × MAX_PAYOFF). */
+export function valuePayoff(net, s, seat) {
+  const z = forward(net, G.view(s, seat)), m = (z[0] + z[1] + z[2] + z[3]) / 4;
+  return (z[0] - m) * net.maxPayoff;
+}
