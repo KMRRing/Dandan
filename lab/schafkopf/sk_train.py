@@ -19,6 +19,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("pack"); ap.add_argument("--epochs", type=int, default=6); ap.add_argument("--h", default="256,128")
 ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--wd", type=float, default=1e-4); ap.add_argument("--auxw", type=float, default=0.1)
 ap.add_argument("--bs", type=int, default=512); ap.add_argument("--out", default=""); ap.add_argument("--seed", type=int, default=1)
+ap.add_argument("--policy-sweep", dest="policy_sweep", action="store_true", help="Fable 03:12Z: the raw policy at epochs E and 4E x width 256,128 and 512,256, each exported as policy-e<ep>-w<width>.json")
 ap.add_argument("--world-aux", dest="world_aux", action="store_true", help="also the world view with the seat's aux inputs")
 ap.add_argument("--world", action="store_true", help="Fable 23:58Z: the world-view value net (XW) beside the seat-view raw net, at the given settings")
 ap.add_argument("--sweep", action="store_true", help="Fable 23:28Z: the value net alone, raw and both arms, epochs 1-3 x wd 1e-4/1e-3 x lr as given and a third")
@@ -154,10 +155,19 @@ def run(kind, inputs, outputs, world=False):
         lin = [m for m in net.body if isinstance(m, nn.Linear)] + [net.main]
         js = {"kind": kind, "inputs": res["inputs"], "outputs": res["outputs"], "n_in": n_in, "maxPayoff": meta["maxPayoff"],
               "layers": [{"w": m.weight.detach().numpy().round(6).tolist(), "b": m.bias.detach().numpy().round(6).tolist()} for m in lin]}
-        json.dump(js, open(os.path.join(a.out, f"{kind}-{res['inputs']}-{res['outputs'].replace('-', 'none')}.json"), "w"))
+        name = getattr(a, "tag", None) or f"{kind}-{res['inputs']}-{res['outputs'].replace('-', 'none')}"
+        json.dump(js, open(os.path.join(a.out, f"{name}.json"), "w"))
     return res
 
 results = []
+if a.policy_sweep:
+    e0 = a.epochs
+    for ep in (e0, 4 * e0):
+        for h in ("256,128", "512,256"):
+            a.epochs, a.h, a.tag = ep, h, f"policy-e{ep}-w{h.split(',')[0]}"
+            r = run("policy", False, False)
+            print(json.dumps({"policy_sweep": True, "epochs": ep, "h": h, "ce": round(r["ce"], 4), "agree": round(r["agree"], 4), "seconds": r["seconds"]}), flush=True)
+    print("sk_train: done"); raise SystemExit
 if a.world:
     run("value", False, False); run("value", False, False, world=True)
     if a.world_aux: run("value", True, False, world=True)   # the target's check: points taken are in the aux inputs

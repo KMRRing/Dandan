@@ -38,6 +38,11 @@ jobs:
           set -o pipefail
           python3 lab/schafkopf/sk_train.py "$RUNNER_TEMP/pack" ${{ inputs.args }} --out "$RUNNER_TEMP/nets" | tee "$RUNNER_TEMP/log.txt"
           { echo '```'; cat "$RUNNER_TEMP/log.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Policy-only table
+        if: contains(inputs.args, '--policy-sweep')
+        run: |
+          node lab/schafkopf/sk-ptable.mjs "$RUNNER_TEMP/nets" lab/schafkopf/nets/g1-policy-raw-none.json 20000 | tee "$RUNNER_TEMP/ptable.txt"
+          { echo '```'; cat "$RUNNER_TEMP/ptable.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with: { name: sk-nets, path: "${{ runner.temp }}/nets" }
       - name: Commit the kept nets
