@@ -32,8 +32,10 @@ if (refBatch) {
   const refs = new Map((await linesOf(refBatch)).map(l => [l.seed, l.ref]));
   A = A.filter(l => refs.has(l.seed)).map(l => { const ref = refs.get(l.seed); return { ...l, ref, seats: l.seats.map(s => ({ ...s, diff: +(s.payoff - ref.payoff[s.me]).toFixed(4) })) }; });
 }
-const diffs = A.flatMap(l => l.seats.map(s => s.diff)), all = stat(diffs);
-console.log(`${batch}: ${A.length} paired deals, ${diffs.length} seat-deals`);
+const hasRef = A.every(l => l.ref);   // a noref=1 match without --ref: only the pairing below can be read
+const diffs = hasRef ? A.flatMap(l => l.seats.map(s => s.diff)) : [], all = stat(diffs);
+console.log(`${batch}: ${A.length} paired deals${hasRef ? `, ${diffs.length} seat-deals` : " (no four-Hard tables: pass --ref to read it against Hard)"}`);
+if (hasRef) {
 console.log(`our seat less Codex Hard's, tariffs a deal: ${f(all)}; SD ${all.sd.toFixed(2)}; exact zeros ${(100 * diffs.filter(x => x === 0).length / Math.max(1, diffs.length)).toFixed(1)}%`);
 const roles = {};
 for (const l of A) for (const s of l.seats) (roles[s.role] ||= []).push(s.diff);
@@ -46,6 +48,7 @@ for (const l of A) for (const s of l.seats) { const k = `${said(l.ref.contract, 
 console.log(`declaring, Hard's (rows) against ours (columns), seat-deals and mean difference:`);
 console.log(`  ${"".padEnd(6)}${K.map(k => k.padStart(16)).join("")}`);
 for (const r of K) console.log(`  ${r.padEnd(6)}${K.map(c => { const v = cell.get(`${r}>${c}`); return (v ? `${v.length} ${stat(v).m >= 0 ? "+" : ""}${stat(v).m.toFixed(2)}` : "-").padStart(16); }).join("")}`);
+}
 if (other) {
   const B = await linesOf(other), byA = new Map();
   for (const l of A) for (const s of l.seats) byA.set(`${l.seed}:${s.me}`, s.payoff);
