@@ -1401,3 +1401,4 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
 - 2026-11-25 15:58Z (ops): ch.vs1.2xlarge-iad eased to $0.035 → US East 16c stepped back per rule: VM a2b0e1bf 1→2, k8s e7f00bce 1→2. Full regrow (6/4) at ≤ $0.010; back to 1 at $0.04.
 - 2026-11-25 16:45Z (ops): ch.vs1.2xlarge-iad back to $0.040 = bid → US East 16c cut again: VM a2b0e1bf 2→1, k8s e7f00bce 2→1. Price is flapping $0.035↔$0.040; no further 2/2 step-back until it holds at ≤ $0.035 for two checks.
 - 2026-11-25 18:19Z (ops): ch.vs1.2xlarge-iad held $0.035 two checks running (17:32Z, 18:19Z) → US East 16c stepped back: VM a2b0e1bf 1→2, k8s e7f00bce 1→2. Full regrow 6/4 at ≤ $0.010; back to 1/1 at $0.04.
+- 2026-11-25 19:06Z (ops): ch.vs1.2xlarge-iad back to $0.010 → US East 16c full regrow: VM a2b0e1bf 2→6, k8s e7f00bce 2→4.
