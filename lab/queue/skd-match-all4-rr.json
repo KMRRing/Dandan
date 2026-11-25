@@ -1,0 +1,8 @@
+{
+  "id": "skd-match-all4-rr",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 1024 10 20261124 noref=1 rollout=lab/schafkopf/nets/g2-policy-raw-none.json greedy=1 biddeals=1024 only=13,21,25,36,332,396,462,484",
+  "shards": 8,
+  "timeoutMin": 480,
+  "purpose": "Re-run of arm D's 8 shards lost to one machine's git fetch (dandan-lab-vcp78-8566). Measurement only, read with skd-match-all4."
+}
