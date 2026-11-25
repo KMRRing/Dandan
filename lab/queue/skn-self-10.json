@@ -1,0 +1,8 @@
+{
+  "id": "skn-self-10",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261210 rollout=lab/schafkopf/nets/g2-policy-raw-none.json greedy=1 biddeals=1024",
+  "shards": 2000,
+  "timeoutMin": 120,
+  "purpose": "Fable 19:05Z, the learning curve (Korbi: 'the solution is just way more training?'): block 10 of 10 of 200,000 self-play deals from Monte zero exactly as live (g2 policy, greedy, bids at 1,024, cards at 256), new seeds. Training data."
+}
