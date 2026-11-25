@@ -1,0 +1,8 @@
+{
+  "id": "skm-m1-rev",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/g2-policy-raw-none.json greedy=1 biddeals=1024 opp=lab/schafkopf/nets/m1-policy-m1.json oppgreedy=1 oppbid=1024",
+  "shards": 500,
+  "timeoutMin": 240,
+  "purpose": "Fable 16:20Z step 2, the reverse: Monte zero in one seat among three M1; read with sk-sum --ref skm-ref-m1. Measurement only."
+}

@@ -1,0 +1,8 @@
+{
+  "id": "skm-dad-b-m1",
+  "script": "sk-dad.mjs",
+  "args": "{shard} {shards} {out} B 4 20261125 deals=256 rollout=lab/schafkopf/nets/m1-policy-m1.json greedy=1",
+  "shards": 200,
+  "timeoutMin": 120,
+  "purpose": "Fable 16:20Z step 2: father's point B finished by M1 in every seat, and M1's own rate (the meter), on skm-dad-b's positions. Measurement only."
+}

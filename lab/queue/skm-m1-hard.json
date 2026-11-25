@@ -1,0 +1,8 @@
+{
+  "id": "skm-m1-hard",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/m1-policy-m1.json greedy=1 biddeals=1024",
+  "shards": 500,
+  "timeoutMin": 120,
+  "purpose": "Fable 16:20Z step 2, the Hard guard: M1 in one seat among three Codex Hard; read with --ref ska-base+ska-base-r, paired against skd-match-bid4. Measurement only."
+}
