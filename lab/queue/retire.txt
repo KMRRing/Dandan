@@ -77,3 +77,12 @@ zps041  # 2026-11-24T10:27Z (Fable 10:25Z): made by the refill before generation
 zps040  # 2026-11-24T12:10:24.957Z Zero's loop: made with the nets before zl28
 zps041  # 2026-11-24T12:10:24.957Z Zero's loop: made with the nets before zl28
 ska-close-r
+skn-self-02  # 2026-11-25T23:53Z (Fable 23:30Z): Monte zero data retired, retargeted to the current engine as skp-self; running shards finish and are kept
+skn-self-03  # 2026-11-25T23:53Z (Fable 23:30Z): Monte zero data retired, retargeted to the current engine as skp-self; running shards finish and are kept
+skn-self-04  # 2026-11-25T23:53Z (Fable 23:30Z): Monte zero data retired, retargeted to the current engine as skp-self; running shards finish and are kept
+skn-self-05  # 2026-11-25T23:53Z (Fable 23:30Z): Monte zero data retired, retargeted to the current engine as skp-self; running shards finish and are kept
+skn-self-06  # 2026-11-25T23:53Z (Fable 23:30Z): Monte zero data retired, retargeted to the current engine as skp-self; running shards finish and are kept
+skn-self-07  # 2026-11-25T23:53Z (Fable 23:30Z): Monte zero data retired, retargeted to the current engine as skp-self; running shards finish and are kept
+skn-self-08  # 2026-11-25T23:53Z (Fable 23:30Z): Monte zero data retired, retargeted to the current engine as skp-self; running shards finish and are kept
+skn-self-09  # 2026-11-25T23:53Z (Fable 23:30Z): Monte zero data retired, retargeted to the current engine as skp-self; running shards finish and are kept
+skn-self-10  # 2026-11-25T23:53Z (Fable 23:30Z): Monte zero data retired, retargeted to the current engine as skp-self; running shards finish and are kept

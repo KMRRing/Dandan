@@ -1,0 +1,8 @@
+{
+  "id": "skm-self-m2",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261131 rollout=lab/schafkopf/nets/m2-policy-m1.json greedy=1 biddeals=1024",
+  "shards": 2000,
+  "timeoutMin": 150,
+  "purpose": "M loop (Fable 23:30Z standing loop): generation 2 of self-play, on M2, 20,000 deals, bids at 1,024, greedy. Training data."
+}

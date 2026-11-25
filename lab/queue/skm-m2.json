@@ -1,0 +1,8 @@
+{
+  "id": "skm-m2",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/m2-policy-m1.json greedy=1 biddeals=1024 opp=lab/schafkopf/nets/m1-policy-m1.json oppgreedy=1 oppbid=1024",
+  "shards": 500,
+  "timeoutMin": 300,
+  "purpose": "M loop (Korbi 22:04 local: train on itself; Fable 23:30Z yardstick): M2 in one seat among three M1; read with sk-sum --ref skm-ref-m1+skm-ref-m1-rr. Measurement only."
+}
