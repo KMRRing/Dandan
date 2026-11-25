@@ -12,7 +12,8 @@ import fs from "node:fs";
 import { schafkopf as G, codexMove } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
 import { loadNet, policyRollout } from "./sk-net.js";
-import { cid, suitOf, rankOf } from "./codex/trumps-cards.js";
+import { cid } from "./codex/trumps-cards.js";
+import { questioned as ofKind, aceFell } from "./sk-leads.js";
 import { seeded, mix } from "../../seats.js";
 
 const [shard0, , out, kind, per, seed0] = process.argv.slice(2).map((x, i) => (i === 2 || i === 3 ? x : Number(x)));
@@ -22,19 +23,6 @@ const DEALS = Number(arg("deals")) || 256;
 const rollout = arg("rollout") ? policyRollout(loadNet(new URL(`../../${arg("rollout")}`, import.meta.url)), process.argv.includes("greedy=1")) : undefined;
 const think = (s, w) => bareThink(s, w, { deals: DEALS, rollout });
 
-const trump = (c, id) => (c.type === "wenz" ? rankOf(id) === "J" : rankOf(id) === "Q" || rankOf(id) === "J" || suitOf(id) === c.trump);
-const aceFell = (s, ace) => s.tricks.some(t => t.cards.some(x => x.card === ace)) || s.trick.some(x => x.card === ace);
-/** The questioned cards for the seat on lead here, or null when the position isn't one of this kind. */
-function questioned(s, w) {
-  const c = s.contract;
-  if (s.step !== "play" || !c || s.trick.length) return null;
-  const legal = G.options(s, w).map(m => m.card);
-  let q = null;
-  if (kind === "A" && (c.type === "solo" || c.type === "wenz") && w !== c.declarer && (w + 3) % 4 === c.declarer) q = legal.filter(x => trump(c, x));
-  if (kind === "B" && c.type === "sau" && w === c.declarer && s.tricks.length >= 1 && s.tricks.length <= 3 && !aceFell(s, cid(c.ace, "A")) && legal.some(x => trump(c, x)))
-    q = legal.filter(x => suitOf(x) === c.ace && !trump(c, x));
-  return q && q.length && q.length < legal.length ? q : null;
-}
 /** The deal finished by Monte zero in every seat after `card`; the declarer side's payoff and the trick the called ace fell in. */
 function finish(s0, w, card, seed) {
   const s = G.fork(s0), c = s.contract, ace = c.type === "sau" ? cid(c.ace, "A") : null;
@@ -55,7 +43,7 @@ const lines = [];
 for (let d = 0; lines.length < per && d < 400; d++) {
   const seed = mix(seed0, shard * 100003 + d), s = G.deal({ rng: seeded(seed) });
   for (let i = 0; !G.over(s); i++) {
-    const w = G.toMove(s), q = questioned(s, w);
+    const w = G.toMove(s), q = ofKind(s, w, kind);
     if (q) {
       const r = think(s, w), cards = r.list.map(x => x.move.card), a = cards.find(x => q.includes(x)), b = cards.find(x => !q.includes(x));
       const pa = finish(s, w, a, seed), pb = finish(s, w, b, seed);

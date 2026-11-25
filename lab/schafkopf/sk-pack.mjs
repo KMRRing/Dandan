@@ -7,6 +7,8 @@
 //   W.i8    (g) who wins the trick on the table, -1 when none is open    T.u8  tricks played    D.u32  the deal's number (the split)
 //   Q.u8    the partner facts (sk-view.js partnerView, 11) × 255    A.i8  who held the called ace (relative seat), -1 outside a
 //           Sauspiel's play: the belief nets' target (Fable 25 Nov 16:20Z)
+//   PL.u8   the move played (its action)    K.u8  the father's lead the position allows (sk-leads.js): 0 none, 1 A, 2 B
+//   QM.u8   the questioned moves of that lead (41), for the played-move head's reading (Fable 25 Nov 19:00Z)
 //   XW.u8   with SK_WORLD=1 (Fable 23:58Z, the world-view value net): the four seats' raw views of the position, in relative order
 //           from the seat to move (the dealt world and the public history), each number × 255. Training only: at play time the
 //           net is given the search's dealt worlds, never the real one.
@@ -15,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { schafkopf as G } from "./sk-rules.js";
 import { rawView, auxView, auxTargets, partnerView, aceHolderOf, RAW_SIZE, AUX_SIZE, PART_SIZE, ACTIONS, actionOf } from "./sk-view.js";
+import { questioned } from "./sk-leads.js";
 import { seeded, mix } from "../../seats.js";
 
 /** The policy target's temperature, in value units (1 unit = 2 SD of the payoff): options 0.02 apart differ by e in weight. */
@@ -23,7 +26,7 @@ const [out, ...srcs] = process.argv.slice(2);
 const files = srcs.flatMap(p => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).filter(f => f.endsWith(".jsonl")).map(f => path.join(p, f)) : [p]));
 fs.mkdirSync(out, { recursive: true });
 const WORLD = process.env.SK_WORLD === "1";
-const W = Object.fromEntries(["X", "M", "P", "V", "E", "H", "W", "T", "D", "Q", "A", ...(WORLD ? ["XW"] : [])].map(k => [k, fs.openSync(path.join(out, `${k}`), "w")]));
+const W = Object.fromEntries(["X", "M", "P", "V", "E", "H", "W", "T", "D", "Q", "A", "PL", "K", "QM", ...(WORLD ? ["XW"] : [])].map(k => [k, fs.openSync(path.join(out, `${k}`), "w")]));
 const put = (k, a) => fs.writeSync(W[k], Buffer.from(a.buffer, a.byteOffset, a.byteLength));
 const F = RAW_SIZE + AUX_SIZE, xr = new Float32Array(RAW_SIZE), xa = new Float32Array(AUX_SIZE);
 let rows = 0, deals = 0, seen = new Set();
@@ -39,12 +42,12 @@ for (const f of files) for (const l of fs.readFileSync(f, "utf8").split("\n")) {
   const s = G.deal({ rng: seeded(g.seed) }), byI = new Map(g.dec.map(d => [d.i, d])), states = [];
   for (let i = 0; i < g.log.length; i++) {
     const [w, m] = g.log[i], d = byI.get(i);
-    if (d) states.push({ v: G.view(s, w), d, ...(WORLD ? { vs: [0, 1, 2, 3].map(r => G.view(s, (w + r) % 4)) } : {}) });
+    if (d) states.push({ v: G.view(s, w), d, m, qa: questioned(s, w, "A"), qb: questioned(s, w, "B"), ...(WORLD ? { vs: [0, 1, 2, 3].map(r => G.view(s, (w + r) % 4)) } : {}) });
     if (typeof G.act(s, w, m, seeded(mix(g.seed, 0x51))) === "string") throw new Error(`deal ${g.seed}: move ${i} refused on replay`);
   }
   if (JSON.stringify(G.payoff(s)) !== JSON.stringify(g.payoff)) throw new Error(`deal ${g.seed}: the replay pays otherwise than the record`);
   const pay = G.payoff(s);
-  for (const { v, d, vs } of states) {
+  for (const { v, d, vs, m, qa, qb } of states) {
     if (vs) { const xw = new Uint8Array(4 * RAW_SIZE); vs.forEach((u, r) => { xr.fill(0); rawView(u, xr); for (let k = 0; k < RAW_SIZE; k++) xw[r * RAW_SIZE + k] = Math.round(255 * xr[k]); }); put("XW", xw); }
     xr.fill(0); xa.fill(0); rawView(v, xr); auxView(v, xa);
     const x = new Uint8Array(F);
@@ -59,6 +62,9 @@ for (const f of files) for (const l of fs.readFileSync(f, "utf8").split("\n")) {
     put("X", x); put("M", mask); put("P", p); put("V", Float32Array.of(rel(0), rel(1), rel(2), rel(3)));
     put("E", Float32Array.of(t.points)); put("H", t.holder); put("W", Int8Array.of(t.winner)); put("T", Uint8Array.of(v.tricks.length)); put("D", Uint32Array.of(deals));
     put("Q", Uint8Array.from(partnerView(v), q => Math.round(255 * q))); put("A", Int8Array.of(aceHolderOf(v, s)));
+    const qm = new Uint8Array(ACTIONS);
+    for (const id of qa || qb || []) qm[actionOf({ t: "card", card: id })] = 1;
+    put("PL", Uint8Array.of(actionOf(m))); put("K", Uint8Array.of(qa ? 1 : qb ? 2 : 0)); put("QM", qm);
     rows++;
   }
   deals++;

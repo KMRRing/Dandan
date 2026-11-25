@@ -26,6 +26,7 @@ ap.add_argument("--world-aux", dest="world_aux", action="store_true", help="also
 ap.add_argument("--world", action="store_true", help="Fable 23:58Z: the world-view value net (XW) beside the seat-view raw net, at the given settings")
 ap.add_argument("--bh", default="64", help="M1: the belief nets' hidden widths (small: they run at every play-out move)")
 ap.add_argument("--m1-value", dest="m1_value", action="store_true", help="M1: the value nets too")
+ap.add_argument("--played", action="store_true", help="Fable 25 Nov 19:00Z: the played move's real result, a payoff head per legal move trained only on the move played, on raw + the M1 inputs, at 1 and 3 epochs (trainer only)")
 ap.add_argument("--m1", action="store_true", help="Fable 25 Nov 16:20Z, step 1: the two partner-belief nets (own view; public record), frozen, then the policy and value on raw + partner facts + both beliefs (engine M1)")
 ap.add_argument("--sweep", action="store_true", help="Fable 23:28Z: the value net alone, raw and both arms, epochs 1-3 x wd 1e-4/1e-3 x lr as given and a third")
 a = ap.parse_args()
@@ -39,6 +40,8 @@ test = (D % 10) == 0
 PART = meta.get("part", 0)
 Q = rd("Q", np.uint8, PART) if PART and os.path.exists(os.path.join(a.pack, "Q")) else None
 AH = rd("A", np.int8) if Q is not None else None
+PLAYED = os.path.exists(os.path.join(a.pack, "PL"))
+PL, KD, QM = (rd("PL", np.uint8), rd("K", np.uint8), rd("QM", np.uint8, ACT)) if PLAYED else (None, None, None)
 tr, te = np.where(~test)[0], np.where(test)[0]
 print(f"sk_train: {N} rows from {meta['deals']} deals; train {len(tr)}, held out {len(te)} (every tenth deal)")
 
@@ -227,7 +230,7 @@ def net_json(net, kind, inputs, n_in, extra=None):
     if extra: j.update(extra)
     return j
 
-if a.m1:
+if a.m1 or a.played:
     assert Q is not None, "pack without the partner facts (Q, A): repack with the current sk-pack.mjs"
     b_own, b_pub = train_belief(False), train_belief(True)
     for b in (b_own, b_pub):
@@ -239,6 +242,37 @@ if a.m1:
         return torch.cat([torch.from_numpy(np.concatenate([X[ix, :R], Q[ix]], 1).astype(np.float32) / 255), po, pp], 1)
     n_in = R + PART + 8
     beliefs = {"own": net_json(b_own, "belief", "raw+part", R + PART, {"mask": "own"}), "public": net_json(b_pub, "belief", "public+part", R + PART, {"mask": "public"})}
+    if a.played:
+        assert PLAYED, "pack without PL, K, QM: repack with the current sk-pack.mjs"
+        def se(x): return float(x.std(ddof=1) / np.sqrt(len(x))) if len(x) > 1 else float("nan")
+        for eps in (1, 3):
+            head = Net(n_in, ACT, False); opt = torch.optim.AdamW(head.parameters(), lr=a.lr, weight_decay=a.wd); t0 = time.time()
+            def lossp(ix):
+                y, _ = head(m1_inputs(ix)); pl = torch.from_numpy(PL[ix].astype(np.int64))
+                return F.mse_loss(y.gather(1, pl[:, None]).squeeze(1), torch.from_numpy(V[ix, 0])), y
+            for ep in range(eps):
+                head.train(); perm = np.random.permutation(tr)
+                for b in range(0, len(perm), a.bs):
+                    l, _ = lossp(perm[b:b + a.bs]); opt.zero_grad(); l.backward(); opt.step()
+            head.eval(); ys = []; tot = 0.
+            with torch.no_grad():
+                for b in range(0, len(te), 4096):
+                    ix = te[b:b + 4096]; l, y = lossp(ix); tot += l.item() * len(ix); ys.append(y.numpy())
+            Y = np.concatenate(ys) * meta["maxPayoff"]; Mt = M[te] > 0; Qt = QM[te] > 0; Kt = KD[te]
+            res = {"kind": "played", "epochs": eps, "rmse_tariffs": round(float(np.sqrt(tot / len(te)) * meta["maxPayoff"]), 3), "seconds": round(time.time() - t0)}
+            for k, name in ((1, "A"), (2, "B")):
+                r = np.where(Kt == k)[0]
+                if len(r):
+                    dq = np.where(Qt[r], Y[r], -1e9).max(1) - np.where(Mt[r] & ~Qt[r], Y[r], -1e9).max(1)
+                    res[name] = {"rows": int(len(r)), "questioned_less_best_other": round(float(dq.mean()), 3), "se": round(se(dq), 3),
+                                 "head_prefers_questioned": round(float((dq > 0).mean()), 3), "search_chose_questioned": round(float(Qt[r][np.arange(len(r)), P[te][r].argmax(1)].mean()), 3)}
+            ht = np.where(Mt, Y, -1e9).argmax(1); st = P[te].argmax(1); dif = ht != st; pl = PL[te]; real = V[te, 0] * meta["maxPayoff"]
+            res["differs"] = round(float(dif.mean()), 4)
+            a_ = dif & (pl == ht); b_ = dif & (pl == st)
+            res["where_they_differ"] = {"played_head_top": [int(a_.sum()), round(float(real[a_].mean()), 3) if a_.any() else None],
+                                        "played_search_top": [int(b_.sum()), round(float(real[b_].mean()), 3) if b_.any() else None]}
+            print(json.dumps(res), flush=True)
+        if not a.m1: print("sk_train: done"); raise SystemExit
     # the policy both ways on the same rows (the raw arm the comparison); the value net only with --m1-value (Monte zero uses none)
     for kind in ("policy", "value") if a.m1_value else ("policy",):
         for inputs in ("raw", "m1"):
