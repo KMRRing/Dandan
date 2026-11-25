@@ -1,0 +1,8 @@
+{
+  "id": "skd-match-bid16-rr",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/g2-policy-raw-none.json greedy=1 biddeals=4096 only=269,304,334,340,343,346,358,400,482",
+  "shards": 9,
+  "timeoutMin": 240,
+  "purpose": "Re-run of arm C's 9 shards lost to one machine's git fetch (dandan-lab-vcp78-8566). Measurement only, read with skd-match-bid16."
+}
