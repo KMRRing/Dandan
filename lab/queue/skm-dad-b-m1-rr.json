@@ -1,0 +1,8 @@
+{
+  "id": "skm-dad-b-m1-rr",
+  "script": "sk-dad.mjs",
+  "args": "{shard} {shards} {out} B 4 20261125 deals=256 rollout=lab/schafkopf/nets/m1-policy-m1.json greedy=1 only=101,115,118,168,176,197",
+  "shards": 6,
+  "timeoutMin": 120,
+  "purpose": "Re-run of skm-dad-b-m1's 6 shards lost to the failing machine. Read with skm-dad-b-m1."
+}
