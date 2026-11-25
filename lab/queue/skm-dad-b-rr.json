@@ -1,0 +1,8 @@
+{
+  "id": "skm-dad-b-rr",
+  "script": "sk-dad.mjs",
+  "args": "{shard} {shards} {out} B 4 20261125 deals=256 rollout=lab/schafkopf/nets/g2-policy-raw-none.json greedy=1 only=102",
+  "shards": 1,
+  "timeoutMin": 120,
+  "purpose": "Re-run of skm-dad-b's shard lost to one machine's git fetch. Measurement only, read with skm-dad-b."
+}
