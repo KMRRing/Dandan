@@ -1,0 +1,8 @@
+{
+  "id": "skd-match-all4",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 1024 10 20261124 noref=1 rollout=lab/schafkopf/nets/g2-policy-raw-none.json greedy=1 biddeals=1024",
+  "shards": 500,
+  "timeoutMin": 480,
+  "purpose": "Fable 09:52Z arm D: generation 3 (g2 policy, greedy play-outs) with every decision, bids and cards, searched at 1,024 deals; ska-base's first 5,000 paired deals, paired against skd-match-bid4, so it isolates the cards. Is the defence gap search noise? Measurement only."
+}
