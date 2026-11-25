@@ -1,0 +1,8 @@
+{
+  "id": "skd-match-bid4",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/g2-policy-raw-none.json greedy=1 biddeals=1024",
+  "shards": 500,
+  "timeoutMin": 90,
+  "purpose": "Fable 07:50Z arm B: generation 3 exactly (g2 policy, greedy play-outs) with the bidding decisions searched at 1,024 deals, every card at 256; ska-base's first 5,000 paired deals, paired against skd-match. Measurement only."
+}

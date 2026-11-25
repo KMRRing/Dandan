@@ -4,7 +4,7 @@
 // from the deal, the seat and the move's number, so until our seat plays otherwise than Hard did, the two tables are the same
 // deal played the same way. Every game's decisions are kept (ours with the search's means), for the first auxiliary reading.
 // usage: node lab/schafkopf/sk-match.mjs <shard> <shards> <out> <deals per decision> <paired deals per shard> <first seed> [ref=hard]
-//   [close=<gap>:<mult>] [only=<shard,...>] [sd=<tariffs>] [rollout=<net file from the repo root>] [greedy=1] [noref=1] [belief=<net file>] [value=<net file>:<w>] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
+//   [close=<gap>:<mult>] [only=<shard,...>] [sd=<tariffs>] [rollout=<net file from the repo root>] [greedy=1] [noref=1] [belief=<net file>] [value=<net file>:<w>] [biddeals=<n>] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
 import fs from "node:fs";
 import { schafkopf as G, codexMove, dealsLine } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
@@ -17,6 +17,8 @@ const [shard0, , out, deals, per, seed0] = process.argv.slice(2).map((x, i) => (
 const ONLY = (process.argv.find(a => a.startsWith("only=")) || "").slice(5).split(",").filter(Boolean).map(Number), shard = ONLY.length ? ONLY[shard0] : shard0;
 const ref = (process.argv.find(a => a.startsWith("ref=")) || "ref=hard").slice(4);
 const NOREF = process.argv.includes("noref=1");
+// biddeals=<n> (Fable 07:50Z, arm B): the bidding decisions searched at n deals, every card as `deals`
+const BIDDEALS = Number((process.argv.find(a => a.startsWith("biddeals=")) || "").slice(9)) || 0;
 // value=<net file>:<w> (Fable 03:12Z): the bid valued as (1 − w) × the play-out mean + w × that value net's prediction after the bid
 const vaArg = (process.argv.find(a => a.startsWith("value=")) || "").slice(6).split(":"), valueMix = vaArg[0] ? { net: loadNet(new URL(`../../${vaArg[0]}`, import.meta.url)), w: Number(vaArg[1] ?? 0.5) } : null;
 // belief=<net file> (Fable 02:10Z, order 1): our seat's worlds weighted by that policy's likelihood of the others' bids and cards
@@ -42,7 +44,7 @@ function play(seed, me) {
     if (w === me) {
       const ops = G.options(s, w);
       if (ops.length > 1) {
-        const r = bareThink(s, w, { deals, close, sd: sdArg, rollout, dealer, valueMix });
+        const r = bareThink(s, w, { deals: BIDDEALS && s.step === "bid" ? BIDDEALS : deals, close, sd: sdArg, rollout, dealer, valueMix });
         m = r.best;
         dec.push({ i, opts: r.list.map(c => [key(c.move), Number.isNaN(c.mean) ? null : +c.mean.toFixed(5), c.n]), ...(r.deeper ? { close: 1 } : {}) });
       } else m = ops[0];

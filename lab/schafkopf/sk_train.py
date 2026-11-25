@@ -19,6 +19,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("pack"); ap.add_argument("--epochs", type=int, default=6); ap.add_argument("--h", default="256,128")
 ap.add_argument("--lr", type=float, default=1e-3); ap.add_argument("--wd", type=float, default=1e-4); ap.add_argument("--auxw", type=float, default=0.1)
 ap.add_argument("--bs", type=int, default=512); ap.add_argument("--out", default=""); ap.add_argument("--seed", type=int, default=1)
+ap.add_argument("--policy-only", dest="policy_only", action="store_true", help="the raw policy alone (its agreement and regret)")
 ap.add_argument("--value-only", dest="value_only", action="store_true", help="Fable 03:12Z: the raw seat-view value net alone, at the given settings (for the bid's value mix)")
 ap.add_argument("--policy-sweep", dest="policy_sweep", action="store_true", help="Fable 03:12Z: the raw policy at epochs E and 4E x width 256,128 and 512,256, each exported as policy-e<ep>-w<width>.json")
 ap.add_argument("--world-aux", dest="world_aux", action="store_true", help="also the world view with the seat's aux inputs")
@@ -118,7 +119,14 @@ def run(kind, inputs, outputs, world=False):
             ix = te[b:b + 4096]; l, y, o = loss_of(ix, train=False); n = len(ix)
             out["main"] += l.item() * n; out["n"] += n
             if kind == "policy":
-                out["agree"] += (y.masked_fill(~torch.from_numpy(M[ix].astype(bool)), -1e9).argmax(1).numpy() == P[ix].argmax(1)).sum()
+                top = y.masked_fill(~torch.from_numpy(M[ix].astype(bool)), -1e9).argmax(1).numpy()
+                out["agree"] += (top == P[ix].argmax(1)).sum()
+                # regret (Fable 07:50Z): the search's mean for its best move less its mean for the policy's top move. The target is
+                # softmax(mean / TAU), so mean_i - mean_best = TAU * ln(P_i / P_best) exactly; in tariffs at SD 5.5 (x 2 SD a value unit)
+                pt = P[ix][np.arange(len(ix)), top]; pb = P[ix].max(1)
+                rg = -meta["tau"] * np.log(np.maximum(pt, 1e-30) / pb) * 2 * 5.5
+                bid = X[ix, OFF["phase"]] > 0
+                out.setdefault("regret", []).append(rg); out.setdefault("rbid", []).append(bid)
             if o is not None:
                 e, f, g = aux_loss(o, ix); out["e"] += e.item() * n; out["f"] += f.item() * n; out["g"] += g.item() * n
             if kind == "dealer":
@@ -143,7 +151,10 @@ def run(kind, inputs, outputs, world=False):
         res["by_trick"] = [[t, round(float(np.sqrt(err[T[te] == t].mean()) * meta["maxPayoff"]), 2), round(float(np.sqrt(zero[T[te] == t].mean()) * meta["maxPayoff"]), 2)] for t in range(9) if (T[te] == t).any()]
         res["after_bid"] = {t: [int((ctype[ix] == j).sum()), round(float(y[ctype[ix] == j].mean()), 2), round(float(real[ctype[ix] == j].mean()), 2)]
                             for j, t in enumerate(["sau", "wenz", "solo"]) if (ctype[ix] == j).any()}   # [deals, predicted, real] for the declarer
-    if kind == "policy": res["ce"] = out["main"] / k; res["agree"] = out["agree"] / k
+    if kind == "policy":
+        res["ce"] = out["main"] / k; res["agree"] = out["agree"] / k
+        rg = np.concatenate(out["regret"]); bid = np.concatenate(out["rbid"])
+        res["regret_tariffs"] = {"all": round(float(rg.mean()), 4), "bid": round(float(rg[bid].mean()), 4), "card": round(float(rg[~bid].mean()), 4), "bid_rows": int(bid.sum())}
     if kind == "dealer":
         res["ce"] = out["main"] / k
         res["right"] = float(right.sum() / max(1, cnt.sum())); res["baseline"] = float(base.sum() / max(1, cnt.sum()))
@@ -161,6 +172,8 @@ def run(kind, inputs, outputs, world=False):
     return res
 
 results = []
+if a.policy_only:
+    run("policy", False, False); print("sk_train: done"); raise SystemExit
 if a.value_only:
     run("value", False, False); print("sk_train: done"); raise SystemExit
 if a.policy_sweep:
