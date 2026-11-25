@@ -6,7 +6,9 @@
 //    Sauspiel paid in that seat. The gap is the search's over- (or under-) estimate, in tariffs.
 //  defend <match batch> <reference batch> (Fable 02:10Z, order 2): deals where a Codex Hard seat declares the same Solo or Wenz at
 //    both tables (ours and the four-Hard reference) and our seat defends: our payoff against Hard's in that seat, by contract
-// usage: node lab/sk-diag.mjs decl <batch[+re-run]> | over <batch[+re-run]> <reference batch[+re-run]> <sd> | defend <batch> <reference>
+//  selfbid <self-play batch> <sd> (Fable 03:12Z, order 2): every Solo and Wenz declared in self-play, the declarer's search mean
+//    at its bid (tariffs) against the payoff it got, overall and by thirds of the estimate
+// usage: node lab/sk-diag.mjs selfbid <batch> <sd> | decl <batch[+re-run]> | over <batch[+re-run]> <reference batch[+re-run]> <sd> | defend <batch> <reference>
 import { labStore } from "./lib.mjs";
 
 const [mode, batch, refBatch, sdArg] = process.argv.slice(2), store = await labStore();
@@ -59,4 +61,19 @@ else if (mode === "defend") {
     }
   }
   console.log(`${batch}: our seat defending Hard's own ${Object.keys(by).join(" / ")} (same declarer and game at both tables), our payoff less Hard's in the seat: ${Object.entries(by).map(([t, v]) => `${t} ${f(stat(v))}`).join("; ")}`);
+}
+else if (mode === "selfbid") {
+  const sd = Number(refBatch), toT = u => (u - 0.5) * 2 * sd, by = {};
+  for (const g of await linesOf(batch)) {
+    const c = g.contract; if (!c || c.type === "sau") continue;
+    const bid = g.dec.find(d => d.seat === c.declarer && d.opts.some(([k]) => JSON.parse(k).t === "pass") && JSON.parse(d.opts[0][0]).type === c.type);
+    if (bid) (by[c.type] ||= []).push([toT(bid.opts[0][1]), g.payoff[c.declarer]]);
+  }
+  for (const [t, v] of Object.entries(by)) {
+    v.sort((a, b) => a[0] - b[0]);
+    const thirds = [0, 1, 2].map(k => v.slice(Math.floor(k * v.length / 3), Math.floor((k + 1) * v.length / 3)));
+    const line = xs => `estimate ${f(stat(xs.map(x => x[0])))}, got ${f(stat(xs.map(x => x[1])))}`;
+    console.log(`${batch} ${t}: all: ${line(v)}`);
+    thirds.forEach((xs, k) => console.log(`  ${["lowest", "middle", "highest"][k]} third of the estimate (${xs[0][0].toFixed(1)} to ${xs[xs.length - 1][0].toFixed(1)}): ${line(xs)}`));
+  }
 }
