@@ -1398,3 +1398,4 @@ first general nets fresh on the stored games (Fable). The live game and Zero 2's
 - 2026-11-25 00:17Z (ops): US East 16c regrow — ch.vs1.2xlarge-iad back to $0.010 (bid $0.04). VM pool a2b0e1bf 1→6, k8s pool e7f00bce 1→4. fleet-status snapshot still frozen at 21:19:57Z (exec's publisher); fleet working per main commits and results on Google.
 
 - 2026-11-25 15:11Z (ops): ch.vs1.2xlarge-iad at $0.040 = bid $0.04 → US East 16c cut per rule: VM a2b0e1bf 6→1, k8s e7f00bce 4→1 (connector floor 1). Regrow to VM 6 / k8s 4 when back ≤ $0.010; step to 2 at $0.035. All other classes under bid; ch.xlarge-iad eased to $0.005.
+- 2026-11-25 15:58Z (ops): ch.vs1.2xlarge-iad eased to $0.035 → US East 16c stepped back per rule: VM a2b0e1bf 1→2, k8s e7f00bce 1→2. Full regrow (6/4) at ≤ $0.010; back to 1 at $0.04.
