@@ -1,0 +1,8 @@
+{
+  "id": "skm-ref-m1-rr",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 opp=lab/schafkopf/nets/m1-policy-m1.json oppgreedy=1 oppbid=1024 refonly=1 only=90,105,132,190,235,242,258,333,409",
+  "shards": 9,
+  "timeoutMin": 240,
+  "purpose": "Re-run of skm-ref-m1's 9 shards lost to the failing machine. Read as skm-ref-m1+skm-ref-m1-rr."
+}
