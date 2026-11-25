@@ -1,7 +1,7 @@
 // Schafkopf self-play, generation 0 (Fable, 24 Nov 2026 20:38Z, job 3): the bare search (sk-monte.js) in all four seats, the deal
 // seeds as sk-match.mjs makes them (so job 1's deals), every seat's searched decisions kept (each option's mean and deals) with the
 // payoff per seat: the training data. No Codex player sits here, so these rows may train (Codex's games train nothing).
-// usage: node lab/schafkopf/sk-selfplay.mjs <shard> <shards> <out> <deals per decision> <deals per shard> <first seed> [close=<gap>:<mult>] [only=<shard,...>] [sd=<tariffs>] [rollout=<net file from the repo root>] [greedy=1]
+// usage: node lab/schafkopf/sk-selfplay.mjs <shard> <shards> <out> <deals per decision> <deals per shard> <first seed> [close=<gap>:<mult>] [only=<shard,...>] [sd=<tariffs>] [rollout=<net file from the repo root>] [greedy=1] [biddeals=<n>]
 import fs from "node:fs";
 import { schafkopf as G, dealsLine } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
@@ -16,6 +16,8 @@ const cl = (process.argv.find(a => a.startsWith("close=")) || "").slice(6).split
 const sdArg = Number((process.argv.find(a => a.startsWith("sd=")) || "").slice(3)) || undefined;
 // rollout=<net file> (Fable 22:52Z/23:28Z, generation 1): the play-outs drawn from that policy net (lab/schafkopf/nets/), not uniform
 const roArg = (process.argv.find(a => a.startsWith("rollout=")) || "").slice(8), rollout = roArg ? policyRollout(loadNet(new URL(`../../${roArg}`, import.meta.url)), process.argv.includes("greedy=1")) : undefined;
+// biddeals=<n> (Fable 07:50Z, arm B, in the loop from generation 5): the bidding decisions searched at n deals, every card at `deals`
+const BIDDEALS = Number((process.argv.find(a => a.startsWith("biddeals=")) || "").slice(9)) || 0;
 const key = m => JSON.stringify(m), lines = [];
 for (let j = 0; j < per; j++) {
   const seed = mix(seed0, shard * per + j), s = G.deal({ rng: seeded(seed) }), dec = [], clock = [0, 0, 0, 0];
@@ -23,7 +25,7 @@ for (let j = 0; j < per; j++) {
     const w = G.toMove(s), ops = G.options(s, w), t0 = Date.now();
     let m = ops[0];
     if (ops.length > 1) {
-      const r = bareThink(s, w, { deals, close, sd: sdArg, rollout });
+      const r = bareThink(s, w, { deals: BIDDEALS && s.step === "bid" ? BIDDEALS : deals, close, sd: sdArg, rollout });
       m = r.best;
       dec.push({ i, seat: w, opts: r.list.map(c => [key(c.move), Number.isNaN(c.mean) ? null : +c.mean.toFixed(5), c.n]), ...(r.deeper ? { close: 1 } : {}) });
     }
