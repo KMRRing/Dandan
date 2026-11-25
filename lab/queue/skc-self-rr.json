@@ -1,0 +1,8 @@
+{
+  "id": "skc-self-rr",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261126 rollout=lab/schafkopf/nets/g1-policy-raw-none.json greedy=1 only=164,307,308,325,326,329,509,744,769,1012,1014,1352,1510,1674,1771,1863",
+  "shards": 16,
+  "timeoutMin": 60,
+  "purpose": "Re-run of skc-self's 16 shards lost to worker errors, on their own deals. Training data with skc-self."
+}
