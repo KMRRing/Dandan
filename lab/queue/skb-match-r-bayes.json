@@ -1,0 +1,8 @@
+{
+  "id": "skb-match-r-bayes",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/g0-policy-raw-none.json belief=lab/schafkopf/nets/g0-policy-raw-none.json",
+  "shards": 100,
+  "timeoutMin": 90,
+  "purpose": "Fable 02:10Z order 1, the belief arm: line R (g0 raw policy, sampled play-outs, as skb-match-r) with our seat's worlds weighted by the g0 raw policy's likelihood of the other seats' bids and cards (floor 0.05, pool 256 a position, resampled by weight). ska-base's first 1,000 paired deals, paired against skb-match-r. Effective worlds at the bid, trick 1 and trick 4 in each shard's output. Measurement only."
+}

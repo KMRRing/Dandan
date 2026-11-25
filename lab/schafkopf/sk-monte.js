@@ -17,6 +17,7 @@ export const uniform = (c, who, rng) => { const ms = G.options(c, who); return m
 
 /** The bare search's decision for the seat to move: { best, list } as dandan-think.js think gives it. */
 /** close: { gap, mult }, a decision whose top two means are within gap (value units) searched again at mult times the deals. */
-export function bareThink(s, seat, { deals = 256, sd = SD, rollout = uniform, close = null } = {}) {
-  return think(s, seat, { deals, ms: 1e9, all: true, options: G.options, rollout, judge: judgeOf(sd), game: G, hold: false, ...(close ? { deeper: close } : {}) });
+/** dealer: a determinize in place of the rules' even one (sk-belief.js, Fable 02:10Z). */
+export function bareThink(s, seat, { deals = 256, sd = SD, rollout = uniform, close = null, dealer = null } = {}) {
+  return think(s, seat, { deals, ms: 1e9, all: true, options: G.options, rollout, judge: judgeOf(sd), game: dealer ? { ...G, determinize: dealer } : G, hold: false, ...(close ? { deeper: close } : {}) });
 }

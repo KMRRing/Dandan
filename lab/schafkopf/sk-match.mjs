@@ -4,11 +4,12 @@
 // from the deal, the seat and the move's number, so until our seat plays otherwise than Hard did, the two tables are the same
 // deal played the same way. Every game's decisions are kept (ours with the search's means), for the first auxiliary reading.
 // usage: node lab/schafkopf/sk-match.mjs <shard> <shards> <out> <deals per decision> <paired deals per shard> <first seed> [ref=hard]
-//   [close=<gap>:<mult>] [only=<shard,...>] [sd=<tariffs>] [rollout=<net file from the repo root>] [greedy=1] [noref=1] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
+//   [close=<gap>:<mult>] [only=<shard,...>] [sd=<tariffs>] [rollout=<net file from the repo root>] [greedy=1] [noref=1] [belief=<net file>] (Fable 20:38Z, job 2: a close call searched again at mult times the deals)
 import fs from "node:fs";
 import { schafkopf as G, codexMove, dealsLine } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
 import { loadNet, policyRollout } from "./sk-net.js";
+import { beliefDealer, beliefLine } from "./sk-belief.js";
 import { seeded, mix } from "../../seats.js";
 
 const [shard0, , out, deals, per, seed0] = process.argv.slice(2).map((x, i) => (i === 2 ? x : Number(x)));
@@ -16,6 +17,8 @@ const [shard0, , out, deals, per, seed0] = process.argv.slice(2).map((x, i) => (
 const ONLY = (process.argv.find(a => a.startsWith("only=")) || "").slice(5).split(",").filter(Boolean).map(Number), shard = ONLY.length ? ONLY[shard0] : shard0;
 const ref = (process.argv.find(a => a.startsWith("ref=")) || "ref=hard").slice(4);
 const NOREF = process.argv.includes("noref=1");
+// belief=<net file> (Fable 02:10Z, order 1): our seat's worlds weighted by that policy's likelihood of the others' bids and cards
+const beArg = (process.argv.find(a => a.startsWith("belief=")) || "").slice(7), dealer = beArg ? beliefDealer(loadNet(new URL(`../../${beArg}`, import.meta.url))) : null;
 const cl = (process.argv.find(a => a.startsWith("close=")) || "").slice(6).split(":").map(Number), close = cl[0] ? { gap: cl[0], mult: cl[1] || 4 } : null;
 // sd=<tariffs> (the value unit; default sk-monte.js SD): a re-run keeps its parent job's unit, so its deals are searched alike
 const sdArg = Number((process.argv.find(a => a.startsWith("sd=")) || "").slice(3)) || undefined;
@@ -37,7 +40,7 @@ function play(seed, me) {
     if (w === me) {
       const ops = G.options(s, w);
       if (ops.length > 1) {
-        const r = bareThink(s, w, { deals, close, sd: sdArg, rollout });
+        const r = bareThink(s, w, { deals, close, sd: sdArg, rollout, dealer });
         m = r.best;
         dec.push({ i, opts: r.list.map(c => [key(c.move), Number.isNaN(c.mean) ? null : +c.mean.toFixed(5), c.n]), ...(r.deeper ? { close: 1 } : {}) });
       } else m = ops[0];
@@ -61,4 +64,4 @@ for (let j = 0; j < per; j++) {
   lines.push({ seed, ...(r0 ? { dealer: r0.s.dealer, ref: { payoff: p0, role: [0, 1, 2, 3].map(p => roleOf(r0.s, p)), contract: r0.s.contract ? { type: r0.s.contract.type, declarer: r0.s.contract.declarer } : null, log: r0.s.log, clock: r0.clock[1] } } : {}), seats });
   fs.writeFileSync(out, lines.map(l => JSON.stringify(l)).join("\n") + "\n");
 }
-console.log(`sk-match: ${lines.length} paired deals; ${dealsLine()}`);
+console.log(`sk-match: ${lines.length} paired deals; ${dealsLine()}${dealer ? `; ${beliefLine()}` : ""}`);

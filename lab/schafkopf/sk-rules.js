@@ -93,6 +93,13 @@ function replayed(s, hands) {
 }
 /** The deal replayed from these starting hands, or null if any decision made so far is illegal in it. */
 export const replay = (s, hands) => replayed(s, hands).w;
+/** The deal replayed from these starting hands with `each(state, who, move)` called before every decision is made (the belief's
+ *  weights read the position each seat chose in); the replayed deal, or null if a decision is illegal there. */
+export function replayWith(s, hands, each) {
+  const w = startOf(s, hands);
+  for (const [who, m] of s.log || []) { if (toMove(w) !== who) return null; each(w, who, m); if (typeof act(w, who, m, () => 0) === "string") return null; }
+  return w;
+}
 /** The cards each seat started with that the seat can see: its own, and every card played. */
 function seenStart(s, seat) {
   const known = [0, 1, 2, 3].map(p => (p === seat ? s.dealt[seat].slice() : []));
