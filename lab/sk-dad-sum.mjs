@@ -18,7 +18,7 @@ const stat = xs => {
   const n = xs.length, m = xs.reduce((a, x) => a + x, 0) / n, se = Math.sqrt(xs.reduce((a, x) => a + (x - m) ** 2, 0) / (n - 1) / n);
   return `${m >= 0 ? "+" : ""}${m.toFixed(3)} ± ${se.toFixed(3)} (${n})`;
 };
-const line = (label, xs) => xs.length > 1 && console.log(`${label}: questioned less best other, declarer side's payoff ${stat(xs.map(x => x.pa - x.pb))}; declarer won ${stat(xs.map(x => (x.pa > 0) - (x.pb > 0)))}; Monte zero chose the questioned lead in ${(100 * xs.filter(x => x.chose).length / xs.length).toFixed(1)}%`);
+const line = (label, xs) => xs.length > 1 && console.log(`${label}: questioned less best other, declarer side's payoff ${stat(xs.map(x => x.pa - x.pb))}; declarer won ${stat(xs.map(x => (x.pa > 0) - (x.pb > 0)))}; the engine chose the questioned lead in ${(100 * xs.filter(x => x.chose).length / xs.length).toFixed(1)}%`);
 const kind = all[0]?.kind;
 line(`${args[0] || dir} (${kind}), all`, all);
 for (const t of [...new Set(all.map(x => x.type))]) line(`  ${t}`, all.filter(x => x.type === t));
