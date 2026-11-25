@@ -1,0 +1,8 @@
+{
+  "id": "skf-self",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261129 rollout=lab/schafkopf/nets/g4-policy-raw-none.json greedy=1 biddeals=1024",
+  "shards": 2000,
+  "timeoutMin": 90,
+  "purpose": "Schafkopf generation 5 (standing loop, arm B entered per Fable 07:50Z): self-play, greedy play-outs from g4's raw policy (generations 3+4: skd-self + ske-self, 40,000 deals), bids searched at 1,024 deals and cards at 256, 20,000 new deals (seed 20261129). Training data."
+}

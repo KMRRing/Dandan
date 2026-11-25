@@ -1,0 +1,8 @@
+{
+  "id": "skf-match",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/g4-policy-raw-none.json greedy=1 biddeals=1024",
+  "shards": 500,
+  "timeoutMin": 90,
+  "purpose": "Schafkopf generation 5 against three Codex Hard (standing loop, arm B in): g4 raw policy, greedy play-outs, bids at 1,024 deals; ska-base's first 5,000 paired deals; paired against ske-match (generation 4) and skd-match-bid4 (generation 3 + arm B). Measurement only."
+}
