@@ -8,6 +8,7 @@
 //   Q.u8    the partner facts (sk-view.js partnerView, 11) × 255    A.i8  who held the called ace (relative seat), -1 outside a
 //           Sauspiel's play: the belief nets' target (Fable 25 Nov 16:20Z)
 //   PL.u8   the move played (its action)    K.u8  the father's lead the position allows (sk-leads.js): 0 none, 1 A, 2 B
+//   HO.u8   0 train, 1 the fixed held-out set, 2 the test job's other shards (SK_TEST)
 //   QM.u8   the questioned moves of that lead (41), for the played-move head's reading (Fable 25 Nov 19:00Z)
 //   XW.u8   with SK_WORLD=1 (Fable 23:58Z, the world-view value net): the four seats' raw views of the position, in relative order
 //           from the seat to move (the dealt world and the public history), each number × 255. Training only: at play time the
@@ -26,7 +27,11 @@ const [out, ...srcs] = process.argv.slice(2);
 const files = srcs.flatMap(p => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).filter(f => f.endsWith(".jsonl")).map(f => path.join(p, f)) : [p]));
 fs.mkdirSync(out, { recursive: true });
 const WORLD = process.env.SK_WORLD === "1";
-const W = Object.fromEntries(["X", "M", "P", "V", "E", "H", "W", "T", "D", "Q", "A", "PL", "K", "QM", ...(WORLD ? ["XW"] : [])].map(k => [k, fs.openSync(path.join(out, `${k}`), "w")]));
+// SK_TEST=<job>:<n> (Fable 25 Nov 23:30Z, the learning curve's fixed held-out set): rows from that job's shards below n are held out
+// (HO 1, never trained on); its other shards are HO 2, which the trainer drops unless told to use them; every other row HO 0
+const [TEST_JOB, TEST_N] = (process.env.SK_TEST || ":0").split(":");
+const partOf = f => Number((path.basename(f).match(/-part-(\d+)\.jsonl$/) || [])[1] ?? -1);
+const W = Object.fromEntries(["X", "M", "P", "V", "E", "H", "W", "T", "D", "Q", "A", "PL", "K", "QM", "HO", ...(WORLD ? ["XW"] : [])].map(k => [k, fs.openSync(path.join(out, `${k}`), "w")]));
 const put = (k, a) => fs.writeSync(W[k], Buffer.from(a.buffer, a.byteOffset, a.byteLength));
 const F = RAW_SIZE + AUX_SIZE, xr = new Float32Array(RAW_SIZE), xa = new Float32Array(AUX_SIZE);
 let rows = 0, deals = 0, seen = new Set();
@@ -35,6 +40,7 @@ let rows = 0, deals = 0, seen = new Set();
 const jobOf = f => path.basename(f).replace(/-part-\d+\.jsonl$/, ""), jobs = new Set(files.map(jobOf));
 const lineOf = f => { const j = jobOf(f); if (j.endsWith("-rr")) return j.slice(0, -3); const b = j.replace(/-r\d*$/, ""); return b !== j && jobs.has(b) ? b : j; };
 for (const f of files) for (const l of fs.readFileSync(f, "utf8").split("\n")) {
+  const ho = lineOf(f) !== TEST_JOB ? 0 : partOf(f) < Number(TEST_N) ? 1 : 2;
   if (!l.startsWith("{")) continue;
   const g = JSON.parse(l), k = `${lineOf(f)}:${g.seed}`;
   if (seen.has(k)) continue;
@@ -64,7 +70,7 @@ for (const f of files) for (const l of fs.readFileSync(f, "utf8").split("\n")) {
     put("Q", Uint8Array.from(partnerView(v), q => Math.round(255 * q))); put("A", Int8Array.of(aceHolderOf(v, s)));
     const qm = new Uint8Array(ACTIONS);
     for (const id of qa || qb || []) qm[actionOf({ t: "card", card: id })] = 1;
-    put("PL", Uint8Array.of(actionOf(m))); put("K", Uint8Array.of(qa ? 1 : qb ? 2 : 0)); put("QM", qm);
+    put("PL", Uint8Array.of(actionOf(m))); put("K", Uint8Array.of(qa ? 1 : qb ? 2 : 0)); put("QM", qm); put("HO", Uint8Array.of(ho));
     rows++;
   }
   deals++;

@@ -27,6 +27,7 @@ ap.add_argument("--world", action="store_true", help="Fable 23:58Z: the world-vi
 ap.add_argument("--bh", default="64", help="M1: the belief nets' hidden widths (small: they run at every play-out move)")
 ap.add_argument("--m1-value", dest="m1_value", action="store_true", help="M1: the value nets too")
 ap.add_argument("--played", action="store_true", help="Fable 25 Nov 19:00Z: the played move's real result, a payoff head per legal move trained only on the move played, on raw + the M1 inputs, at 1 and 3 epochs (trainer only)")
+ap.add_argument("--use-test-job", dest="use_test_job", action="store_true", help="train on the SK_TEST job's shards outside the held-out set")
 ap.add_argument("--m1", action="store_true", help="Fable 25 Nov 16:20Z, step 1: the two partner-belief nets (own view; public record), frozen, then the policy and value on raw + partner facts + both beliefs (engine M1)")
 ap.add_argument("--sweep", action="store_true", help="Fable 23:28Z: the value net alone, raw and both arms, epochs 1-3 x wd 1e-4/1e-3 x lr as given and a third")
 a = ap.parse_args()
@@ -42,8 +43,15 @@ Q = rd("Q", np.uint8, PART) if PART and os.path.exists(os.path.join(a.pack, "Q")
 AH = rd("A", np.int8) if Q is not None else None
 PLAYED = os.path.exists(os.path.join(a.pack, "PL"))
 PL, KD, QM = (rd("PL", np.uint8), rd("K", np.uint8), rd("QM", np.uint8, ACT)) if PLAYED else (None, None, None)
-tr, te = np.where(~test)[0], np.where(test)[0]
-print(f"sk_train: {N} rows from {meta['deals']} deals; train {len(tr)}, held out {len(te)} (every tenth deal)")
+HO = rd("HO", np.uint8) if os.path.exists(os.path.join(a.pack, "HO")) else None
+if HO is not None and (HO == 1).any():
+    # the learning curve's fixed held-out set (sk-pack SK_TEST, Fable 25 Nov 23:30Z): those rows only; the test job's other shards
+    # train only with --use-test-job
+    test = HO == 1
+    tr, te = np.where((HO == 0) | ((HO == 2) & a.use_test_job))[0], np.where(test)[0]
+else:
+    tr, te = np.where(~test)[0], np.where(test)[0]
+print(f"sk_train: {N} rows from {meta['deals']} deals; train {len(tr)}, held out {len(te)} ({"the fixed held-out set" if HO is not None and (HO == 1).any() else "every tenth deal"})")
 
 # the raw view's parts, in sk-view.js's order: where the contract's type, the declarer and the phase sit
 OFF = {}; _o = 0
