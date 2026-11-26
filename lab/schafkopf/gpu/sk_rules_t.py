@@ -82,6 +82,10 @@ class Deals:
         self.run_card = torch.full((B, 4, 4), -1, dtype=torch.long, device=dev)
         self.run_time = torch.full((B, 4, 4), -1, dtype=torch.long, device=dev)
         self.run_n = torch.zeros(B, 4, dtype=torch.long, device=dev)
+        # the decisions so far (actions, for the dealer's replay) and the voids shown (a seat that didn't follow a class led:
+        # 0..3 a suit, 4 trump)
+        self.log = torch.full((B, 4 + C), -1, dtype=torch.long, device=dev); self.nlog = z()
+        self.void = torch.zeros(B, 4, 5, dtype=torch.bool, device=dev)
 
     # ------------------------------------------------------------------ legal moves
     def legal(self):
@@ -130,11 +134,16 @@ class Deals:
         return torch.where(self.step >= STEP_PLAY, self.call_type, torch.zeros_like(self.call_type))
 
     # ------------------------------------------------------------------ one action for every deal
-    def act(self, a):
-        """Plays action `a` [B] for the seat to move in every deal still running (the caller passes legal actions)."""
+    def act(self, a, live=None):
+        """Plays action `a` [B] for the seat to move in every deal still running (the caller passes legal actions); with
+        `live` [B] bool, only in those deals."""
         a = a.to(self.dev).long()
-        bid = (self.step == STEP_BID) & (a >= C)
-        play = (self.step == STEP_PLAY) & (a < C)
+        go = torch.ones_like(a, dtype=torch.bool) if live is None else live
+        bid = go & (self.step == STEP_BID) & (a >= C)
+        play = go & (self.step == STEP_PLAY) & (a >= 0) & (a < C)
+        acted = bid | play
+        self.log[self.ar[acted], self.nlog[acted]] = a[acted]
+        self.nlog = torch.where(acted, self.nlog + 1, self.nlog)
         if bid.any(): self._bid(bid, a - C)
         if play.any(): self._card(play, a.clamp(max=C - 1))
 
@@ -177,6 +186,11 @@ class Deals:
         self.card_seat[idx, k[m]] = seat[m]
         self.card_time[idx, k[m]] = self.plays[m]
         self.plays = torch.where(m, self.plays + 1, self.plays)
+        F = self.t["FOLLOW"][self.cfg]
+        foll = m & (self.trick_len > 0)
+        led = F[self.ar, self.trick[:, 0].clamp(min=0)]
+        shown = foll & (F[self.ar, k] != led)
+        self.void[self.ar[shown], seat[shown], led[shown]] = True
         hm = self.hands[self.ar, seat]
         hm[self.ar[m], k[m]] = False
         self.hands[self.ar, seat] = hm
@@ -260,6 +274,15 @@ class Deals:
 
     def over(self):
         return self.step == STEP_OVER
+
+
+    def take(self, idx):
+        """A new batch of the deals at `idx` (a copy of each, as they stand)."""
+        D = Deals.__new__(Deals)
+        for k, v in self.__dict__.items():
+            D.__dict__[k] = v[idx].clone() if torch.is_tensor(v) and v.dim() > 0 and v.shape[0] == self.B and k != "ar" else v
+        D.B = int(idx.numel()); D.ar = torch.arange(D.B, device=self.dev)
+        return D
 
 
 def deal_random(B, gen=None, device="cpu"):
