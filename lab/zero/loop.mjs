@@ -88,8 +88,11 @@ if (L.phase === "play") {
   const got = await games(L.genFrom, L.genSince ? Date.parse(L.genSince) : 0), total = got.reduce((a, b) => a + b.games, 0);
   say(`generation ${L.gen}: ${total} of ${L.games} games in (${got.map(b => `${b.id} ${b.games}`).join(", ") || "none yet"})`);
   // the Fleet page's Loop view reads this: games in now, and the pace (the last 24 readings, one a step)
+  // paused with nothing new (26 Nov 2026, Fable 16:20Z: the reading landed on main every few minutes while Dandan is paused):
+  // the last reading stands, so the state is unchanged and nothing is committed; the loop picks up where it was on resume
+  const still = F.off && L.progress?.gen === L.gen && L.progress.games === total;
   const pace = (L.progress?.gen === L.gen ? L.progress.pace || [] : []).concat([[now, total]]).slice(-24);
-  L.progress = { gen: L.gen, games: total, of: L.games, at: now, nets: L.champion, pace };
+  if (!still) L.progress = { gen: L.gen, games: total, of: L.games, at: now, nets: L.champion, pace };
   if (total >= L.games) {
     // self-play paused once generation pauseAfter's games are in (23 Nov 2026, Korbi 14:54 local: "after 28 is done self playing,
     // let's put a pause on self playing", for research before a last pivot): the filler stops making batches (filler.json off;

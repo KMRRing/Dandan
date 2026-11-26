@@ -15,6 +15,10 @@ on:
         description: "Restart only the lab pods that are draining (their log says a newer worker is on main), except those still running a shard of a job matching this pattern (e.g. zdref001|zceil001); empty: off"
         required: false
         default: ""
+      remove_machine_of:
+        description: "A lab worker pod's name (or part of it): the machine it runs on is cordoned (nothing new lands there), its pods stopped and the machine deleted from the cluster, so the pool replaces it; empty: off"
+        required: false
+        default: ""
       logs:
         description: "Pod or node names (comma-separated, any part of the name) whose lab worker's last 40 log lines to show, or 'unready' for every pod not running"
         required: false
@@ -30,6 +34,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: azure/setup-kubectl@v4
+      - uses: actions/checkout@v4
+        with: { sparse-checkout: lab/k8s }
       - name: Apply the setup to each cluster and list what runs
         env:
           RS_KUBECONFIG: "${{ secrets.RS_KUBECONFIG }}"
@@ -43,6 +49,7 @@ jobs:
           RS_KUBECONFIG_9: "${{ secrets.RS_KUBECONFIG_9 }}"
           LAB_K8S_MANIFEST: "${{ secrets.LAB_K8S_MANIFEST }}"
           LOGS: "${{ inputs.logs }}"
+          REMOVE_OF: "${{ inputs.remove_machine_of }}"
         run: |
           if [ -z "$LAB_K8S_MANIFEST" ]; then echo "::error::Add the LAB_K8S_MANIFEST secret first"; exit 1; fi
           # Docker Hub refuses many anonymous pulls from shared addresses; Google's mirror of the same official image doesn't. The image
@@ -50,12 +57,59 @@ jobs:
           # swapping it after the apply restarted every worker on each run)
           printf '%s\n' "$LAB_K8S_MANIFEST" | sed 's#image: node:22-bookworm#image: mirror.gcr.io/library/node:22-bookworm#' > "$RUNNER_TEMP/m.yaml"
           # one kubeconfig secret per cloudspace (13 Nov: Chicago, then Hong Kong); the same setup goes to each
+          # 26 Nov 2026 (Fable 16:20Z): the San Jose cloudspace (kmr-ring1-sjc, its kubeconfig in RS_KUBECONFIG_6) runs the GPU
+          # runner only, made from this same setup by lab/k8s/gpu-setup.py, so the store key stays in the secret; the CPU clusters
+          # never get the GPU setup. A cluster is the GPU one when its name or address has GPU_MATCH in it
+          GPU_MATCH=sjc
+          echo "kubeconfig secrets present: $(for v in RS_KUBECONFIG RS_KUBECONFIG_2 RS_KUBECONFIG_3 RS_KUBECONFIG_4 RS_KUBECONFIG_5 RS_KUBECONFIG_6 RS_KUBECONFIG_7 RS_KUBECONFIG_8 RS_KUBECONFIG_9; do [ -n "${!v}" ] && printf '%s ' "$v"; done)" | tee -a "$GITHUB_STEP_SUMMARY"
           n=0
           for name in RS_KUBECONFIG RS_KUBECONFIG_2 RS_KUBECONFIG_3 RS_KUBECONFIG_4 RS_KUBECONFIG_5 RS_KUBECONFIG_6 RS_KUBECONFIG_7 RS_KUBECONFIG_8 RS_KUBECONFIG_9; do
             kc="${!name}"; [ -n "$kc" ] || continue; n=$((n+1))
             export KUBECONFIG="$RUNNER_TEMP/kc"; printf '%s\n' "$kc" > "$KUBECONFIG"; chmod 600 "$KUBECONFIG"
             cluster=$(kubectl config view --minify -o jsonpath='{.clusters[0].name}' 2>/dev/null)
-            echo "## $cluster" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "## $cluster ($name)" | tee -a "$GITHUB_STEP_SUMMARY"
+            server=$(kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)
+            if printf '%s %s' "$cluster" "$server" | grep -qi "$GPU_MATCH"; then
+              { python3 lab/k8s/gpu-setup.py "$RUNNER_TEMP/m.yaml" "$RUNNER_TEMP/g.yaml" "$cluster" || { echo "GPU setup not made"; rm -f "$KUBECONFIG"; continue; }
+                kubectl delete daemonset dandan-lab --ignore-not-found 2>&1
+                kubectl apply -f "$RUNNER_TEMP/g.yaml" 2>&1 | sed -E 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g'
+                rm -f "$RUNNER_TEMP/g.yaml"
+                if [ "${{ inputs.restart }}" = "true" ]; then kubectl rollout restart deployment/dandan-gpu 2>&1; fi
+                sleep 20
+                echo "### GPU machines"; echo '```'
+                kubectl get nodes -o custom-columns='NODE:.metadata.name,READY:.status.conditions[?(@.type=="Ready")].status,GPUS:.status.allocatable.nvidia\.com/gpu,TYPE:.metadata.labels.node\.kubernetes\.io/instance-type' 2>&1
+                echo '```'
+                gpus=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.allocatable.nvidia\.com/gpu}{"\n"}{end}' 2>/dev/null | awk '$1>0{s+=$1} END{print s+0}')
+                plugin=$(kubectl get pods -A --no-headers 2>/dev/null | grep -ciE 'nvidia-device-plugin|gpu-operator')
+                echo "GPUs Kubernetes can hand out: $gpus; NVIDIA device plugin or GPU operator pods: $plugin"
+                if [ "$gpus" = "0" ]; then
+                  echo "::warning::No GPU is visible to Kubernetes on $cluster."
+                  echo "No GPU is visible to Kubernetes here. If the machine has one, it lacks the NVIDIA driver, the container runtime or the device plugin: NVIDIA's GPU Operator installs all three (helm install gpu-operator nvidia/gpu-operator -n gpu-operator --create-namespace); with the driver already on the machine, the device plugin alone (NVIDIA k8s-device-plugin's DaemonSet) is enough. The runner's pod stays Pending until then."
+                fi
+                echo "### GPU runner"; echo '```'
+                kubectl get pods -l app=dandan-gpu -o wide --no-headers 2>&1 | cut -c1-160
+                for pod in $(kubectl get pods -l app=dandan-gpu --no-headers 2>/dev/null | awk '{print $1}'); do
+                  kubectl describe pod "$pod" 2>/dev/null | sed -n '/^Events:/,$p' | tail -6 | cut -c1-200
+                  kubectl logs "$pod" --tail=25 2>&1 | sed -E -e '/[Kk][Ee][Yy]|[Ss][Ee][Cc][Rr][Ee][Tt]|[Tt][Oo][Kk][Ee][Nn]|BEGIN|END /c\[line hidden]' -e 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g' | cut -c1-200
+                done
+                echo '```'
+              } | tee -a "$GITHUB_STEP_SUMMARY"
+              rm -f "$KUBECONFIG"; continue
+            fi
+            kubectl delete deployment dandan-gpu --ignore-not-found >/dev/null 2>&1
+            # 26 Nov 2026 (Fable 16:20Z): a bad machine's pod (dandan-lab-vcp78-8566) is recreated there by the DaemonSet, so it is
+            # the machine that goes: cordoned, emptied and deleted from the cluster; the pool brings up a fresh one in its place
+            if [ -n "$REMOVE_OF" ]; then
+              node=$(kubectl get pods -l app=dandan-lab -o wide --no-headers 2>/dev/null | awk -v p="$REMOVE_OF" 'index($1,p){print $7; exit}')
+              if [ -n "$node" ]; then
+                { echo "### Removing machine $node (pod matching $REMOVE_OF)"; echo '```'
+                  kubectl cordon "$node" 2>&1
+                  kubectl drain "$node" --ignore-daemonsets --delete-emptydir-data --force --timeout=90s 2>&1 | tail -3
+                  kubectl delete pod -l app=dandan-lab --field-selector "spec.nodeName=$node" --wait=false 2>&1
+                  kubectl delete node "$node" --wait=false 2>&1
+                  echo '```'; } | tee -a "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
             # each worker is told which cluster it runs in (LAB_POOL), for the Fleet page's cost tiles (13 Nov)
             sed "s#^\( *\)image: \(.*node:22-bookworm\)#\1image: \2\n\1env: [{ name: LAB_POOL, value: \"$cluster\" }]#" "$RUNNER_TEMP/m.yaml" > "$RUNNER_TEMP/m1.yaml"
             kubectl apply -f "$RUNNER_TEMP/m1.yaml" 2>&1 | sed -E 's/[A-Za-z0-9+\/=_-]{40,}/[hidden]/g'
