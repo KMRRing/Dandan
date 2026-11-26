@@ -4,6 +4,9 @@
 import { schafkopf as G } from "../sk-rules.js";
 import { actionOf, id0, rawView, partnerView } from "../sk-view.js";
 import { seeded, mix } from "../../../seats.js";
+import { loadNet, forward } from "../sk-net.js";
+// NET=<net file from the repo root>: also the net's outputs for the seat to move
+const NET = process.env.NET ? loadNet(new URL(`../../../${process.env.NET}`, import.meta.url)) : null;
 
 const [n, seed0] = process.argv.slice(2).map(Number), SAU = process.argv.includes("sau"), VIEWS = process.argv.includes("views");   // "sau": Sauspiele first
 for (let d = 0; d < n; d++) {
@@ -18,6 +21,7 @@ for (let d = 0; d < n; d++) {
     const st = { seat: w, legal: ops.map(actionOf).sort((a, b) => a - b), a: actionOf(m) };
     // "views": the seat to move's rawView (its nonzero entries) and partnerView, and the same for the seat after it
     if (VIEWS) st.views = [w, (w + 1) % 4].map(p => { const v = G.view(s, p), r = rawView(v); return { p, raw: [...r.keys()].filter(i => r[i]), part: [...partnerView(v)] }; });
+    if (NET) st.out = [...forward(NET, G.view(s, w))].map(z => +z.toFixed(6));
     steps.push(st);
     G.act(s, w, m, seeded(mix(seed, 0x51)));
   }
