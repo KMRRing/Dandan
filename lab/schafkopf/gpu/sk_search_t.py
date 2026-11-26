@@ -15,6 +15,7 @@ fixed per position), as the JS's hand orders are."""
 import math, torch
 from sk_rules_t import Deals, C, ACTIONS, STEP_BID
 from sk_deal_t import worlds
+from sk_rng_t import uniform, mix
 
 EXPLORE, EARLY, LOOK_FROM, SPREAD, SD = 0.3, 16, 128, 0.06, 5.5
 UNVISITED = 1e9
@@ -22,16 +23,18 @@ UNVISITED = 1e9
 BID_ORDER = {32: 0, 33: 1, 34: 2, 35: 3, 36: 4, 40: 5, 39: 6, 38: 7, 37: 8}
 
 
-def _order_keys(B, own_key, seat, gen, dev):
-    """[B, 41]: each action's place in its options' order (lower first)."""
-    k = torch.rand(B, ACTIONS, generator=gen, device=dev)
+def _order_keys(wkeys):
+    """[W, 41]: each action's place in its options' order (lower first), drawn per world, so every option played in a world
+    meets the same hand orders (as the JS's options do: they are the world's hands)."""
+    k = uniform(wkeys, ACTIONS, 30).float()
     for a, r in BID_ORDER.items(): k[:, a] = 10 + r
     return k
 
 
-def search(D, net, deals_card=256, deals_bid=1024, gen=None, chunk=16):
-    """The search's decision for the seat to move in each deal of D. Returns (best [B], means [B, 41] (nan where not an option),
-    n [B, 41] deals each option was played, deals run [B])."""
+def search(D, net, deals_card=256, deals_bid=1024, keys=None, chunk=16):
+    """The search's decision for the seat to move in each deal of D. `keys` [B]: each position's random key (sk_rng_t): the same
+    key searches a position identically, on any device and in any batch. Returns (best [B], means [B, 41] (nan where not an
+    option), n [B, 41] deals each option was played, deals run [B])."""
     dev, B = D.dev, D.B
     seat = D.turn.clone()
     L0 = D.legal()
@@ -56,7 +59,8 @@ def search(D, net, deals_card=256, deals_bid=1024, gen=None, chunk=16):
     child = torch.full((T, NMAX, SL), -1, dtype=torch.int32, device=dev)
     node_n = torch.zeros(T, NMAX, dtype=torch.int32, device=dev)
     count = torch.ones(T, dtype=torch.long, device=dev)
-    own_key = torch.rand(B, C, generator=gen, device=dev)
+    if keys is None: keys = torch.arange(B, device=dev)
+    own_key = uniform(keys, C, 31).float()
     lead_prev = torch.full((B,), -1, dtype=torch.long, device=dev)
     steady_looks = torch.zeros(B, dtype=torch.long, device=dev)
     steady = torch.where(deals == 256, 2, 0)
@@ -66,13 +70,15 @@ def search(D, net, deals_card=256, deals_bid=1024, gen=None, chunk=16):
     W = None
     while running.any() and d < Dmax:
         if d % chunk == 0:
-            W, _ = worlds(D, seat, chunk, gen)                # [B * chunk] worlds for the next `chunk` deals
+            wk = mix(keys.repeat_interleave(chunk), torch.arange(d, d + chunk, device=dev).repeat(B))
+            W, _ = worlds(D, seat, chunk, wk)                 # [B * chunk] worlds for the next `chunk` deals
+            okeys = _order_keys(wk)
         # the simulations: every running position's alive options in this deal's world
         sb, sa = (alive & running[:, None]).nonzero(as_tuple=True)
         S = sb.numel()
         tree = sb * Cm + (cidx[sb] == sa[:, None]).long().argmax(1)
         Wi = W.take(sb * chunk + d % chunk)
-        okey = _order_keys(S, own_key, seat, gen, dev)
+        okey = okeys[sb * chunk + d % chunk].clone()
         mine = Wi.dealt[torch.arange(S, device=dev), seat[sb]]                    # the searcher's cards: its fixed order
         okey[:, :C] = torch.where(mine, own_key[sb], okey[:, :C])
         Wi.act(sa)

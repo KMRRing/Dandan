@@ -19,7 +19,8 @@ for t in range(30):
 keep = (~D.over() & (D.plays >= 18)).nonzero().flatten()[:P]
 D = D.take(keep); seat = D.turn.clone()
 bad = 0; chi_tot = 0.0; dof_tot = 0
-W, draws = worlds(D, seat, N, g)
+from sk_rng_t import mix
+W, draws = worlds(D, seat, N, mix(torch.arange(D.B * N), 11))
 for i in range(D.B):
     s = int(seat[i]); others = [(s + k) % 4 for k in (1, 2, 3)]
     unseen = [k for k in range(C) if not D.dealt[i, s, k] and D.card_seat[i, k] < 0]

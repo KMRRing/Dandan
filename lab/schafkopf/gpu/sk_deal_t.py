@@ -7,6 +7,7 @@ shuffled within each class), and the same replay check rejects the rest (the bid
 over the valid worlds. test_deal.py checks validity and uniformity against exact enumeration on small positions."""
 import torch
 from sk_rules_t import Deals, C, STEP_PLAY
+from sk_rng_t import uniform, mix
 
 CAP = 9                                            # a seat holds at most 8 unseen cards
 
@@ -15,9 +16,10 @@ def _lgam(x):
     return torch.lgamma(x.double() + 1)
 
 
-def worlds(D, seat, n, gen=None, max_rounds=60):
+def worlds(D, seat, n, keys, max_rounds=60):
     """n worlds for each deal in D, as seen by `seat` [B]: a Deals of B*n deals (world j of deal i at i*n + j), replayed to the
-    position, the seat's own hand as it is. Returns (worlds, draws): draws is how many proposals each world took on average."""
+    position, the seat's own hand as it is. `keys` [B * n]: each world's random key (sk_rng_t), so a world depends only on its key.
+    Returns (worlds, draws): draws is how many proposals each world took on average."""
     dev, B = D.dev, D.B
     F = D.t["FOLLOW"][D.cfg]                                                 # [B, 32] follow class (bidding: suit, as cfg 0's)
     played = D.card_seat >= 0
@@ -60,6 +62,7 @@ def worlds(D, seat, n, gen=None, max_rounds=60):
     while todo.numel() and rounds < max_rounds:
         rounds += 1
         o = owner[todo]; M = todo.numel()
+        rk = mix(keys[todo], rounds)                                                  # this round's key for each world
         r1, r2 = need[o, 0].clone(), need[o, 1].clone()
         split = torch.zeros(M, 5, 3, dtype=torch.long, device=dev)
         for c in range(5):
@@ -73,13 +76,13 @@ def worlds(D, seat, n, gen=None, max_rounds=60):
                     w = _lgam(nn_) - _lgam(torch.tensor(k1)) - _lgam(torch.tensor(k2)) - _lgam(k3.clamp(min=0)) + W[c + 1][o, (r1 - k1).clamp(0, CAP - 1), (r2 - k2).clamp(0, CAP - 1)]
                     lw[:, k1, k2] = torch.where(ok, w, torch.full_like(w, NEG))
             flat = lw.view(M, -1)
-            g = -torch.log(-torch.log(torch.rand(M, CAP * CAP, generator=gen, device=dev).clamp(1e-12, 1)))
+            g = -torch.log(-torch.log(uniform(rk, CAP * CAP, 10 + c)))
             pick = (flat + g).argmax(1)
             k1, k2 = pick // CAP, pick % CAP
             split[:, c, 0], split[:, c, 1], split[:, c, 2] = k1, k2, nn_ - k1 - k2
             r1, r2 = r1 - k1, r2 - k2
         # the cards: within each class a random order, then the first k1 to the first other seat, the next k2 to the second
-        key = torch.rand(M, C, generator=gen, device=dev) + (~unseen[o]).float() * 10       # unseen first, in random order
+        key = uniform(rk, C, 20).float() + (~unseen[o]).float() * 10                  # unseen first, in random order
         Fo = F[o]
         hands = D.dealt[o].clone()
         for p in range(3): hands[torch.arange(M, device=dev), others[o, p]] = False

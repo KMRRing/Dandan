@@ -6,6 +6,7 @@ sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from sk_rules_t import Deals, C
 from sk_net_t import load
 from sk_search_t import search
+from sk_rng_t import mix
 
 P = [json.loads(l) for l in open(sys.argv[1]) if l.startswith("{")]
 net_path = sys.argv[2]; deals = int(sys.argv[3]) if len(sys.argv) > 3 else 256; bd = int(sys.argv[4]) if len(sys.argv) > 4 else 256
@@ -21,7 +22,8 @@ for t in range(max(len(p["log"]) for p in P)):
     D.act(a.clamp(min=0), a >= 0)
 assert all(int(D.turn[i]) == p["seat"] for i, p in enumerate(P)), "replay: the seat to move differs"
 t0 = time.time()
-best, means, cnt, d = search(D, net, deals_card=deals, deals_bid=bd, gen=torch.Generator(device=dev).manual_seed(1))
+SEED = int(sys.argv[6]) if len(sys.argv) > 6 else 1
+best, means, cnt, d = search(D, net, deals_card=deals, deals_bid=bd, keys=mix(torch.arange(B, device=dev), SEED))
 dt = time.time() - t0
 zs, same, top_same = [], 0, 0
 for i, p in enumerate(P):

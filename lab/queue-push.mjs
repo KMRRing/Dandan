@@ -23,6 +23,18 @@ for (const f of files) {
   console.log(ok ? `${id}: queued (${spec.shards} shards, ref ${spec.ref.slice(0, 7)})` : `${id}: written meanwhile by someone else, left`);
   if (ok) { queued++; added.push(id); }
 }
+// GPU jobs (Fable, 26 Nov 12:55Z): lab/queue-gpu/<id>.json to gpujobs/<id>.json, where only lab/gpu-runner.mjs looks (worker.mjs
+// lists jobs/ alone); create-only, as above, and a GPU job's id may not be a CPU job's
+const gpuDir = new URL("./queue-gpu/", import.meta.url);
+for (const f of fs.existsSync(gpuDir) ? fs.readdirSync(gpuDir).filter(f => f.endsWith(".json")).sort() : []) {
+  const id = path.basename(f, ".json"), spec = JSON.parse(fs.readFileSync(new URL(f, gpuDir), "utf8"));
+  if (spec.id !== id) { console.log(`queue-gpu/${f}: its id is ${spec.id}, skipped`); continue; }
+  if (!/^[0-9a-f]{40}$/.test(spec.ref || "")) spec.ref = sha;
+  spec.repo ||= "https://github.com/KMRRing/Dandan.git";
+  spec.made ||= new Date().toISOString().slice(0, 10);
+  if ((await store.get(`gpujobs/${id}.json`)) || (await store.get(`jobs/${id}.json`)) || (await store.get(`retired/${id}.json`))) { console.log(`${id} (GPU): already in the bucket, left`); continue; }
+  console.log((await store.create(`gpujobs/${id}.json`, JSON.stringify(spec))) ? `${id} (GPU): queued (${spec.shards} shards, ref ${spec.ref.slice(0, 7)})` : `${id} (GPU): written meanwhile, left`);
+}
 // the workers' open list (fleet/open.json): new jobs go on it, or idle machines would find them only at their next full look
 if (added.length) console.log((await editOpen(store, jobs => { for (const id of added) jobs[id] = 1; return true; }, { by: "queue-push" })) ? `open list: ${added.join(", ")} added` : "open list: not written (the workers' next full look finds them)");
 console.log(`${queued} queued of ${files.length} in lab/queue/`);

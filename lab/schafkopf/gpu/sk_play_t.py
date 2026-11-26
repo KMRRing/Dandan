@@ -12,6 +12,7 @@ sys.path.insert(0, __file__.rsplit("/", 1)[0])
 from sk_rules_t import Deals, C, deal_random
 from sk_net_t import load
 from sk_search_t import search
+from sk_rng_t import mix
 
 SAU = {33: 0, 34: 2, 35: 3}
 
@@ -33,7 +34,7 @@ def codex_hands(D, i):
     return [[k + 1 + k // 8 for k in D.dealt[i, p].nonzero().flatten().tolist()] for p in range(4)]
 
 
-def play(D, nets, seat_engine, deals_card, deals_bid, gen, record=False):
+def play(D, nets, seat_engine, deals_card, deals_bid, keys, record=False):
     """Plays every deal of D to its end; seat_engine [B, 4] picks the net (index into nets) deciding for each seat. Returns the
     logs [[seat, action]] and, with record, each searched decision {i, seat, opts: [[key, mean, n]]}."""
     B = D.B
@@ -48,7 +49,7 @@ def play(D, nets, seat_engine, deals_card, deals_bid, gen, record=False):
             idx = (multi & (eng == e)).nonzero().flatten()
             if not idx.numel(): continue
             Ds = D.take(idx)
-            best, means, cnt, _ = search(Ds, nets[e], deals_card, deals_bid, gen)
+            best, means, cnt, _ = search(Ds, nets[e], deals_card, deals_bid, mix(keys[idx], i))
             act[idx] = best
             if record:
                 for j, b in enumerate(idx.tolist()):
@@ -82,14 +83,15 @@ def main():
     batch = int(kv.get("batch", 256))
     lines, t0 = [], time.time()
     if mode == "selfplay":
-        n, seed = int(sys.argv[3]), int(sys.argv[4])
-        gen = torch.Generator(device=dev).manual_seed(seed); cpu_gen = torch.Generator().manual_seed(seed)
+        # the seed may be a sum (a job's "<seed0>+{shard}"), so each shard plays its own deals
+        n, seed = int(sys.argv[3]), sum(int(x) for x in sys.argv[4].split("+"))
+        cpu_gen = torch.Generator().manual_seed(seed)
         net = load(kv["net"], dev)
         for start in range(0, n, batch):
             m = min(batch, n - start)
             D = deal_random(m, cpu_gen, dev)
             hands = [codex_hands(D, b) for b in range(m)]; dealer = D.dealer.tolist()
-            logs, decs = play(D, [net], torch.zeros(m, 4, dtype=torch.long, device=dev), dc, db, gen, record=True)
+            logs, decs = play(D, [net], torch.zeros(m, 4, dtype=torch.long, device=dev), dc, db, mix(torch.arange(start, start + m, device=dev), seed), record=True)
             for b in range(m):
                 lines.append({"seed": seed * 1000003 + start + b, "hands": hands[b], "dealer": dealer[b], "payoff": D.payoff[b].tolist(), "contract": contract_of(D, b),
                               "thrown": bool(D.thrown[b]), "log": [[s, move_of(a)] for s, a in logs[b]], "dec": decs[b]})
@@ -98,7 +100,6 @@ def main():
     elif mode == "match":
         deals = [json.loads(l) for l in open(sys.argv[3]) if l.startswith("{")]
         cand, opp = load(kv["cand"], dev), load(kv["opp"], dev)
-        gen = torch.Generator(device=dev).manual_seed(int(kv.get("seed", 1)))
         noref, refonly = kv.get("noref") == "1", kv.get("refonly") == "1"
         tables = ([-1] if not noref else []) + ([] if refonly else [0, 1, 2, 3])   # -1: four opp; k: cand in seat k
         for start in range(0, len(deals), max(1, batch // len(tables))):
@@ -111,7 +112,8 @@ def main():
             se = torch.ones(len(rows), 4, dtype=torch.long)
             for r, (_, t) in enumerate(rows):
                 if t >= 0: se[r, t] = 0
-            logs, _ = play(D, [cand, opp], se.to(dev), dc, db, gen)
+            # a table's key: its deal's seed and which table it is, so every table of a deal searches the same worlds at a position
+            logs, _ = play(D, [cand, opp], se.to(dev), dc, db, mix(torch.tensor([d["seed"] & 0xFFFFFFFF for d, _ in rows], device=dev), 7))
             for d in chunk:
                 ref = next((r for r, (dd, t) in enumerate(rows) if dd is d and t == -1), None)
                 p0 = D.payoff[ref].tolist() if ref is not None else None
