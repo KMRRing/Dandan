@@ -18,7 +18,10 @@ from sk_deal_t import worlds
 from sk_rng_t import uniform, mix
 
 EXPLORE, EARLY, LOOK_FROM, SPREAD, SD = 0.3, 16, 128, 0.06, 5.5
-UNVISITED = 1e9
+# an unvisited option: above any visited one, first in its order. Not 1e9 - rank / 100 as the JS writes it: in float32 that is
+# 1e9 for every rank, and the first by action number won (26 Nov 2026: the GPU search's leads and bids leaned to low cards and
+# to Wenz before Solo, -0.045 in value at bids, found against the JS on 400 positions)
+UNVISITED = 1e6
 # Codex's bid order (sk-view.js actions 32..40 are pass, sau0, sau2, sau3, wenz, solo0..3; Codex lists solo 3, 2, 1, 0)
 BID_ORDER = {32: 0, 33: 1, 34: 2, 35: 3, 36: 4, 40: 5, 39: 6, 38: 7, 37: 8}
 
@@ -108,9 +111,11 @@ def search(D, net, deals_card=256, deals_bid=1024, keys=None, chunk=16):
                 en = e_n[t[:, None], nd[:, None], slot]; ew = e_w[t[:, None], nd[:, None], slot]
                 av = e_av[t[:, None], nd[:, None], slot] + consider.int()
                 e_av[t[:, None], nd[:, None], slot] = av
-                v = torch.where(en > 0, ew / en.clamp(min=1) + EXPLORE * torch.sqrt(torch.log(av.clamp(min=1).float()) / en.clamp(min=1).float()), UNVISITED - rank.float() / 100)
+                v = torch.where(en > 0, ew / en.clamp(min=1) + EXPLORE * torch.sqrt(torch.log(av.clamp(min=1).float()) / en.clamp(min=1).float()), UNVISITED - rank.float())
                 v = v.masked_fill(~consider, -1e18)
-                a = v.argmax(1)
+                # ties (common: deal values come in a few steps) go to the earlier option in order, as in the JS
+                top = v == v.max(1, keepdim=True).values
+                a = rank.masked_fill(~top, 1 << 20).argmin(1)
                 act[i] = a
                 s_ = w * ACTIONS + a
                 path_t.append(t); path_n.append(nd); path_s.append(s_); path_who.append(w); path_on.append(i)
@@ -122,7 +127,7 @@ def search(D, net, deals_card=256, deals_bid=1024, keys=None, chunk=16):
                     count[t[new]] += 1
                     growing[i[new]] = False
                 node[i[~new]] = ch[~new]
-            po = multi & ~growing
+            po = multi & ~tr                                                       # tr's moves are the tree's, even where this step ended the tree
             if po.any():
                 i = ar[po]
                 Wp = Wi.take(i) if i.numel() < S else Wi
@@ -162,12 +167,14 @@ def search(D, net, deals_card=256, deals_bid=1024, keys=None, chunk=16):
                     if int(steady_looks[b]) >= int(steady[b]): running[b] = False
         running &= (alive.sum(1) > 1) & (d < deals)
     means = torch.full((B, ACTIONS), float("nan"), device=dev)
+    self_se = torch.full((B, ACTIONS), float("nan"), device=dev)
     played = cnt > 0
-    sums = torch.zeros(B, ACTIONS, device=dev)
     for b in range(B):
         for a in cand[b].nonzero().flatten().tolist():
             n = int(cnt[b, a])
             if n: means[b, a] = vals[b, a, :n].mean()
+            if n > 1: self_se[b, a] = vals[b, a, :n].std(unbiased=True) / math.sqrt(n)
+    search.se = self_se                                  # each option's standard error, for the checks (compare.py)
     score = torch.where(alive & played, means, torch.full_like(means, -1e9))
     best = torch.where(nopt > 1, score.argmax(1), L0.long().argmax(1))
     return best, means, cnt, torch.tensor(d)
