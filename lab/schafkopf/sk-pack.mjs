@@ -45,7 +45,7 @@ for (const f of files) for (const l of fs.readFileSync(f, "utf8").split("\n")) {
   const g = JSON.parse(l), k = `${lineOf(f)}:${g.seed}`;
   if (seen.has(k)) continue;
   seen.add(k);
-  const s = G.deal({ rng: seeded(g.seed) }), byI = new Map(g.dec.map(d => [d.i, d])), states = [];
+  const s = g.hands ? G.dealWith(g.hands, g.dealer) : G.deal({ rng: seeded(g.seed) }), byI = new Map(g.dec.map(d => [d.i, d])), states = [];
   for (let i = 0; i < g.log.length; i++) {
     const [w, m] = g.log[i], d = byI.get(i);
     if (d) states.push({ v: G.view(s, w), d, m, qa: questioned(s, w, "A"), qb: questioned(s, w, "B"), ...(WORLD ? { vs: [0, 1, 2, 3].map(r => G.view(s, (w + r) % 4)) } : {}) });

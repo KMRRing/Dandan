@@ -78,6 +78,8 @@ export function view(s, seat) {
 
 export const fork = s => structuredClone(s);
 
+/** A deal from given starting hands and dealer (the GPU engine's records, gpu/sk_play_t.py), no decision made. */
+export function dealWith(hands, dealer) { return startOf({ dealer }, hands); }
 /** The deal as it started with these hands: the same dealer and table, no decision made. */
 function startOf(s, hands) {
   const w = codex.deal({ options: { game: "schafkopf", deals: 1 }, rng: () => 0 });
@@ -183,7 +185,7 @@ export function seedOf(s, seat) {
 }
 
 /** The rules engine as the general Monte takes it. */
-export const schafkopf = { id: "schafkopf", seats: 4, deal, toMove, options, act, over, payoff, view, fork, determinize, seedOf, replay, MAX_PAYOFF, CARDS };
+export const schafkopf = { id: "schafkopf", seats: 4, deal, dealWith, toMove, options, act, over, payoff, view, fork, determinize, seedOf, replay, MAX_PAYOFF, CARDS };
 
 /** Codex's own computer player for a seat (Easy, Medium, Hard): the opponent to measure against, never a teacher. */
 export const codexMove = (s, seat, level, rng) => codex.bot(s, seat, { level, rng });
