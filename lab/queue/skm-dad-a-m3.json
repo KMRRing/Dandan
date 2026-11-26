@@ -1,0 +1,8 @@
+{
+  "id": "skm-dad-a-m3",
+  "script": "sk-dad.mjs",
+  "args": "{shard} {shards} {out} A 4 20261125 deals=256 rollout=lab/schafkopf/nets/m3-policy-m1.json greedy=1",
+  "shards": 200,
+  "timeoutMin": 120,
+  "purpose": "M loop, generation 3, read (3): the father's point A with M3. Measurement only."
+}

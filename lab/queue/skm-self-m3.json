@@ -1,0 +1,8 @@
+{
+  "id": "skm-self-m3",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261132 rollout=lab/schafkopf/nets/m3-policy-m1.json greedy=1 biddeals=1024",
+  "shards": 2000,
+  "timeoutMin": 150,
+  "purpose": "M loop: generation 3 of self-play, on M3, 20,000 deals. Training data."
+}
