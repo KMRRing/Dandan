@@ -68,6 +68,20 @@ class Deals:
         self.thrown = torch.zeros(B, dtype=torch.bool, device=dev)
         self.payoff = torch.zeros(B, 4, device=dev)
         self.ar = torch.arange(B, device=dev)
+        # the public record, for the views (sk_view_t.py): each card's trick (−1 unplayed), seat and time; each seat's bid
+        self.card_trick = torch.full((B, C), -1, dtype=torch.long, device=dev)
+        self.card_seat = torch.full((B, C), -1, dtype=torch.long, device=dev)
+        self.card_time = torch.full((B, C), -1, dtype=torch.long, device=dev)
+        self.plays = z()
+        self.bid_of = torch.full((B, 4), -1, dtype=torch.long, device=dev)
+        # who can still be the partner on the public record (sk-view.js publicPartner): the called ace fallen, a seat that
+        # followed the called suit with another card, and a seat's leads from the called suit (checked at view time: running
+        # away needs two more of the suit it may still have held)
+        self.pub_can = torch.ones(B, 4, dtype=torch.bool, device=dev)
+        self.ace_fell = torch.zeros(B, dtype=torch.bool, device=dev)
+        self.run_card = torch.full((B, 4, 4), -1, dtype=torch.long, device=dev)
+        self.run_time = torch.full((B, 4, 4), -1, dtype=torch.long, device=dev)
+        self.run_n = torch.zeros(B, 4, dtype=torch.long, device=dev)
 
     # ------------------------------------------------------------------ legal moves
     def legal(self):
@@ -125,6 +139,7 @@ class Deals:
         if play.any(): self._card(play, a.clamp(max=C - 1))
 
     def _bid(self, m, b):
+        self.bid_of[self.ar[m], self.turn[m]] = b[m]
         self.said = torch.where(m, self.said + 1, self.said)
         said_play = m & (b != BID_PASS)
         typ = torch.where(b == BID_WENZ, 2, torch.where(b >= BID_SOLO[0], 3, 1))
@@ -148,6 +163,7 @@ class Deals:
             self.declarer = torch.where(start, self.call_seat, self.declarer)
             self.ace = torch.where(start, ace, self.ace)
             self.partner = torch.where(start & (ct == 1), holder, self.partner)
+            self.pub_can[self.ar[start], self.call_seat[start]] = False
             self.step = torch.where(start, STEP_PLAY, self.step)
             lead = (self.dealer + 1) % 4
             self.leader = torch.where(start, lead, self.leader)
@@ -155,6 +171,12 @@ class Deals:
 
     def _card(self, m, k):
         seat = self.turn
+        self._partner_record(m, k, seat)
+        idx = self.ar[m]
+        self.card_trick[idx, k[m]] = self.tricks[m]
+        self.card_seat[idx, k[m]] = seat[m]
+        self.card_time[idx, k[m]] = self.plays[m]
+        self.plays = torch.where(m, self.plays + 1, self.plays)
         hm = self.hands[self.ar, seat]
         hm[self.ar[m], k[m]] = False
         self.hands[self.ar, seat] = hm
@@ -184,6 +206,32 @@ class Deals:
             self.tricks = torch.where(full, self.tricks + 1, self.tricks)
             end = full & (self.tricks == 8)
             if end.any(): self._score(end)
+
+    def _partner_record(self, m, k, seat):
+        """The public partner record, before card `k` is played by `seat` (only while the called ace is out)."""
+        sau = m & (self.call_type == 1) & ~self.ace_fell
+        if not sau.any(): return
+        ace = self.ace.clamp(min=0); asuit = ace // 8
+        F = self.t["FOLLOW"][self.cfg]
+        fk = F[self.ar, k]
+        is_ace = k == ace
+        fell = sau & is_ace
+        self.pub_can[fell] = False
+        self.pub_can[self.ar[fell], seat[fell]] = True
+        self.ace_fell |= fell
+        live = sau & ~is_ace & self.pub_can[self.ar, seat]
+        first = self.trick[:, 0].clamp(min=0)
+        led = F[self.ar, first]
+        lead = self.trick_len == 0
+        # following when the called suit was led, without the ace: never held it
+        out = live & ~lead & (led == asuit)
+        self.pub_can[self.ar[out], seat[out]] = False
+        # leading the called suit (not the ace): held it only if running away; noted, checked at view time
+        run = live & lead & (fk == asuit)
+        if run.any():
+            i, p = self.ar[run], seat[run]; n = self.run_n[i, p].clamp(max=3)
+            self.run_card[i, p, n] = k[run]; self.run_time[i, p, n] = self.plays[run]
+            self.run_n[i, p] = self.run_n[i, p] + 1
 
     def _score(self, m):
         B = self.B
