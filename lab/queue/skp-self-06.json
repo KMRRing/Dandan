@@ -1,0 +1,8 @@
+{
+  "id": "skp-self-06",
+  "script": "sk-selfplay.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261216 rollout=lab/schafkopf/nets/m1-policy-m1.json greedy=1 biddeals=1024",
+  "shards": 2000,
+  "timeoutMin": 150,
+  "purpose": "Fable 23:30Z, the learning curve on the current engine: block 06 of 10 of 200,000 self-play deals from M1 (the better of M1 and M2 at mixed tables), bids at 1,024, greedy. Training data; runs behind the M loop's skm tier."
+}
