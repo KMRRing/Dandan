@@ -22,8 +22,11 @@ export const uniform = (c, who, rng) => { const ms = G.options(c, who); return m
  *  each option's mean is (1 − w) × its play-out mean + w × the value net's payoff for the seat at the position after that bid, in
  *  value units, and the bid goes to the best mix; the play-out mean stays as `playout`. The value net was trained on real outcomes
  *  of searched self-play, where the play-outs are policy-quality: it corrects what the play-outs flatter. */
-export function bareThink(s, seat, { deals = 256, sd = SD, rollout = uniform, close = null, dealer = null, valueMix = null } = {}) {
-  const r = think(s, seat, { deals, ms: 1e9, all: true, options: G.options, rollout, judge: judgeOf(sd), game: dealer ? { ...G, determinize: dealer } : G, hold: false, ...(close ? { deeper: close } : {}) });
+export function bareThink(s, seat, { deals = 256, sd = SD, rollout = uniform, close = null, dealer = null, valueMix = null, rootOptions = null } = {}) {
+  // rootOptions (sk-probe.js): the root's options in place of the legal ones; every later decision, in the tree and the
+  // play-outs, keeps the legal ones
+  const at = s.log.length, options = rootOptions ? (c, who) => (who === seat && c.log.length === at ? rootOptions : G.options(c, who)) : G.options;
+  const r = think(s, seat, { deals, ms: 1e9, all: true, options, rollout, judge: judgeOf(sd), game: dealer ? { ...G, determinize: dealer } : G, hold: false, ...(close ? { deeper: close } : {}) });
   if (!valueMix || s.step !== "bid" || r.only) return r;
   const { net, w } = valueMix;
   const list = r.list.map(c => {

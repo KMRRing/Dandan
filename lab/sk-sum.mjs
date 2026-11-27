@@ -40,6 +40,13 @@ console.log(`our seat less Codex Hard's, tariffs a deal: ${f(all)}; SD ${all.sd.
 const roles = {};
 for (const l of A) for (const s of l.seats) (roles[s.role] ||= []).push(s.diff);
 console.log(`by our role: ${Object.entries(roles).map(([r, v]) => `${r} ${f(stat(v), 2)}`).join("; ")}`);
+// the father's probe (sk-probe.js, Fable 27 Nov 09:15Z): how often the rule removed an option, and the difference only where it
+// did, at the probe's table or at the reference table: everywhere else both tables played alike
+const fire = A.reduce((a, l) => a + (l.ref.fired || 0) + l.seats.reduce((b, s) => b + (s.fired || 0), 0), 0);
+if (fire) {
+  const tables = A.length * (1 + (A[0]?.seats.length || 4)), hit = A.flatMap(l => l.seats.filter(s => s.fired || l.ref.fired).map(s => s.diff));
+  console.log(`the rule removed an option ${fire} times: ${(100 * fire / tables).toFixed(1)} per 100 tables; where it fired (${(100 * hit.length / Math.max(1, diffs.length)).toFixed(1)}% of seat-deals): ${f(stat(hit))}`);
+}
 const ref = stat(A.flatMap(l => l.ref.payoff));
 console.log(`per-deal payoff SD at the four-Hard tables (the value unit): ${Math.sqrt(A.flatMap(l => l.ref.payoff).reduce((a, x) => a + x * x, 0) / Math.max(1, 4 * A.length - 1)).toFixed(3)} (mean ${ref.m.toFixed(3)}, ${ref.n} seat-deals)`);
 // bidding: what Hard said in this seat at the reference table against what we said in it, and the mean difference in each cell
