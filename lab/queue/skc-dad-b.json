@@ -1,0 +1,8 @@
+{
+  "id": "skc-dad-b",
+  "script": "sk-dad.mjs",
+  "args": "{shard} {shards} {out} B 4 0 deals=256 rollout=lab/schafkopf/nets/m1-policy-m1.json greedy=1 from=lab/schafkopf/positions/m1-self.jsonl counter=K1,K2",
+  "shards": 500,
+  "timeoutMin": 240,
+  "purpose": "Korbi 27 Nov 14:17 local: can the declarer's searching be punished by a plain counter rule? The first 2,000 B positions of M1's own games (as skp-dad-b), both leads finished with plain M1 defence and with the defenders under K1 (pull trumps) and K2 (force: longest side suit), same seeds. Read with sk-dad-sum. Measurement only."
+}

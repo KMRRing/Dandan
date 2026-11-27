@@ -17,7 +17,7 @@ import { bareThink } from "./sk-monte.js";
 import { loadNet, policyRollout } from "./sk-net.js";
 import { cid } from "./codex/trumps-cards.js";
 import { questioned as ofKind, aceFell } from "./sk-leads.js";
-import { probeFilter } from "./sk-probe.js";
+import { probeFilter, counterFilter } from "./sk-probe.js";
 import { actionOf } from "./sk-view.js";
 import { seeded, mix } from "../../seats.js";
 
@@ -29,7 +29,8 @@ const rollout = arg("rollout") ? policyRollout(loadNet(new URL(`../../${arg("rol
 const think = (s, w) => bareThink(s, w, { deals: DEALS, rollout });
 
 /** The deal finished by Monte zero in every seat after `card`; the declarer side's payoff and the trick the called ace fell in. */
-function finish(s0, w, card, seed) {
+// defence: a counter rule (sk-probe.js counterFilter, K1 or K2) for the defenders' leads from here on; every other decision as before
+function finish(s0, w, card, seed, defence = null) {
   const s = G.fork(s0), c = s.contract, ace = c.type === "sau" ? cid(c.ace, "A") : null;
   let fell = null;
   const step = (who, m, i) => {
@@ -39,13 +40,14 @@ function finish(s0, w, card, seed) {
   step(w, { t: "card", card }, 0);
   for (let i = 1; !G.over(s); i++) {
     const who = G.toMove(s), ops = G.options(s, who);
-    step(who, ops.length > 1 ? think(s, who).best : ops[0], i);
+    const keep = defence && ops.length > 1 ? counterFilter(s, who, ops, defence) : null;
+    step(who, ops.length < 2 ? ops[0] : keep?.length === 1 ? keep[0] : keep ? bareThink(s, who, { deals: DEALS, rollout, rootOptions: keep }).best : think(s, who).best, i);
   }
   return { pay: G.payoff(s)[c.declarer], fell };
 }
 
 const lines = [];
-const FROM = arg("from");
+const FROM = arg("from"), COUNTER = arg("counter") ? arg("counter").split(",") : null;
 if (FROM) {
   const all = fs.readFileSync(new URL(`../../${FROM}`, import.meta.url), "utf8").split("\n").filter(Boolean).map(JSON.parse).filter(x => x.rule === kind);
   for (const x of all.slice(shard * per, (shard + 1) * per)) {
@@ -54,8 +56,11 @@ if (FROM) {
     const w = G.toMove(s), keep = probeFilter(s, w, G.options(s, w), kind), mine = byAct(w, x.lead);
     if (!keep || !mine || keep.includes(mine)) throw new Error(`position ${x.seed}/${x.log.length}: not a break of rule ${kind}`);
     const b = keep.length > 1 ? bareThink(s, w, { deals: DEALS, rollout, rootOptions: keep }).best : keep[0];
-    const pa = finish(s, w, mine.card, x.seed), pb = finish(s, w, b.card, x.seed);
-    lines.push({ seed: x.seed, kind, trick: s.tricks.length + 1, type: s.contract.type, chose: 1, a: mine.card, b: b.card, pa: pa.pay, pb: pb.pay, fa: pa.fell, fb: pb.fell });
+    const pa = finish(s, w, mine.card, x.seed), pb = finish(s, w, b.card, x.seed), k = {};
+    // counter=K1,K2 (Korbi 27 Nov 14:17 local): both leads finished again with the defenders under each counter rule, on the same
+    // seeds; the rule punishes the engine's lead if it gains more after it (paK − pa) than after the rule's pick (pbK − pb)
+    for (const r of COUNTER || []) { k[`pa${r}`] = finish(s, w, mine.card, x.seed, r).pay; k[`pb${r}`] = finish(s, w, b.card, x.seed, r).pay; }
+    lines.push({ seed: x.seed, kind, trick: s.tricks.length + 1, type: s.contract.type, chose: 1, a: mine.card, b: b.card, pa: pa.pay, pb: pb.pay, fa: pa.fell, fb: pb.fell, ...k });
     fs.writeFileSync(out, lines.map(l => JSON.stringify(l)).join("\n") + "\n");
   }
   console.log(`sk-dad ${kind} from ${FROM}: ${lines.length} positions`);

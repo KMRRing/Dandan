@@ -2,7 +2,7 @@
 // trumps when the declarer plays last, rule B exactly the Sauspiel declarer's called-suit cards while the called ace is out,
 // neither ever removes every option or fires anywhere else, and the search at the root then picks only among what is left.
 import { schafkopf as G } from "../lab/schafkopf/sk-rules.js";
-import { probeFilter } from "../lab/schafkopf/sk-probe.js";
+import { probeFilter, counterFilter } from "../lab/schafkopf/sk-probe.js";
 import { bareThink } from "../lab/schafkopf/sk-monte.js";
 import { suitOf, rankOf, cid } from "../lab/schafkopf/codex/trumps-cards.js";
 import { aceFell } from "../lab/schafkopf/sk-leads.js";
@@ -28,11 +28,22 @@ for (let d = 0; d < 1500 && fail < 6; d++) {
         if (keep.length > 1 && searched < 3) { searched++; const b = bareThink(s, w, { deals: 4, rootOptions: keep }).best; if (!keep.includes(b)) bad(`deal ${d}: the search picked a removed card`); }
       }
     }
+    // the counter rules (Korbi 27 Nov 14:17 local): only the Sauspiel's two defenders, on lead, once the called ace has fallen;
+    // K1 keeps their trumps, K2 their longest other suit
+    for (const k of ["K1", "K2"]) {
+      const keep = counterFilter(s, w, ops, k);
+      if (!keep) continue;
+      seen[k] = (seen[k] || 0) + 1;
+      const fell = [...s.tricks.map(t => t.cards), s.trick].flat().find(x => x.card === cid(c.ace, "A"));
+      if (c.type !== "sau" || !fell || w === c.declarer || w === fell.seat || s.trick.length) bad(`deal ${d}: ${k} fired outside the defence`);
+      if (k === "K1" && !keep.every(m => trump(c, m.card))) bad(`deal ${d}: K1 kept a side card`);
+      if (k === "K2" && (keep.some(m => trump(c, m.card)))) bad(`deal ${d}: K2 kept a trump`);
+    }
     // random bids always end in a Solo: every other deal bids the first Sauspiel it can, so both rules meet their positions
     const pick = s.step === "bid" && d % 2 ? ops.find(m => m.type === "sau") || ops[0] : ops[Math.floor(rng() * ops.length)];
     G.act(s, w, pick, rng);
   }
 }
-if (!seen.A || !seen.B) bad(`too few positions: A ${seen.A}, B ${seen.B}`);
+if (!seen.A || !seen.B || !seen.K1 || !seen.K2) bad(`too few positions: A ${seen.A}, B ${seen.B}, K1 ${seen.K1}, K2 ${seen.K2}`);
 if (fail) process.exit(1);
 console.log(`schafkopf-probe: rules A (${seen.A} positions) and B (${seen.B}) remove exactly the father's cards; the search keeps to the rest`);

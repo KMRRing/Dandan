@@ -26,3 +26,26 @@ export const probeArgs = argv => ({
   rule: (argv.find(a => a.startsWith("rule=")) || "").slice(5) || null,
   opprule: (argv.find(a => a.startsWith("opprule=")) || "").slice(8) || null,
 });
+
+// Can the declarer's searching (rule B's break) be punished? (Korbi 27 Nov 2026 14:17 local: "hardcode a bot that counters the
+// playstyle (but as a general rule, not with deeper knowledge)".) Two plain defence rules, for the two defenders on lead once the
+// called ace has fallen (the teams known), each the opposite of the other, so one of them is the right way to press:
+//   K1 (pull): lead a trump when you hold one;
+//   K2 (force): lead no trump, and lead from your longest other suit, to make the declarer's side ruff.
+// A filter on the root's options, as above; null where it doesn't apply or removes nothing.
+const playedBy = (s, id) => { for (const t of [...s.tricks.map(t => t.cards), s.trick]) for (const k of t) if (k.card === id) return k.seat; return null; };
+export function counterFilter(s, w, ops, k) {
+  const c = s.contract;
+  if (!k || s.step !== "play" || !c || c.type !== "sau" || s.trick.length || ops.length < 2) return null;
+  const partner = playedBy(s, cid(c.ace, "A"));
+  if (partner == null || w === c.declarer || w === partner) return null;
+  const tr = ops.filter(m => trump(c, m.card)), side = ops.filter(m => !trump(c, m.card));
+  let keep = null;
+  if (k === "K1") keep = tr;
+  else if (k === "K2" && side.length) {
+    const n = {}; for (const m of side) n[suitOf(m.card)] = (n[suitOf(m.card)] || 0) + 1;
+    const top = Math.max(...Object.values(n));
+    keep = side.filter(m => n[suitOf(m.card)] === top);
+  }
+  return keep && keep.length && keep.length < ops.length ? keep : null;
+}

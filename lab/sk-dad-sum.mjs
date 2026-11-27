@@ -21,6 +21,17 @@ const stat = xs => {
 };
 const line = (label, xs) => xs.length > 1 && console.log(`${label}: questioned less best other, declarer side's payoff ${stat(xs.map(x => x.pa - x.pb))}; declarer won ${stat(xs.map(x => (x.pa > 0) - (x.pb > 0)))}; the engine chose the questioned lead in ${(100 * xs.filter(x => x.chose).length / xs.length).toFixed(1)}%`);
 const kind = all[0]?.kind;
+// counter lines (sk-dad.mjs counter=, Korbi 27 Nov 14:17 local): each defence rule against plain M1 defence on the same lead and seeds;
+// a negative number is the rule punishing the declarer's choice
+const counters = Object.keys(all[0] || {}).filter(k => /^paK\d$/.test(k)).map(k => k.slice(2));
+if (counters.length) {
+  line(`${args[0] || dir} (${kind}), plain defence`, all);
+  for (const k of counters) {
+    const after = (x, l) => x[`p${l}${k}`] - x[`p${l}`];
+    console.log(`  defence ${k} less plain, declarer side's payoff: after the engine's lead ${stat(all.map(x => after(x, "a")))}, after the rule's pick ${stat(all.map(x => after(x, "b")))}; the difference (negative: ${k} punishes the engine's lead) ${stat(all.map(x => after(x, "a") - after(x, "b")))}`);
+  }
+  process.exit(0);
+}
 line(`${args[0] || dir} (${kind}), all`, all);
 // the father's probe on these positions (Fable 27 Nov 09:15Z): where the engine itself chose the questioned lead, the difference
 // is what his rule would change (the questioned lead against the best other, the rule's own pick), and nowhere else does it act
