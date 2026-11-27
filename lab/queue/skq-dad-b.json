@@ -1,0 +1,8 @@
+{
+  "id": "skq-dad-b",
+  "script": "sk-dad.mjs",
+  "args": "{shard} {shards} {out} B 4 20261125 deals=256 rollout=lab/schafkopf/nets/lc200k-256-policy-m1.json greedy=1",
+  "shards": 200,
+  "timeoutMin": 120,
+  "purpose": "Fable 27 Nov 00:45Z, with skq-m: the father's point B with the lc200k-256 policy. Measurement only."
+}
