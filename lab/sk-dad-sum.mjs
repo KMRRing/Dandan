@@ -25,10 +25,13 @@ const kind = all[0]?.kind;
 // a negative number is the rule punishing the declarer's choice
 const counters = Object.keys(all[0] || {}).filter(k => /^paK\d$/.test(k)).map(k => k.slice(2));
 if (counters.length) {
-  line(`${args[0] || dir} (${kind}), plain defence`, all);
-  for (const k of counters) {
-    const after = (x, l) => x[`p${l}${k}`] - x[`p${l}`];
-    console.log(`  defence ${k} less plain, declarer side's payoff: after the engine's lead ${stat(all.map(x => after(x, "a")))}, after the rule's pick ${stat(all.map(x => after(x, "b")))}; the difference (negative: ${k} punishes the engine's lead) ${stat(all.map(x => after(x, "a") - after(x, "b")))}`);
+  const hidden = x => x.fb == null || x.fb > x.trick + 1, won = v => (v > 0 ? 1 : 0);
+  for (const [label, xs] of [["all", all], ["the other lead kept the partner hidden past the next trick", all.filter(hidden)], ["the other lead showed the partner by the next trick", all.filter(x => !hidden(x))]]) {
+    line(`${args[0] || dir} (${kind}), ${label}, plain defence`, xs);
+    for (const k of counters) {
+      const after = (x, l) => x[`p${l}${k}`] - x[`p${l}`], wins = (x, l) => won(x[`p${l}${k}`]) - won(x[`p${l}`]);
+      console.log(`  defence ${k} less plain, declarer side's payoff: after the engine's lead ${stat(xs.map(x => after(x, "a")))}, after the rule's pick ${stat(xs.map(x => after(x, "b")))}; the exploit (negative: ${k} punishes the engine's lead) ${stat(xs.map(x => after(x, "a") - after(x, "b")))}; declarer won ${stat(xs.map(x => wins(x, "a") - wins(x, "b")))}`);
+    }
   }
   process.exit(0);
 }
