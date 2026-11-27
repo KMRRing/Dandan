@@ -7,13 +7,18 @@
 // One line per position: the declarer side's payoff each way, the trick the called ace fell in each way (B), and whether
 // Monte zero's own choice was the questioned lead (the meter).
 // usage: node lab/schafkopf/sk-dad.mjs <shard> <shards> <out> <A|B> <positions per shard> <first seed> [deals=256]
-//   [rollout=<net file from the repo root>] [greedy=1] [only=<shard,...>]
+//   [rollout=<net file from the repo root>] [greedy=1] [only=<shard,...>] [from=<positions file from the repo root>]
+// from= (Korbi 27 Nov 2026, "do it played by M1"; sk-positions.mjs): the positions are those listed, where the engine broke the
+// father's rule in its own games; each is finished with the engine's own lead (the questioned one) and with the rule's pick (the
+// search's best among the leads the rule allows), so every line is one the rule would change (chose = 1).
 import fs from "node:fs";
 import { schafkopf as G, codexMove } from "./sk-rules.js";
 import { bareThink } from "./sk-monte.js";
 import { loadNet, policyRollout } from "./sk-net.js";
 import { cid } from "./codex/trumps-cards.js";
 import { questioned as ofKind, aceFell } from "./sk-leads.js";
+import { probeFilter } from "./sk-probe.js";
+import { actionOf } from "./sk-view.js";
 import { seeded, mix } from "../../seats.js";
 
 const [shard0, , out, kind, per, seed0] = process.argv.slice(2).map((x, i) => (i === 2 || i === 3 ? x : Number(x)));
@@ -40,6 +45,22 @@ function finish(s0, w, card, seed) {
 }
 
 const lines = [];
+const FROM = arg("from");
+if (FROM) {
+  const all = fs.readFileSync(new URL(`../../${FROM}`, import.meta.url), "utf8").split("\n").filter(Boolean).map(JSON.parse).filter(x => x.rule === kind);
+  for (const x of all.slice(shard * per, (shard + 1) * per)) {
+    const s = G.deal({ rng: seeded(x.seed) }), byAct = (w, a) => G.options(s, w).find(m => actionOf(m) === a);
+    for (const a of x.log) { const w = G.toMove(s); G.act(s, w, byAct(w, a), seeded(mix(x.seed, 0x51))); }
+    const w = G.toMove(s), keep = probeFilter(s, w, G.options(s, w), kind), mine = byAct(w, x.lead);
+    if (!keep || !mine || keep.includes(mine)) throw new Error(`position ${x.seed}/${x.log.length}: not a break of rule ${kind}`);
+    const b = keep.length > 1 ? bareThink(s, w, { deals: DEALS, rollout, rootOptions: keep }).best : keep[0];
+    const pa = finish(s, w, mine.card, x.seed), pb = finish(s, w, b.card, x.seed);
+    lines.push({ seed: x.seed, kind, trick: s.tricks.length + 1, type: s.contract.type, chose: 1, a: mine.card, b: b.card, pa: pa.pay, pb: pb.pay, fa: pa.fell, fb: pb.fell });
+    fs.writeFileSync(out, lines.map(l => JSON.stringify(l)).join("\n") + "\n");
+  }
+  console.log(`sk-dad ${kind} from ${FROM}: ${lines.length} positions`);
+  process.exit(0);
+}
 for (let d = 0; lines.length < per && d < 400; d++) {
   const seed = mix(seed0, shard * 100003 + d), s = G.deal({ rng: seeded(seed) });
   for (let i = 0; !G.over(s); i++) {

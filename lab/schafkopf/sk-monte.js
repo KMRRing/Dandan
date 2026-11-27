@@ -25,7 +25,7 @@ export const uniform = (c, who, rng) => { const ms = G.options(c, who); return m
 export function bareThink(s, seat, { deals = 256, sd = SD, rollout = uniform, close = null, dealer = null, valueMix = null, rootOptions = null } = {}) {
   // rootOptions (sk-probe.js): the root's options in place of the legal ones; every later decision, in the tree and the
   // play-outs, keeps the legal ones
-  const at = s.log.length, options = rootOptions ? (c, who) => (who === seat && c.log.length === at ? rootOptions : G.options(c, who)) : G.options;
+  const at = (s.log || []).length, options = rootOptions ? (c, who) => (who === seat && (c.log || []).length === at ? rootOptions : G.options(c, who)) : G.options;
   const r = think(s, seat, { deals, ms: 1e9, all: true, options, rollout, judge: judgeOf(sd), game: dealer ? { ...G, determinize: dealer } : G, hold: false, ...(close ? { deeper: close } : {}) });
   if (!valueMix || s.step !== "bid" || r.only) return r;
   const { net, w } = valueMix;

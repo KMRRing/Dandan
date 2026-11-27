@@ -1,0 +1,38 @@
+# The father's probe on M1's own games (Korbi 27 Nov 2026, "do it played by M1"): the lead positions in the given self-play jobs
+# where the engine broke rule A or B (lab/schafkopf/sk-positions.mjs), committed as lab/schafkopf/positions/<name>.jsonl for
+# sk-dad.mjs from=<file> jobs on the fleet. Read-only on the store.
+name: Schafkopf probe positions
+on:
+  workflow_dispatch:
+    inputs:
+      name: { description: "Commit as lab/schafkopf/positions/<name>.jsonl", required: true, default: "m1-self" }
+      jobs: { description: "Self-play jobs (or match jobs, their reference tables), comma-separated", required: true, default: "skp-self-01" }
+      rules: { description: "A, B or AB", required: false, default: "AB" }
+      max: { description: "At most this many positions per rule (thinned evenly)", required: false, default: "4000" }
+permissions:
+  contents: write
+jobs:
+  positions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Fetch and find
+        env:
+          LAB_READ_KEY: "${{ secrets.LAB_READ_KEY }}"
+          LAB_BUCKET: dandan-lab-807207481983
+        run: |
+          printf '%s' "$LAB_READ_KEY" > "$RUNNER_TEMP/key.json"
+          LAB_KEY="$RUNNER_TEMP/key.json" node lab/schafkopf/sk-fetch.mjs "$RUNNER_TEMP/res" "${{ inputs.jobs }}"
+          rm -f "$RUNNER_TEMP/key.json"
+          node --max-old-space-size=6000 lab/schafkopf/sk-positions.mjs "$RUNNER_TEMP/res" "lab/schafkopf/positions/${{ inputs.name }}.jsonl" "${{ inputs.rules }}" "${{ inputs.max }}" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add lab/schafkopf/positions
+          git commit -q -m "Schafkopf probe positions: ${{ inputs.name }} (${{ inputs.jobs }})" || exit 0
+          for i in 1 2 3 4 5 6 7 8; do if git pull -q --rebase origin main && git push -q origin HEAD:main; then exit 0; fi; git rebase --abort 2>/dev/null || true; sleep $((5 + RANDOM % 20)); done
+          exit 1
