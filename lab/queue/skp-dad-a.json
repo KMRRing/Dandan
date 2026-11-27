@@ -1,0 +1,8 @@
+{
+  "id": "skp-dad-a",
+  "script": "sk-dad.mjs",
+  "args": "{shard} {shards} {out} A 4 0 deals=256 rollout=lab/schafkopf/nets/m1-policy-m1.json greedy=1 from=lab/schafkopf/positions/m1-self.jsonl",
+  "shards": 965,
+  "timeoutMin": 120,
+  "purpose": "Korbi 27 Nov 11:23 local (do it played by M1), Fable 09:15Z probe: the 3860 positions in M1's own self-play games (skp-self) where M1 broke the father's rule A, each finished by M1 in every seat with M1's lead and with the rule's pick. Read with sk-dad-sum; every line is one the rule changes. Measurement only."
+}
