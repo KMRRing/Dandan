@@ -1,0 +1,8 @@
+{
+  "id": "skq-m",
+  "script": "sk-match.mjs",
+  "args": "{shard} {shards} {out} 256 10 20261124 noref=1 rollout=lab/schafkopf/nets/lc200k-256-policy-m1.json greedy=1 biddeals=1024 opp=lab/schafkopf/nets/m1-policy-m1.json oppgreedy=1 oppbid=1024",
+  "shards": 500,
+  "timeoutMin": 300,
+  "purpose": "Fable 27 Nov 00:45Z: does the learning curve reach the table? M1's search with the lc200k-256 policy and beliefs (180k skp-self deals; 512 is 2.3x slower per play-out move for 0.002 regret) in one seat among three M1; read with sk-sum --ref skm-ref-m1+skm-ref-m1-rr. Measurement only."
+}
